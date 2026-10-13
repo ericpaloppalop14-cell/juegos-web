@@ -123,6 +123,11 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 .mon-b.no{background:#cbb8dc;box-shadow:0 3px 0 #a892bf}
 .mon-toast{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;transition:all .3s;z-index:60;background:rgba(255,255,255,.95);color:#7a4fb0;font-family:var(--mf);font-weight:600;font-size:16px;padding:10px 16px;border-radius:18px;box-shadow:0 4px 0 rgba(180,120,200,.4);max-width:86vw;text-align:center;pointer-events:none}
 .mon-toast.on{opacity:1;transform:translate(-50%,0)}
+#tapStart{position:fixed;inset:0;z-index:9999;display:none;flex-direction:row;align-items:flex-start;justify-content:center;gap:8px;padding-top:calc(14px + env(safe-area-inset-top));background:rgba(255,240,250,.25);pointer-events:auto}
+#tapStart.on{display:flex}
+#tapStart .ts-blob{width:40px;height:34px;margin-top:2px;border-radius:50% 50% 44% 44%;background:radial-gradient(circle at 35% 30%,#fff 0 12%,#ffc4de 13% 100%);box-shadow:0 6px 0 rgba(220,120,170,.35);position:relative;animation:tsb .8s ease-in-out infinite}
+#tapStart .ts-blob i{position:absolute;top:13px;width:5px;height:7px;border-radius:50%;background:#5a3a6a}#tapStart .ts-blob i:first-child{left:11px}#tapStart .ts-blob i:last-child{right:11px}
+#tapStart .ts-txt{margin-top:0;font-weight:700;font-size:16px;color:#8b5cc2;background:rgba(255,255,255,.9);padding:8px 18px;border-radius:24px;box-shadow:0 4px 0 rgba(180,120,200,.4);animation:tsp 1.6s ease-in-out infinite}
 @keyframes tsb{0%,100%{transform:translateY(4px) scale(1.06,.94)}50%{transform:translateY(-8px) scale(.96,1.04)}}
 @keyframes tsp{0%,100%{opacity:.75}50%{opacity:1}}
 </style>
@@ -132,6 +137,7 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 <div class="ui">
   <div id="hud" style="opacity:0"><div id="score">0</div><div id="combo">Combo x2</div></div>
   <div id="hint"><span id="hintText"></span></div>
+  <div id="tapStart"><div class="ts-blob"><i></i><i></i></div><div class="ts-txt" data-i18n="tapStart">🎵 Toca para empezar</div></div>
   <div id="title" class="screen on">
     <div class="logo"><span class="l">M</span><span class="l">o</span><span class="l">c</span><span class="l">h</span><span class="l">i</span></div>
     <div class="sub" data-i18n="sub">¡Corre, cambia de color y atraviesa!</div>

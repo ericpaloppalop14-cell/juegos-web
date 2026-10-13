@@ -2406,6 +2406,7 @@ function addScore(v) { score += v; scorePop(); }
 const keyQ = [];
 let ptr = null;
 function onAction(a) {
+  if (window.__tapGuard && performance.now() < window.__tapGuard) return; // el toque de "Toca para empezar" solo arranca el audio
   Snd.init();
   if (state === 'menu') { if (a === 'tap' || a === 'start') startGame('normal'); return; }
   if (state === 'over') { if (overT > 0.45 && (a === 'tap' || a === 'start')) startGame(); return; }
@@ -2534,8 +2535,16 @@ btn('selNoAds', async () => { if (MON.noAds()) return; const ok = await MON.buy(
 MON.onChange(() => { if (state === 'select') updateSelectUI(); if (!isUnlocked(selChar)) selChar = 0; });
 Snd.create(); Music.start(); try { const p = Snd.ac && Snd.ac.resume(); if (p && p.then) p.then(() => Music.kick()).catch(() => {}); } catch (e) {}
 // cualquier primer gesto (toque, tecla) desbloquea el audio; Jugar/Elegir además lo hacen en su propio pointerdown
-// la música arranca sola con el primer toque/pulsación/tecla en cualquier sitio (una sola vez)
-(() => { const evs = ['pointerdown', 'touchstart', 'keydown']; const first = () => { evs.forEach(ev => window.removeEventListener(ev, first, true)); Snd.init(); }; evs.forEach(ev => window.addEventListener(ev, first, { capture: true, passive: true })); })();
+['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, () => Snd.init(), { capture: true, passive: true }));
+// Invitación sutil si el navegador bloquea el audio: el primer toque en CUALQUIER sitio arranca la música
+(() => { const el = document.getElementById('tapStart'); if (!el) return;
+  const hide = () => { el.classList.remove('on'); window.__tapGuard = performance.now() + 350; };
+  setTimeout(() => { if (Snd.ac && Snd.ac.state !== 'running' && state === 'menu') el.classList.add('on'); }, 350);
+  const eat = e => { e.preventDefault(); e.stopPropagation(); Snd.init(); window.__tapGuard = performance.now() + 450; };
+  ['pointerdown', 'touchstart', 'mousedown'].forEach(ev => el.addEventListener(ev, eat));
+  ['pointerup', 'touchend', 'click'].forEach(ev => el.addEventListener(ev, e => { eat(e); setTimeout(hide, 60); }));
+  
+})();
 const muteBtn = document.getElementById('mute');
 const ICON_ON = '<svg viewBox="0 0 24 24"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#c07ad8"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" stroke="#c07ad8" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
 const ICON_OFF = '<svg viewBox="0 0 24 24"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#c9a8d8"/><path d="M16 9l5 6M21 9l-5 6" stroke="#e48ab4" stroke-width="2.2" stroke-linecap="round"/></svg>';
