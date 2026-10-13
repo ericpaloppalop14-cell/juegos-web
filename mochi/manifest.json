@@ -1,7 +1,7 @@
 {
   "name": "Mochi",
   "short_name": "Mochi",
-  "description": "Corre con Mochi, cambia de color, atraviesa las paredes de gelatina y desbloquea 10 personajes con mundos dentro.",
+  "description": "Corre con Mochi, cambia de color, atraviesa las paredes de gelatina y desbloquea 15 personajes con mundos dentro.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",

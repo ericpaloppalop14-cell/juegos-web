@@ -82,45 +82,45 @@
       if (owned.has(id)) return true;
       if (mode === 'debug') {
         return new Promise(res => {
-          const o = overlay(`<div class="mon-t">Google Play <small>(simulado · debug)</small></div><div class="mon-p">${label || id}</div><div class="mon-price">${Monet.price(id)}</div><div class="mon-row"><button class="mon-b no" data-a="0">Cancelar</button><button class="mon-b" data-a="1">Comprar</button></div>`);
-          o.querySelectorAll('button').forEach(b => btnHandler(b, () => { o.remove(); if (b.dataset.a === '1') { owned.add(id); save(); changed(); toast('¡Compra completada!'); res(true); } else res(false); }));
+          const o = overlay(`<div class="mon-t">Google Play <small>${T('mSim')}</small></div><div class="mon-p">${label || id}</div><div class="mon-price">${Monet.price(id)}</div><div class="mon-row"><button class="mon-b no" data-a="0">${T('mCancel')}</button><button class="mon-b" data-a="1">${T('mBuy')}</button></div>`);
+          o.querySelectorAll('button').forEach(b => btnHandler(b, () => { o.remove(); if (b.dataset.a === '1') { owned.add(id); save(); changed(); toast(T('mDone')); res(true); } else res(false); }));
         });
       }
       if (mode !== 'native') return false;
       try {
         const tx = await Purch.purchaseProduct({ productIdentifier: id, productType: 'inapp', quantity: 1 });
         const st = tx && tx.purchaseState != null ? String(tx.purchaseState) : '1';
-        if (st === '1') { owned.add(id); save(); changed(); toast('¡Compra completada!'); return true; }
-        toast('Compra pendiente: se activará cuando Google Play la confirme.', 3200); return false;
+        if (st === '1') { owned.add(id); save(); changed(); toast(T('mDone')); return true; }
+        toast(T('mPending'), 3200); return false;
       } catch (e) {
-        const m = String(e && (e.message || e)); if (!/cancel/i.test(m)) toast('No se pudo completar la compra.');
+        const m = String(e && (e.message || e)); if (!/cancel/i.test(m)) toast(T('mFail'));
         return false;
       }
     },
     async restore() {
-      if (mode === 'debug') { toast(owned.size ? `Compras restauradas (${owned.size})` : 'No hay compras que restaurar'); changed(); return owned.size; }
+      if (mode === 'debug') { toast(owned.size ? T('mRestored', { n: owned.size }) : T('mNone')); changed(); return owned.size; }
       if (mode !== 'native') return 0;
-      try { try { await Purch.restorePurchases(); } catch (e) {} const n = await syncPurchases(); toast(owned.size ? `Compras restauradas (${owned.size})` : 'No hay compras que restaurar'); return n; }
-      catch (e) { toast('No se pudieron restaurar las compras.'); return 0; }
+      try { try { await Purch.restorePurchases(); } catch (e) {} const n = await syncPurchases(); toast(owned.size ? T('mRestored', { n: owned.size }) : T('mNone')); return n; }
+      catch (e) { toast(T('mRestoreFail')); return 0; }
     },
     async privacyForm() {
-      if (mode === 'debug') { toast('Formulario de privacidad (simulado)'); return; }
+      if (mode === 'debug') { toast(T('mPrivSim')); return; }
       if (AdMob) try { await AdMob.showPrivacyOptionsForm(); } catch (e) {}
     },
     // Rewarded ad. Resolves true only if the reward was earned.
     async showRewarded() {
       if (mode === 'debug') {
         return new Promise(res => {
-          const o = overlay(`<div class="mon-t">Anuncio de prueba <small>(simulado · debug)</small></div><div class="mon-ad">AD</div><div class="mon-p" id="monCd">El anuncio termina en 3…</div><div class="mon-row"><button class="mon-b no" data-a="0">Cerrar sin recompensa</button></div>`);
+          const o = overlay(`<div class="mon-t">${T('mAdTest')} <small>${T('mSim')}</small></div><div class="mon-ad">AD</div><div class="mon-p" id="monCd">${T('mAdEnds', { n: 3 })}</div><div class="mon-row"><button class="mon-b no" data-a="0">${T('mClose')}</button></div>`);
           let n = 3; const cd = o.querySelector('#monCd');
-          const iv = setInterval(() => { n--; if (n > 0) cd.textContent = `El anuncio termina en ${n}…`; else { clearInterval(iv); o.remove(); res(true); } }, 700);
+          const iv = setInterval(() => { n--; if (n > 0) cd.textContent = T('mAdEnds', { n }); else { clearInterval(iv); o.remove(); res(true); } }, 700);
           btnHandler(o.querySelector('button'), () => { clearInterval(iv); o.remove(); res(false); });
         });
       }
       if (mode !== 'native' || !AdMob) return false;
-      if (!consentOk) { toast('Los anuncios no están disponibles ahora.'); return false; }
+      if (!consentOk) { toast(T('mAdsNA')); return false; }
       if (!adReady) { await preloadAd(); }
-      if (!adReady) { toast('No hay ningún anuncio disponible ahora mismo.'); preloadAd(); return false; }
+      if (!adReady) { toast(T('mNoAd')); preloadAd(); return false; }
       adReady = false;
       // Reward is granted only via the "Reward" event; resolve when the ad is closed.
       return new Promise(async res => {
@@ -129,10 +129,10 @@
         try {
           hs.push(await AdMob.addListener('onRewardedVideoAdReward', () => { rewarded = true; }));
           hs.push(await AdMob.addListener('onRewardedVideoAdDismissed', () => setTimeout(() => finish(rewarded), 150)));
-          hs.push(await AdMob.addListener('onRewardedVideoAdFailedToShow', () => { toast('No se pudo mostrar el anuncio.'); finish(false); }));
+          hs.push(await AdMob.addListener('onRewardedVideoAdFailedToShow', () => { toast(T('mAdFail')); finish(false); }));
           const r = await AdMob.showRewardVideoAd();
           if (r && (r.amount != null || r.type)) rewarded = true;
-        } catch (e) { toast('No se pudo mostrar el anuncio.'); finish(false); }
+        } catch (e) { toast(T('mAdFail')); finish(false); }
       });
     }
   };

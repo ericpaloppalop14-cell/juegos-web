@@ -41,7 +41,13 @@ window.MOCHI_CONFIG = {
       lava: 'mochi_pj_lava',
       tictac: 'mochi_pj_tictac',
       trueno: 'mochi_pj_trueno',
-      disco: 'mochi_pj_disco'
+      disco: 'mochi_pj_disco',
+      // PREMIUM (solo compra, 0,99 €)
+      nebula: 'mochi_pj_nebula',
+      volcan: 'mochi_pj_volcan',
+      caramelo: 'mochi_pj_caramelo',
+      aurora: 'mochi_pj_aurora',
+      prisma: 'mochi_pj_prisma'
     }
   },
   // Precios de referencia que se muestran si Google Play aún no ha devuelto
@@ -49,7 +55,7 @@ window.MOCHI_CONFIG = {
   refPrices: { noAds: '2,99 €', char: '0,99 €' },
 
   // "Seguir donde te quedaste": máximo por partida
-  maxContinues: 2,
+  maxContinues: 3,
 
   privacyUrl: 'https://telegra.ph/Pol%C3%ADtica-de-privacidad-de-Mochi-10-12'
 };

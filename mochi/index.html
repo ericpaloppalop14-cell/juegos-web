@@ -14,9 +14,18 @@
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'Fredoka';src:url(fredoka.woff2) format('woff2');font-weight:300 700;font-display:block}
+@font-face{font-family:'MochiJA';src:url(fonts/cjk-ja.woff2) format('woff2');font-weight:300 800;font-display:swap}
+@font-face{font-family:'MochiKO';src:url(fonts/cjk-ko.woff2) format('woff2');font-weight:300 800;font-display:swap}
+@font-face{font-family:'MochiSC';src:url(fonts/cjk-sc.woff2) format('woff2');font-weight:300 900;font-display:swap}
+@font-face{font-family:'MochiTC';src:url(fonts/cjk-tc.woff2) format('woff2');font-weight:300 900;font-display:swap}
+:root{--mf:'Fredoka',ui-rounded,'Nunito','Segoe UI',system-ui,sans-serif}
+html.cjk .card h2,html.cjk #cont h2{letter-spacing:0}
+#selPick,#contGo,.tap,#selBuy,#over .tap,.sub,.bestline,#selRecord,#selInner,.card h2,.card .lbl,.nr,#contNoAds,#contNo{white-space:nowrap;max-width:92vw}
+#hint span,.sub,#selInner,#overUnlock,#contLeft{max-width:92vw}
+#selBack{white-space:nowrap;flex-shrink:0}#select .top h3{white-space:nowrap;min-width:0;overflow:visible;text-align:center;flex:1 1 auto}#cont #contLeft{margin-top:12px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#ffe9d6;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;position:fixed;inset:0}
-body{font-family:'Fredoka',ui-rounded,'Nunito','Segoe UI',system-ui,sans-serif;color:#7a4b8a}
+body{font-family:var(--mf);color:#7a4b8a}
 canvas{position:absolute;inset:0;display:block;touch-action:none}
 .ui{position:absolute;inset:0;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #hud{display:flex;flex-direction:column;align-items:center;padding-top:14px;transition:opacity .3s}
@@ -28,6 +37,12 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 #best-hud{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(16px + env(safe-area-inset-top));font-size:15px;font-weight:600;color:#fff;background:rgba(170,120,200,.35);padding:4px 10px;border-radius:14px}
 #mute{position:absolute;right:calc(12px + env(safe-area-inset-right));top:calc(12px + env(safe-area-inset-top));width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.7);box-shadow:0 3px 0 rgba(180,120,190,.35);pointer-events:auto;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;z-index:5}
 #mute svg{width:26px;height:26px}
+#pauseBtn{position:absolute;left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top));width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.7);box-shadow:0 3px 0 rgba(180,120,190,.35);pointer-events:auto;display:none;align-items:center;justify-content:center;padding:0;cursor:pointer;z-index:5}
+#pauseBtn.on{display:flex}#pauseBtn svg{width:24px;height:24px}
+#skipBtn{position:absolute;right:calc(12px + env(safe-area-inset-right));top:calc(70px + env(safe-area-inset-top));font-size:15px;padding:7px 14px;z-index:5;display:none}#skipBtn.on{display:inline-flex}
+#pause .card{display:flex;flex-direction:column;align-items:center;gap:10px}#pause .pbtn{font-size:18px;padding:9px 22px;min-width:180px;justify-content:center}#pause .pbig{font-size:22px;color:#fff;background:linear-gradient(180deg,#ffa9cf,#f37fb4);box-shadow:0 5px 0 #d0609a}
+#turboBtn{font-size:17px;padding:9px 20px;flex-direction:column;gap:0;color:#fff;background:linear-gradient(180deg,#ffc36b,#ff8a5c);box-shadow:0 4px 0 #d8693c}#turboBtn small{font-size:12px;font-weight:600;opacity:.95}
+#modeRow{margin-top:12px;display:flex;gap:8px;align-items:stretch;justify-content:center;flex-wrap:wrap;max-width:94vw}#howBtn{font-size:15px;padding:7px 14px}#contHelp{margin:4px 0 8px;max-width:260px;white-space:normal}
 #hint{position:absolute;left:0;right:0;top:calc(108px + env(safe-area-inset-top));display:flex;justify-content:center;opacity:0;transform:translateY(-10px);transition:opacity .35s,transform .35s}
 #hint.on{opacity:1;transform:none}
 #hint span{background:rgba(255,255,255,.88);color:#8a5aa8;font-weight:600;font-size:20px;padding:10px 18px;border-radius:22px;box-shadow:0 4px 0 rgba(190,130,200,.35);text-align:center;max-width:88vw}
@@ -63,7 +78,7 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 #charBtn .dot{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 18%,#ffb3d6 30%,#c9a8ff 100%)}
 .unl{margin-top:10px;font-size:16px;font-weight:600;color:#a88bc4}
 .unl.new{color:#fff;background:linear-gradient(90deg,#7ee3c4,#b9a2f7);border-radius:16px;padding:5px 12px;font-weight:700;animation:pulse .9s infinite}
-#charBtn2{margin-top:14px;font-size:17px;padding:8px 18px}
+#charBtn2,#overHome,#contHome{margin-top:14px;font-size:17px;padding:8px 18px}
 #select{pointer-events:none;justify-content:flex-start}
 #select .top{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:12px}
 #select h3{margin:0;font-size:28px;color:#fff;text-shadow:0 3px 0 #f08cbc,2px 2px 0 #f08cbc,-2px 2px 0 #f08cbc,0 6px 12px rgba(170,90,170,.3)}
@@ -93,9 +108,12 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 #selShop{position:absolute;bottom:calc(76px + env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 #selShop .pbtn{font-size:12px;padding:6px 10px}
 @media (max-height:760px){#selDesc{font-size:13px;line-height:1.2}#selName{margin-bottom:0}#selShop{gap:5px}#selShop .pbtn{font-size:11.5px;padding:5px 8px}}
+#selName.prem{background:linear-gradient(90deg,#c98a1e,#f2c14e,#a8741a,#f2c14e,#c98a1e);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:holo 3s linear infinite}
+#selInner.prem{background:linear-gradient(90deg,#f2c14e,#fff0b8,#f2c14e,#fff0b8,#f2c14e);background-size:200% 100%;animation:holo 3s linear infinite;color:#5a3a10;box-shadow:0 2px 0 rgba(200,140,40,.5)}
+@keyframes holo{to{background-position:200% 0}}
 #selNoAds{color:#fff;background:linear-gradient(90deg,#ffb36b,#ff8fc0);box-shadow:0 3px 0 #d8709a}
 #selNoAds.owned{background:linear-gradient(90deg,#9df0d6,#5fc7a6);box-shadow:0 3px 0 #3fa585}
-.mon-ov{position:fixed;inset:0;z-index:50;background:rgba(60,30,80,.55);display:flex;align-items:center;justify-content:center;font-family:Fredoka,sans-serif}
+.mon-ov{position:fixed;inset:0;z-index:50;background:rgba(60,30,80,.55);display:flex;align-items:center;justify-content:center;font-family:var(--mf)}
 .mon-box{background:#fff;border-radius:22px;padding:22px 22px 18px;min-width:260px;max-width:86vw;text-align:center;color:#6a4b8a;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .mon-t{font-weight:700;font-size:19px}.mon-t small{font-weight:500;font-size:12px;color:#b090c0}
 .mon-p{margin-top:10px;font-size:16px}.mon-price{font-size:30px;font-weight:700;color:#3fa585;margin-top:4px}
@@ -103,8 +121,15 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 .mon-row{display:flex;gap:10px;justify-content:center;margin-top:16px}
 .mon-b{font-family:inherit;font-weight:700;font-size:16px;border:none;border-radius:20px;padding:9px 18px;color:#fff;background:#5fc7a6;box-shadow:0 3px 0 #3fa585}
 .mon-b.no{background:#cbb8dc;box-shadow:0 3px 0 #a892bf}
-.mon-toast{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;transition:all .3s;z-index:60;background:rgba(255,255,255,.95);color:#7a4fb0;font-family:Fredoka,sans-serif;font-weight:600;font-size:16px;padding:10px 16px;border-radius:18px;box-shadow:0 4px 0 rgba(180,120,200,.4);max-width:86vw;text-align:center;pointer-events:none}
+.mon-toast{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;transition:all .3s;z-index:60;background:rgba(255,255,255,.95);color:#7a4fb0;font-family:var(--mf);font-weight:600;font-size:16px;padding:10px 16px;border-radius:18px;box-shadow:0 4px 0 rgba(180,120,200,.4);max-width:86vw;text-align:center;pointer-events:none}
 .mon-toast.on{opacity:1;transform:translate(-50%,0)}
+#tapStart{position:fixed;inset:0;z-index:9999;display:none;flex-direction:row;align-items:flex-start;justify-content:center;gap:8px;padding-top:calc(14px + env(safe-area-inset-top));background:rgba(255,240,250,.25);pointer-events:auto}
+#tapStart.on{display:flex}
+#tapStart .ts-blob{width:40px;height:34px;margin-top:2px;border-radius:50% 50% 44% 44%;background:radial-gradient(circle at 35% 30%,#fff 0 12%,#ffc4de 13% 100%);box-shadow:0 6px 0 rgba(220,120,170,.35);position:relative;animation:tsb .8s ease-in-out infinite}
+#tapStart .ts-blob i{position:absolute;top:13px;width:5px;height:7px;border-radius:50%;background:#5a3a6a}#tapStart .ts-blob i:first-child{left:11px}#tapStart .ts-blob i:last-child{right:11px}
+#tapStart .ts-txt{margin-top:0;font-weight:700;font-size:16px;color:#8b5cc2;background:rgba(255,255,255,.9);padding:8px 18px;border-radius:24px;box-shadow:0 4px 0 rgba(180,120,200,.4);animation:tsp 1.6s ease-in-out infinite}
+@keyframes tsb{0%,100%{transform:translateY(4px) scale(1.06,.94)}50%{transform:translateY(-8px) scale(.96,1.04)}}
+@keyframes tsp{0%,100%{opacity:.75}50%{opacity:1}}
 </style>
 </head>
 <body>
@@ -112,51 +137,71 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 <div class="ui">
   <div id="hud" style="opacity:0"><div id="score">0</div><div id="combo">Combo x2</div></div>
   <div id="hint"><span id="hintText"></span></div>
+  <div id="tapStart"><div class="ts-blob"><i></i><i></i></div><div class="ts-txt" data-i18n="tapStart">🎵 Toca para empezar</div></div>
   <div id="title" class="screen on">
     <div class="logo"><span class="l">M</span><span class="l">o</span><span class="l">c</span><span class="l">h</span><span class="l">i</span></div>
-    <div class="sub">¡Corre, cambia de color y atraviesa!</div>
+    <div class="sub" data-i18n="sub">¡Corre, cambia de color y atraviesa!</div>
     <div class="bestline" id="bestTitle" style="display:none"></div>
-    <button class="pbtn" id="charBtn"><span class="dot"></span>Personajes</button>
-    <div class="tap">Toca para jugar</div>
+    <button class="pbtn" id="charBtn"><span class="dot"></span><span data-i18n="chars">Personajes</span></button>
+    <div id="modeRow"><button class="pbtn" id="turboBtn"><span data-i18n="turbo">⚡ Modo Turbo</span><small id="turboSmall" data-i18n="turboSub"></small></button><button class="pbtn" id="howBtn" data-i18n="howTo">❓ Cómo jugar</button></div>
+    <div class="tap" data-i18n="tapPlay">Toca para jugar</div>
   </div>
   <div id="over" class="screen">
     <div class="card">
       <h2 id="overTitle">¡Plof!</h2>
-      <div class="lbl">Puntos</div>
+      <div class="lbl" id="overMode" style="display:none" data-i18n="turboTag"></div>
+      <div class="lbl" data-i18n="points">Puntos</div>
       <div class="big" id="finalScore">0</div>
-      <div class="lbl">Récord</div>
+      <div class="lbl" data-i18n="record">Récord</div>
       <div class="rec" id="finalBest">0</div>
-      <div class="nr" id="newRec">¡Nuevo récord!</div>
+      <div class="nr" id="newRec" data-i18n="newRecord">¡Nuevo récord!</div>
       <div class="unl" id="overUnlock"></div>
-      <div><button class="pbtn" id="charBtn2">Personajes</button></div>
-      <div><div class="tap">Toca para repetir</div></div>
+      <div><button class="pbtn" id="overHome"><span aria-hidden="true">🏠</span> <span data-i18n="home">Menú</span></button> <button class="pbtn" id="charBtn2" data-i18n="chars">Personajes</button></div>
+      <div><div class="tap" data-i18n="tapRetry">Toca para repetir</div></div>
     </div>
   </div>
   <div id="select" class="screen">
-    <div class="top"><button class="pbtn" id="selBack">‹ Volver</button><h3>Personajes</h3><div id="selCount">1/10</div></div>
+    <div class="top"><button class="pbtn" id="selBack" data-i18n="back">‹ Volver</button><h3 data-i18n="chars">Personajes</h3><div id="selCount">1/15</div></div>
     <div id="selRecord"></div>
-    <button class="pbtn arrow" id="selPrev" aria-label="Anterior">‹</button>
-    <button class="pbtn arrow" id="selNext" aria-label="Siguiente">›</button>
+    <button class="pbtn arrow" id="selPrev" aria-label="Anterior" data-i18n-aria="prev">‹</button>
+    <button class="pbtn arrow" id="selNext" aria-label="Siguiente" data-i18n-aria="next">›</button>
     <div id="selInfo"><div id="selName">Mochi</div><div id="selInner"></div><div id="selDesc"></div><button class="pbtn" id="selBuy" style="display:none">Desbloquear por 0,99 €</button></div>
-    <div id="selShop" style="display:none"><button class="pbtn" id="selNoAds">Sin anuncios</button><button class="pbtn" id="selRestore">Restaurar compras</button><button class="pbtn" id="selPrivacy" style="display:none">Privacidad</button></div>
-    <button class="pbtn" id="selPick">¡Jugar!</button>
+    <div id="selShop" style="display:none"><button class="pbtn" id="selNoAds" data-i18n="noAds">Sin anuncios</button><button class="pbtn" id="selRestore" data-i18n="restore">Restaurar compras</button><button class="pbtn" id="selPrivacy" style="display:none" data-i18n="privacy">Privacidad</button></div>
+    <button class="pbtn" id="selPick" data-i18n="play">¡Jugar!</button>
   </div>
   <div id="cont" class="screen">
     <div class="card">
-      <h2>¿Seguir donde<br>te quedaste?</h2>
-      <div class="lbl">Llevas</div>
+      <h2 data-i18n-html="contTitle">¿Seguir donde<br>te quedaste?</h2>
+      <div class="lbl" data-i18n="soFar">Llevas</div>
       <div id="contScore">0</div>
-      <button class="pbtn" id="contGo">▶ Ver anuncio y seguir</button>
+      <div class="lbl" id="contHelp" style="display:none" data-i18n="contHelp"></div>
+      <button class="pbtn" id="contGo" data-i18n="contAd">▶ Ver anuncio y seguir</button>
       <div class="lbl" id="contLeft"></div>
       <div class="cbar"><div id="contBar"></div></div>
-      <div><button class="pbtn" id="contNo">No, gracias</button></div>
-      <div><button class="pbtn" id="contNoAds">Sin anuncios</button></div>
+      <div><button class="pbtn" id="contHome"><span aria-hidden="true">🏠</span> <span data-i18n="home">Menú</span></button> <button class="pbtn" id="contNo" data-i18n="noThanks">No, gracias</button></div>
+      <div><button class="pbtn" id="contNoAds" data-i18n="noAds">Sin anuncios</button></div>
     </div>
   </div>
-  <div id="pause" class="screen"><div class="card"><h2>Pausa</h2><div class="lbl">Toca para seguir</div></div></div>
+  <div id="pause" class="screen"><div class="card"><h2 data-i18n="pause">Pausa</h2>
+    <div><button class="pbtn pbig" id="pResume" data-i18n="pResume">▶ Continuar</button></div>
+    <div><button class="pbtn" id="pRestart" data-i18n="pRestart">↻ Reiniciar</button></div>
+    <div><button class="pbtn" id="pMenu" data-i18n="pMenu">⌂ Menú</button></div>
+    <div><button class="pbtn" id="pSound"></button></div></div></div>
 </div>
-<button id="mute" aria-label="Sonido"></button>
+<button id="mute" aria-label="Sonido" data-i18n-aria="sound"></button>
+<button id="pauseBtn" aria-label="Pausa" data-i18n-aria="pauseBtn"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="2" fill="#a374c4"/><rect x="13.8" y="5" width="4.2" height="14" rx="2" fill="#a374c4"/></svg></button>
+<button id="skipBtn" class="pbtn" data-i18n="skip">Saltar ›</button>
 <script src="config.js"></script>
+<script src="i18n.js"></script>
+<script>
+I18N.apply();document.documentElement.style.setProperty('--mf',I18N.FONT);
+(function(){const ids=['selPick','selBuy','contGo','contNoAds','contNo','selNoAds','selRestore','selPrivacy','selBack','charBtn','charBtn2','newRec','selInner','selRecord'];
+ let q=0;const run=()=>{q=0;ids.forEach(id=>{const e=document.getElementById(id);if(e&&e.offsetParent!==null)I18N.fit(e,innerWidth*0.92-16,0.55)});
+ const h3=document.querySelector('#select .top h3');if(h3.offsetParent!==null){h3.style.fontSize='';I18N.fit(h3,h3.clientWidth,0.55)}
+ document.querySelectorAll('.tap,.sub,.bestline,#overUnlock,#contLeft,.card h2,.lbl').forEach(e=>{if(e.offsetParent!==null)I18N.fit(e,Math.min(innerWidth*0.92,e.parentElement.clientWidth||innerWidth),0.6)})};
+ const sch=()=>{if(!q)q=requestAnimationFrame(run)};
+ addEventListener('load',()=>{new MutationObserver(sch).observe(document.querySelector('.ui'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});sch();document.fonts&&document.fonts.ready.then(sch)});addEventListener('resize',sch)})();
+</script>
 <script src="monet.js"></script>
 <script src="game.js"></script>
 <script>

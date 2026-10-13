@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ffd6ec">
+<title>Mochi Rivals</title>
+<style>
+@font-face{font-family:Fredoka;src:url(fredoka.woff2) format('woff2');font-weight:300 700;font-display:block}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#ffd6ec;font-family:Fredoka,system-ui,sans-serif;color:#6a4b8a;touch-action:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:4}
+#hTop{position:absolute;left:0;right:0;top:calc(8px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:flex-start;padding:0 10px}
+#hPos{font-size:52px;font-weight:700;color:#fff;-webkit-text-stroke:3px #e0609f;text-shadow:0 4px 0 #e0609f;line-height:1;background:radial-gradient(circle,#ffffffcc,#ffd6eccc);border-radius:20px;padding:3px 12px 5px;border:3px solid #fff;box-shadow:0 4px 14px rgba(160,50,120,.35);min-width:92px;text-align:center}
+#hPos small{font-size:20px;-webkit-text-stroke:1.5px #e0609f}
+#hPos.p1{-webkit-text-stroke-color:#d49a00;text-shadow:0 4px 0 #d49a00}
+#hLap{font-size:20px;font-weight:700;color:#fff;text-shadow:0 2px 0 #b0508a,0 0 10px rgba(150,40,110,.4);text-align:center;line-height:1.1;margin-top:4px;flex:1}
+#hLap span{display:block;font-size:15px}
+#hBar{width:150px;height:12px;margin:6px auto 0;border-radius:8px;background:rgba(255,255,255,.35);border:2px solid #fff;overflow:hidden}#hBar b{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd84a,#ff8fc0);border-radius:6px}
+#hIcon{width:70px;height:70px;border-radius:20px;background:rgba(255,255,255,.78);border:4px solid #fff;box-shadow:0 4px 0 rgba(200,100,170,.4);display:flex;align-items:center;justify-content:center;font-size:40px}
+#hBoard{position:absolute;left:10px;top:calc(84px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:3px}
+#hBoard div{font-size:12.5px;font-weight:700;color:#fff;background:rgba(110,60,150,.45);border-radius:10px;padding:2px 8px 2px 4px;display:flex;align-items:center;gap:5px;white-space:nowrap}
+#hBoard div.me{background:rgba(240,96,159,.85)}
+#hBoard i{width:11px;height:11px;border-radius:50%;display:inline-block;border:1.5px solid #fff}
+#toast{position:absolute;left:50%;top:24%;transform:translateX(-50%);font-size:26px;font-weight:700;color:#fff;-webkit-text-stroke:1.5px #c0508a;text-shadow:0 3px 0 #c0508a;text-align:center;width:94vw;opacity:0;transition:opacity .2s;line-height:1.1}
+#count{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%) scale(1);font-size:110px;font-weight:700;color:#fff;-webkit-text-stroke:4px #e0609f;text-shadow:0 7px 0 #e0609f;opacity:0;white-space:nowrap}
+#count.pop{animation:pop .9s ease-out forwards}
+@keyframes pop{0%{opacity:1;transform:translate(-50%,-50%) scale(1.7)}25%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(.9)}}
+#banner{position:absolute;left:0;right:0;top:34%;text-align:center;font-size:40px;font-weight:700;color:#fff;text-shadow:0 4px 0 #c0508a,0 0 24px #ff7fe0;opacity:0;transform:scale(.6);transition:all .3s cubic-bezier(.3,1.6,.5,1);padding:0 10px}
+#banner.on{opacity:1;transform:scale(1)}
+#say{position:absolute;left:10px;bottom:calc(150px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+#say div{background:rgba(255,255,255,.92);border-radius:16px;padding:6px 12px;font-size:14px;font-weight:600;color:#6a3f9a;box-shadow:0 3px 0 rgba(170,110,200,.3);animation:sayin .3s ease-out}
+@keyframes sayin{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+#hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(122px + env(safe-area-inset-bottom));background:rgba(255,255,255,.88);padding:7px 14px;border-radius:16px;font-weight:600;font-size:15px;text-align:center;width:max-content;max-width:92vw;transition:opacity .5s}
+#ctl{position:absolute;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));display:none;justify-content:space-between;padding:0 16px;pointer-events:none}
+#ctl.on{display:flex}
+#ctl button{pointer-events:auto;width:96px;height:96px;border-radius:50%;border:4px solid rgba(255,255,255,.9);background:rgba(255,255,255,.35);font:700 34px Fredoka;color:#fff;text-shadow:0 2px 0 #c0508a;box-shadow:0 4px 14px rgba(160,50,120,.3)}
+#ctl button.mid{width:84px;height:84px;font-size:30px;align-self:flex-end;background:rgba(126,227,196,.55)}
+#ctl button:active{transform:scale(.92);background:rgba(255,255,255,.6)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .25s}
+#load{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#c0508a;background:#ffd6ec}
+#exitB{position:absolute;right:calc(10px);bottom:calc(10px + env(safe-area-inset-bottom));pointer-events:auto;border:none;border-radius:14px;background:rgba(255,255,255,.7);font:700 13px Fredoka;color:#8b5cc2;padding:6px 10px;display:none}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud">
+  <div id="flash"></div>
+  <div id="hTop"><div id="hPos">1<small>º/6</small></div><div id="hLap"><div id="hName"></div><span id="hTime">0.0 s</span><div id="hBar"><b id="hBarIn"></b></div></div><div id="hIcon"></div></div>
+  <div id="hBoard"></div>
+  <div id="toast"></div><div id="count"></div><div id="banner"></div>
+  <div id="say"></div><div id="hint"></div>
+  <div id="ctl"><button id="bL">⬅</button><button id="bM" class="mid">🫧</button><button id="bR">➡</button></div>
+</div>
+<div id="load">Preparando la prueba…</div>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module" src="js/pruebas3d.js"></script>
+</body>
+</html>
