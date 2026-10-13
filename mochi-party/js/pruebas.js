@@ -173,40 +173,57 @@ const LAYERS = [
 const caida = {
   id: 'caida', name: 'Caída al Centro de la Tierra', icon: '🌋', maxT: 75,
   desc: 'Tírate por el agujero y llega el primero al núcleo. Atraviesa raíces, fósiles, cristales y magma.',
-  how: 'Arrastra el dedo a izquierda y derecha. Coge las gotas de gelatina para acelerar.',
+  how: 'Arrastra el dedo (o ← →) para moverte. Coge 💎 gemas, 💧 turbo, 🫧 burbuja-escudo y 🧲 imán. ¡Rozar obstáculos sin chocar da velocidad!',
   init(E) {
     E.D = 13000; E.LH = E.D / LAYERS.length; E.O = []; E.B = [];
-    for (let d = 500; d < E.D - 300; d += rnd(210, 290)) {
-      const L = Math.min(LAYERS.length - 1, Math.floor(d / E.LH));
-      if (Math.random() < .35) { const gap = rnd(-120, 120); E.O.push({ d, L, wall: true, gap, gw: 120 }); }
-      else { const w = rnd(70, 150); E.O.push({ d, L, x: rnd(-150, 150), w, vx: L === 3 ? rnd(-60, 60) : 0 }); }
-      if (Math.random() < .35) E.B.push({ d: d + 110, x: rnd(-150, 150), taken: new Set() });
+    E.I = []; E.SP = [];
+    for (let d = 500; d < E.D - 300; d += rnd(230, 300)) {
+      const L = Math.min(LAYERS.length - 1, Math.floor(d / E.LH)), u = Math.random();
+      // variedad: pared con hueco (a veces móvil), plataforma (móvil en magma), pareja en zigzag, y en el núcleo aros giratorios
+      if (u < .3) { const gap = rnd(-110, 110); E.O.push({ d, L, wall: true, gap, gw: 135 - L * 3, vg: L >= 2 && Math.random() < .5 ? rnd(40, 70) * (Math.random() < .5 ? -1 : 1) : 0 }); }
+      else if (u < .45 && L >= 1) { const sx0 = Math.random() < .5 ? -1 : 1; E.O.push({ d, L, x: sx0 * 95, w: 120, vx: 0 }); E.O.push({ d: d + 120, L, x: -sx0 * 95, w: 120, vx: 0 }); d += 120; }
+      else { const w = rnd(70, 140); E.O.push({ d, L, x: rnd(-150, 150), w, vx: L === 3 ? rnd(-60, 60) : L === 4 ? rnd(-90, 90) : 0 }); }
+      if (Math.random() < .3) E.B.push({ d: d + 115, x: rnd(-140, 140), taken: new Set() });
+      // filas de gemas que dibujan un camino seguro
+      if (Math.random() < .55) { const x0 = rnd(-130, 130), x1 = clamp(x0 + rnd(-80, 80), -150, 150); for (let j = 0; j < 5; j++) E.I.push({ d: d + 60 + j * 26, x: lerp(x0, x1, j / 4), type: 'gem', taken: new Set() }); }
+      else if (Math.random() < .22) E.I.push({ d: d + 140, x: rnd(-130, 130), type: Math.random() < .5 ? 'shield' : 'magnet', taken: new Set() });
     }
+    for (let i = 0; i < 40; i++) E.SP.push({ x: rnd(-200, 200), y: rnd(0, 1), l: rnd(.4, 1) });
     E.layer = -1;
-    E.racers.forEach((r, k) => { r.d = 0; r.x = (k - 2.5) * 50; r.tx = r.x; r.v = 0; r.stun = 0; r.boost = 0; r.dec = {}; });
-    E.camD = 0;
+    E.racers.forEach((r, k) => { r.d = 0; r.x = (k - 2.5) * 50; r.tx = r.x; r.v = 0; r.vx = 0; r.stun = 0; r.boost = 0; r.dec = {}; r.gems = 0; r.shield = 0; r.mag = 0; r.inv = 0; r.graze = 0; });
+    E.camD = 0; E.flash = 0;
   },
-  hits(E, o, x, r = 16) { if (o.wall) return Math.abs(x - o.gap) > o.gw / 2 - r * .6; return Math.abs(x - o.x) < o.w / 2 + r * .6; },
+  hits(E, o, x, r = 16) { if (o.wall) return Math.abs(x - o.gap) > o.gw / 2 - r * .45; return Math.abs(x - o.x) < o.w / 2 + r * .45; },
+  near(E, o, x) { return !this.hits(E, o, x) && this.hits(E, o, x, 34); },
   safeX(E, o) { if (o.wall) return o.gap; const l = o.x - o.w / 2 - 30, rr = o.x + o.w / 2 + 30; return (l < -170 ? rr : rr > 170 ? l : (Math.random() < .5 ? l : rr)); },
   update(E, dt) {
-    for (const o of E.O) if (o.vx) { o.x += o.vx * dt; if (Math.abs(o.x) > 150) o.vx *= -1; }
+    for (const o of E.O) { if (o.vx) { o.x += o.vx * dt; if (Math.abs(o.x) > 150) o.vx *= -1; } if (o.vg) { o.gap += o.vg * dt; if (Math.abs(o.gap) > 120) o.vg *= -1; } }
     for (const r of E.racers) {
       if (r.fin) continue;
-      const vmax = (r.me ? 420 : 405 + r.skill * 40) + (r.boost > 0 ? 220 : 0);
-      if (r.stun > 0) r.stun -= dt; else r.v = Math.min(vmax, r.v + 320 * dt);
+      const Lr = Math.min(4, Math.floor(r.d / E.LH)), vmax = (r.me ? 430 : 425 + r.skill * 45) + Lr * 35 + Math.min(90, r.gems * 4) + (r.boost > 0 ? 240 : 0);
+      r.shield -= dt; r.mag -= dt; r.inv -= dt;
+      if (r.stun > 0) r.stun -= dt; else r.v = r.v < vmax ? Math.min(vmax, r.v + 360 * dt) : Math.max(vmax, r.v - 300 * dt);
       r.boost -= dt;
       const ahead = E.O.find(o => o.d > r.d + 10 && o.d < r.d + 300);
       if (r.me) {
         if (AUTO) { if (ahead && this.hits(E, ahead, r.tx)) r.tx = this.safeX(E, ahead); const b = E.B.find(b => b.d > r.d && b.d < r.d + 250 && !b.taken.has(r.id)); if (b && (!ahead || !this.hits(E, ahead, b.x))) r.tx = b.x; }
         else if (input.down && input.px != null) r.tx = clamp((input.px - W() / 2) * (390 / W()), -170, 170);
-        r.x = lerp(r.x, r.tx, Math.min(1, dt * 9));
+        for (const tp of E.taps) if (tp.key && Math.abs(tp.x - W() / 2) > 5) r.tx = clamp(r.tx + (tp.x < W() / 2 ? -70 : 70), -170, 170);
+        r.vx += ((r.tx - r.x) * 120 - r.vx * 18) * dt; r.x = clamp(r.x + r.vx * dt, -175, 175);
       } else {
-        if (ahead) { const key = E.O.indexOf(ahead); if (!(key in r.dec)) r.dec[key] = Math.random() < 0.72 + r.skill * 0.26 ? this.safeX(E, ahead) : r.tx; if (this.hits(E, ahead, r.tx) || r.dec[key] !== r.tx) r.tx = r.dec[key]; }
+        if (ahead) { const key = E.O.indexOf(ahead); if (!(key in r.dec) || (ahead.vg && r.dec[key] !== r.tx && Math.random() < .5)) r.dec[key] = Math.random() < 0.8 + r.skill * 0.2 ? this.safeX(E, ahead) : r.tx; if (this.hits(E, ahead, r.tx) || r.dec[key] !== r.tx) r.tx = r.dec[key]; }
         const dx = r.tx - r.x; r.x += clamp(dx, -330 * dt, 330 * dt);
       }
       const od = r.d; r.d += r.v * dt;
-      for (const o of E.O) if (od < o.d && r.d >= o.d && this.hits(E, o, r.x)) { r.v = 80; r.stun = .45; if (r.me) { SFX.boing(); fxText(r.x, o.d, pick(['¡Cataplof!', '¡Ay, una raíz!', '¡Boing!']), '#ff4f6a'); E.shake = .3; fxBurst(r.x, o.d, LAYERS[o.L].ob); } else if (Math.random() < .25) E.say(r, pick(['¡Mi cara!', '¡Eso estaba ahí antes!', '¡Puaj, tierra!'])); }
-      for (const b of E.B) if (od < b.d && r.d >= b.d && Math.abs(r.x - b.x) < 34 && !b.taken.has(r.id)) { b.taken.add(r.id); r.boost = 1.6; if (r.me) { SFX.perfect(); fxText(r.x, b.d, '¡Gelatina turbo! 💧', '#2b9c7c'); } }
+      for (const o of E.O) if (od < o.d && r.d >= o.d && !this.hits(E, o, r.x) && this.near(E, o, r.x) && r.me) { r.graze++; r.v += 60; fxText(r.x, o.d, pick(['¡Rozando! +vel', '¡Por un pelo!', '¡Uy, uy!']), '#fff'); }
+      for (const o of E.O) if (od < o.d && r.d >= o.d && this.hits(E, o, r.x) && r.inv <= 0 && r.shield > 0) { r.shield = 0; r.inv = .6; if (r.me) { SFX.perfect(); fxText(r.x, o.d, '¡Burbuja! 🫧 ¡Plop!', '#8fd0ff'); fxBurst(r.x, o.d, '#8fd0ff'); E.flash = .25; } }
+      for (const o of E.O) if (od < o.d && r.d >= o.d && this.hits(E, o, r.x) && r.inv <= 0) { r.v = 150; r.stun = .35; r.inv = .5; if (r.me) { SFX.boing(); fxText(r.x, o.d, pick(['¡Cataplof!', '¡Ay, una raíz!', '¡Boing!']), '#ff4f6a'); E.shake = .3; fxBurst(r.x, o.d, LAYERS[o.L].ob); } else if (Math.random() < .25) E.say(r, pick(['¡Mi cara!', '¡Eso estaba ahí antes!', '¡Puaj, tierra!'])); }
+      for (const b of E.B) if (od < b.d && r.d >= b.d && Math.abs(r.x - b.x) < 38 && !b.taken.has(r.id)) { b.taken.add(r.id); r.boost = 1.6; if (r.me) { SFX.perfect(); fxText(r.x, b.d, '¡Gelatina turbo! 💧', '#2b9c7c'); E.flash = .2; } }
+      if (r.me && r.mag > 0) for (const it of E.I) if (it.type === 'gem' && !it.taken.has('me') && it.d > r.d && it.d < r.d + 260) it.x = lerp(it.x, r.x, Math.min(1, dt * 6));
+      for (const it of E.I) if (od < it.d && r.d >= it.d && Math.abs(r.x - it.x) < (it.type === 'gem' ? 30 : 36) && !it.taken.has(r.id) && (r.me || Math.random() < .6)) { it.taken.add(r.id);
+        if (it.type === 'gem') { r.gems++; if (r.me) { SFX.splash(); if (r.gems % 5 === 0) { fxText(r.x, it.d, `💎 x${r.gems} ¡+velocidad!`, '#7ef0ff'); SFX.perfect(); } fxBurst(r.x, it.d, '#7ef0ff'); } }
+        else if (it.type === 'shield') { r.shield = 12; if (r.me) { SFX.perfect(); fxText(r.x, it.d, '🫧 ¡Burbuja-escudo!', '#8fd0ff'); } }
+        else { r.mag = 6; if (r.me) { SFX.perfect(); fxText(r.x, it.d, '🧲 ¡Imán de gemas!', '#ff9cf0'); } } }
       r.prog = clamp(r.d / E.D, 0, 1); if (r.d >= E.D) E.finish(r);
     }
     E.camD = E.me.d;
@@ -225,6 +242,9 @@ const caida = {
       if (L === 3) { X.fillStyle = LL.acc; X.beginPath(); X.arc(x, y + Math.sin(t * 2 + i) * 10, 8 + i % 5, 0, 7); X.fill(); }
       if (L === 4) { X.strokeStyle = '#fff'; X.lineWidth = 2; X.beginPath(); X.arc(x, y, 14 + (t * 30 + i * 9) % 30, 0, 7); X.stroke(); }
       X.globalAlpha = 1; }
+    // sensación de velocidad: rayas que pasan hacia arriba, más largas cuanto más rápido
+    const spd = clamp(E.me.v / 600, 0, 1.3); X.strokeStyle = 'rgba(255,255,255,' + (.12 + spd * .25) + ')'; X.lineWidth = 2;
+    for (const p of E.SP) { p.y -= dt * (1.2 + spd * 2.5) * p.l; if (p.y < -0.1) { p.y = 1.1; p.x = rnd(-200, 200); } const xx = cx + p.x * k, yy = p.y * h; X.beginPath(); X.moveTo(xx, yy); X.lineTo(xx, yy + (30 + spd * 90) * p.l); X.stroke(); }
     // paredes laterales
     X.fillStyle = 'rgba(0,0,0,.18)'; X.fillRect(0, 0, cx - 190 * k, h); X.fillRect(cx + 190 * k, 0, w, h);
     // meta: núcleo
@@ -238,15 +258,23 @@ const caida = {
       if (o.L === 1 && !o.wall) { X.fillStyle = '#4a3a2a'; X.beginPath(); X.arc(sx(o.x + o.w / 2) - 10 * k, y - 2, 3, 0, 7); X.fill(); }
       if (o.L === 0) { X.strokeStyle = LAYERS[0].acc; X.lineWidth = 3; X.beginPath(); X.moveTo(sx(o.wall ? o.gap - o.gw / 2 - 30 : o.x), y + 12 * k); X.quadraticCurveTo(sx(o.wall ? o.gap - o.gw / 2 - 40 : o.x - 10), y + 30 * k, sx(o.wall ? o.gap - o.gw / 2 - 25 : o.x + 6), y + 40 * k); X.stroke(); }
     }
+    for (const it of E.I) { if (it.taken.has('me')) continue; const y = sy(it.d); if (y < -30 || y > h + 30) continue; const x = sx(it.x), bob = Math.sin(t * 6 + it.d) * 3;
+      if (it.type === 'gem') { X.fillStyle = '#7ef0ff'; X.beginPath(); X.moveTo(x, y - 10 + bob); X.lineTo(x + 8, y + bob); X.lineTo(x, y + 10 + bob); X.lineTo(x - 8, y + bob); X.fill(); X.fillStyle = 'rgba(255,255,255,.8)'; X.fillRect(x - 2, y - 5 + bob, 3, 3); }
+      else { X.font = '24px sans-serif'; X.textAlign = 'center'; X.textBaseline = 'middle'; X.globalAlpha = .35; X.fillStyle = it.type === 'shield' ? '#8fd0ff' : '#ff9cf0'; X.beginPath(); X.arc(x, y + bob, 20 + Math.sin(t * 8) * 2, 0, 7); X.fill(); X.globalAlpha = 1; X.fillText(it.type === 'shield' ? '🫧' : '🧲', x, y + bob); X.textBaseline = 'alphabetic'; } }
     for (const b of E.B) { if (b.taken.has('me')) continue; const y = sy(b.d); if (y < -30 || y > h + 30) continue; const pulse = 1 + Math.sin(t * 8) * .1; X.fillStyle = '#7ee3c4'; X.beginPath(); X.ellipse(sx(b.x), y, 14 * pulse, 17 * pulse, 0, 0, 7); X.fill(); X.fillStyle = 'rgba(255,255,255,.7)'; X.beginPath(); X.arc(sx(b.x) - 4, y - 6, 4, 0, 7); X.fill(); }
     // corredores
     for (const r of E.racers) { const y = sy(r.d), x = sx(r.x);
       if (y < -20 || y > h + 20) { if (!r.me) { const yy = y < 0 ? 46 + 40 : h - 30; X.font = '700 12px Fredoka'; X.fillStyle = r.ch.color; X.textAlign = 'center'; X.fillText((y < 0 ? '▲ ' : '▼ ') + r.ch.name, clamp(x, 40, w - 40), yy); } continue; }
+      if (r.shield > 0) { X.strokeStyle = 'rgba(143,208,255,.85)'; X.lineWidth = 3; X.beginPath(); X.arc(x, y, (r.me ? 28 : 22) + Math.sin(t * 6) * 2, 0, 7); X.stroke(); }
+      if (r.me && r.inv > 0 && Math.floor(t * 20) % 2) continue;
       if (r.boost > 0) { X.fillStyle = 'rgba(126,227,196,.6)'; X.beginPath(); X.ellipse(x, y - 26, 10, 22, 0, 0, 7); X.fill(); }
       X.strokeStyle = 'rgba(255,255,255,.5)'; X.lineWidth = 2; for (let i = -1; i <= 1; i++) { X.beginPath(); X.moveTo(x + i * 8, y - 22); X.lineTo(x + i * 8, y - 22 - r.v * .08); X.stroke(); }
       drawMochi(X, x, y, r.me ? 18 : 14, { ch: r.ch, rot: Math.PI + Math.sin(t * 4 + (r.k || 0)) * .2, alpha: r.me ? 1 : .8, noShadow: true, mood: r.stun > 0 ? 'ouch' : r.boost > 0 ? 'happy' : 'ok', squish: -.1 });
       nameTag(X, x, y + 28, r.me ? 'Tú' : r.ch.name, r.ch.color, r.me); }
     drawFX(dt, -cx + 0, (E.camD) - py);
+    if (E.flash > 0) { E.flash -= dt; X.fillStyle = 'rgba(255,255,255,' + (E.flash * 2) + ')'; X.fillRect(0, 0, w, h); }
+    // contador de gemas y efectos activos
+    X.font = '700 15px Fredoka'; X.textAlign = 'left'; X.fillStyle = '#fff'; X.fillText(`💎 ${E.me.gems}` + (E.me.shield > 0 ? '  🫧' : '') + (E.me.mag > 0 ? '  🧲' : '') + (E.me.boost > 0 ? '  💧' : ''), 14, h - 18);
     // banda de profundidad (barra lateral)
     X.fillStyle = 'rgba(255,255,255,.3)'; X.fillRect(w - 14, 80, 6, h - 140); LAYERS.forEach((Lr, i) => { X.fillStyle = Lr.ob; X.fillRect(w - 14, 80 + (h - 140) * i / 5, 6, (h - 140) / 5); });
     for (const r of E.racers) { X.fillStyle = r.ch.color; X.beginPath(); X.arc(w - 11, 80 + (h - 140) * r.prog, r.me ? 7 : 4.5, 0, 7); X.fill(); }
