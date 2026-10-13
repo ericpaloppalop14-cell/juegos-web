@@ -56,7 +56,7 @@ function play() {
     localStorage.removeItem('mr_carrera');
     location.href = `carrera/index.html?rivals=1&pj=${S.pj}&rv=${S.rv.join(',')}&barrio=${Math.floor(Math.random() * 4)}${Q.has('auto') ? '&auto' : ''}`; return;
   }
-  if (e.def && e.id !== 'caida') { // caida = versión 2D de frente (js/pruebas.js); las otras 3 pruebas 3D viven en carrera/pruebas.html (mismo motor Three.js que la carrera)
+  if (e.def) { // las 4 pruebas 3D viven en carrera/pruebas.html (mismo motor Three.js que la carrera)
     localStorage.removeItem('mr_res');
     location.href = `carrera/pruebas.html?p=${e.id}&pj=${S.pj}&rv=${S.rv.join(',')}&sk=${S.rv.map(id => (S.skill[id] || .6).toFixed(2)).join(',')}${Q.has('auto') ? '&auto' : ''}${Q.get('x') ? '&x=' + Q.get('x') : ''}${Q.get('q') ? '&q=' + Q.get('q') : ''}`; return;
   }
