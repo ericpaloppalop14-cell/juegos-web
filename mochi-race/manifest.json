@@ -1,4 +1,0 @@
-{ "name": "Mochi Race", "short_name": "Mochi Race", "start_url": "./", "display": "fullscreen", "orientation": "portrait",
-  "background_color": "#ffd6ec", "theme_color": "#ffb3d6", "lang": "es",
-  "description": "Carreras locas por las calles de una ciudad gelatina: peatones surrealistas, derrapes, objetos y partidas online con amigos.",
-  "icons": [ { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }, { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }, { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" } ] }
