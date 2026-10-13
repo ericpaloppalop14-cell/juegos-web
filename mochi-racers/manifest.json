@@ -1,0 +1,4 @@
+{ "name": "Mochi Racers", "short_name": "Mochi Racers", "start_url": "./", "display": "fullscreen", "orientation": "landscape",
+  "background_color": "#ffd6ec", "theme_color": "#ffb3d6", "lang": "es",
+  "description": "Carreras de gelatina en vehículos locos: copas, objetos, derrapes y una seta que te hace gigante.",
+  "icons": [ { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }, { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }, { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" } ] }

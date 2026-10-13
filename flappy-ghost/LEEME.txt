@@ -1,0 +1,29 @@
+FLAPPY GHOST — REVISIÓN 1.0.4
+
+El juego se empaqueta en Android con esta carpeta completa. Para revisar su interfaz web, servir index.html desde un servidor local; no es necesario conectarse para cargar el arte, la tipografía o la práctica.
+
+Cambios de la revisión del 9 de octubre de 2026:
+- Práctica interactiva breve al primer uso, que se puede omitir y repetir desde Ayuda. No cambia récord, tiempo jugado, compras, anuncios ni desbloqueos.
+- Español e inglés en la interfaz del juego, tienda, colección, ayuda, práctica y privacidad. La elección se guarda en el dispositivo.
+- Compartir puntuación y récord abre el selector del usuario cuando está disponible; también se puede copiar el texto manualmente. No confirma que el enlace haya sido enviado.
+- Comentarios mediante un borrador de correo que el usuario revisa y envía. Contacto: ericpaloppalop14@hotmail.com.
+- Atrás cierra primero los paneles y pausa una partida antes de salir. La política se puede consultar dentro de un panel sin reiniciar esa partida.
+- Fuentes Fredoka y Nunito incluidas localmente. Sus licencias OFL y procedencia están en fonts/.
+- Solicitudes al puente con identificadores propios de cada documento, para no confundir callbacks antiguos con compras nuevas.
+
+Comprobaciones de esta revisión: 21 pruebas de JavaScript y 20 comprobaciones nativas sin conexión en emulador API 36. Revisión manual a 360 x 640, 390 x 844 y 844 x 390, incluida práctica completa, idiomas, guardados antiguos y cierre de paneles. Los detalles y los límites están en android/qa/WEB-QA-2026-10-09.md y android/qa/README.md, relativos a la raíz de esta revisión. No se han realizado compras, anuncios reales ni inicio de sesión en Play Games.
+
+Cambios anteriores del cielo, conservados:
+- Nueva ilustración conservando la composición y la paleta rosa/lila.
+- Movimiento suave y continuo del cielo, independiente de la velocidad y los reinicios.
+- Estrellas más discretas, sin gradientes nuevos en cada fotograma.
+- Carga y decodificación de todos los personajes y escenarios antes de jugar.
+- Preparación de texturas y del audio antes del primer inicio.
+- Fondo prerenderizado a una resolución apropiada para móvil.
+- Reinicio del reloj al comenzar para evitar acumular tiempo anterior al toque.
+
+Verificación histórica de la mejora del cielo: sintaxis JavaScript; 12 personajes y 8 recursos gráficos cargados; cuatro arranques y reinicios; pausa/reanudación; sin errores JavaScript. Prueba en Edge con viewport móvil de 390 x 844 y DPR 2: 240 fotogramas, percentil 95 de 17,1 ms y máximo de 17,7 ms. Estas mediciones anteriores son de escritorio; no son un resultado de rendimiento de la revisión 1.0.4 ni de un móvil físico.
+
+Se conservan las reglas, el catálogo de 17 personajes, los recursos gráficos originales y los guardados existentes. Los precios y las compras proceden de la tienda nativa; la vista web no concede productos pagados. Las fuentes incluidas se cargan sin Google Fonts ni peticiones a un servidor de tipografía.
+
+CIELO ANIMADO: estrellas fugaces cada 6-11 segundos, grupos de murcielagos cada 19-29 segundos, relampagos suaves cada 26-40 segundos y ciclo lunar continuo de 100 segundos de juego. Los efectos avanzan solo durante la partida y conservan su continuidad al reiniciar. Respeta la preferencia del sistema de movimiento reducido. Verificado un ciclo simulado de 120 segundos, pausa y limites de efectos; sin errores JavaScript.
