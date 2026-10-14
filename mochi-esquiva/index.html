@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffd9e8">
+  <meta name="description" content="Pilota entre el tráfico y adelanta en una ciudad de dulces. Mochi Esquiva: un runner 3D kawaii para móvil.">
+  <title>Mochi Esquiva · Ronda 4 · A toda velocidad</title>
+  <meta name="mochi-build" content="R4-traffic-20261013">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="stage" aria-label="Mochi Esquiva, pilotaje entre tráfico en cinco carriles">
+    <canvas id="game" aria-label="Pista de juego en 3D. Desliza a izquierda o derecha para cambiar de carril, hacia arriba para acelerar o hacia abajo para frenar."></canvas>
+    <canvas id="menuCanvas" hidden aria-hidden="true"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <section id="loading" class="screen loading-screen" aria-live="polite">
+      <div class="loading-mochi" aria-hidden="true"><i></i><i></i><span></span></div>
+      <p class="eyebrow">UN MUNDO MUY DULCE</p>
+      <h1 class="loading-title">Mochi Esquiva</h1>
+      <div class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p id="loadingText">Preparando la magia…</p>
+    </section>
+
+    <section id="fatal" class="screen modal-screen" hidden>
+      <div class="dialog">
+        <div class="dialog-symbol" aria-hidden="true">☁</div>
+        <h2>Una nube en el camino</h2>
+        <p id="fatalText">No hemos podido preparar el juego.</p>
+        <button id="retryButton" class="button primary">Volver a intentar</button>
+      </div>
+    </section>
+
+    <section id="menu" class="screen original-screen" hidden aria-labelledby="gameTitle">
+      <button id="soundButton" class="original-mute" aria-label="Activar o desactivar sonido" title="Sonido"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/></svg></button>
+      <h1 id="gameTitle" class="logo" aria-label="Mochi"><span class="l">M</span><span class="l">o</span><span class="l">c</span><span class="l">h</span><span class="l">i</span></h1>
+      <div class="sub">¡Corre, esquiva y atraviesa!</div>
+      <div id="bestTitle" class="bestline">Récord: <span id="menuBest">0</span></div>
+      <button class="pbtn" id="charBtn"><span class="dot" aria-hidden="true"></span><span>Personajes</span></button>
+      <div id="modeRow"><button class="pbtn" id="turboBtn"><span>⚡ Modo Turbo</span><small id="turboSmall"></small></button><button class="pbtn" id="tutorialButton"><svg class="candy-icon icon-help" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#cdb4ed" stroke="#b796d7" stroke-width="1"/><path d="M8.6 8.4c.1-3.4 6.9-3.8 6.9.1 0 2.8-3.7 2.6-3.7 5" fill="none" stroke="#fff7ff" stroke-width="2.4" stroke-linecap="round"/><circle cx="11.8" cy="17" r="1.2" fill="#fff7ff"/></svg> Cómo jugar</button></div>
+      <div id="gameModes" role="group" aria-label="Modos de juego">
+        <button class="mode-card" id="modeEndless"><span class="ico">∞</span><b>Infinito</b><small>Esquiva sin fin</small></button>
+        <button class="mode-card" id="modeSolo"><span class="ico">🏁</span><b>Carrera</b><small>Tú contra 4 IA</small></button>
+        <button class="mode-card" id="modeMulti"><span class="ico">👥</span><b>Multijugador</b><small>Sala con amigos</small></button>
+      </div>
+      <button id="playButton" class="tap">Toca para jugar</button>
+    </section>
+
+    <section id="select" class="screen original-screen" hidden aria-labelledby="selectTitle">
+      <div class="top"><button class="pbtn" id="selBack">‹ Volver</button><h3 id="selectTitle">Personajes</h3><div id="selCount">1/32</div></div>
+      <div id="selRecord">Récord: 0</div>
+      <div class="select-wallet" aria-label="Tus monedas y gemas"><span><svg class="candy-icon icon-coin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#edab46"/><circle cx="11" cy="10.8" r="8.5" fill="#ffdc79" stroke="#fff0b5" stroke-width="1.4"/><path d="M7.1 5.6a7.3 7.3 0 0 1 7.5-.4" fill="none" stroke="#fff6cc" stroke-width="2" stroke-linecap="round"/><path d="m11.5 6.7 1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.7 1.4.5-3-2.2-2.1 3-.4z" fill="#d59432"/></svg> <b id="walletCoins">0</b></span><span><svg class="candy-icon icon-gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 7-10 12L2 10z" fill="#8eb4ef" stroke="#7795cc" stroke-width="1"/><path d="M6 3h12l4 7H2z" fill="#bcf3f6"/><path d="m6 3 4 7 2 12L2 10z" fill="#8edce8"/><path d="m18 3-4 7-2 12 10-12z" fill="#acbdf7"/><path d="M10 10h4l-2 12z" fill="#d0ddff"/><path d="m7 4-3 5h5z" fill="#efffff" opacity=".85"/></svg> <b id="walletGems">0</b></span></div>
+      <button class="pbtn arrow" id="selPrev" aria-label="Personaje anterior">‹</button>
+      <button class="pbtn arrow" id="selNext" aria-label="Personaje siguiente">›</button>
+      <div id="selInfo"><div id="selName">Mochi</div><div id="selInner">El original</div><div id="selDesc">Pequeñito, blandito y listo para correr.</div><button class="pbtn" id="selBuy" hidden>Desbloquear</button></div>
+      <div id="selShop"><button class="pbtn" id="shopButton"><svg class="candy-icon icon-shop" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.3 7h15.4l1.5 14H2.8z" fill="#f8add2" stroke="#d681b6" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="#b984bf" stroke-width="2" stroke-linecap="round"/><path d="M5.5 9h2l-.7 9.5h-2z" fill="#ffe8f3" opacity=".85"/><path d="m12 10.6.9 2 2.2.3-1.6 1.6.4 2.2-1.9-1-1.9 1 .4-2.2-1.6-1.6 2.2-.3z" fill="#fff2bb"/></svg> Tienda</button><button class="pbtn" id="missionsButton"><svg class="candy-icon icon-star" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.4 3 6.2 6.8 1-4.9 4.8 1.1 6.8-6-3.2-6 3.2 1.1-6.8-4.9-4.8 6.8-1z" fill="#ffda79" stroke="#e9b454" stroke-width="1.1" stroke-linejoin="round"/><path d="m12 4.8 1.7 4.5-4.7 1 2.2-1.1z" fill="#fff4c8"/><circle cx="9.5" cy="12.3" r=".85" fill="#b98550"/><circle cx="14.5" cy="12.3" r=".85" fill="#b98550"/><path d="M10.3 15a2 2 0 0 0 3.4 0" fill="none" stroke="#b98550" stroke-width=".9" stroke-linecap="round"/></svg> Misiones</button><button class="pbtn" id="selNoAds" hidden>Recompensas</button><button class="pbtn" id="selRestore" hidden>Restaurar</button><button class="pbtn" id="selPrivacy" hidden>Privacidad</button></div>
+      <button class="pbtn" id="selPick">¡Jugar!</button>
+    </section>
+
+    <section id="shop" class="screen original-overlay" hidden aria-labelledby="shopTitle">
+      <div class="original-card shop-card">
+        <div class="original-card-header"><h2 id="shopTitle"><svg class="candy-icon icon-shop" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.3 7h15.4l1.5 14H2.8z" fill="#f8add2" stroke="#d681b6" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 8V6a4 4 0 0 1 8 0v2" fill="none" stroke="#b984bf" stroke-width="2" stroke-linecap="round"/><path d="M5.5 9h2l-.7 9.5h-2z" fill="#ffe8f3" opacity=".85"/><path d="m12 10.6.9 2 2.2.3-1.6 1.6.4 2.2-1.9-1-1.9 1 .4-2.2-1.6-1.6 2.2-.3z" fill="#fff2bb"/></svg> Tienda</h2><button id="closeShopButton" class="pbtn original-close" aria-label="Cerrar tienda">×</button></div>
+        <div class="shop-wallet"><span><svg class="candy-icon icon-coin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#edab46"/><circle cx="11" cy="10.8" r="8.5" fill="#ffdc79" stroke="#fff0b5" stroke-width="1.4"/><path d="M7.1 5.6a7.3 7.3 0 0 1 7.5-.4" fill="none" stroke="#fff6cc" stroke-width="2" stroke-linecap="round"/><path d="m11.5 6.7 1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.7 1.4.5-3-2.2-2.1 3-.4z" fill="#d59432"/></svg> <b id="shopCoins">0</b></span><span><svg class="candy-icon icon-gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 7-10 12L2 10z" fill="#8eb4ef" stroke="#7795cc" stroke-width="1"/><path d="M6 3h12l4 7H2z" fill="#bcf3f6"/><path d="m6 3 4 7 2 12L2 10z" fill="#8edce8"/><path d="m18 3-4 7-2 12 10-12z" fill="#acbdf7"/><path d="M10 10h4l-2 12z" fill="#d0ddff"/><path d="m7 4-3 5h5z" fill="#efffff" opacity=".85"/></svg> <b id="shopGems">0</b></span></div>
+        <p class="shop-intro">Un poquito más de magia para tu carrera.</p>
+        <div id="shopItems" class="shop-items"></div>
+        <p class="virtual-note">Monedas y gemas del juego. Sin dinero real.</p>
+      </div>
+    </section>
+
+    <section id="missions" class="screen original-overlay" hidden aria-labelledby="missionsTitle">
+      <div class="original-card missions-card">
+        <div class="original-card-header"><h2 id="missionsTitle"><svg class="candy-icon icon-star" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.4 3 6.2 6.8 1-4.9 4.8 1.1 6.8-6-3.2-6 3.2 1.1-6.8-4.9-4.8 6.8-1z" fill="#ffda79" stroke="#e9b454" stroke-width="1.1" stroke-linejoin="round"/><path d="m12 4.8 1.7 4.5-4.7 1 2.2-1.1z" fill="#fff4c8"/><circle cx="9.5" cy="12.3" r=".85" fill="#b98550"/><circle cx="14.5" cy="12.3" r=".85" fill="#b98550"/><path d="M10.3 15a2 2 0 0 0 3.4 0" fill="none" stroke="#b98550" stroke-width=".9" stroke-linecap="round"/></svg> Misiones</h2><button id="closeMissionsButton" class="pbtn original-close" aria-label="Cerrar misiones">×</button></div>
+        <p class="shop-intro">Pequeños retos, grandes recompensas.</p>
+        <div id="missionList" class="mission-list"></div>
+      </div>
+    </section>
+
+    <section id="hud" class="hud" hidden aria-label="Puntuación y controles">
+      <div class="hud-top">
+        <button id="pauseButton" class="icon-button hud-icon" aria-label="Pausar juego" title="Pausar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+        <div class="score-display">
+          <div class="score-card"><span class="sr-only">PUNTOS</span><strong id="score">0</strong></div>
+          <div class="combo-badge" id="combo">Combo ×1</div>
+          <small class="hud-best">RÉCORD <b id="best">0</b></small>
+        </div>
+        <button id="soundHudButton" class="icon-button hud-icon" aria-label="Activar o desactivar sonido" title="Sonido"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 8a6 6 0 0 1 0 8"/></svg></button>
+        <button id="qualityButton" class="quality-button" title="Cambiar calidad gráfica" aria-label="Calidad gráfica automática" aria-describedby="qualityStatus">AUTO</button>
+        <span id="qualityStatus" class="sr-only">La calidad automática se adapta al rendimiento del dispositivo.</span>
+      </div>
+      <div class="hud-stats"><span class="speed-stat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 3-8 10h6l-2 8 8-11h-6z"/></svg><b id="speed">1.0×</b></span><span class="near-stat"><span aria-hidden="true">✦</span><b id="nearCount">0</b> CERRADOS</span><span class="passed-stat"><b id="passedCount">0</b> ADELANTADOS</span></div>
+      <div class="run-wallet"><span><svg class="candy-icon icon-coin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#edab46"/><circle cx="11" cy="10.8" r="8.5" fill="#ffdc79" stroke="#fff0b5" stroke-width="1.4"/><path d="M7.1 5.6a7.3 7.3 0 0 1 7.5-.4" fill="none" stroke="#fff6cc" stroke-width="2" stroke-linecap="round"/><path d="m11.5 6.7 1.3 2.7 3 .4-2.2 2.1.5 3-2.6-1.4-2.7 1.4.5-3-2.2-2.1 3-.4z" fill="#d59432"/></svg> <b id="coinsRun">0</b></span><span><svg class="candy-icon icon-gem" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 7-10 12L2 10z" fill="#8eb4ef" stroke="#7795cc" stroke-width="1"/><path d="M6 3h12l4 7H2z" fill="#bcf3f6"/><path d="m6 3 4 7 2 12L2 10z" fill="#8edce8"/><path d="m18 3-4 7-2 12 10-12z" fill="#acbdf7"/><path d="M10 10h4l-2 12z" fill="#d0ddff"/><path d="m7 4-3 5h5z" fill="#efffff" opacity=".85"/></svg> <b id="gemsRun">0</b></span></div>
+    </section>
+
+    <div id="zoneBanner" class="zone-banner" aria-live="polite"></div>
+    <div id="streakBox" class="streak-box" hidden><span>RACHA</span><div class="streak-track"><i id="streakFill"></i></div></div>
+    <div id="runMission" class="run-mission" hidden></div>
+    <div id="dashHud" class="dash-hud" hidden role="status"><span id="dashLabel">↑ IMPULSO LISTO</span><div class="dash-track"><i id="dashMeter"></i></div></div>
+    <div id="raceHud" class="race-hud" hidden>
+      <div class="race-pos"><strong id="racePos">1º</strong><span id="raceTotal">/5</span></div>
+      <div class="race-track"><div id="raceBar" class="race-bar"></div><span id="raceMeters">2600 m</span></div>
+      <ol id="raceList" class="race-list"></ol>
+    </div>
+    <section id="podium" class="screen modal-screen" hidden aria-labelledby="podiumTitle">
+      <div class="dialog podium-card">
+        <h2 id="podiumTitle">¡Meta!</h2>
+        <div id="podiumSteps" class="podium-steps"></div>
+        <div id="podiumPrize" class="podium-prize">+0 monedas</div>
+        <ol id="podiumList" class="podium-list"></ol>
+        <button id="podiumAgain" class="button primary">Otra carrera</button>
+        <button id="podiumMenu" class="button text-button">Volver al inicio</button>
+      </div>
+    </section>
+    <section id="lobby" class="screen modal-screen" hidden aria-labelledby="lobbyTitle">
+      <div class="dialog lobby-card">
+        <h2 id="lobbyTitle">Carrera multijugador</h2>
+        <p class="lobby-label">Código de la sala</p>
+        <div id="lobbyCode" class="lobby-code">·····</div>
+        <input id="lobbyLink" class="lobby-link" readonly aria-label="Enlace de invitación">
+        <button id="lobbyShare" class="button secondary">Invitar amigos</button>
+        <ul id="lobbyPlayers" class="lobby-players"></ul>
+        <p id="lobbyStatus" class="lobby-status"></p>
+        <button id="lobbyStart" class="button primary">¡Empezar carrera!</button>
+        <p id="lobbyWait" class="lobby-status" hidden>Esperando a que el anfitrión empiece…</p>
+        <div class="lobby-join"><input id="lobbyInput" maxlength="6" placeholder="Código de un amigo" aria-label="Código de sala"><button id="lobbyJoin" class="button secondary">Unirme</button></div>
+        <button id="lobbyBack" class="button text-button">Volver al inicio</button>
+      </div>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="comboFlash" class="combo-flash" aria-hidden="true"></div>
+    <div id="countdown" class="countdown" hidden aria-live="assertive">3</div>
+    <div id="gestureHint" class="gesture-hint" hidden aria-hidden="true"><span>←</span><p>Desliza para cambiar de carril</p><span>→</span></div>
+    <div id="powerHud" class="power-hud" hidden aria-live="polite"></div>
+    <div id="eventBanner" class="event-banner" hidden role="status"></div>
+    <div id="missionToast" class="original-toast" hidden role="status"></div>
+
+    <section id="tutorial" class="screen modal-screen" hidden aria-labelledby="tutorialTitle">
+      <div class="dialog tutorial-dialog">
+        <p class="eyebrow">LISTO EN UN MOMENTO</p>
+        <h2 id="tutorialTitle">Déjate llevar.</h2>
+        <p class="dialog-intro">Todos avanzan. Tú vas más rápido.</p>
+        <ol class="tutorial-steps">
+          <li><span class="step-icon swipe-icon" aria-hidden="true">↔</span><div><b>Un gesto, un carril</b><p>Desliza a un lado. Arrastra 4 veces más para cruzar dos carriles. En PC: ← →.</p></div></li>
+          <li><span class="step-icon" aria-hidden="true">↕</span><div><b>Acelera y frena</b><p>Desliza arriba para acelerar, abajo para frenar. En PC: ↑ o W / ↓ o S.</p></div></li>
+          <li><span class="step-icon" aria-hidden="true">✦</span><div><b>Adelanta y suma</b><p>Alcanza el tráfico y adelanta por el hueco libre. Los intermitentes avisan de cambios de carril. Recoge monedas, gemas y estrellas. Imán, escudo y turbo te ayudan. Los adelantamientos cerrados dan bonus y combo.</p></div></li>
+        </ol>
+        <div class="tutorial-warning"><span aria-hidden="true">🎨</span> ¡Paredes de gelatina! Toca el botón de su color (o 1·2·3) para atravesarlas, como en Mochi.</div>
+        <div class="tutorial-warning"><span aria-hidden="true">↝</span> Una flecha avisa cuando un dulce va a cambiar de carril.</div>
+        <button id="startTutorialButton" class="button primary">¡Lo tengo, vamos!</button>
+        <button id="skipTutorialButton" class="button text-button">Volver al inicio</button>
+      </div>
+    </section>
+
+    <section id="pause" class="screen modal-screen" hidden aria-labelledby="pauseTitle">
+      <div class="dialog pause-dialog">
+        <div class="dialog-symbol pause-symbol" aria-hidden="true">Ⅱ</div>
+        <p class="eyebrow">UN RESPIRO</p>
+        <h2 id="pauseTitle">Mochi te espera.</h2>
+        <p>El mundo dulce puede esperar un poquito.</p>
+        <button id="resumeButton" class="button primary">Seguir corriendo <span aria-hidden="true">→</span></button>
+        <button id="restartPauseButton" class="button secondary">Empezar de nuevo</button>
+        <button id="menuPauseButton" class="button text-button">Volver al inicio</button>
+      </div>
+    </section>
+
+    <section id="gameover" class="screen modal-screen" hidden aria-labelledby="gameoverTitle">
+      <div class="dialog gameover-dialog">
+        <p class="eyebrow">UN ABRAZO DEMASIADO DULCE</p>
+        <h2 id="gameoverTitle">¡Ay, Mochi!</h2>
+        <p class="gameover-subtitle">Hasta las gelatinas necesitan otra oportunidad.</p>
+        <div id="newRecord" class="record-banner" hidden><span aria-hidden="true">✦</span> ¡NUEVO RÉCORD! <span aria-hidden="true">✦</span></div>
+        <div class="final-score"><span>TUS PUNTOS</span><strong id="finalScore">0</strong></div>
+        <div class="final-stats"><div><span>ADELANTADOS</span><b id="finalPassed">0</b></div><div><span>RÉCORD</span><b id="finalBest">0</b></div><div><span>CERRADOS</span><b id="finalNear">0</b></div></div>
+        <button id="continueButton" class="button primary"><span>Continuar</span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></button>
+        <p id="continueInfo" class="continue-info">Una oportunidad por caída · 3 por partida</p>
+        <button id="restartButton" class="button secondary">Otra partida</button>
+        <button id="charBtn2" class="pbtn">Personajes</button>
+        <button id="menuButton" class="button text-button">Volver al inicio</button>
+      </div>
+    </section>
+
+    <section id="ad" class="screen modal-screen ad-screen" hidden aria-labelledby="adTitle">
+      <div class="dialog ad-dialog">
+        <span class="simulation-tag">ANUNCIO SIMULADO</span>
+        <div class="ad-sparkles" aria-hidden="true">✧ <span>☁</span> ✦</div>
+        <h2 id="adTitle">Un poquito de magia.</h2>
+        <p>Mochi se está recuperando para seguir la carrera.</p>
+        <div class="ad-timer"><strong id="adCountdown">5</strong><span>SEGUNDOS</span></div>
+        <div class="ad-progress-track"><div id="adProgress" class="ad-progress"></div></div>
+        <button id="adContinueButton" class="button primary" disabled>¡Volver a correr!</button>
+        <p class="ad-disclaimer">Esto es una simulación. No hay publicidad real.</p>
+      </div>
+    </section>
+
+    <div id="rotateNotice" class="rotate-notice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 8 1 5m2 3 3-2M21 16l2 3m-2-3-3 2"/></svg> Mochi se disfruta más en vertical</div>
+  </main>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}
+  </script>
+  <script type="module">
+    import('./game.js').catch(error => {
+      console.error(error);
+      document.getElementById('loading').hidden = true;
+      document.getElementById('fatal').hidden = false;
+      document.getElementById('fatalText').textContent = 'No se pudo cargar Three.js. Abre el juego desde un servidor web y comprueba tu conexión a Internet.';
+      document.getElementById('retryButton').onclick = () => location.reload();
+    });
+  </script>
+</body>
+</html>
