@@ -1,42 +1,66 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#ffd9e8"><title>Mochi Olimpiadas</title>
+<meta name="theme-color" content="#ffc9e0"><title>Mochi Olimpiadas</title>
 <link rel="icon" href="icons/icon-192.png"><link rel="manifest" href="manifest.json">
 <style>
 @font-face{font-family:'Fredoka';src:url(fredoka.woff2) format('woff2');font-weight:300 700;font-display:block}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:#ffe9d6;touch-action:none;user-select:none;-webkit-user-select:none;position:fixed;inset:0;font-family:'Fredoka',ui-rounded,system-ui,sans-serif;color:#7a4b8a}
 canvas{position:absolute;inset:0;display:block;touch-action:none}
-.scr{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);background:rgba(255,233,214,.55);backdrop-filter:blur(2px)}
-.scr.on{display:flex}
-h1{margin:0;font-size:46px;line-height:1;color:#fff;text-align:center;text-shadow:0 3px 0 #e58bb5,2px 2px 0 #e58bb5,-2px 2px 0 #e58bb5,2px -1px 0 #e58bb5,-2px -1px 0 #e58bb5,0 6px 14px rgba(160,80,140,.35)}
-h1 small{display:block;font-size:24px;margin-top:4px}
-.rings{font-size:26px;letter-spacing:2px;margin:6px 0 12px}
-.btn{font-family:inherit;border:0;font-size:22px;font-weight:700;color:#fff;background:linear-gradient(180deg,#ffa9cf,#f37fb4);padding:12px 26px;border-radius:40px;box-shadow:0 5px 0 #d0609a,0 10px 18px rgba(200,90,150,.3);margin:6px;cursor:pointer}
-.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #d0609a}
-.btn.alt{background:linear-gradient(180deg,#cdb8ff,#a98cf0);box-shadow:0 5px 0 #8065c8}
-.list{display:flex;flex-direction:column;gap:8px;width:min(360px,92vw);margin:8px 0}
-.ev{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.92);border-radius:22px;padding:9px 14px;box-shadow:0 5px 0 rgba(200,140,210,.45);font-size:19px;font-weight:600;cursor:pointer;border:0;font-family:inherit;color:#7a4b8a;text-align:left}
-.ev .ic{font-size:26px;width:34px;text-align:center}.ev .nm{flex:1}.ev .md{font-size:24px}
-.card{background:rgba(255,255,255,.94);border-radius:30px;padding:20px 26px;min-width:260px;max-width:92vw;text-align:center;box-shadow:0 8px 0 rgba(200,140,210,.45),0 20px 40px rgba(150,80,150,.25);animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
-@keyframes pop{from{transform:scale(.7)}to{transform:scale(1)}}
-.card h2{margin:0 0 4px;font-size:32px;color:#f27bb2}
-.big{font-size:44px;font-weight:700;color:#a374c4}.medal{font-size:64px;line-height:1.1}
-.sub{font-size:17px;opacity:.85;margin:4px 0}
-table{margin:8px auto;border-collapse:collapse;font-size:17px}td{padding:4px 8px}
-#intro .how{font-size:18px;max-width:300px;margin:8px auto}
+.scr{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 10px)}
+.scr.on{display:flex;animation:fadeIn .35s ease}
+#intro,#res,#medals{background:radial-gradient(ellipse at center,rgba(255,220,236,.55),rgba(120,60,130,.45))}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+h1{margin:0;font-size:52px;line-height:.95;color:#fff;text-align:center;letter-spacing:1px;text-shadow:0 4px 0 #e2559a,3px 3px 0 #e2559a,-3px 3px 0 #e2559a,3px -2px 0 #e2559a,-3px -2px 0 #e2559a,0 10px 24px rgba(160,60,140,.45);animation:bob 2.6s ease-in-out infinite}
+h1 small{display:block;font-size:30px;margin-top:6px;color:#fff7c2;text-shadow:0 3px 0 #b77be0,2px 2px 0 #b77be0,-2px 2px 0 #b77be0,2px -2px 0 #b77be0,-2px -2px 0 #b77be0}
+@keyframes bob{50%{transform:translateY(-5px) rotate(-1deg)}}
+.rings{display:flex;gap:4px;margin:8px 0 10px}.rings i{width:22px;height:22px;border-radius:50%;border:4px solid;display:block;margin:0 -3px}
+.rings i:nth-child(1){border-color:#7cc4ff}.rings i:nth-child(2){border-color:#ffd34d;transform:translateY(8px)}.rings i:nth-child(3){border-color:#b38cf5}.rings i:nth-child(4){border-color:#7fdc9a;transform:translateY(8px)}.rings i:nth-child(5){border-color:#ff7fae}
+.btn{font-family:inherit;border:0;font-size:22px;font-weight:700;color:#fff;background:linear-gradient(180deg,#ffb3d5 0%,#ff7fb4 55%,#f2629f 100%);padding:13px 30px;border-radius:40px;box-shadow:inset 0 3px 0 rgba(255,255,255,.55),0 6px 0 #c94a88,0 12px 22px rgba(200,70,140,.35);margin:6px;cursor:pointer;text-shadow:0 2px 0 rgba(180,40,110,.35);transition:transform .08s}
+.btn:active{transform:translateY(4px);box-shadow:inset 0 3px 0 rgba(255,255,255,.55),0 2px 0 #c94a88}
+.btn.alt{background:linear-gradient(180deg,#dccbff,#a98cf0 60%,#9476e2);box-shadow:inset 0 3px 0 rgba(255,255,255,.55),0 6px 0 #7155c0,0 12px 22px rgba(120,80,200,.3);text-shadow:0 2px 0 rgba(90,50,170,.35)}
+.btn.big{font-size:26px;padding:15px 40px;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.05)}}
+.list{display:flex;flex-direction:column;gap:7px;width:min(370px,94vw);margin:6px 0}
+.ev{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,244,250,.94));border-radius:22px;padding:7px 14px 7px 8px;box-shadow:0 5px 0 rgba(210,140,200,.5),0 10px 18px rgba(150,70,140,.15);font-size:18px;font-weight:700;cursor:pointer;border:2px solid #fff;font-family:inherit;color:#7a4b8a;text-align:left;animation:slideIn .45s cubic-bezier(.3,1.4,.5,1) both}
+.ev:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(210,140,200,.5)}
+@keyframes slideIn{from{opacity:0;transform:translateX(-30px)}}
+.ev .ic{font-size:26px;width:44px;height:44px;border-radius:15px;display:grid;place-items:center;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08),inset 0 2px 0 rgba(255,255,255,.7)}
+.ic0{background:linear-gradient(#ffd6ea,#ffb0d2)}.ic1{background:linear-gradient(#d9ecff,#a9d4ff)}.ic2{background:linear-gradient(#efe4ff,#cbb5ff)}.ic3{background:linear-gradient(#fff2c9,#ffd88a)}.ic4{background:linear-gradient(#ddf8dd,#ade9b3)}.ic5{background:linear-gradient(#d4f5ea,#9fe3cf)}
+.ev .nm{flex:1;line-height:1.1}.ev .nm small{display:block;font-size:13px;font-weight:500;opacity:.7}.ev .md{font-size:24px;color:#d9a3d0}
+.card{position:relative;background:linear-gradient(180deg,#fff 0%,#fff6fb 100%);border-radius:32px;padding:22px 24px 18px;width:min(360px,92vw);text-align:center;border:3px solid #fff;box-shadow:0 8px 0 rgba(210,140,200,.6),0 24px 50px rgba(120,50,130,.35);animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:scale(.6) rotate(-3deg);opacity:0}to{transform:scale(1)}}
+.card h2{margin:0 0 4px;font-size:28px;color:#f2629f;line-height:1.1}
+.bigic{font-size:54px;width:90px;height:90px;margin:-62px auto 6px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#fff,#ffd0e6 70%);border:4px solid #fff;box-shadow:0 6px 0 rgba(210,140,200,.6),0 10px 20px rgba(150,70,140,.3)}
+.tag{display:inline-block;font-size:13px;font-weight:700;color:#fff;background:#b38cf5;border-radius:20px;padding:3px 12px;margin-bottom:6px}
+#intro .how{font-size:17px;margin:8px auto 10px;line-height:1.3}
+.mms{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:6px}.mm{font-size:13px;font-weight:700;border-radius:14px;padding:4px 9px}
+.mm.oro{background:#fff3c4;color:#b58300}.mm.plata{background:#eef0f6;color:#6b7390}.mm.bronce{background:#ffe6d2;color:#a8622c}
+.big{font-size:44px;font-weight:700;color:#9b6bd0;line-height:1.1}
+.medal{font-size:76px;line-height:1;width:120px;height:120px;margin:4px auto;border-radius:50%;display:grid;place-items:center;animation:medal 1s cubic-bezier(.3,1.6,.5,1)}
+.medal.oro{background:radial-gradient(circle,#fff5c0,rgba(255,220,100,0) 70%)}.medal.plata{background:radial-gradient(circle,#f2f4fa,rgba(220,225,240,0) 70%)}.medal.bronce{background:radial-gradient(circle,#ffe2c8,rgba(240,180,130,0) 70%)}
+@keyframes medal{from{transform:scale(0) rotate(-180deg)}}
+.sub{font-size:16px;opacity:.85;margin:3px 0}.sub.rec{color:#e2559a;font-weight:700;opacity:1;animation:pulse 1s infinite}
+.pods{display:flex;align-items:flex-end;justify-content:center;gap:6px;margin:8px 0 10px}
+.pod{width:84px;text-align:center}.pm{font-size:34px;animation:medal .8s cubic-bezier(.3,1.6,.5,1)}.pc{font-size:30px;font-weight:700;color:#7a4b8a}
+.pb{border-radius:14px 14px 4px 4px;color:#fff;font-weight:700;font-size:20px;padding-top:6px;box-shadow:inset 0 3px 0 rgba(255,255,255,.5)}
+.p0 .pb{height:70px;background:linear-gradient(#ffe27a,#f5b915)}.p1 .pb{height:50px;background:linear-gradient(#e9ecf5,#b8bfd4)}.p2 .pb{height:36px;background:linear-gradient(#ffc9a0,#e08e55)}
+.tab{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:6px 10px;font-size:15px;box-shadow:0 2px 0 rgba(210,140,200,.35)}
+.row .ic{font-size:20px}.row .nm{flex:1;text-align:left;font-weight:600}.row .sc{font-weight:700;color:#9b6bd0}.row .md{width:26px;font-size:20px}
+.row.oro{background:linear-gradient(90deg,#fff8d8,#fff)}.row.plata{background:linear-gradient(90deg,#f1f3fa,#fff)}.row.bronce{background:linear-gradient(90deg,#ffeee0,#fff)}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="menu" class="scr on">
- <h1>Mochi<small>Olimpiadas</small></h1><div class="rings">🔵🟡⚫🟢🔴</div>
- <button class="btn" id="bAll">¡Jugar Olimpiada!</button>
+ <h1>Mochi<small>Olimpiadas</small></h1><div class="rings"><i></i><i></i><i></i><i></i><i></i></div>
+ <button class="btn big" id="bAll">¡Jugar Olimpiada!</button>
  <div class="list" id="evList"></div>
  <button class="btn alt" id="bMed">🏅 Medallero</button>
 </div>
-<div id="intro" class="scr"><div class="card"><h2 id="inT"></h2><div class="how" id="inH"></div><button class="btn" id="inGo">¡Vamos!</button></div></div>
+<div id="intro" class="scr"><div class="card"><div class="bigic" id="inI"></div><div class="tag" id="inP"></div><h2 id="inT"></h2><div class="how" id="inH"></div><div class="mms" id="inM"></div><button class="btn big" id="inGo">¡Vamos!</button></div></div>
 <div id="res" class="scr"><div class="card"><h2 id="rsT"></h2><div class="medal" id="rsM"></div><div class="big" id="rsS"></div><div class="sub" id="rsR"></div><div class="sub" id="rsN"></div>
  <div><button class="btn alt" id="rsAgain">Repetir</button><button class="btn" id="rsNext">Seguir</button></div></div></div>
-<div id="medals" class="scr"><div class="card"><h2 id="mdT">Medallero</h2><div class="medal" id="mdTot"></div><table id="mdTab"></table><button class="btn" id="mdBack">Menú</button></div></div>
-<script src="game.js"></script>
+<div id="medals" class="scr"><div class="card"><h2 id="mdT">Medallero</h2><div class="pods" id="mdPod"></div><div class="tab" id="mdTab"></div><button class="btn" id="mdBack">Menú</button></div></div>
+<script src="game.js?v=2"></script>
 </body></html>
