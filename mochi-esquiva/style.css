@@ -446,27 +446,3 @@ body:not([data-state=running]):not([data-state=countdown]) .racer-tag{display:no
 .streak-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff7ad0,#ffe27a);transition:width .15s}
 .streak-box[data-super=true]{border-color:#7ff6ff;box-shadow:0 0 18px #7ff6ff}
 .run-mission{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 128px);z-index:5;pointer-events:none;font:700 12px var(--mf,system-ui);color:#fff;background:rgba(80,20,110,.6);padding:4px 12px;border-radius:12px;white-space:nowrap}
-
-/* ===== Estética del Mochi normal: pastel, gelatina, botones blanditos (Fredoka) ===== */
-body { background: #ffe3f1; }
-#stage { background: linear-gradient(180deg,#bfe8ff 0%,#ffe3f1 45%,#ffd0e8 100%); }
-.vignette { background: linear-gradient(180deg,rgba(255,255,255,.08),transparent 30%,transparent 82%,rgba(255,170,210,.12)); }
-.icon-button, .hud-icon { background: #fff !important; color: #c07ad8 !important; border: 0 !important; border-radius: 18px !important; box-shadow: 0 4px 0 #f0a8cc, 0 8px 14px rgba(170,90,170,.18) !important; }
-.hud-icon svg { filter: none !important; }
-.quality-button { background: rgba(255,255,255,.85) !important; color: #b07ac8 !important; border: 0 !important; box-shadow: 0 2px 0 #f0a8cc; }
-.toast { color: #fff !important; -webkit-text-stroke: 0 !important; text-shadow: 0 3px 0 #f08cbc,2px 2px 0 #f08cbc,-2px 2px 0 #f08cbc,0 6px 14px rgba(170,90,170,.3) !important; font-family: var(--mf) !important; }
-.dash-hud, .streak-box { background: rgba(255,255,255,.9) !important; color: #8b5cc2 !important; border: 0 !important; border-radius: 20px !important; box-shadow: 0 4px 0 #f0a8cc !important; }
-.run-mission { background: rgba(255,255,255,.88) !important; color: #8b5cc2 !important; box-shadow: 0 3px 0 #f0a8cc; }
-.zone-banner { text-shadow: 0 3px 0 #f08cbc,2px 2px 0 #f08cbc,-2px 2px 0 #f08cbc,0 8px 18px rgba(170,90,170,.35) !important; }
-#hud [id="score"], #hud .score { color: #fff; text-shadow: 0 3px 0 #f08cbc,0 6px 12px rgba(170,90,170,.3); }
-/* botones de color (como los del Mochi normal) */
-.color-pick { position: absolute; left: 50%; bottom: calc(max(26px, env(safe-area-inset-bottom)) + 74px); transform: translateX(-50%); z-index: 6; display: flex; gap: 14px; }
-.color-pick button { width: 54px; height: 54px; border-radius: 50%; border: 4px solid #fff; background: var(--c); box-shadow: 0 5px 0 rgba(170,90,170,.35), 0 8px 16px rgba(170,90,170,.25); padding: 0; transition: transform .12s; }
-.color-pick button i { display: block; width: 14px; height: 9px; margin: 12px auto 0 14px; border-radius: 50%; background: rgba(255,255,255,.7); }
-.color-pick button.on { transform: translateY(-6px) scale(1.12); box-shadow: 0 0 0 4px var(--c), 0 9px 0 rgba(170,90,170,.35); }
-.color-pick button:active { transform: scale(.92); }
-.score-card { background: #fff !important; border: 0 !important; border-radius: 22px !important; box-shadow: 0 4px 0 #f0a8cc, 0 8px 14px rgba(170,90,170,.18) !important; }
-.score-card strong { color: #ff6fae !important; text-shadow: none !important; }
-.score-card > span, .score-card small { color: #b07ac8 !important; }
-.hud-stats > span, .hud-stats .speed-stat, .hud-stats .near-stat { background: rgba(255,255,255,.9) !important; color: #8b5cc2 !important; border: 0 !important; box-shadow: 0 3px 0 #f0a8cc !important; }
-.color-pick[hidden] { display: none !important; }

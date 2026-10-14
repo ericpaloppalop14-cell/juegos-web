@@ -149,12 +149,12 @@ function init() {
   renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: false, powerPreference: 'high-performance'});
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.info.autoReset = false;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95;
   renderer.shadowMap.enabled = false; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  scene = new THREE.Scene(); scene.background = new THREE.Color('#ffd6ea');
-  scene.fog = new THREE.FogExp2('#ffc9e3', .0046);
+  scene = new THREE.Scene(); scene.background = new THREE.Color('#86579e');
+  scene.fog = new THREE.FogExp2('#b0418f', .0052);
   camera = new THREE.PerspectiveCamera(72, 1, .1, 460);
-  scene.add(new THREE.HemisphereLight('#fff4fb', '#ffc4e0', 1.25));
+  scene.add(new THREE.HemisphereLight('#c9dcff', '#9a469e', 1.0));
   sun = new THREE.DirectionalLight('#ffdbb4', 1.9); sun.position.set(-9,16,8);
   sun.castShadow = true; sun.shadow.mapSize.set(1024,1024);
   Object.assign(sun.shadow.camera, {left:-9,right:9,top:13,bottom:-13,near:1,far:55});
@@ -178,7 +178,7 @@ function init() {
   const renderTarget = new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType});
   renderTarget.samples = 0;
   composer = new EffectComposer(renderer, renderTarget); composer.addPass(new RenderPass(scene,camera));
-  bloom = new UnrealBloomPass(new THREE.Vector2(1,1), .12, .4, 1.35);
+  bloom = new UnrealBloomPass(new THREE.Vector2(1,1), .22, .42, 1.25);
   composer.addPass(bloom);
   speedBlur=new ShaderPass({uniforms:{tDiffuse:{value:null},strength:{value:0}},
     vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
@@ -449,8 +449,6 @@ function spawnWave() {
     spawnHazard(kind,from,to,game.wave,-z/WORLD_SCALE,1.3,ownSpeed);
   }
   const pickupZ=game.speed*(game.wave===0?1.6:2.8)*.55;
-  // (sin placas de acelerón ni rampas de salto) · paredes de gelatina de color como en Mochi
-  if(game.wave>=2&&game.wave%3===2)spawnColorWall(game.speed*2.4);
   spawnStar(safe,-pickupZ*WORLD_SCALE,game.wave%2===0);
   collectibles?.spawnWave(safe,pickupZ,game.wave,event);
   game.lastSafe=safe;game.wave++;
@@ -475,7 +473,7 @@ function spawnTraffic() {
 function clearObjects() {
   for(let i=hazards.length-1;i>=0;i--) recycleHazard(i);
   for(let i=stars.length-1;i>=0;i--) recycleStar(i);
-  collectibles?.clear();turboPads.length=0;plateTime=0;clearColorWalls();
+  collectibles?.clear();turboPads.length=0;plateTime=0;
   for(const p of popupNodes) p.node.remove();popupNodes.length=0;
   sparkLife.fill(0);sparkPositions.fill(-999);
 }
@@ -604,7 +602,7 @@ function fixedUpdate(dt) {
     if(oldZ<.65&&s.z>-.65&&s.lane===li){bonus(10,'star',LANES[s.lane],PLAYER_Z);recycleStar(i);}
     else if(s.z>15)recycleStar(i);
   }
-  collectibles?.update(dt,move,game.x);updateTurboPads(move);funTick(dt,move);updateColorWalls(dt,move);
+  collectibles?.update(dt,move,game.x);updateTurboPads(move);funTick(dt,move);
   if(race){raceTick(dt);if(race?.done)return;}
   game.score=Math.floor(game.rawScore);if(game.score>game.best)game.best=game.score;
 }
@@ -1758,8 +1756,8 @@ const CandyWorld = (() => {
     const taper = geo('taper', () => new THREE.CylinderGeometry(.77, 1, 1, 12));
     const mat = (color, opts = {}) => { const m = new THREE.MeshPhysicalMaterial({color, roughness: .27, metalness: .045, clearcoat: .85, clearcoatRoughness: .16, ...opts}); materials.push(m); return m; };
     const light = (color, intensity = .72) => mat(color, {emissive: color, emissiveIntensity: intensity, roughness: .25});
-    const chocolate = mat('#e59cc4'), wafer = mat('#db9670'), cream = mat('#ffdfb6'), icing = mat('#fff0fa');
-    const pink = mat('#ff9ccb'), lilac = mat('#d8c4ff'), teal = mat('#8fe8cf'), berry = mat('#ff8fbf');
+    const chocolate = mat('#512147'), wafer = mat('#db9670'), cream = mat('#ffdfb6'), icing = mat('#fff0fa');
+    const pink = mat('#e970b6'), lilac = mat('#9e70d3'), teal = mat('#52bfc3'), berry = mat('#ba347e');
     const strawberry = mat('#d8285a', {roughness: .28, clearcoat: .8, clearcoatRoughness: .2}), berryPink = mat('#ef5f9e', {roughness: .3, clearcoat: .8, clearcoatRoughness: .2});
     const mint = mat('#8fdec6'), caramel = mat('#d79a54'), red = mat('#eb518e'), dark = mat('#382238');
     const sugarColors = [pink, lilac, teal, berry, mint, caramel];
@@ -1950,7 +1948,7 @@ const CandyWorld = (() => {
     wetCtx.putImageData(wetData, 0, 0); const wet = new THREE.CanvasTexture(wetCanvas); wet.wrapS = wet.wrapT = THREE.RepeatWrapping; wet.repeat.set(3, 42); textures.add(wet);
     const seaMat = mat('#22475e', {roughness: .20, metalness: .26, bumpMap: wet, bumpScale: .012, envMapIntensity: .5});
     const sea = mesh(root, geo('sea', () => new THREE.PlaneGeometry(240, 300)), seaMat, 0, -.65, -100); sea.rotation.x = -Math.PI / 2;
-    const roadMat = mat('#ff9ccb', {roughness: .12, metalness: .05, transparent: true, opacity: .62, clearcoatRoughness: .05, bumpMap: wet, bumpScale: .004, envMapIntensity: .82});
+    const roadMat = mat('#2a0d40', {roughness: .05, metalness: .3, transparent: true, opacity: .30, clearcoatRoughness: .05, bumpMap: wet, bumpScale: .004, envMapIntensity: .82});
     const road = mesh(root, geo('avenue', () => new THREE.BoxGeometry(12, .14, 220)), roadMat, 0, -.077, -85); road.receiveShadow = true;
     const infrastructure = new THREE.Group(); root.add(infrastructure);
     cuboid(infrastructure, chocolate, 0, -.23, -85, 12.02, .20, 220);
@@ -1966,7 +1964,7 @@ const CandyWorld = (() => {
       const rail=new THREE.Mesh(new THREE.BoxGeometry(.16,.09,220),railMat); rail.position.set(side*5.95,.06,-85); root.add(rail); }
     let reflection = null;
     if (typeof Reflector !== 'undefined') {
-      reflection = new Reflector(geo('road-reflection', () => new THREE.PlaneGeometry(12, 220)), {textureWidth: 512, textureHeight: 512, color: '#ffd0e6', clipBias: .004, multisample: 0});
+      reflection = new Reflector(geo('road-reflection', () => new THREE.PlaneGeometry(12, 220)), {textureWidth: 512, textureHeight: 512, color: '#714065', clipBias: .004, multisample: 0});
       reflection.rotation.x = -Math.PI / 2; reflection.position.set(0, -.020, -85); root.add(reflection);
       const reflect = reflection.onBeforeRender; reflection.material.uniforms.waveTime = {value: 0};
       reflection.material.vertexShader = 'uniform mat4 textureMatrix;varying vec4 vUv;varying vec3 vLocal;void main(){vUv=textureMatrix*vec4(position,1.);vLocal=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}';
@@ -2116,7 +2114,7 @@ const CandyWorld = (() => {
         starGeo.setDrawRange(0, quality === 0 ? 65 : quality === 1 ? 110 : 150); dustGeo.setDrawRange(0, quality === 0 ? 28 : quality === 1 ? 48 : 72);
         nodeMesh.visible = quality > 0; dashed.count = quality === 0 ? 96 : quality === 1 ? 128 : 152;
         circuitGeometry.setDrawRange(0, quality === 0 ? 24 * 13 : Infinity);
-        roadMat.opacity = quality === 0 ? .92 : .62; roadMat.roughness = quality === 0 ? .20 : .05;
+        roadMat.opacity = quality === 0 ? .9 : .30; roadMat.roughness = quality === 0 ? .20 : .05;
         infrastructure.children[0].material = quality === 0 ? sceneryEcoMat : sceneryMat;
         for (const b of batches) if (b.fullMaterial === sceneryMat) b.mesh.material = quality === 0 ? sceneryEcoMat : sceneryMat;
         if (reflection) { reflection.visible = quality > 0; reflection.getRenderTarget().setSize(quality === 2 ? 384 : 256, quality === 2 ? 384 : 256); lastReflectionFrame = -100; }
@@ -3924,13 +3922,12 @@ function renderRoadGameplay(){
 
 // ===================== R5 · DIVERSIÓN: zonas, eventos, racha, rampas, misiones =====================
 const ZONES=[
-  {name:'Avenida de fresa',fog:'#ffc9e3',tint:[1,1,1],exp:1.05},
-  {name:'Arcoíris de gelatina',fog:'#ffe2f3',tint:[1.04,1.02,1.08],exp:1.08},
-  {name:'Puente de nubes',fog:'#fff0fa',tint:[1.1,1.08,1.14],exp:1.12},
-  {name:'Valle de chocolate con leche',fog:'#f3c9b4',tint:[1.12,.98,.9],exp:1.02}
+  {name:'Avenida de fresa',fog:'#b0418f',tint:[1,1,1],exp:.95},
+  {name:'Puente de nubes',fog:'#f0c4ec',tint:[1.14,1.1,1.2],exp:1.1},
+  {name:'Ciudad de chocolate',fog:'#5e2a1c',tint:[1.22,.86,.7],exp:.9}
 ];
 const ZONE_TIME=35;
-let zoneIdx=0,zoneW=[1,0,0,0],zoneGroups=[],zoneFogTmp=new THREE.Color(),lastZoneShown=-1;
+let zoneIdx=0,zoneW=[1,0,0],zoneGroups=[],zoneFogTmp=new THREE.Color(),lastZoneShown=-1;
 let streak=0,superT=0,jumpT=0,ramps=[],rampMesh=null,truck=null,truckDrop=0,lastEventKind=null;
 let runMission=null,missionsDone=0;
 const JUMP_TIME=1.15;
@@ -3939,10 +3936,11 @@ function initFun(){
   // Decorado propio de cada zona, instanciado (1 llamada de dibujo por tipo) y en bucle.
   const mk=(geo,mat,n,place)=>{const m=new THREE.InstancedMesh(geo,mat,n);const t=new THREE.Object3D();m.userData.items=[];
     for(let i=0;i<n;i++){const it=place(i);m.userData.items.push(it);}m.frustumCulled=false;return m;};
-  // arcoíris de gelatina: bandas pastel concéntricas (sustituyen al túnel de neón)
-  const RB=['#ff9cc8','#ffc38a','#ffe27a','#8fe8cf','#9fd0ff','#c9b2ff'];
+  const neonA=new THREE.MeshBasicMaterial({color:new THREE.Color(2.2,.6,1.9),toneMapped:false});
+  const neonB=new THREE.MeshBasicMaterial({color:new THREE.Color(.5,1.9,2.2),toneMapped:false});
+  const arch=new THREE.TorusGeometry(7.6,.16,8,40,Math.PI);
   const tunnel=new THREE.Group();
-  RB.forEach((c,k)=>{const m=new THREE.MeshStandardMaterial({color:c,roughness:.35,emissive:c,emissiveIntensity:.25,transparent:true,opacity:.85});tunnel.add(mk(new THREE.TorusGeometry(8.6-k*.32,.16,8,40,Math.PI),m,6,i=>({x:0,y:0,z:-i*36-6,s:1,ry:0})));});
+  if(false)for(const [mat,off] of [[neonA,0],[neonB,6]])tunnel.add(mk(arch,mat,18,i=>({x:0,y:0,z:-i*12-off,s:1,ry:0})));
   const cloudMat=new THREE.MeshStandardMaterial({color:'#fff0fb',roughness:.9,emissive:'#ffc4ec',emissiveIntensity:.15});
   const cloud=new THREE.Group();cloud.add(mk(new THREE.SphereGeometry(1,14,10),cloudMat,70,i=>({x:(i%2?1:-1)*(7.2+Math.random()*4),y:-.6+Math.random()*.8,z:-i*3.1,s:1.6+Math.random()*1.8,ry:0})));
   const chocoMat=new THREE.MeshPhysicalMaterial({color:'#5a2a1e',roughness:.3,clearcoat:.8});
@@ -3950,7 +3948,7 @@ function initFun(){
   const choco=new THREE.Group();
   choco.add(mk(new THREE.CylinderGeometry(.9,1.1,1,12),chocoMat,24,i=>({x:(i%2?1:-1)*(7.4+Math.random()*1.5),y:3.5,z:-Math.floor(i/2)*18,s:1.4,sy:7+Math.random()*5,ry:0})));
   choco.add(mk(new THREE.SphereGeometry(1.05,12,8),creamMat,24,i=>({x:0,y:0,z:0,s:1,link:i})));
-  zoneGroups=[null,tunnel,cloud,choco];
+  zoneGroups=[null,cloud,choco];
   for(const g of zoneGroups)if(g){g.visible=false;scene.add(g);}
   // Rampas: cuña rosa con bordes de neón.
   const wedge=new THREE.BufferGeometry();
@@ -3967,19 +3965,18 @@ function updateZoneDecor(dt,move){
     for(const m of meshes){const items=m.userData.items;
       for(let i=0;i<items.length;i++){const it=items[i];
         if(it.link!==undefined){const p=meshes[0].userData.items[it.link];t.position.set(p.x,p.y+p.sy/2+.3,p.z);t.scale.set(1.55,.75*w,1.55);}
-        else{it.z+=move;const span=zi===2?217:216;if(it.z>20)it.z-=span;t.position.set(it.x,it.y*w-(1-w)*3,it.z);t.scale.set(it.s,(it.sy||it.s)*w,it.s);}
+        else{it.z+=move;const span=zi===1?217:216;if(it.z>20)it.z-=span;t.position.set(it.x,it.y*w-(1-w)*3,it.z);t.scale.set(it.s,(it.sy||it.s)*w,it.s);}
         t.rotation.set(0,it.ry||0,0);t.updateMatrix();m.setMatrixAt(i,t.matrix);}
       m.instanceMatrix.needsUpdate=true;}
   });
 }
-function funReset(){streak=0;superT=0;jumpT=0;ramps.length=0;truck=null;truckDrop=0;zoneIdx=0;zoneW=[1,0,0,0];lastZoneShown=0;missionsDone=0;newMission();updateFunHud();}
+function funReset(){streak=0;superT=0;jumpT=0;ramps.length=0;truck=null;truckDrop=0;zoneIdx=0;zoneW=[1,0,0];lastZoneShown=0;missionsDone=0;newMission();updateFunHud();}
 function newMission(){
   const kinds=['cupcake','donut','tea','gummy','icecream','lollipop','sushi','cotton','macaron','jelly'];
   const r=Math.random();
-  if(r<.5){const k=kinds[Math.floor(Math.random()*kinds.length)];const names={cupcake:'cupcakes',donut:'donuts',tea:'teteras',gummy:'gominolas',icecream:'helados',lollipop:'piruletas',sushi:'sushis',cotton:'algodones',macaron:'macarons',jelly:'gelatinas'};
+  if(r<.6){const k=kinds[Math.floor(Math.random()*kinds.length)];const names={cupcake:'cupcakes',donut:'donuts',tea:'teteras',gummy:'gominolas',icecream:'helados',lollipop:'piruletas',sushi:'sushis',cotton:'algodones',macaron:'macarons',jelly:'gelatinas'};
     runMission={type:'pass',kind:k,goal:4+Math.floor(Math.random()*4)+missionsDone,n:0,text:'Adelanta '+'{g}'+' '+names[k],reward:40+missionsDone*20};}
-  else if(r<.8)runMission={type:'near',goal:5+missionsDone*2,n:0,text:'Haz {g} esquives cerrados',reward:50+missionsDone*20};
-  else runMission={type:'wall',goal:2+missionsDone,n:0,text:'Atraviesa {g} paredes de gelatina',reward:60+missionsDone*20};
+  else runMission={type:'near',goal:5+missionsDone*2,n:0,text:'Haz {g} esquives cerrados',reward:50+missionsDone*20};
 }
 function missionProgress(type,kind){
   if(!runMission||runMission.type!==type||(type==='pass'&&runMission.kind!==kind))return;
@@ -3995,7 +3992,7 @@ function spawnRamp(lane,logicalZ){if(ramps.length<6)ramps.push({lane,z:-logicalZ
 function funTick(dt,move){
   // Zonas: cambian cada ZONE_TIME s con transición suave de 3 s.
   const zi=Math.floor(game.elapsed/ZONE_TIME)%ZONES.length;zoneIdx=zi;
-  for(let i=0;i<4;i++)zoneW[i]=lerp(zoneW[i],i===zi?1:0,1-Math.exp(-dt*1.2));
+  for(let i=0;i<ZONES.length;i++)zoneW[i]=lerp(zoneW[i],i===zi?1:0,1-Math.exp(-dt*1.2));
   if(zi!==lastZoneShown){lastZoneShown=zi;showBanner(ZONES[zi].name);}
   streak=Math.max(0,streak-dt*.012);superT=Math.max(0,superT-dt);
   if(jumpT>0)jumpT=Math.max(0,jumpT-dt);
@@ -4055,41 +4052,3 @@ try {
   $('fatalText').textContent = 'No se pudo iniciar el mundo 3D. Comprueba que tu navegador admite WebGL 2 y que tienes conexión para cargar Three.js.';
   $('retryButton').onclick = () => location.reload();
 }
-
-
-// ===================== Paredes de gelatina de color (mecánica del Mochi normal) =====================
-// Toca el botón de color (o 1/2/3) para que Mochi sea de ese color: atraviesas la pared de tu mismo color; si no, ¡plof!
-const WALL_COLORS=[{n:'Fresa',c:'#ff8fc8'},{n:'Menta',c:'#6fe3b8'},{n:'Limón',c:'#ffd86b'}];
-let mochiColor=0,colorWalls=[],colorAura=null,colorUI=null;
-function setMochiColor(i){if(i===mochiColor)return;mochiColor=i;Audio.play('move');burst(game.x,.9,PLAYER_Z,WALL_COLORS[i].c,14);paintColorUI();
-  if(colorAura){colorAura.material.color.set(WALL_COLORS[i].c);colorAura.material.emissive.set(WALL_COLORS[i].c);}}
-function paintColorUI(){if(!colorUI)return;[...colorUI.children].forEach((b,k)=>b.classList.toggle('on',k===mochiColor));}
-function ensureColorStuff(){
-  if(!colorAura&&player){colorAura=new THREE.Mesh(new THREE.TorusGeometry(.75,.09,10,36),new THREE.MeshStandardMaterial({color:WALL_COLORS[0].c,emissive:WALL_COLORS[0].c,emissiveIntensity:.6,transparent:true,opacity:.9}));colorAura.rotation.x=Math.PI/2;colorAura.position.y=.08;player.add(colorAura);}
-  if(!colorUI){colorUI=document.createElement('div');colorUI.id='colorPick';colorUI.className='color-pick';
-    WALL_COLORS.forEach((w,k)=>{const b=document.createElement('button');b.type='button';b.style.setProperty('--c',w.c);b.setAttribute('aria-label','Color '+w.n);b.innerHTML='<i></i>';
-      b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setMochiColor(k);});colorUI.appendChild(b);});
-    ($('stage')||document.body).appendChild(colorUI);paintColorUI();
-    window.addEventListener('keydown',e=>{const k=['1','2','3'].indexOf(e.key);if(k>=0&&game.state==='running')setMochiColor(k);});}
-}
-function spawnColorWall(logicalZ){ensureColorStuff();if(colorWalls.length>=3)return;
-  const ci=Math.floor(Math.random()*3),c=WALL_COLORS[ci].c,g=new THREE.Group();
-  const jm=new THREE.MeshPhysicalMaterial({color:c,roughness:.15,transmission:0,transparent:true,opacity:.72,clearcoat:1,emissive:c,emissiveIntensity:.18,depthWrite:false});
-  const w=new THREE.Mesh(new THREE.BoxGeometry(11.8,3.4,.45),jm);w.position.y=1.7;g.add(w);
-  const fm=new THREE.MeshStandardMaterial({color:'#ffffff',emissive:c,emissiveIntensity:.35,roughness:.4});
-  const top=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,12,14),fm);top.rotation.z=Math.PI/2;top.position.y=3.45;g.add(top);
-  for(let k=0;k<9;k++){const d=new THREE.Mesh(new THREE.SphereGeometry(.18+Math.random()*.1,10,8),fm);d.position.set(-5.5+k*1.37,3.45-.25-Math.random()*.4,.05);d.scale.y=1.4;g.add(d);} // gotitas de gelatina
-  for(const sx of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:'#5a3a6a'}));eye.position.set(sx*.55,2.3,.3);g.add(eye);}
-  const mouth=new THREE.Mesh(new THREE.TorusGeometry(.22,.05,6,16,Math.PI),new THREE.MeshBasicMaterial({color:'#5a3a6a'}));mouth.rotation.z=Math.PI;mouth.position.set(0,2.0,.3);g.add(mouth);
-  const z=-logicalZ*WORLD_SCALE;g.position.z=z;scene.add(g);colorWalls.push({g,z,ci,done:false});
-  notify('¡Pared de '+WALL_COLORS[ci].n+'!');}
-function updateColorWalls(dt,move){ensureColorStuff();if(colorUI)colorUI.hidden=game.state!=='running'&&game.state!=='countdown'&&game.state!=='pause';
-  if(colorAura){colorAura.rotation.z+=dt*2;colorAura.scale.setScalar(1+Math.sin(visualTime*6)*.06);}
-  for(let i=colorWalls.length-1;i>=0;i--){const w=colorWalls[i],old=w.z;w.z+=move;w.g.position.z=w.z;w.g.children[0].scale.x=1+Math.sin(visualTime*5+i)*.01;w.g.children[0].scale.y=1+Math.cos(visualTime*5+i)*.03;
-    if(!w.done&&old<PLAYER_Z&&w.z>=PLAYER_Z){w.done=true;
-      if(w.ci===mochiColor){bonus(25,'star',game.x,PLAYER_Z);missionProgress('wall');burst(game.x,1.2,PLAYER_Z,WALL_COLORS[w.ci].c,36);notify('¡Atraviesas la gelatina! +25');Audio.play('star');w.g.visible=false;}
-      else if(game.invincible>0){notify('¡Por los pelos! Era de '+WALL_COLORS[w.ci].n);}
-      else {notify('¡Plof! La pared era de '+WALL_COLORS[w.ci].n);die();}}
-    if(w.z>20){scene.remove(w.g);colorWalls.splice(i,1);}}}
-window.__colorWalls=()=>colorWalls.map(w=>({z:Math.round(w.z),c:w.ci,done:w.done,ok:!w.g.visible}));
-function clearColorWalls(){for(const w of colorWalls)scene.remove(w.g);colorWalls.length=0;}

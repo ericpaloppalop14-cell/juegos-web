@@ -7,7 +7,7 @@
   <meta name="description" content="Pilota entre el tráfico y adelanta en una ciudad de dulces. Mochi Esquiva: un runner 3D kawaii para móvil.">
   <title>Mochi Esquiva · Ronda 4 · A toda velocidad</title>
   <meta name="mochi-build" content="R4-traffic-20261013">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=r5b">
 </head>
 <body>
   <main id="stage" aria-label="Mochi Esquiva, pilotaje entre tráfico en cinco carriles">
@@ -144,7 +144,6 @@
           <li><span class="step-icon" aria-hidden="true">↕</span><div><b>Acelera y frena</b><p>Desliza arriba para acelerar, abajo para frenar. En PC: ↑ o W / ↓ o S.</p></div></li>
           <li><span class="step-icon" aria-hidden="true">✦</span><div><b>Adelanta y suma</b><p>Alcanza el tráfico y adelanta por el hueco libre. Los intermitentes avisan de cambios de carril. Recoge monedas, gemas y estrellas. Imán, escudo y turbo te ayudan. Los adelantamientos cerrados dan bonus y combo.</p></div></li>
         </ol>
-        <div class="tutorial-warning"><span aria-hidden="true">🎨</span> ¡Paredes de gelatina! Toca el botón de su color (o 1·2·3) para atravesarlas, como en Mochi.</div>
         <div class="tutorial-warning"><span aria-hidden="true">↝</span> Una flecha avisa cuando un dulce va a cambiar de carril.</div>
         <button id="startTutorialButton" class="button primary">¡Lo tengo, vamos!</button>
         <button id="skipTutorialButton" class="button text-button">Volver al inicio</button>
@@ -198,7 +197,7 @@
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}
   </script>
   <script type="module">
-    import('./game.js').catch(error => {
+    import('./game.js?v=r5b').catch(error => {
       console.error(error);
       document.getElementById('loading').hidden = true;
       document.getElementById('fatal').hidden = false;
