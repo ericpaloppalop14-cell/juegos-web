@@ -7,6 +7,7 @@ const Q = new URLSearchParams(location.search);
 const EV = [
   { id: 'carrera', name: 'Carrera de Coches', icon: '🏎️', desc: 'Una vuelta por las calles de la ciudad gelatina, con peatones locos y objetos (es la carrera de Mochi Race).', ext: true },
   { id: 'planetas', ...pick0(P.planetas) }, { id: 'vallas', ...pick0(P.vallas) }, { id: 'caida', ...pick0(P.caida) }, { id: 'nado', ...pick0(P.nado) },
+  { id: 'anillos', name: 'Vuelo de Anillos', icon: '💫', desc: 'Vuela hacia delante por el cielo de golosinas y atraviesa anillos: cada uno te acelera y el dorado ⭐ vale más.', def: true },
 ];
 function pick0(d) { return { name: d.name, icon: d.icon, desc: d.desc, def: d }; }
 const PTS = [10, 7, 5, 3, 2, 1];
@@ -44,7 +45,7 @@ $('bCharOk').onclick = () => menu();
 // ---------- presentación de la prueba ----------
 function intro() {
   const e = EV[S.idx]; show('sIntro');
-  $('iIcon').textContent = e.icon; $('iName').textContent = (S.mode === 'torneo' ? `Prueba ${S.idx + 1}/5 · ` : '') + e.name; $('iDesc').textContent = e.desc;
+  $('iIcon').textContent = e.icon; $('iName').textContent = (S.mode === 'torneo' ? `Prueba ${S.idx + 1}/${EV.length} · ` : '') + e.name; $('iDesc').textContent = e.desc;
   const r = CH(pick(S.rv)); $('iQuote').innerHTML = `<b>${r.name}:</b> «${pick(r.lines)}»`;
   $('iRivals').innerHTML = '<tr><td>Rivales</td><td>Personalidad</td>' + (S.mode === 'torneo' ? '<td class="n">Pts</td>' : '') + '</tr>' + S.rv.map(id => `<tr><td><span class="dot" style="background:${CH(id).color}"></span>${CH(id).name}</td><td>${CH(id).pers}</td>${S.mode === 'torneo' ? `<td class="n">${S.pts[id]}</td>` : ''}</tr>`).join('');
 }
@@ -80,7 +81,7 @@ function podio(res) {
   let h = '<tr><td></td><td>Mochi</td><td class="n">Tiempo</td>' + (S.mode === 'torneo' ? '<td class="n">+Pts</td><td class="n">Total</td>' : '') + '</tr>';
   res.forEach((r, i) => { h += `<tr class="${r.id === 'me' ? 'me' : ''}"><td>${i + 1}º</td><td><span class="dot" style="background:${chOf(r.id).color}"></span>${nm(r.id)}</td><td class="n">${r.time.toFixed(1)} s${r.fin === false ? '*' : ''}</td>${S.mode === 'torneo' ? `<td class="n">+${PTS[i]}</td><td class="n">${S.pts[r.id]}</td>` : ''}</tr>`; });
   $('pTable').innerHTML = h;
-  $('bNext').textContent = S.mode === 'torneo' ? (last ? '🏆 Ver clasificación final' : `Siguiente prueba (${S.idx + 2}/5)`) : 'Repetir';
+  $('bNext').textContent = S.mode === 'torneo' ? (last ? '🏆 Ver clasificación final' : `Siguiente prueba (${S.idx + 2}/${EV.length})`) : 'Repetir';
   $('bNext').onclick = () => { if (S.mode !== 'torneo') { intro(); return; } if (last) final(); else { S.idx++; save(); intro(); } };
 }
 function final() {

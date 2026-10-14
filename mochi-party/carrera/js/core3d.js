@@ -79,8 +79,8 @@ const glowSprite = (color, s, op = 1) => { const sp = new THREE.Sprite(new THREE
 // ---------------- entrada ----------------
 const input = { taps: [], ups: [], down: false, px: null, swipe: false, swipeUp: false, side: [] };
 const cv = $('gl');
-cv.addEventListener('pointerdown', e => { Audio.init(); input.down = true; input.px = e.clientX; input.sy = e.clientY; input.sx = e.clientX; input.taps.push(e.clientX); });
-cv.addEventListener('pointermove', e => { if (input.down) input.px = e.clientX; });
+cv.addEventListener('pointerdown', e => { Audio.init(); input.down = true; input.px = e.clientX; input.py = e.clientY; input.sy = e.clientY; input.sx = e.clientX; input.taps.push(e.clientX); });
+cv.addEventListener('pointermove', e => { if (input.down) { input.px = e.clientX; input.py = e.clientY; } });
 addEventListener('pointerup', e => { if (input.down) { const dy = e.clientY - input.sy, dx = e.clientX - input.sx; if (dy > 45 && Math.abs(dy) > Math.abs(dx)) input.swipe = true; else if (dy < -45 && Math.abs(dy) > Math.abs(dx)) input.swipeUp = true; else input.ups.push(e.clientX); } input.down = false; });
 for (const [id, s] of [['bL', 'L'], ['bR', 'R'], ['bM', 'M']]) $(id).addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Audio.init(); if (s === 'M') input.swipe = true; else input.side.push(s); });
 addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') input.taps.push(innerWidth / 2); if (e.code === 'ArrowLeft') input.side.push('L'); if (e.code === 'ArrowRight') input.side.push('R'); if (e.code === 'ArrowDown') input.swipe = true; });
