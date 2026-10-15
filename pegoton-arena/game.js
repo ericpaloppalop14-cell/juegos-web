@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=686';
+import * as THREE from './three.js?v=687';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -162,6 +162,8 @@ const allChars = () => S.shape ? [...CHARS, ...PREMS, { id: 'custom', n: S.cname
 // cara
 const eyeW = new THREE.SphereGeometry(1, 22, 16), mouthG = new THREE.TorusGeometry(.1, .022, 8, 20, Math.PI), mouthM = new THREE.MeshStandardMaterial({ color: 0x5a1838, roughness: .4 }), eyeMatW = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .3 }), eyeMatB = new THREE.MeshStandardMaterial({ color: 0x1a1030, roughness: .2 });
 const blushMat = new THREE.MeshBasicMaterial({ color: 0xff7aa8, transparent: true, opacity: .6 });
+const FTOP = new Map([mouthM, eyeMatW, eyeMatB, blushMat].map(m => { const k = m.clone(); k.depthTest = false; return [m, k]; })); // v6.23: la cara del juego siempre por delante de la basura pegada
+function faceOrder(face) { face.traverse(o => { if (!o.isMesh || !FTOP.has(o.material)) return; o.renderOrder = o.material === eyeMatB ? 31 : o.material === eyeMatW ? (o.scale.x < .05 ? 32 : 30) : 29; o.material = FTOP.get(o.material); }); }
 function addFace(m, radii) {
   const f = new THREE.Group();
   for (const s of [-1, 1]) {
@@ -182,7 +184,7 @@ function visK(geo) { if (geo.userData.vk) return geo.userData.vk; const pa = geo
 function makeCharMesh(c, team) {
   const mat = new THREE.MeshPhysicalMaterial({ map: skinMap(c.skin), roughness: .42, metalness: 0, clearcoat: .55, clearcoatRoughness: .28 }); gumify(mat, c.prem ? 1 : 0);
   const g = new THREE.Group(), body = new THREE.Mesh(getCharGeo(c), mat); g.add(body); g.body = body; const vk = visK(body.geometry); body.scale.setScalar(vk);
-  const face = new THREE.Group(); g.add(face); g.face = face; face.scale.setScalar(vk); if (!c.custom || S.eyes) addFace(face, charRadii(c));
+  const face = new THREE.Group(); g.add(face); g.face = face; face.scale.setScalar(vk); if (!c.custom || S.eyes) { addFace(face, charRadii(c)); faceOrder(face); }
   if (c.prem) { mat.emissive.set(c.rim); mat.emissiveIntensity = .12; g.acc = buildAcc(c.acc); g.add(g.acc); g.prem = c; } if (team != null) teamLook(g, c, team); return g;
 }
 
@@ -665,7 +667,7 @@ function frame1(now) {
   for (const c of cells) { const x = c.px + (c.x - c.px) * al, z = c.pz + (c.z - c.pz) * al, r = c.rr; c.ix = x; c.iz = z;
     const sp = Math.hypot(c.vx + c.bx, c.vz + c.bz); if (sp > .5) { const ty = Math.atan2((c.vx + c.bx) / sp * .9, 1); let d = ty - c.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); c.yaw += d * damp(10, dt); }
     if (c.jig > 0) c.jig = Math.max(0, c.jig - dt * 2.2); const w = Math.sin(t * 9 + c.x) * .03 + c.sq * Math.sin(c.sq * 18) * .12 + (c.jig || 0) * Math.sin(t * 34) * .06, bob = Math.abs(Math.sin(t * 7 + c.z)) * Math.min(.3, sp * .02) * r;
-    c.mesh.position.set(x, r * (1 - w) + bob * .4, z); const st = Math.min(.35, Math.hypot(c.bx, c.bz) * .012); c.mesh.scale.set(r * (1 + w - st * .5), r * (1 - w - st * .4), r * (1 + w + st)); c.mesh.face.rotation.set(-.75 + Math.min(.2, sp * .012), c.yaw, 0, 'YXZ'); if (c.mesh.acc) { c.mesh.acc.rotation.set(-.35, c.yaw, 0, 'YXZ'); animAcc(c.mesh.acc, t, sp); if (sp > 3 && Math.random() < .35) premTrail(c); }
+    c.mesh.position.set(x, r * (1 - w) + bob * .4, z); const st = Math.min(.35, Math.hypot(c.bx, c.bz) * .012); c.mesh.scale.set(r * (1 + w - st * .5), r * (1 - w - st * .4), r * (1 + w + st)); c.mesh.face.rotation.set(-.75 + Math.min(.2, sp * .012), Math.sin(c.yaw) * .4, 0, 'YXZ'); /* v6.23: cara siempre hacia la cámara (solo mira un poco hacia los lados) */ if (c.mesh.acc) { c.mesh.acc.rotation.set(-.35, c.yaw, 0, 'YXZ'); animAcc(c.mesh.acc, t, sp); if (sp > 3 && Math.random() < .35) premTrail(c); }
     if (sp > .2) { TV2.set(c.vz + c.bz, 0, -(c.vx + c.bx)).normalize(); TQ.setFromAxisAngle(TV2, sp * dt / Math.max(.3, r)); c.q.premultiply(TQ); } c.mesh.body.quaternion.copy(c.q);
     c.ring.position.set(x, .05, z); c.ring.scale.setScalar(r);
     { let mine = 0; if (me && G.on && me.alive && c.p !== me) for (const q of me.cells) mine = Math.max(mine, q.m); const I = c.ind.material;
