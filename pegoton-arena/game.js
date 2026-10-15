@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=685';
+import * as THREE from './three.js?v=686';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -422,11 +422,11 @@ function stick(c, t, s, col, wx, wz, fly, wy = .5) { if (c.fix) return; TV2.set(
   const q = new THREE.Quaternion().setFromUnitVectors(YUP, TV2).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd(-.7, .7), Math.random() * 6.28, rnd(-.7, .7))));
   const o = { t, s, col, d: TV2.clone(), q, emb: rnd(.3, .55) }; if (fly && flights.length < 60) flights.push({ o, c, x: wx, y: wy, z: wz, t0: 0, dur: rnd(.14, .22) }); else addStuck(c, o); }
 // v6.21: por encima de FIX_M la bola lleva un set FIJO de figuras (todas las de la pista, reparto Fibonacci), sin reciclar
-const FIX_M = 3000, FIX_N = 36;
+const FIX_M = 3000, FIX_N = 170; // v6.22: set denso estilo Katamari
 function buildFixed(c) { const old = c.st, out = [];
-  for (let i = 0; i < FIX_N; i++) { const y = 1 - 2 * (i + .5) / FIX_N, r = Math.sqrt(1 - y * y), a = i * 2.39996; const d = new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r), t = i % NTOY;
-    const q = new THREE.Quaternion().setFromUnitVectors(YUP, d).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd(-.35, .35), Math.random() * 6.28, rnd(-.35, .35))));
-    out.push({ t, s: 0, fr: rnd(.095, .12), col: (TH.baked ? 0xffffff : TH.fixed[t]) ?? FCOLS[i % FCOLS.length], d, q, emb: .42, g: 0 }); }
+  for (let i = 0; i < FIX_N; i++) { const y = 1 - 2 * (i + .5) / FIX_N, r = Math.sqrt(1 - y * y), a = i * 2.39996; const d = new THREE.Vector3(Math.cos(a) * r + rnd(-.06, .06), y + rnd(-.06, .06), Math.sin(a) * r + rnd(-.06, .06)).normalize(), t = (i * 7 + (i >> 3)) % NTOY, u = Math.random(), fr = u < .07 ? rnd(.18, .25) : u < .3 ? rnd(.10, .14) : rnd(.04, .07);
+    const q = new THREE.Quaternion().setFromUnitVectors(YUP, d).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd(-1.2, 1.2), Math.random() * 6.28, rnd(-1.2, 1.2))));
+    out.push({ t, s: 0, fr, col: (TH.baked ? 0xffffff : TH.fixed[t]) ?? FCOLS[(Math.random() * FCOLS.length) | 0], d, q, emb: Math.random() < .25 ? rnd(.05, .25) : rnd(.3, .55), g: 0 }); }
   for (const o of old) o.out = 1; c.st = out; c.fixOld = old.filter(o => o.t < NT); c.fix = 1; c.fixN = FIX_N; }
 function addStuck(c, o) { if (c.fix) return; c.st.push(o); if (c.st.length > MAXST) c.st.shift(); }
 function transfer(from, to) { if (G.net === 'h') NEV.push(['tr', from.id, to.id]); let n = 0; for (const o of from.st) { o.d.set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize(); o.q.setFromUnitVectors(YUP, o.d).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd(-.7, .7), Math.random() * 6.28, rnd(-.7, .7))));
