@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=687';
+import * as THREE from './three.js?v=688';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -448,7 +448,7 @@ function burst(x, z, col, n, s = 1) { for (let i = 0; i < n; i++) { const q = pa
 let drag = null, joyA = null, joyM = 1; const joyEl = $('joy'), knob = $('joyK'); const joy = { on: 0 };
 // v6.17: joystick FIJO (mismo aspecto, semitransparente) encima de los botones; Diestro = derecha, Zurdo = izquierda
 const JR = 52; let joyC = { x: 0, y: 0 };
-function placeJoy() { document.body.classList.toggle('zurdo', S.hand === 'z'); const bb = $('btns').getBoundingClientRect(); const w = bb.width > 10 ? bb : { left: S.hand === 'z' ? 14 : innerWidth - 186, width: 172, top: innerHeight - 112 };
+function placeJoy() { document.body.classList.toggle('zurdo', S.hand === 'z'); const r1 = $('bEject').getBoundingClientRect(), r2 = $('bSplit').getBoundingClientRect(), bb = { left: Math.min(r1.left, r2.left), width: Math.max(r1.right, r2.right) - Math.min(r1.left, r2.left), top: Math.min(r1.top, r2.top) }; /* v6.24: sin contar el botón Pegado */ const w = bb.width > 10 ? bb : { left: S.hand === 'z' ? 14 : innerWidth - 186, width: 172, top: innerHeight - 112 };
   joyC.x = w.left + w.width / 2 + (S.hand === 'z' ? 1 : -1) * Math.min(44, innerWidth * .1); /* v6.18: un poco hacia el centro */ joyC.y = w.top - 84; joyEl.style.left = joyC.x + 'px'; joyEl.style.top = joyC.y + 'px'; }
 addEventListener('resize', () => setTimeout(placeJoy, 50));
 function joyShow(v) { joyEl.classList.toggle('on', !!v); joyEl.classList.add('fixed'); if (v) { placeJoy(); setTimeout(placeJoy, 120); } }
@@ -465,6 +465,7 @@ addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDra
 function resetJoy() { joyRel(); joyM = 0; joy.on = 0; joyShow(1); }
 const keys = {}; addEventListener('keydown', e => { keys[e.code] = 1; if (e.code === 'Space') doSplit(me); if (e.code === 'KeyW') doEject(me); }); addEventListener('keyup', e => keys[e.code] = 0);
 $('bSplit').addEventListener('pointerdown', e => { e.stopPropagation(); if (G.net === 'c') NET.send({ t: 'sp', a: joyA }); else doSplit(me); });
+$('bPeg').addEventListener('pointerdown', e => { e.stopPropagation(); doPeg(); });
 $('bEject').addEventListener('pointerdown', e => { e.stopPropagation(); if (G.net === 'c') NET.send({ t: 'ej' }); else doEject(me); });
 
 // ---------- Acciones ----------
@@ -482,7 +483,7 @@ function miniGeo(ch) { const key = ch.id === 'custom' ? 'custom:' + (S.shape || 
   for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), r = sampleR(radii, x, y, z); pa.setXYZ(i, x * r, y * r, z * r); } g.computeVertexNormals(); g.userData.mini = 1; return MINIG[key] = g; } // figura del personaje en baja resolución (320 triángulos)
 function bigBurst(c) { const p = c.p, ox = c.x, oz = c.z, col = colOf(p), M = p.cells.reduce((a, o) => a + o.m, 0);
   wave(ox, oz, ARENA * 1.4, 0xffffff); wave(ox, oz, ARENA, col); burst(ox, oz, col, 40, 3); burst(ox, oz, 0xffd84a, 20, 2.4);
-  if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); }
+  if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); if (!G.pegOn && G.net !== 'c') { G.pegOn = 1; G.pegUsed = new Set(); setTimeout(() => { if (G.pegOn) { msg('🧲 ¡Nueva habilidad: PEGADO!', 2.5); pegUI(); } }, 2300); pegUI(); } }
   const body = c.mesh.body, geo = miniGeo(p.char), mat = body.material.clone(), vk = visK(geo);
   const N = Math.max(20, Math.min(MINI_MAX, Math.round(M / 1500))); { let live = 0; for (let j = BURSTS.length - 1; j >= 0; j--) for (const q of BURSTS[j].q) if (q.l > 0) { live++; if (live + N > MINI_LIVE) q.l = Math.min(q.l, 1.2); } } const im = new THREE.InstancedMesh(geo, mat, N); im.frustumCulled = false; scene.add(im);
   const B = { im, geo, own: 0, mat, vk, q: [] }; const off = Math.random() * 6.283;
@@ -493,9 +494,24 @@ function bigBurst(c) { const p = c.p, ox = c.x, oz = c.z, col = colOf(p), M = p.
 function clearBursts() { for (const B of BURSTS) { scene.remove(B.im); B.im.dispose(); B.mat.dispose(); if (B.own) B.geo.dispose(); } BURSTS.length = 0; }
 function stepCrumbs(DT) { for (let j = BURSTS.length - 1; j >= 0; j--) { const B = BURSTS[j]; let live = 0;
   for (const q of B.q) { if (q.l <= 0) continue; q.l -= DT; live++; if (q.d > 0) { q.d -= DT; continue; } const k = damp(3.5, DT); q.x += (q.tx - q.x) * k; q.z += (q.tz - q.z) * k; if (q.e > 0) { q.e -= DT; continue; } /* volando: aún no se pueden comer */
-    for (const c of cells) { if (c.dead) continue; const dx = q.x - c.x, dz = q.z - c.z; if (dx * dx + dz * dz <= c.rr * c.rr) { c.m += q.m; c.sq = Math.max(c.sq, .55); q.l = 0; if (c.p === me) sfx.pop(4, 0); break; } } }
+    for (const c of cells) { if (c.dead || (G.pegT > 0 && c.p === me)) continue; const dx = q.x - c.x, dz = q.z - c.z; if (dx * dx + dz * dz <= c.rr * c.rr) { c.m += q.m; c.sq = Math.max(c.sq, .55); q.l = 0; if (c.p === me) sfx.pop(4, 0); break; } } }
   if (!live) { scene.remove(B.im); B.im.dispose(); B.mat.dispose(); if (B.own) B.geo.dispose(); BURSTS.splice(j, 1); } } }
 function drawCrumbs(t) { for (const B of BURSTS) { let n = 0; for (const q of B.q) { if (q.l <= 0) continue; const s = q.s * B.vk * Math.min(1, q.l / 1.5) * (1 + Math.sin(t * 5 + q.yaw) * .06); TQ.setFromEuler(EUL.set(0, q.yaw + t * .5, 0)); M4.compose(SC.set(q.x, s * .9 + .05, q.z), TQ, TV2.setScalar(s)); B.im.setMatrixAt(n++, M4); } B.im.count = n; B.im.instanceMatrix.needsUpdate = true; } }
+// v6.24: habilidad PEGADO (tras explotar): te enganchas 4 s a un rival cercano, invulnerable; una vez por rival
+const PEG_T = 4, PEG_RANGE = 45;
+function pegMain() { return me && me.cells.length ? me.cells.reduce((a, b) => a.m >= b.m ? a : b) : null; }
+function pegCand() { const c = pegMain(); if (!c || !me.alive) return null; let best = null, bd = 1e9;
+  for (const o of cells) { if (o.dead || o.p === me || !o.p.alive || G.pegUsed.has(o.p) || (G.teams && o.p.team === me.team)) continue; const d = Math.hypot(o.x - c.x, o.z - c.z) - o.rr - c.rr; if (d < PEG_RANGE && d < bd) { bd = d; best = o; } } return best; }
+function pegUI() { const b = $('bPeg'); if (!b) return; b.classList.toggle('hide', !G.pegOn); if (G.pegOn) { const ok = G.pegT > 0 || !!pegCand(); b.classList.toggle('off', !ok); b.querySelector('small').textContent = G.pegT > 0 ? 'PEGADO ' + Math.ceil(G.pegT) : 'PEGADO'; } placeJoy(); }
+function doPeg() { if (!G.on || !G.pegOn || G.pegT > 0) return; const t = pegCand(), c = pegMain(); if (!t || !c) { if (c) msg('Ningún rival cerca', 1); return; }
+  G.pegT = PEG_T; G.pegTg = t; G.pegUsed.add(t.p); G.pegA = Math.atan2(c.z - t.z, c.x - t.x); me.prot = PEG_T + .2; sfx.combo(4); burst(c.x, c.z, 0x7ff6ff, 18, 1); msg('🧲 ¡Pegado a ' + t.p.name + '!', 1.5); pegUI(); }
+function pegStep(DT) { if (!(G.pegT > 0)) return; let t = G.pegTg; if (!t || t.dead) t = G.pegTg = (G.pegTg && G.pegTg.p.cells.length ? G.pegTg.p.cells.reduce((a, b) => a.m >= b.m ? a : b) : null);
+  G.pegT -= DT; me.prot = Math.max(me.prot, .3); const ux = Math.cos(G.pegA), uz = Math.sin(G.pegA);
+  if (t && G.pegT > 0) { for (const c of me.cells) { const R = t.rr + c.rr * .55; c.x = t.x + ux * R; c.z = t.z + uz * R; c.vx = t.vx; c.vz = t.vz; c.bx = c.bz = 0; c.tvx = c.tvz = undefined; } return; }
+  // soltar: reaparece alejado del rival, dentro del mapa
+  G.pegT = 0; const c = pegMain(); if (c && t) { let a = G.pegA, ok = 0; for (let k = 0; k < 16 && !ok; k++) { const D = t.rr + c.rr + 18, x = t.x + Math.cos(a) * D, z = t.z + Math.sin(a) * D; if (Math.hypot(x, z) < ARENA - c.rr - 2) { ok = 1; for (const o of me.cells) { o.x = x + rnd(-1, 1); o.z = z + rnd(-1, 1); o.vx = o.vz = 0; } } else a += .4 * (k % 2 ? k : -k); }
+    if (!ok) for (const o of me.cells) { o.x *= .2; o.z *= .2; } wave(c.x, c.z, c.rr * 3, 0x7ff6ff); }
+  me.prot = 1; G.pegTg = null; pegUI(); }
 function doEject(p) {
   if (!G.on || !p || !p.alive) return; let any = 0;
   for (const c of p.cells) { if (c.m < 18 || food.length >= MAXF) continue; c.m -= 3; c.rr = massR(c.m); any = 1;
@@ -538,7 +554,7 @@ const colOf = p => G.teams ? TEAMS[p.team].c : (p === me ? 0xffffff : p.col || 0
 function teamScores() { if (!G.teams) return [0, 0, 0, 0]; const s = [0, 0, 0, 0]; for (const c of cells) s[c.p.team] += c.m; return s; }
 let selChar = null;
 function startGame(opts = {}) { if (!opts.roster && G.net === 'h') { mpLeave(); } if (G.net === 'c') return; resetJoy(); G.dead = 0; acc = 0; last = performance.now(); for (const s of ['over', 'dead', 'help']) $(s).classList.add('hide'); G.cd = navigator.webdriver ? 0 : 2.1; $('cd').classList.toggle('hide', !G.cd);
-  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; clearBursts(); { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
+  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; clearBursts(); G.pegOn = 0; G.pegT = 0; G.pegTg = null; G.pegUsed = new Set(); { const b = document.getElementById('bPeg'); if (b) b.classList.add('hide'); } { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
   const ch = allChars(); selChar = ch.find(c => c.id === S.char && !premLocked(c)) || ch[0]; G.trialUsed = selChar.prem && S.trial === selChar.id && !premOwned(selChar.id);
   G.teams = S.mode === 'equipos'; G.inf = S.dur === 'inf'; G.el = 0; $('bExit').classList.remove('hide'); $('bEndInf').classList.remove('hide'); me = { name: 'Tú', team: G.teams ? S.team : 100, char: selChar, cells: [], bot: 0, dirx: 0, dirz: 1, tx: 0, tz: 1, alive: 0, pud: 0, aggr: 1, boost: 0 };
   players.push(me); spawnPlayer(me, START_M);
@@ -596,9 +612,10 @@ function step0() {
     if (me && me.alive) for (const c of me.cells) { const dx = f.x - c.x, dz = f.z - c.z; if (dx * dx + dz * dz < (c.rr + 5) ** 2) { f.ang = Math.atan2(dz, dx) + rnd(-.4, .4); sp = f.mv * 1.4; break; } }
     f.x += Math.cos(f.ang) * sp * DT; f.z += Math.sin(f.ang) * sp * DT; const d = Math.hypot(f.x, f.z); if (d > ARENA - 2) { f.ang += PI; f.x *= (ARENA - 2) / d; f.z *= (ARENA - 2) / d; } f.ry = -f.ang + PI / 2; }
   for (const f of food) if (f.ej) { f.x += f.vx * DT; f.z += f.vz * DT; const k = damp(3.5, DT); f.vx -= f.vx * k; f.vz -= f.vz * k; if (f.ot > 0) f.ot -= DT; const d = Math.hypot(f.x, f.z); if (d > ARENA - 1) { f.x *= (ARENA - 1) / d; f.z *= (ARENA - 1) / d; } f.dirty = 1; }
+  pegStep(DT); if (G.pegOn && (G.pegUiT = (G.pegUiT || 0) - DT) <= 0) { G.pegUiT = .25; pegUI(); }
   FGRID.clear(); for (const f of food) { if (f.x > 999) continue; const k = ((f.x / GS + 64) | 0) * 256 + ((f.z / GS + 64) | 0); let b = FGRID.get(k); if (!b) FGRID.set(k, b = []); b.push(f); }
   let anyGone = 0;
-  for (const c of cells) { const r2 = (c.rr + 2.4) ** 2, R0 = c.rr + 2.4, x0 = ((c.x - R0) / GS + 64) | 0, x1 = ((c.x + R0) / GS + 64) | 0, z0 = ((c.z - R0) / GS + 64) | 0, z1 = ((c.z + R0) / GS + 64) | 0;
+  for (const c of cells) { if (G.pegT > 0 && c.p === me) continue; const r2 = (c.rr + 2.4) ** 2, R0 = c.rr + 2.4, x0 = ((c.x - R0) / GS + 64) | 0, x1 = ((c.x + R0) / GS + 64) | 0, z0 = ((c.z - R0) / GS + 64) | 0, z1 = ((c.z + R0) / GS + 64) | 0;
     for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const B = FGRID.get(gx * 256 + gz); if (B) for (let i = 0; i < B.length; i++) { const f = B[i]; if (f.gone || c.dead) continue; const dx = f.x - c.x; if (dx * dx > r2) continue; const dz = f.z - c.z; const fr = f.ej ? .3 : f.s * .85; if (dx * dx + dz * dz > c.rr * c.rr) continue; /* v6.18: solo si el centro del objeto queda dentro de la bola */ if (f.ej && f.own === c && f.ot > 0) continue; if (!f.ej && f.s >= c.rr) continue;
       c.m += f.m * (c.p.bot ? DF().eat : 1); c.sq = Math.max(c.sq, f.k ? 1 : .55); c.jig = 1; if (!f.ej) { stick(c, f.t, f.s, f.c, f.x, f.z, 1); if (G.net === 'h') NEV.push(['e', c.id, f.t, f.s, f.c, Math.round(f.x * 10), Math.round(f.z * 10)]); }
       if (f.k === 2 && !c.p.bot) { c.p.boost = 4; if (c.p === me) { msg('⚡ ¡TURBO!', 1); sfx.combo(5); G.shake = .25; } burst(f.x, f.z, 0x3ff0ff, 14, 1); }
@@ -927,4 +944,4 @@ function mpSetup() {
 }
 
 mpSetup();
-window.__ar = { BURSTS, step, CHARS, PREMS, get players() { return players; }, netStart: netHostStart, get NET() { return NET; }, vis: () => Object.entries(THC).map(([k, c]) => k + ":" + c.arenaG.visible + "," + c.foodIMs[0].visible).join(" "), ri: () => [renderer.info.memory.geometries, renderer.info.memory.textures, renderer.info.programs.length, scene.children.length], food: () => food, endGame, dbg: () => [foodIMs.length, NT, OBJG.length, [...new Set(food.map(f => f.t))]], doSplit, setTheme, THEMES, initFood, cam: () => ({ h: +camH.toFixed(1), fog: scene.fog.far | 0 }), MAXM,  G, S, startGame, openSculpt, get me() { return me; }, get cells() { return cells; }, sculpt, brush, frames: () => G.frames };
+window.__ar = { BURSTS, doPeg, pegCand, step, CHARS, PREMS, get players() { return players; }, netStart: netHostStart, get NET() { return NET; }, vis: () => Object.entries(THC).map(([k, c]) => k + ":" + c.arenaG.visible + "," + c.foodIMs[0].visible).join(" "), ri: () => [renderer.info.memory.geometries, renderer.info.memory.textures, renderer.info.programs.length, scene.children.length], food: () => food, endGame, dbg: () => [foodIMs.length, NT, OBJG.length, [...new Set(food.map(f => f.t))]], doSplit, setTheme, THEMES, initFood, cam: () => ({ h: +camH.toFixed(1), fog: scene.fog.far | 0 }), MAXM,  G, S, startGame, openSculpt, get me() { return me; }, get cells() { return cells; }, sculpt, brush, frames: () => G.frames };

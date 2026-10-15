@@ -167,3 +167,8 @@ button.big{margin-top:6px;letter-spacing:2px;text-shadow:0 3px 0 #a3226a}
 /* v6.17 joystick fijo */
 #joy.fixed{display:block;opacity:.75}
 body.zurdo #btns{right:auto;left:14px;flex-direction:row-reverse}
+
+/* v6.24 Pegado */
+#bPeg{width:62px;height:62px}
+#bPeg span{font-size:22px}
+#bPeg.off{opacity:.4;filter:grayscale(1)}
