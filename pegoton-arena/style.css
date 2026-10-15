@@ -163,3 +163,7 @@ button.big{margin-top:6px;letter-spacing:2px;text-shadow:0 3px 0 #a3226a}
 #cd{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-size:96px;font-weight:700;color:#fff;-webkit-text-stroke:3px #a3226a;text-shadow:0 6px 0 #0004;pointer-events:none;z-index:40}#cd.hide{display:none}
 .mpb{background:linear-gradient(#3fb8ff,#2a7bd6)!important;margin-top:8px}.mpRow{display:flex;gap:8px;align-items:center;margin:10px 0}.mpRow label{font-size:13px;opacity:.8}.mpRow input{flex:1;height:44px;border-radius:14px;border:2px solid #fff6;background:#fff;color:#4a2a5e;font:700 18px inherit;padding:0 12px;text-transform:none;min-width:0}#mpCodeIn{text-transform:uppercase;letter-spacing:4px;text-align:center}.mpCode{font-size:54px;font-weight:700;letter-spacing:10px;text-align:center;color:#ffd84a;-webkit-text-stroke:2px #a3226a}.mpP{background:#ffffff22;border-radius:12px;padding:8px 12px;margin:5px 0;font-weight:700}.mpInfo{font-size:13px;opacity:.85;text-align:center;margin:8px 0}#mp .panel{max-height:92vh;overflow:auto}
 .ch{position:relative}.lock{position:absolute;top:4px;right:4px;background:#2a1640e6;color:#ffd84a;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700}.lock.tr{color:#7ff6ff}.premImg{width:160px;height:160px;display:block;margin:0 auto}#premDlg{z-index:50}
+
+/* v6.17 joystick fijo */
+#joy.fixed{display:block;opacity:.75}
+body.zurdo #btns{right:auto;left:14px;flex-direction:row-reverse}

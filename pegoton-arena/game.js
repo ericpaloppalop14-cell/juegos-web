@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=680';
+import * as THREE from './three.js?v=681';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -402,7 +402,8 @@ function wave(x, z, r, col) { const w = waves[wi = (wi + 1) % waves.length]; w.m
 function popNum() { return; } function popNum0(x, z, txt, col) { V.set(x, 1, z).project(camera); if (V.z > 1) return; const e = document.createElement('div'); e.className = 'pop'; e.textContent = txt; e.style.color = col; e.style.left = (V.x * .5 + .5) * innerWidth + 'px'; e.style.top = (-V.y * .5 + .5) * innerHeight + 'px'; $('pops').appendChild(e); setTimeout(() => e.remove(), 900); }
 const BOTN = ['Fideo', 'Pipa', 'Rosquilla', 'Muffin', 'Chupi', 'Lacasito', 'Merengue', 'Galleta', 'Chicloso', 'Gominola', 'Bombón', 'Pegajosa', 'Regaliz', 'Turrón', 'Nube', 'Piruleta', 'Caramelo', 'Mazapán', 'Churro', 'Fresón', 'Kiwi', 'Melón', 'Coco', 'Gofre', 'Natilla', 'Flan', 'Toffee', 'Mochi', 'Bizcocho', 'Polvorón'];
 let players = [], cells = [], me = null;
-const MAXM = (ARENA / 4 / 0.32) ** 2; // radio nunca > 1/4 de la arena (≈6700)
+const MAXM = 1e9; // v6.17: sin tope de tamaño (antes radio ≤ 1/4 de arena ≈ 6700 de masa)
+const BURST_R = ARENA * .9; // v6.17: al ocupar ~90% del mapa la bola explota en trozos
 const START_M = 12, EAT_K = 1.05, PROT = 2; // 12 % más masa ≈ se ve claramente más grande con los juguetes; basta con que tu borde cubra su centro
 const massR = m => 0.32 * Math.sqrt(m);
 const speedOf = m => 19.85 * (0.363 + 0.637 / (1 + Math.pow(Math.max(1, m) / 55, 0.7))); // v6.11: los grandes conservan chispa // v6.9: curva más marcada, siempre baja con la masa // siempre baja con la masa: 12→12,1 · 200→8,9 · 1000→7,1 · máx→6
@@ -436,14 +437,23 @@ function burst(x, z, col, n, s = 1) { for (let i = 0; i < n; i++) { const q = pa
 // ---------- Input: joystick flotante invisible ----------
 // joystick flotante (igual que Tierra que se hunde v6): toca en cualquier sitio, arrastra hacia donde quieras ir (referencia fija al empezar)
 let drag = null, joyA = null, joyM = 1; const joyEl = $('joy'), knob = $('joyK'); const joy = { on: 0 };
-canvas.addEventListener('pointerdown', e => { if (!G.on || sculpt.on) return; if (drag && drag.id === e.pointerId) return; /* v6.9: un drag colgado ya no bloquea */ audio(); drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY };
-  try { canvas.setPointerCapture(e.pointerId); } catch (x) { } joyEl.style.left = e.clientX + 'px'; joyEl.style.top = e.clientY + 'px'; knob.style.transform = 'translate(-50%,-50%)'; joyEl.classList.add('on'); joy.on = 1; });
-canvas.addEventListener('onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove', e => { if (!drag || e.pointerId !== drag.id) return; let dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; const R = 52; let d = Math.hypot(dx, dy); if (d > R * 1.5) { const k = 1 - R * 1.5 / d; drag.x0 += dx * k; drag.y0 += dy * k; dx -= dx * k; dy -= dy * k; d = R * 1.5; joyEl.style.left = drag.x0 + 'px'; joyEl.style.top = drag.y0 + 'px'; }
-  if (d > R) { dx *= R / d; dy *= R / d; } knob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-  const act = joyA == null ? d > 6 : d > 3.5; joyA = act ? Math.atan2(dx, -dy) : null; { const u = Math.max(0, Math.min(1, (Math.min(d, R) - 3.5) / (R - 16))); joyM = u * (2 - u); } joyEl.style.setProperty('--a', Math.atan2(dx, -dy) + 'rad'); joyEl.classList.toggle('dir', d > 5); });
-const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyA = null; joy.on = 0; joyEl.classList.remove('on'); };
-addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDrag); canvas.addEventListener('lostpointercapture', endDrag); addEventListener('blur', () => { drag = null; joyA = null; joy.on = 0; joyEl.classList.remove('on'); }); document.addEventListener('visibilitychange', () => { drag = null; joyA = null; joy.on = 0; joyEl.classList.remove('on'); });
-function resetJoy() { drag = null; joyA = null; joyM = 0; joy.on = 0; joyEl.classList.remove('on'); }
+// v6.17: joystick FIJO (mismo aspecto, semitransparente) encima de los botones; Diestro = derecha, Zurdo = izquierda
+const JR = 52; let joyC = { x: 0, y: 0 };
+function placeJoy() { document.body.classList.toggle('zurdo', S.hand === 'z'); const bb = $('btns').getBoundingClientRect(); const w = bb.width > 10 ? bb : { left: S.hand === 'z' ? 14 : innerWidth - 186, width: 172, top: innerHeight - 112 };
+  joyC.x = w.left + w.width / 2; joyC.y = w.top - 84; joyEl.style.left = joyC.x + 'px'; joyEl.style.top = joyC.y + 'px'; }
+addEventListener('resize', () => setTimeout(placeJoy, 50));
+function joyShow(v) { joyEl.classList.toggle('on', !!v); joyEl.classList.add('fixed'); if (v) { placeJoy(); setTimeout(placeJoy, 120); } }
+canvas.addEventListener('pointerdown', e => { if (!G.on || sculpt.on) return; if (drag && drag.id === e.pointerId) return; placeJoy();
+  if (Math.hypot(e.clientX - joyC.x, e.clientY - joyC.y) > 110 && e.pointerType !== 'mouse') return; /* solo se toca en la zona del joystick */
+  audio(); drag = { id: e.pointerId, x0: joyC.x, y0: joyC.y }; try { canvas.setPointerCapture(e.pointerId); } catch (x) { } joyMove(e); });
+function joyMove(e) { if (!drag || e.pointerId !== drag.id) return; let dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; const R = JR; let d = Math.hypot(dx, dy); const fa = Math.atan2(dx, -dy), fd = d;
+  if (d > R) { dx *= R / d; dy *= R / d; d = R; } knob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+  const act = joyA == null ? fd > 6 : fd > 3.5; joyA = act ? fa : null; { const u = Math.max(0, Math.min(1, (Math.min(fd, R) - 3.5) / (R - 16))); joyM = u * (2 - u); } joyEl.style.setProperty('--a', fa + 'rad'); joyEl.classList.toggle('dir', fd > 5); }
+canvas.addEventListener('onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove', joyMove);
+const joyRel = () => { drag = null; joyA = null; knob.style.transform = 'translate(-50%,-50%)'; joyEl.classList.remove('dir'); };
+const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; joyRel(); };
+addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDrag); canvas.addEventListener('lostpointercapture', endDrag); addEventListener('blur', joyRel); document.addEventListener('visibilitychange', joyRel);
+function resetJoy() { joyRel(); joyM = 0; joy.on = 0; joyShow(1); }
 const keys = {}; addEventListener('keydown', e => { keys[e.code] = 1; if (e.code === 'Space') doSplit(me); if (e.code === 'KeyW') doEject(me); }); addEventListener('keyup', e => keys[e.code] = 0);
 $('bSplit').addEventListener('pointerdown', e => { e.stopPropagation(); if (G.net === 'c') NET.send({ t: 'sp', a: joyA }); else doSplit(me); });
 $('bEject').addEventListener('pointerdown', e => { e.stopPropagation(); if (G.net === 'c') NET.send({ t: 'ej' }); else doEject(me); });
@@ -457,6 +467,13 @@ function doSplit(p) {
     n.merge = c.merge = 1.8; n.st = c.st.splice(0, c.st.length >> 1); n.q.copy(c.q); n.sq = 1; c.sq = 1; wave(c.x, c.z, c.rr * 2, 0xffffff); burst(c.x, c.z, colOf(p), 6, .6); }
   if (p === me) sfx.combo(2);
 }
+// v6.17: explosión al ocupar el mapa: la bola se rompe en ~20 trozos medianos repartidos; el jugador controla el más grande, el resto queda suelto (comestible) un rato
+function bigBurst(c) { const p = c.p, N = 20, M = c.m, keep = M * .2, rest = (M - keep) / (N - 1); const ox = c.x, oz = c.z;
+  wave(ox, oz, ARENA * 1.6, 0xffffff); wave(ox, oz, ARENA * 1.1, colOf(p)); burst(ox, oz, colOf(p), 60, 3); burst(ox, oz, 0xffd84a, 30, 2.4);
+  if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); }
+  c.m = keep; c.rr = massR(keep); c.sq = 1; c.merge = 6; const r0 = ARENA * .15; c.x = ox * .3; c.z = oz * .3;
+  for (let i = 1; i < N; i++) { const a = i / (N - 1) * 6.283 + rnd(-.15, .15), r = Math.min(ARENA - massR(rest) * .7, rnd(ARENA * .45, ARENA * .9)); const n = newCell(p, Math.cos(a) * r, Math.sin(a) * r, rest * rnd(.8, 1.2));
+    n.loose = 18; n.merge = 18; n.bx = Math.cos(a) * 30; n.bz = Math.sin(a) * 30; n.sq = 1; n.q.copy(c.q); } }
 function doEject(p) {
   if (!G.on || !p || !p.alive) return; let any = 0;
   for (const c of p.cells) { if (c.m < 18 || food.length >= MAXF) continue; c.m -= 3; c.rr = massR(c.m); any = 1;
@@ -528,25 +545,27 @@ function step0() {
   for (const p of players) { if (!p.bot) continue; if (!p.alive) { p.resp -= DT; if (p.resp <= 0) { spawnPlayer(p, START_M); } continue; }
     p.think -= DT; if (p.ignT > 0) p.ignT -= DT; if (p.think <= 0) { const th = DF().th; p.think = p.thinkDt = rnd(th[0], th[1]); botThink(p); } p.dirx += (p.tx - p.dirx) * damp(10, DT); p.dirz += (p.tz - p.dirz) * damp(10, DT); p.inp = 1; }
   // movimiento
+  const toBurst = [];
   for (const c of cells) { const p = c.p; c.px = c.x; c.pz = c.z; let dx = p.dirx, dz = p.dirz; const L = Math.hypot(dx, dz) || 1;
     // cada célula va hacia el centro de masa + dirección (como agar)
     // Tierra que se hunde v6: 2º orden, la entrada se suaviza (70 ms) y la velocidad la sigue (~90 ms): rápido pero sin tirones
-    const m = p.inp || 0, sp = (m > 0 ? speedOf(c.m) * Math.min(1, 0.55 + m * 1.6) : 0) * (p.boost > 0 && !p.bot ? 1.4 : 1), ki = 1 - Math.exp(-DT / 0.035), kv = 1 - Math.exp(-DT / 0.055);
+    const m = c.loose > 0 ? 0 : (p.inp || 0), sp = (m > 0 ? speedOf(c.m) * Math.min(1, 0.55 + m * 1.6) : 0) * (p.boost > 0 && !p.bot ? 1.4 : 1), ki = 1 - Math.exp(-DT / 0.035), kv = 1 - Math.exp(-DT / 0.055);
     c.tvx = (c.tvx ?? c.vx) + (dx / L * sp - (c.tvx ?? c.vx)) * ki; c.tvz = (c.tvz ?? c.vz) + (dz / L * sp - (c.tvz ?? c.vz)) * ki;
     c.vx += (c.tvx - c.vx) * kv; c.vz += (c.tvz - c.vz) * kv;
     if (p.boost > 0 && Math.random() < .3) trail(c);
     c.x += (c.vx + c.bx) * DT; c.z += (c.vz + c.bz) * DT; const bd = damp(4.5, DT); c.bx -= c.bx * bd; c.bz -= c.bz * bd;
-    if (c.merge > 0) c.merge -= DT; if (!isFinite(c.m) || c.m < 1) c.m = START_M; if (c.m > MAXM) c.m = MAXM; if (c.m > 150) c.m -= c.m * (0.002 + 0.014 * c.m / MAXM) * DT; c.rr = massR(c.m); // Agar: los grandes adelgazan poco a poco
+    if (c.merge > 0) c.merge -= DT; if (!isFinite(c.m) || c.m < 1) c.m = START_M; if (c.m > MAXM) c.m = MAXM; if (c.m > 150) c.m -= c.m * 0.0015 * DT; c.rr = massR(c.m); if (c.loose > 0) c.loose -= DT; else if (c.rr >= BURST_R && G.net !== 'c') toBurst.push(c); // Agar: los grandes adelgazan poco a poco
     if (!isFinite(c.x) || !isFinite(c.z)) { c.x = c.z = 0; c.vx = c.vz = c.bx = c.bz = 0; c.tvx = c.tvz = undefined; } const d = Math.hypot(c.x, c.z), lim = Math.max(2, ARENA - c.rr * .6); if (d > lim) { c.x *= lim / d; c.z *= lim / d; }
     if (c.sq > 0) c.sq = Math.max(0, c.sq - DT * 2.5); }
+  for (const c of toBurst) if (!c.dead) bigBurst(c);
   // células propias: cohesión, separación o fusión
   for (const p of players) { const cs = p.cells; if (cs.length < 2) continue; const main = cs.reduce((a, b) => a.m >= b.m ? a : b);
     // imán suave hacia el trozo principal (más grande), limitado para no dar velocidad extra
-    for (const c of cs) { if (c === main) continue; const dx = main.x - c.x, dz = main.z - c.z, d = Math.hypot(dx, dz) || 1, mv = Math.min(Math.max(0, d - (main.merge <= 0 && c.merge <= 0 && main.m >= c.m * EAT_K ? 0 : (main.rr + c.rr) * .5)), Math.max(speedOf(c.m) * .15, speedOf(c.m) - Math.hypot(c.vx, c.vz)) * .6 * DT); c.x += dx / d * mv; c.z += dz / d * mv; }
+    for (const c of cs) { if (c === main || c.loose > 0) continue; const dx = main.x - c.x, dz = main.z - c.z, d = Math.hypot(dx, dz) || 1, mv = Math.min(Math.max(0, d - (main.merge <= 0 && c.merge <= 0 && main.m >= c.m * EAT_K ? 0 : (main.rr + c.rr) * .5)), Math.max(speedOf(c.m) * .15, speedOf(c.m) - Math.hypot(c.vx, c.vz)) * .6 * DT); c.x += dx / d * mv; c.z += dz / d * mv; }
     for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) { const a = cs[i], b = cs[j]; if (a.dead || b.dead) continue; const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || .01, rs = a.rr + b.rr;
       const big = a.m >= b.m ? a : b, sm = big === a ? b : a;
       // fusión = misma regla que comer: el grande (≥ EAT_K) cubre el centro del pequeño; iguales no se fusionan, solo se tocan
-      if (big.merge <= 0 && sm.merge <= 0 && big.m >= sm.m * EAT_K) { if (d < big.rr - sm.rr * .05) { big.m += sm.m; transfer(sm, big); big.sq = 1; removeCell(sm); } }
+      if (!(big.loose > 0) && !(sm.loose > 0) && big.merge <= 0 && sm.merge <= 0 && big.m >= sm.m * EAT_K) { if (d < big.rr - sm.rr * .05) { big.m += sm.m; transfer(sm, big); big.sq = 1; removeCell(sm); } }
       else if (d < rs * .92) { const o = (rs * .92 - d) / d * .5 * damp(6, DT); a.x -= dx * o; a.z -= dz * o; b.x += dx * o; b.z += dz * o; } }
     p.cells = cs.filter(c => !c.dead); }
   cells = cells.filter(c => !c.dead);
@@ -567,7 +586,7 @@ function step0() {
   if (anyGone) food = food.filter(f => !f.gone);
   // comer células
   for (const a of cells) { if (a.dead) continue; for (const b of cells) { if (b === a || b.dead || a.dead || b.p === a.p) continue; if (b.p.team === a.p.team || b.p.prot > 0 || a.p.prot > 0 || !a.p.alive || !b.p.alive) continue;
-      if (a.m < b.m * EAT_K) continue; const d = Math.hypot(b.x - a.x, b.z - a.z); if (d >= a.rr * (1 + Math.min(.08, a.st.length * .002)) - b.rr * .3) continue; // v6.15: regla clara y generosa
+      if (a.m < b.m * (b.loose > 0 ? .5 : EAT_K)) continue; /* v6.17: trozos sueltos de explosión: se comen con la mitad de masa */ const d = Math.hypot(b.x - a.x, b.z - a.z); if (d >= a.rr * (1 + Math.min(.08, a.st.length * .002)) - b.rr * .3) continue; // v6.15: regla clara y generosa
       a.m += b.m; a.sq = 1; transfer(b, a); burst(b.x, b.z, colOf(b.p), 26, Math.min(2.2, .7 + b.rr * .3)); burst(b.x, b.z, 0xffffff, 8, .8); wave(a.x, a.z, a.rr * 2.4, colOf(a.p)); if (a.p === me) popNum(a.x, a.z, '+' + Math.round(b.m), '#ffd84a'); if (b.p === me) popNum(b.x, b.z, '¡ÑAM!', '#ff5470');
       if (a.p.remote && G.net === 'h') NEV.push(['k', a.p.remote, b.p.name]); if (a.p === me) { G.eats++; sfx.bump(); G.shake = .45; addCombo(5); eatMsg('Te has comido a ' + b.p.name, 1.3); 0 && (b.p.cells.length <= 1 ? '😋 ¡Te has comido a ' + b.p.name + '!' : '😋 ¡Ñam!'); }
       removeCell(b); b.p.cells = b.p.cells.filter(c => !c.dead);
@@ -661,7 +680,7 @@ function frame1(now) {
   for (let i = 0; i < PN; i++) { const q = parts[i]; if (q.l > 0) { q.l -= dt; q.vy -= 25 * dt; q.x += q.vx * dt; q.y = Math.max(.1, q.y + q.vy * dt); q.z += q.vz * dt; } const s = q.l > 0 ? q.s : 0; M4.makeScale(s, s, s).setPosition(q.x || 0, q.y || 0, q.z || 0); partIM.setMatrixAt(i, M4); } partIM.instanceMatrix.needsUpdate = true;
   // cámara
   if (players.length && me) { let mx = 0, mz = 0, tm = 0, maxr = 1; if (me.cells.length) { for (const c of me.cells) { mx += (c.ix ?? c.x) * c.m; mz += (c.iz ?? c.z) * c.m; tm += c.m; maxr = Math.max(maxr, c.rr); } mx /= tm; mz /= tm; } else { mx = camX; mz = camZp; }
-    const spread = me.cells.reduce((a, c) => Math.max(a, Math.hypot((c.ix ?? c.x) - mx, (c.iz ?? c.z) - mz) + c.rr), 0); const tH = 26 + Math.sqrt(Math.min(tm || 10, 400)) * 1.2 + Math.max(maxr * 4.2, spread * 2.4), ar = camera.aspect < 1 ? 1.15 : .9; camH += (Math.min(280, isFinite(tH) ? tH * ar : 60) - camH) * damp(2.5, dt); scene.fog.near = camH * 1.6 + 40; scene.fog.far = camH * 4 + 220;
+    const spread = me.cells.reduce((a, c) => Math.max(a, Math.hypot((c.ix ?? c.x) - mx, (c.iz ?? c.z) - mz) + c.rr), 0); const tH = 26 + Math.sqrt(Math.min(tm || 10, 400)) * 1.2 + Math.max(maxr * 4.2, spread * 2.4), ar = camera.aspect < 1 ? 1.15 : .9; camH += (Math.min(340, isFinite(tH) ? tH * ar : 60) - camH) * damp(2.5, dt); scene.fog.near = camH * 1.6 + 40; scene.fog.far = camH * 4 + 220;
     { let vx = 0, vz = 0; for (const c of me.cells) { vx += c.vx; vz += c.vz; } const n = me.cells.length || 1; mx += vx / n * .25; mz += vz / n * .25; } camX += (mx - camX) * damp(12, dt); camZp += (mz - camZp) * damp(12, dt); if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 2.2); const sk = (G.shake || 0) ** 2 * 2.2; camera.position.set(camX + rnd(-sk, sk), camH, camZp + camH * .42 + rnd(-sk, sk)); camera.lookAt(camX, 0, camZp); camera.fov = 50 + (me.boost > 0 ? 6 : 0) + (G.shake || 0) * 6; camera.updateProjectionMatrix(); }
   else { camera.position.set(Math.sin(t * .1) * 40, 45, Math.cos(t * .1) * 40); camera.lookAt(0, 0, 0); }
   renderer.render(scene, camera);
@@ -759,10 +778,11 @@ function showMenu() {
   $('charPick').innerHTML = ch.map(c => `<div class="ch ${c.id === S.char ? 'on' : ''}" data-id="${c.id}"><img src="${thumb(c)}">${c.custom ? '⭐ ' : ''}${c.prem ? '👑 ' : ''}${c.n}${premLocked(c) ? '<span class="lock">🔒 0,99 €</span>' : (c.prem && S.trial === c.id ? '<span class="lock tr">Prueba</span>' : '')}</div>`).join('');
   $('charPick').querySelectorAll('.ch').forEach(d => { d.onclick = () => { sfx.click(); const c = allChars().find(x => x.id === d.dataset.id); if (premLocked(c)) return premOpen(c); S.char = d.dataset.id; save(); showMenu(); }; d.ondblclick = () => { if (premLocked(allChars().find(x => x.id === d.dataset.id))) return; S.char = d.dataset.id; save(); audio(); startGame(); }; });
   $('bCreate').textContent = S.shape ? '🎨 Editar el mío' : '🎨 Crear el mío';
-  $('bSnd').textContent = S.snd ? '🔊' : '🔇'; const sc = ch.find(c => c.id === S.char); $('heroImg').src = thumb(sc); $('heroName').textContent = sc.n; $('bestTxt').textContent = S.best ? '🏆 Récord: ' + S.best + ' de masa' : '¡Sé la bola más grande!';
+  $('bSnd').textContent = S.snd ? '🔊' : '🔇'; $('bHand').textContent = S.hand === 'z' ? '✋ Mano: Zurdo' : '✋ Mano: Diestro'; document.body.classList.toggle('zurdo', S.hand === 'z'); const sc = ch.find(c => c.id === S.char); $('heroImg').src = thumb(sc); $('heroName').textContent = sc.n; $('bestTxt').textContent = S.best ? '🏆 Récord: ' + S.best + ' de masa' : '¡Sé la bola más grande!';
 }
 $('bPlay').onclick = () => { audio(); sfx.click(); startGame(); };
 $('bCreate').onclick = () => { audio(); sfx.click(); openSculpt(); };
+$('bHand').onclick = () => { S.hand = S.hand === 'z' ? 'd' : 'z'; save(); showMenu(); };
 $('bSnd').onclick = () => { S.snd = !S.snd; save(); showMenu(); };
 $('bHelp').onclick = () => { sfx.click(); $('help').classList.remove('hide'); };
 $('bHelpClose').onclick = () => { sfx.click(); $('help').classList.add('hide'); };
