@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=681';
+import * as THREE from './three.js?v=682';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -360,7 +360,7 @@ function buildTheme(i) {
   { const D = 1024, cv = document.createElement('canvas'); cv.width = cv.height = D; const y = cv.getContext('2d'), h = D / 2, n = TH.sect.length * 2;
     for (let k = 0; k < n; k++) { y.fillStyle = TH.sect[k % TH.sect.length] + '24'; y.beginPath(); y.moveTo(h, h); y.arc(h, h, h * .98, k * 2 * PI / n + .01, (k + 1) * 2 * PI / n - .01); y.closePath(); y.fill(); }
     for (const [r, w, a] of [[.98, 8, '#ffffffcc'], [.66, 3, '#ffffff66'], [.33, 3, '#ffffff66']]) { y.strokeStyle = a; y.lineWidth = w; y.beginPath(); y.arc(h, h, h * r, 0, 7); y.stroke(); }
-    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const ov = new THREE.Mesh(new THREE.CircleGeometry(ARENA + 2, 96), new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false })); ov.rotation.x = -PI / 2; ov.position.y = .015; G2.add(ov); }
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const ov = new THREE.Mesh(new THREE.CircleGeometry(ARENA + 2, 96), new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); ov.rotation.x = -PI / 2; ov.position.y = .015; G2.add(ov); }
   const out = new THREE.Mesh(new THREE.RingGeometry(ARENA + 2, 420, 64), new THREE.MeshStandardMaterial({ color: TH.out, roughness: .7 })); out.rotation.x = -PI / 2; out.position.y = -.6; G2.add(out);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(ARENA + 2.5, 2.2, 14, 220), new THREE.MeshStandardMaterial({ map: stripes(TH.rim[0], TH.rim[1]), roughness: .3 })); rim.rotation.x = -PI / 2; rim.position.y = .4; G2.add(rim);
   const M = new THREE.Matrix4(), col = new THREE.Color(), Qd = new THREE.Quaternion(), Pd = new THREE.Vector3(), Sd = new THREE.Vector3(), E = new THREE.Euler();
@@ -440,7 +440,7 @@ let drag = null, joyA = null, joyM = 1; const joyEl = $('joy'), knob = $('joyK')
 // v6.17: joystick FIJO (mismo aspecto, semitransparente) encima de los botones; Diestro = derecha, Zurdo = izquierda
 const JR = 52; let joyC = { x: 0, y: 0 };
 function placeJoy() { document.body.classList.toggle('zurdo', S.hand === 'z'); const bb = $('btns').getBoundingClientRect(); const w = bb.width > 10 ? bb : { left: S.hand === 'z' ? 14 : innerWidth - 186, width: 172, top: innerHeight - 112 };
-  joyC.x = w.left + w.width / 2; joyC.y = w.top - 84; joyEl.style.left = joyC.x + 'px'; joyEl.style.top = joyC.y + 'px'; }
+  joyC.x = w.left + w.width / 2 + (S.hand === 'z' ? 1 : -1) * Math.min(44, innerWidth * .1); /* v6.18: un poco hacia el centro */ joyC.y = w.top - 84; joyEl.style.left = joyC.x + 'px'; joyEl.style.top = joyC.y + 'px'; }
 addEventListener('resize', () => setTimeout(placeJoy, 50));
 function joyShow(v) { joyEl.classList.toggle('on', !!v); joyEl.classList.add('fixed'); if (v) { placeJoy(); setTimeout(placeJoy, 120); } }
 canvas.addEventListener('pointerdown', e => { if (!G.on || sculpt.on) return; if (drag && drag.id === e.pointerId) return; placeJoy();
@@ -467,13 +467,17 @@ function doSplit(p) {
     n.merge = c.merge = 1.8; n.st = c.st.splice(0, c.st.length >> 1); n.q.copy(c.q); n.sq = 1; c.sq = 1; wave(c.x, c.z, c.rr * 2, 0xffffff); burst(c.x, c.z, colOf(p), 6, .6); }
   if (p === me) sfx.combo(2);
 }
-// v6.17: explosión al ocupar el mapa: la bola se rompe en ~20 trozos medianos repartidos; el jugador controla el más grande, el resto queda suelto (comestible) un rato
-function bigBurst(c) { const p = c.p, N = 20, M = c.m, keep = M * .2, rest = (M - keep) / (N - 1); const ox = c.x, oz = c.z;
-  wave(ox, oz, ARENA * 1.6, 0xffffff); wave(ox, oz, ARENA * 1.1, colOf(p)); burst(ox, oz, colOf(p), 60, 3); burst(ox, oz, 0xffd84a, 30, 2.4);
+// v6.18: explosión ligera: la bola vuelve a tamaño pequeño y suelta mini bolitas (pool fijo, instanciado) que se comen como comida y caducan
+const CRN = 60, crumbs = [], crIM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshStandardMaterial({ roughness: .35 }), CRN); crIM.count = 0; crIM.frustumCulled = false; scene.add(crIM);
+for (let i = 0; i < CRN; i++) crumbs.push({ l: 0 }); let cri = 0;
+function bigBurst(c) { const p = c.p, ox = c.x, oz = c.z, col = colOf(p);
+  wave(ox, oz, ARENA * 1.4, 0xffffff); wave(ox, oz, ARENA, col); burst(ox, oz, col, 40, 3); burst(ox, oz, 0xffd84a, 20, 2.4);
   if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); }
-  c.m = keep; c.rr = massR(keep); c.sq = 1; c.merge = 6; const r0 = ARENA * .15; c.x = ox * .3; c.z = oz * .3;
-  for (let i = 1; i < N; i++) { const a = i / (N - 1) * 6.283 + rnd(-.15, .15), r = Math.min(ARENA - massR(rest) * .7, rnd(ARENA * .45, ARENA * .9)); const n = newCell(p, Math.cos(a) * r, Math.sin(a) * r, rest * rnd(.8, 1.2));
-    n.loose = 18; n.merge = 18; n.bx = Math.cos(a) * 30; n.bz = Math.sin(a) * 30; n.sq = 1; n.q.copy(c.q); } }
+  for (const o of p.cells) if (o !== c) removeCell(o); p.cells = [c]; c.m = 30; c.rr = massR(30); c.sq = 1; c.merge = 0; c.st.length = 0; c.bx = c.bz = 0;
+  for (let i = 0; i < 50; i++) { const q = crumbs[cri = (cri + 1) % CRN], a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * (ARENA - 3); Object.assign(q, { x: ox + (Math.cos(a) * r - ox) * .15, z: oz + (Math.sin(a) * r - oz) * .15, tx: Math.cos(a) * r, tz: Math.sin(a) * r, m: 6, s: rnd(.6, .9), l: rnd(18, 25), c: col }); } }
+function stepCrumbs(DT) { let n = 0; for (const q of crumbs) { if (q.l <= 0) continue; q.l -= DT; const k = damp(2.5, DT); q.x += (q.tx - q.x) * k; q.z += (q.tz - q.z) * k;
+  for (const c of cells) { if (c.dead) continue; const dx = q.x - c.x, dz = q.z - c.z; if (dx * dx + dz * dz <= c.rr * c.rr) { c.m += q.m; c.sq = Math.max(c.sq, .55); q.l = 0; if (c.p === me) sfx.pop(4, 0); break; } } } }
+function drawCrumbs(t) { let n = 0; for (const q of crumbs) { if (q.l <= 0) continue; const s = q.s * Math.min(1, q.l / 1.5) * (1 + Math.sin(t * 4 + q.tx) * .06); M4.compose(SC.set(q.x, s + .05, q.z), FSQ, TV2.setScalar(s)); crIM.setMatrixAt(n, M4); crIM.setColorAt(n, COL.set(q.c)); n++; } crIM.count = n; crIM.instanceMatrix.needsUpdate = true; if (crIM.instanceColor) crIM.instanceColor.needsUpdate = true; }
 function doEject(p) {
   if (!G.on || !p || !p.alive) return; let any = 0;
   for (const c of p.cells) { if (c.m < 18 || food.length >= MAXF) continue; c.m -= 3; c.rr = massR(c.m); any = 1;
@@ -516,7 +520,7 @@ const colOf = p => G.teams ? TEAMS[p.team].c : (p === me ? 0xffffff : p.col || 0
 function teamScores() { if (!G.teams) return [0, 0, 0, 0]; const s = [0, 0, 0, 0]; for (const c of cells) s[c.p.team] += c.m; return s; }
 let selChar = null;
 function startGame(opts = {}) { if (!opts.roster && G.net === 'h') { mpLeave(); } if (G.net === 'c') return; resetJoy(); G.dead = 0; acc = 0; last = performance.now(); for (const s of ['over', 'dead', 'help']) $(s).classList.add('hide'); G.cd = navigator.webdriver ? 0 : 2.1; $('cd').classList.toggle('hide', !G.cd);
-  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
+  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; for (const q of crumbs) q.l = 0; { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
   const ch = allChars(); selChar = ch.find(c => c.id === S.char && !premLocked(c)) || ch[0]; G.trialUsed = selChar.prem && S.trial === selChar.id && !premOwned(selChar.id);
   G.teams = S.mode === 'equipos'; G.inf = S.dur === 'inf'; G.el = 0; $('bExit').classList.remove('hide'); $('bEndInf').classList.remove('hide'); me = { name: 'Tú', team: G.teams ? S.team : 100, char: selChar, cells: [], bot: 0, dirx: 0, dirz: 1, tx: 0, tz: 1, alive: 0, pud: 0, aggr: 1, boost: 0 };
   players.push(me); spawnPlayer(me, START_M);
@@ -557,7 +561,7 @@ function step0() {
     if (c.merge > 0) c.merge -= DT; if (!isFinite(c.m) || c.m < 1) c.m = START_M; if (c.m > MAXM) c.m = MAXM; if (c.m > 150) c.m -= c.m * 0.0015 * DT; c.rr = massR(c.m); if (c.loose > 0) c.loose -= DT; else if (c.rr >= BURST_R && G.net !== 'c') toBurst.push(c); // Agar: los grandes adelgazan poco a poco
     if (!isFinite(c.x) || !isFinite(c.z)) { c.x = c.z = 0; c.vx = c.vz = c.bx = c.bz = 0; c.tvx = c.tvz = undefined; } const d = Math.hypot(c.x, c.z), lim = Math.max(2, ARENA - c.rr * .6); if (d > lim) { c.x *= lim / d; c.z *= lim / d; }
     if (c.sq > 0) c.sq = Math.max(0, c.sq - DT * 2.5); }
-  for (const c of toBurst) if (!c.dead) bigBurst(c);
+  for (const c of toBurst) if (!c.dead) bigBurst(c); stepCrumbs(DT);
   // células propias: cohesión, separación o fusión
   for (const p of players) { const cs = p.cells; if (cs.length < 2) continue; const main = cs.reduce((a, b) => a.m >= b.m ? a : b);
     // imán suave hacia el trozo principal (más grande), limitado para no dar velocidad extra
@@ -577,7 +581,7 @@ function step0() {
   FGRID.clear(); for (const f of food) { if (f.x > 999) continue; const k = ((f.x / GS + 64) | 0) * 256 + ((f.z / GS + 64) | 0); let b = FGRID.get(k); if (!b) FGRID.set(k, b = []); b.push(f); }
   let anyGone = 0;
   for (const c of cells) { const r2 = (c.rr + 2.4) ** 2, R0 = c.rr + 2.4, x0 = ((c.x - R0) / GS + 64) | 0, x1 = ((c.x + R0) / GS + 64) | 0, z0 = ((c.z - R0) / GS + 64) | 0, z1 = ((c.z + R0) / GS + 64) | 0;
-    for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const B = FGRID.get(gx * 256 + gz); if (B) for (let i = 0; i < B.length; i++) { const f = B[i]; if (f.gone || c.dead) continue; const dx = f.x - c.x; if (dx * dx > r2) continue; const dz = f.z - c.z; const fr = f.ej ? .3 : f.s * .85; if (dx * dx + dz * dz > (c.rr + fr) ** 2) continue; if (f.ej && f.own === c && f.ot > 0) continue; if (!f.ej && f.s >= c.rr) continue;
+    for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const B = FGRID.get(gx * 256 + gz); if (B) for (let i = 0; i < B.length; i++) { const f = B[i]; if (f.gone || c.dead) continue; const dx = f.x - c.x; if (dx * dx > r2) continue; const dz = f.z - c.z; const fr = f.ej ? .3 : f.s * .85; if (dx * dx + dz * dz > c.rr * c.rr) continue; /* v6.18: solo si el centro del objeto queda dentro de la bola */ if (f.ej && f.own === c && f.ot > 0) continue; if (!f.ej && f.s >= c.rr) continue;
       c.m += f.m * (c.p.bot ? DF().eat : 1); c.sq = Math.max(c.sq, f.k ? 1 : .55); c.jig = 1; if (!f.ej) { stick(c, f.t, f.s, f.c, f.x, f.z, 1); if (G.net === 'h') NEV.push(['e', c.id, f.t, f.s, f.c, Math.round(f.x * 10), Math.round(f.z * 10)]); }
       if (f.k === 2 && !c.p.bot) { c.p.boost = 4; if (c.p === me) { msg('⚡ ¡TURBO!', 1); sfx.combo(5); G.shake = .25; } burst(f.x, f.z, 0x3ff0ff, 14, 1); }
       if (f.k === 1) { burst(f.x, f.z, 0xffd84a, 20, 1.2); wave(f.x, f.z, c.rr * 2, 0xffd84a); if (c.p === me) { popNum(f.x, f.z, '+16 🍭', '#ffd84a'); sfx.coin(); G.shake = .2; } }
@@ -586,7 +590,7 @@ function step0() {
   if (anyGone) food = food.filter(f => !f.gone);
   // comer células
   for (const a of cells) { if (a.dead) continue; for (const b of cells) { if (b === a || b.dead || a.dead || b.p === a.p) continue; if (b.p.team === a.p.team || b.p.prot > 0 || a.p.prot > 0 || !a.p.alive || !b.p.alive) continue;
-      if (a.m < b.m * (b.loose > 0 ? .5 : EAT_K)) continue; /* v6.17: trozos sueltos de explosión: se comen con la mitad de masa */ const d = Math.hypot(b.x - a.x, b.z - a.z); if (d >= a.rr * (1 + Math.min(.08, a.st.length * .002)) - b.rr * .3) continue; // v6.15: regla clara y generosa
+      if (a.m < b.m * (b.loose > 0 ? .5 : EAT_K)) continue; /* v6.17: trozos sueltos de explosión: se comen con la mitad de masa */ const d = Math.hypot(b.x - a.x, b.z - a.z); if (d > a.rr) continue; /* v6.18: el borde debe cubrir al menos la mitad del otro (su centro dentro) */ // v6.15: regla clara y generosa
       a.m += b.m; a.sq = 1; transfer(b, a); burst(b.x, b.z, colOf(b.p), 26, Math.min(2.2, .7 + b.rr * .3)); burst(b.x, b.z, 0xffffff, 8, .8); wave(a.x, a.z, a.rr * 2.4, colOf(a.p)); if (a.p === me) popNum(a.x, a.z, '+' + Math.round(b.m), '#ffd84a'); if (b.p === me) popNum(b.x, b.z, '¡ÑAM!', '#ff5470');
       if (a.p.remote && G.net === 'h') NEV.push(['k', a.p.remote, b.p.name]); if (a.p === me) { G.eats++; sfx.bump(); G.shake = .45; addCombo(5); eatMsg('Te has comido a ' + b.p.name, 1.3); 0 && (b.p.cells.length <= 1 ? '😋 ¡Te has comido a ' + b.p.name + '!' : '😋 ¡Ñam!'); }
       removeCell(b); b.p.cells = b.p.cells.filter(c => !c.dead);
@@ -671,7 +675,7 @@ function frame1(now) {
   const fc = new Array(NT).fill(0); let nfs = 0;
   const vx0 = camX, vz0 = camZp, vw = camH * camera.aspect * .62 + 3, vh = camH * .62 + 3; for (const f of food) { if (f.x > 999 || Math.abs(f.x - vx0) > vw || Math.abs(f.z - vz0) > vh) continue; const im = foodIMs[f.t]; if (fc[f.t] >= 1300) continue; const s = (f.ej ? .55 : f.s) * (1 + Math.sin(t * (f.k ? 6 : 3) + f.ph) * (f.k ? .15 : .05));
     TQ.setFromEuler(EUL.set(f.rx, f.mv ? f.ry : t * (f.k ? 2 : .6) + f.ph, f.rz)); const hq = f.mv ? Math.abs(Math.sin(t * (6 + f.mv * 1.5) + f.ph)) : 0; M4.compose(V.set(f.x, s + .05 + (f.k ? Math.sin(t * 3 + f.ph) * .25 + .4 : 0) + hq * s * .35, f.z), TQ, f.mv ? SC.set(s * (1.08 - hq * .1), s * (.88 + hq * .2), s * (1.08 - hq * .1)) : SC.setScalar(s)); im.setMatrixAt(fc[f.t], M4); im.setColorAt(fc[f.t], COL.set(f.c)); fc[f.t]++; if (nfs < 1500) { M4.compose(V.set(f.x + s * .12, .025, f.z + s * .08), FSQ, SC.set(s * 2.1, 1, s * 2.1)); fshIM.setMatrixAt(nfs++, M4); } }
-  fshIM.count = nfs; fshIM.instanceMatrix.needsUpdate = true;
+  fshIM.count = nfs; fshIM.instanceMatrix.needsUpdate = true; drawCrumbs(t);
   foodIMs.forEach((im, i) => { im.count = fc[i]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; });
   for (const q of puddles) { const s = q.r * (1 + Math.sin(t * 3) * .05) * Math.min(1, (q.t > 2 ? 1 : q.t / 2)); q.m.scale.setScalar(Math.max(.01, s)); }
   for (const w of waves) if (w.l > 0) { w.l -= dt * 2.2; const k = 1 - Math.max(0, w.l); w.m.scale.setScalar(.3 + k * w.r); w.m.material.opacity = Math.max(0, w.l) * .8; if (w.l <= 0) w.m.visible = false; }
@@ -680,8 +684,8 @@ function frame1(now) {
   for (let i = 0; i < PN; i++) { const q = parts[i]; if (q.l > 0) { q.l -= dt; q.vy -= 25 * dt; q.x += q.vx * dt; q.y = Math.max(.1, q.y + q.vy * dt); q.z += q.vz * dt; } const s = q.l > 0 ? q.s : 0; M4.makeScale(s, s, s).setPosition(q.x || 0, q.y || 0, q.z || 0); partIM.setMatrixAt(i, M4); } partIM.instanceMatrix.needsUpdate = true;
   // cámara
   if (players.length && me) { let mx = 0, mz = 0, tm = 0, maxr = 1; if (me.cells.length) { for (const c of me.cells) { mx += (c.ix ?? c.x) * c.m; mz += (c.iz ?? c.z) * c.m; tm += c.m; maxr = Math.max(maxr, c.rr); } mx /= tm; mz /= tm; } else { mx = camX; mz = camZp; }
-    const spread = me.cells.reduce((a, c) => Math.max(a, Math.hypot((c.ix ?? c.x) - mx, (c.iz ?? c.z) - mz) + c.rr), 0); const tH = 26 + Math.sqrt(Math.min(tm || 10, 400)) * 1.2 + Math.max(maxr * 4.2, spread * 2.4), ar = camera.aspect < 1 ? 1.15 : .9; camH += (Math.min(340, isFinite(tH) ? tH * ar : 60) - camH) * damp(2.5, dt); scene.fog.near = camH * 1.6 + 40; scene.fog.far = camH * 4 + 220;
-    { let vx = 0, vz = 0; for (const c of me.cells) { vx += c.vx; vz += c.vz; } const n = me.cells.length || 1; mx += vx / n * .25; mz += vz / n * .25; } camX += (mx - camX) * damp(12, dt); camZp += (mz - camZp) * damp(12, dt); if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 2.2); const sk = (G.shake || 0) ** 2 * 2.2; camera.position.set(camX + rnd(-sk, sk), camH, camZp + camH * .42 + rnd(-sk, sk)); camera.lookAt(camX, 0, camZp); camera.fov = 50 + (me.boost > 0 ? 6 : 0) + (G.shake || 0) * 6; camera.updateProjectionMatrix(); }
+    const spread = me.cells.reduce((a, c) => Math.max(a, Math.hypot((c.ix ?? c.x) - mx, (c.iz ?? c.z) - mz) + c.rr), 0); const tH = 26 + Math.sqrt(Math.min(tm || 10, 400)) * 1.2 + Math.max(maxr * 4.2, spread * 2.4), ar = camera.aspect < 1 ? 1.15 : .9; camH += (Math.min(900, isFinite(tH) ? tH * ar : 60) - camH) * damp(2.5, dt); scene.fog.near = camH * 1.6 + 40; scene.fog.far = camH * 4 + 220;
+    { let vx = 0, vz = 0; for (const c of me.cells) { vx += c.vx; vz += c.vz; } const n = me.cells.length || 1; mx += vx / n * .25; mz += vz / n * .25; } camX += (mx - camX) * damp(12, dt); camZp += (mz - camZp) * damp(12, dt); if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 2.2); const sk = (G.shake || 0) ** 2 * 2.2; camera.position.set(camX + rnd(-sk, sk), camH, camZp + camH * .42 + rnd(-sk, sk)); camera.lookAt(camX, 0, camZp); camera.fov = 50 + (me.boost > 0 ? 6 : 0) + (G.shake || 0) * 6; camera.near = Math.max(.5, camH * .12); camera.far = camH * 6 + 600; camera.updateProjectionMatrix(); /* v6.18: near dinámico = sin parpadeo de baldosas al alejar */ }
   else { camera.position.set(Math.sin(t * .1) * 40, 45, Math.cos(t * .1) * 40); camera.lookAt(0, 0, 0); }
   renderer.render(scene, camera);
   if (G.on && (hudT -= dt) <= 0) { hudT = .25; updHud(); }
