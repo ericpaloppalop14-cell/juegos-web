@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=683';
+import * as THREE from './three.js?v=684';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -198,11 +198,11 @@ function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h
 addEventListener('resize', resize); resize();
 
 const TEAMS = [{ n: 'Rojo', c: 0xff3b30, css: '#ff3b30', pal: ['#8e0b10', '#d81e1e', '#ff3b30', '#ff8f80'] }, { n: 'Azul', c: 0x2f7bff, css: '#2f7bff', pal: ['#0d2f8a', '#1a55d6', '#2f7bff', '#8cbcff'] }, { n: 'Amarillo', c: 0xffd21f, css: '#ffd21f', pal: ['#a66d00', '#f0a800', '#ffd21f', '#fff08a'] }, { n: 'Verde', c: 0x2ecc40, css: '#2ecc40', pal: ['#0b6b1f', '#1fa233', '#2ecc40', '#97f09c'] }]; // v6.16: paleta por equipo (oscuro, sombra, base, luz)
-const ARENA = 135; // v6.10: +29% radio // v6.4: ~2x área
+const ARENA = 162; // v6.20: +20% radio // v6.10: +29% radio // v6.4: ~2x área
 
 
 // ---------- Comida (InstancedMesh) ----------
-const MAXF = 2600, NFOOD = 1500;
+const MAXF = 3600, NFOOD = 2150; // v6.20: más comida para la arena más grande
 // ---------- Juguetes y chuches reconocibles (geometría combinada con colores por vértice) ----------
 function toy(parts) { const P = [], N = [], C = [], cc = new THREE.Color(), MM = new THREE.Matrix4(), QQ = new THREE.Quaternion(), EE = new THREE.Euler();
   for (const [g0, col, pos = [0, 0, 0], rot = [0, 0, 0], sc = [1, 1, 1]] of parts) { const g = g0.index ? g0.toNonIndexed() : g0.clone(); MM.compose(new THREE.Vector3(...pos), QQ.setFromEuler(EE.set(...rot)), new THREE.Vector3(...sc)); g.applyMatrix4(MM);
@@ -361,7 +361,7 @@ function buildTheme(i) {
     for (let k = 0; k < n; k++) { y.fillStyle = TH.sect[k % TH.sect.length] + '24'; y.beginPath(); y.moveTo(h, h); y.arc(h, h, h * .98, k * 2 * PI / n + .01, (k + 1) * 2 * PI / n - .01); y.closePath(); y.fill(); }
     for (const [r, w, a] of [[.98, 8, '#ffffffcc'], [.66, 3, '#ffffff66'], [.33, 3, '#ffffff66']]) { y.strokeStyle = a; y.lineWidth = w; y.beginPath(); y.arc(h, h, h * r, 0, 7); y.stroke(); }
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; const ov = new THREE.Mesh(new THREE.CircleGeometry(ARENA + 2, 96), new THREE.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })); ov.rotation.x = -PI / 2; ov.position.y = .015; G2.add(ov); }
-  const out = new THREE.Mesh(new THREE.RingGeometry(ARENA + 2, 420, 64), new THREE.MeshStandardMaterial({ color: TH.out, roughness: .7 })); out.rotation.x = -PI / 2; out.position.y = -.6; G2.add(out);
+  const out = new THREE.Mesh(new THREE.RingGeometry(ARENA + 2, 520, 64), new THREE.MeshStandardMaterial({ color: TH.out, roughness: .7 })); out.rotation.x = -PI / 2; out.position.y = -.6; G2.add(out);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(ARENA + 2.5, 2.2, 14, 220), new THREE.MeshStandardMaterial({ map: stripes(TH.rim[0], TH.rim[1]), roughness: .3 })); rim.rotation.x = -PI / 2; rim.position.y = .4; G2.add(rim);
   const M = new THREE.Matrix4(), col = new THREE.Color(), Qd = new THREE.Quaternion(), Pd = new THREE.Vector3(), Sd = new THREE.Vector3(), E = new THREE.Euler();
   const NB = 220, beads = new THREE.InstancedMesh(new THREE.SphereGeometry(.75, 10, 8), new THREE.MeshStandardMaterial({ roughness: .3 }), NB);
@@ -406,7 +406,7 @@ const MAXM = 1e9; // v6.17: sin tope de tamaño (antes radio ≤ 1/4 de arena �
 const BURST_R = ARENA * .9; // v6.17: al ocupar ~90% del mapa la bola explota en trozos
 const START_M = 12, EAT_K = 1.05, PROT = 2; // 12 % más masa ≈ se ve claramente más grande con los juguetes; basta con que tu borde cubra su centro
 const massR = m => 0.32 * Math.sqrt(m);
-const speedOf = m => 19.85 * (0.363 + 0.637 / (1 + Math.pow(Math.max(1, m) / 55, 0.7))); // v6.11: los grandes conservan chispa // v6.9: curva más marcada, siempre baja con la masa // siempre baja con la masa: 12→12,1 · 200→8,9 · 1000→7,1 · máx→6
+const speedOf = m => 22.8 * /* v6.20: +15% */ (0.363 + 0.637 / (1 + Math.pow(Math.max(1, m) / 55, 0.7))); // v6.11: los grandes conservan chispa // v6.9: curva más marcada, siempre baja con la masa // siempre baja con la masa: 12→12,1 · 200→8,9 · 1000→7,1 · máx→6
 const shieldIM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0x7ff6ff, transparent: true, opacity: .28, depthWrite: false }), 48); shieldIM.count = 0; shieldIM.frustumCulled = false; shieldIM.renderOrder = 5; scene.add(shieldIM);
 function newCell(p, x, z, m) { const cid = ++CID;
   const mesh = makeCharMesh(p.char, G.teams && TEAMS[p.team] ? p.team : null); const ring = new THREE.Mesh(G.teams ? ringGeoT : ringGeo, new THREE.MeshBasicMaterial({ color: colOf(p), transparent: true, opacity: .85 })); ring.material.opacity = G.teams ? 1 : 0; ring.rotation.x = -Math.PI / 2; const ind = new THREE.Mesh(indGeo, new THREE.MeshBasicMaterial({ color: 0x3fd36a, transparent: true, opacity: 0, depthWrite: false })); ind.rotation.x = -Math.PI / 2; scene.add(ind); const sh = new THREE.Mesh(shGeo, shMat); sh.rotation.x = -Math.PI / 2;
@@ -414,7 +414,7 @@ function newCell(p, x, z, m) { const cid = ++CID;
   const c = { p, x, z, px: x, pz: z, vx: 0, vz: 0, bx: 0, bz: 0, m, rr: massR(m), mesh, ring, ind, sh, q: new THREE.Quaternion(), st: [], merge: 0, yaw: 0, sq: 0, dead: 0 };
   c.id = cid; cells.push(c); p.cells.push(c); return c;
 }
-const EUL = new THREE.Euler(), TQ = new THREE.Quaternion(), TV2 = new THREE.Vector3(), MAXST = 55;
+const EUL = new THREE.Euler(), TQ = new THREE.Quaternion(), TV2 = new THREE.Vector3(), MAXST = 90;
 const strandIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6), new THREE.MeshStandardMaterial({ roughness: .3 }), 40); strandIM.count = 0; strandIM.frustumCulled = false; scene.add(strandIM); const V2 = new THREE.Vector3(), WHITE = new THREE.Color(0xffffff);
 const flights = [], YUP = new THREE.Vector3(0, 1, 0);
 function stick(c, t, s, col, wx, wz, fly, wy = .5) { TV2.set(wx - c.x, rnd(-.2, 1.0) * c.rr, wz - c.z).normalize().applyQuaternion(TQ.copy(c.q).invert());
@@ -667,7 +667,7 @@ function frame1(now) {
   // objetos pegados (Katamari): se hunden en la bola según crece
   const sc = new Array(NT).fill(0);
   for (const c of cells) { if (!c.st.length) continue; c.mesh.updateMatrixWorld(); const BW = c.mesh.body.matrixWorld;
-    for (let j = c.st.length - 1; j >= 0; j--) { const o = c.st[j], rel = o.s / c.rr; if (rel < .05) { c.st.splice(j, 1); continue; } const im = stkIMs[o.t]; if (sc[o.t] >= MAXS) continue;
+    for (let j = c.st.length - 1; j >= 0; j--) { const o = c.st[j], rel = Math.max(o.s / c.rr, .085); /* v6.20: ya no se borran al crecer; tamaño mínimo visible */ const im = stkIMs[o.t]; if (sc[o.t] >= MAXS) continue;
       M4.compose(V.copy(o.d).multiplyScalar(1 + rel * (1 - 2 * o.emb) * .9), o.q, SC.setScalar(rel)); M4.premultiply(BW); im.setMatrixAt(sc[o.t], M4); im.setColorAt(sc[o.t], COL.set(o.col)); sc[o.t]++; } }
   let ns = 0;
   for (let j = flights.length - 1; j >= 0; j--) { const F = flights[j], c = F.c; F.t0 += dt; if (c.dead) { flights.splice(j, 1); continue; } const k = Math.max(0, F.t0 / F.dur);
