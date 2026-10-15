@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ffd9e8">
+<title>Tierra que se hunde · Mochi</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="js/style.css?v=v7">
+<style>
+#hud{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:5}
+#hud.on{display:flex}
+.pill{background:rgba(255,255,255,.85);color:#8a5aa8;font-weight:700;font-size:16px;padding:4px 14px;border-radius:16px;box-shadow:0 3px 0 rgba(190,130,200,.35)}
+.pill.warn{background:linear-gradient(90deg,#ffb36b,#ff8fc0);color:#fff}
+#nums{position:absolute;right:calc(env(safe-area-inset-right) + 8px);top:calc(env(safe-area-inset-top) + 66px);bottom:calc(env(safe-area-inset-bottom) + 10px);display:none;flex-direction:column;gap:5px;justify-content:center;z-index:6;width:min(17vw,70px)}
+#nums.on{display:flex}
+#nums button{flex:1 1 0;max-height:68px;min-height:38px;border:none;border-radius:16px;font-family:inherit;font-weight:700;font-size:min(7vw,30px);color:#fff;background:var(--c);box-shadow:0 4px 0 rgba(90,50,110,.35),inset 0 2px 0 rgba(255,255,255,.5);text-shadow:0 2px 0 rgba(80,40,90,.35);cursor:pointer;transition:transform .08s,opacity .2s}
+#nums button:active{transform:translateY(2px) scale(.96)}
+#nums button.busy{opacity:.3}
+#nums button.mine{outline:3px solid #fff;outline-offset:-3px}
+#nums.cd button{filter:grayscale(.6) brightness(.95)}
+@media (orientation:landscape) and (max-height:540px){#nums.on{display:grid;grid-template-columns:1fr 1fr;top:calc(env(safe-area-inset-top) + 64px);width:min(24vw,128px)}#nums button{min-height:0;max-height:none;font-size:min(5vh,26px)}}
+#numCd{position:absolute;left:-8px;bottom:0;width:4px;border-radius:2px;background:#ff6fae;height:0}
+#mm{position:absolute;left:calc(env(safe-area-inset-left) + 10px);top:calc(env(safe-area-inset-top) + 64px);width:110px;height:110px;display:none;z-index:5;pointer-events:none;filter:drop-shadow(0 3px 0 rgba(180,120,200,.4))}
+#mm.on{display:block}
+#hOut{position:absolute;left:0;right:80px;top:calc(env(safe-area-inset-top) + 190px);text-align:center;display:none;z-index:5;pointer-events:none}
+#hOut.on{display:block}
+#hopB{position:absolute;right:calc(env(safe-area-inset-right) + min(17vw,70px) + 22px);bottom:calc(env(safe-area-inset-bottom) + 22px);width:78px;height:78px;border-radius:50%;border:none;display:none;flex-direction:column;align-items:center;justify-content:center;font-size:30px;font-family:inherit;color:#fff;z-index:6;background:conic-gradient(rgba(90,60,120,.55) var(--cd,0deg),transparent 0),linear-gradient(#ff8fc8,#c86bff);box-shadow:0 5px 0 rgba(110,50,140,.4),inset 0 3px 0 rgba(255,255,255,.5);touch-action:none}
+#hopB small{font-size:12px;font-weight:700;margin-top:-4px}
+#hopB.on{display:flex}#hopB:active{transform:scale(.93)}#hopB.cd{filter:saturate(.5)}
+@media (orientation:landscape) and (max-height:540px){#hopB{right:calc(env(safe-area-inset-right) + min(24vw,128px) + 20px)}}
+#joy{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:3px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);pointer-events:none;display:none;z-index:4}
+#joy.on{display:block}
+#joyK{position:absolute;left:50%;top:50%;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.75);box-shadow:0 3px 8px rgba(150,80,150,.3);transform:translate(-50%,-50%)}
+#spect{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 120px);text-align:center;display:none;z-index:5;pointer-events:none}
+#spect.on{display:block}
+#steerHint{position:absolute;left:0;right:80px;bottom:calc(env(safe-area-inset-bottom) + 120px);text-align:center;display:none;z-index:5;pointer-events:none}
+#steerHint.on{display:block}
+</style>
+</head>
+<body>
+<canvas id="c3d"></canvas>
+<div id="hud"><div class="pill" id="hAlive"></div><div class="pill" id="hNext"></div></div>
+<div id="spect"><span class="pill">👻 Te has hundido · mirando la partida</span></div>
+<div id="nums"></div>
+<button id="hopB" aria-label="Salto">🦘<small>Salto</small></button>
+<canvas id="mm" width="220" height="220"></canvas>
+<div id="hOut"><span class="pill warn">🌀 ¡Estás fuera de la zona! ¡Vuelve!</span></div>
+<div id="joy"><div id="joyK"></div></div>
+<div id="steerHint"><span class="pill">🕹️ Arrastra el dedo para ir · pulsa un número para hundir</span></div>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script src="lib/peerjs.min.js"></script>
+<script>if (/localnet/.test(location.search)) document.write('<script src="lib/fakepeer.js"><\/script>');</script>
+<script type="module" src="js/main.js?v=v7"></script>
+</body>
+</html>
