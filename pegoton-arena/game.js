@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=684';
+import * as THREE from './three.js?v=685';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -417,11 +417,18 @@ function newCell(p, x, z, m) { const cid = ++CID;
 const EUL = new THREE.Euler(), TQ = new THREE.Quaternion(), TV2 = new THREE.Vector3(), MAXST = 90;
 const strandIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6), new THREE.MeshStandardMaterial({ roughness: .3 }), 40); strandIM.count = 0; strandIM.frustumCulled = false; scene.add(strandIM); const V2 = new THREE.Vector3(), WHITE = new THREE.Color(0xffffff);
 const flights = [], YUP = new THREE.Vector3(0, 1, 0);
-function stick(c, t, s, col, wx, wz, fly, wy = .5) { TV2.set(wx - c.x, rnd(-.2, 1.0) * c.rr, wz - c.z).normalize().applyQuaternion(TQ.copy(c.q).invert());
+function stick(c, t, s, col, wx, wz, fly, wy = .5) { if (c.fix) return; TV2.set(wx - c.x, rnd(-.2, 1.0) * c.rr, wz - c.z).normalize().applyQuaternion(TQ.copy(c.q).invert());
   // el juguete sale de la superficie: su eje "arriba" apunta hacia fuera, con giro e inclinación al azar
   const q = new THREE.Quaternion().setFromUnitVectors(YUP, TV2).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd(-.7, .7), Math.random() * 6.28, rnd(-.7, .7))));
   const o = { t, s, col, d: TV2.clone(), q, emb: rnd(.3, .55) }; if (fly && flights.length < 60) flights.push({ o, c, x: wx, y: wy, z: wz, t0: 0, dur: rnd(.14, .22) }); else addStuck(c, o); }
-function addStuck(c, o) { c.st.push(o); if (c.st.length > MAXST) c.st.shift(); }
+// v6.21: por encima de FIX_M la bola lleva un set FIJO de figuras (todas las de la pista, reparto Fibonacci), sin reciclar
+const FIX_M = 3000, FIX_N = 36;
+function buildFixed(c) { const old = c.st, out = [];
+  for (let i = 0; i < FIX_N; i++) { const y = 1 - 2 * (i + .5) / FIX_N, r = Math.sqrt(1 - y * y), a = i * 2.39996; const d = new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r), t = i % NTOY;
+    const q = new THREE.Quaternion().setFromUnitVectors(YUP, d).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd(-.35, .35), Math.random() * 6.28, rnd(-.35, .35))));
+    out.push({ t, s: 0, fr: rnd(.095, .12), col: (TH.baked ? 0xffffff : TH.fixed[t]) ?? FCOLS[i % FCOLS.length], d, q, emb: .42, g: 0 }); }
+  for (const o of old) o.out = 1; c.st = out; c.fixOld = old.filter(o => o.t < NT); c.fix = 1; c.fixN = FIX_N; }
+function addStuck(c, o) { if (c.fix) return; c.st.push(o); if (c.st.length > MAXST) c.st.shift(); }
 function transfer(from, to) { if (G.net === 'h') NEV.push(['tr', from.id, to.id]); let n = 0; for (const o of from.st) { o.d.set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize(); o.q.setFromUnitVectors(YUP, o.d).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(rnd(-.7, .7), Math.random() * 6.28, rnd(-.7, .7))));
     if (n++ < 25 && flights.length < 60) flights.push({ o, c: to, x: from.x + rnd(-1, 1) * from.rr, y: from.rr, z: from.z + rnd(-1, 1) * from.rr, t0: -n * .02, dur: rnd(.25, .4) }); else addStuck(to, o); } from.st = []; }
 function removeCell(c) { c.dead = 1; scene.remove(c.mesh, c.ring, c.sh, c.ind); c.ring.material.dispose(); c.ind.material.dispose(); c.mesh.body.material.dispose(); if (c.mesh.body.geometry !== charGeo[c.p.char.id]) c.mesh.body.geometry.dispose(); }
@@ -666,9 +673,11 @@ function frame1(now) {
       c.ind.position.set(x, .06, z); c.ind.scale.setScalar(r); } c.sh.position.set(x + r * .15, .03, z + r * .1); c.sh.scale.setScalar(r * (1 - bob * .1)); }
   // objetos pegados (Katamari): se hunden en la bola según crece
   const sc = new Array(NT).fill(0);
-  for (const c of cells) { if (!c.st.length) continue; c.mesh.updateMatrixWorld(); const BW = c.mesh.body.matrixWorld;
-    for (let j = c.st.length - 1; j >= 0; j--) { const o = c.st[j], rel = Math.max(o.s / c.rr, .085); /* v6.20: ya no se borran al crecer; tamaño mínimo visible */ const im = stkIMs[o.t]; if (sc[o.t] >= MAXS) continue;
-      M4.compose(V.copy(o.d).multiplyScalar(1 + rel * (1 - 2 * o.emb) * .9), o.q, SC.setScalar(rel)); M4.premultiply(BW); im.setMatrixAt(sc[o.t], M4); im.setColorAt(sc[o.t], COL.set(o.col)); sc[o.t]++; } }
+  for (const c of cells) { if (c.m >= FIX_M && (!c.fix || c.st.length !== c.fixN)) buildFixed(c); else if (c.fix && c.m < FIX_M * .8) { c.fix = 0; c.fixN = 0; for (const o of c.st) { o.s = o.fr * c.rr; delete o.fr; } }
+    if (c.fixOld && c.fixOld.length) { const fo = c.fixOld; for (let j = fo.length - 1; j >= 0; j--) { const o = fo[j]; o.k = (o.k ?? 1) - dt * 1.6; if (o.k <= 0) { fo.splice(j, 1); continue; } c.st.push(o); } }
+    if (!c.st.length) continue; c.mesh.updateMatrixWorld(); const BW = c.mesh.body.matrixWorld;
+    for (let j = c.st.length - 1; j >= 0; j--) { const o = c.st[j]; if (o.g != null && o.g < 1) o.g = Math.min(1, o.g + dt * 1.4); const rel = (o.fr ?? Math.max(o.s / c.rr, .085)) * (o.g ?? 1) * (o.k ?? 1); const im = stkIMs[o.t]; if (sc[o.t] >= MAXS) continue;
+      M4.compose(V.copy(o.d).multiplyScalar(1 + rel * (1 - 2 * o.emb) * .9), o.q, SC.setScalar(rel)); M4.premultiply(BW); im.setMatrixAt(sc[o.t], M4); im.setColorAt(sc[o.t], COL.set(o.col)); sc[o.t]++; } if (c.fixOld && c.fixOld.length) c.st.length = c.fixN; }
   let ns = 0;
   for (let j = flights.length - 1; j >= 0; j--) { const F = flights[j], c = F.c; F.t0 += dt; if (c.dead) { flights.splice(j, 1); continue; } const k = Math.max(0, F.t0 / F.dur);
     if (k >= 1) { flights.splice(j, 1); addStuck(c, F.o); c.sq = Math.max(c.sq, .6); c.jig = 1; if (c.p === me) sfx.pop(3 + (Math.random() * 5 | 0), 0); continue; }
