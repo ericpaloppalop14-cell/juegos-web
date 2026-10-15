@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=682';
+import * as THREE from './three.js?v=683';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -467,17 +467,26 @@ function doSplit(p) {
     n.merge = c.merge = 1.8; n.st = c.st.splice(0, c.st.length >> 1); n.q.copy(c.q); n.sq = 1; c.sq = 1; wave(c.x, c.z, c.rr * 2, 0xffffff); burst(c.x, c.z, colOf(p), 6, .6); }
   if (p === me) sfx.combo(2);
 }
-// v6.18: explosión ligera: la bola vuelve a tamaño pequeño y suelta mini bolitas (pool fijo, instanciado) que se comen como comida y caducan
-const CRN = 60, crumbs = [], crIM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshStandardMaterial({ roughness: .35 }), CRN); crIM.count = 0; crIM.frustumCulled = false; scene.add(crIM);
-for (let i = 0; i < CRN; i++) crumbs.push({ l: 0 }); let cri = 0;
-function bigBurst(c) { const p = c.p, ox = c.x, oz = c.z, col = colOf(p);
+// v6.19: explosión en MINI PERSONAJES: la misma figura (geometría y material del personaje) en un InstancedMesh por explosión; son comida libre para todos
+const BURSTS = []; const MINI_MAX = 120, MINI_S = .75, MINI_LIVE = 160, MINIG = {};
+function miniGeo(ch) { const key = ch.id === 'custom' ? 'custom:' + (S.shape || []).length + ':' + (S.shape ? S.shape[0] : 0) : ch.id; if (MINIG[key]) return MINIG[key]; const radii = charRadii(ch), g = new THREE.IcosahedronGeometry(1, 2), pa = g.attributes.position;
+  for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), r = sampleR(radii, x, y, z); pa.setXYZ(i, x * r, y * r, z * r); } g.computeVertexNormals(); g.userData.mini = 1; return MINIG[key] = g; } // figura del personaje en baja resolución (320 triángulos)
+function bigBurst(c) { const p = c.p, ox = c.x, oz = c.z, col = colOf(p), M = p.cells.reduce((a, o) => a + o.m, 0);
   wave(ox, oz, ARENA * 1.4, 0xffffff); wave(ox, oz, ARENA, col); burst(ox, oz, col, 40, 3); burst(ox, oz, 0xffd84a, 20, 2.4);
   if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); }
-  for (const o of p.cells) if (o !== c) removeCell(o); p.cells = [c]; c.m = 30; c.rr = massR(30); c.sq = 1; c.merge = 0; c.st.length = 0; c.bx = c.bz = 0;
-  for (let i = 0; i < 50; i++) { const q = crumbs[cri = (cri + 1) % CRN], a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * (ARENA - 3); Object.assign(q, { x: ox + (Math.cos(a) * r - ox) * .15, z: oz + (Math.sin(a) * r - oz) * .15, tx: Math.cos(a) * r, tz: Math.sin(a) * r, m: 6, s: rnd(.6, .9), l: rnd(18, 25), c: col }); } }
-function stepCrumbs(DT) { let n = 0; for (const q of crumbs) { if (q.l <= 0) continue; q.l -= DT; const k = damp(2.5, DT); q.x += (q.tx - q.x) * k; q.z += (q.tz - q.z) * k;
-  for (const c of cells) { if (c.dead) continue; const dx = q.x - c.x, dz = q.z - c.z; if (dx * dx + dz * dz <= c.rr * c.rr) { c.m += q.m; c.sq = Math.max(c.sq, .55); q.l = 0; if (c.p === me) sfx.pop(4, 0); break; } } } }
-function drawCrumbs(t) { let n = 0; for (const q of crumbs) { if (q.l <= 0) continue; const s = q.s * Math.min(1, q.l / 1.5) * (1 + Math.sin(t * 4 + q.tx) * .06); M4.compose(SC.set(q.x, s + .05, q.z), FSQ, TV2.setScalar(s)); crIM.setMatrixAt(n, M4); crIM.setColorAt(n, COL.set(q.c)); n++; } crIM.count = n; crIM.instanceMatrix.needsUpdate = true; if (crIM.instanceColor) crIM.instanceColor.needsUpdate = true; }
+  const body = c.mesh.body, geo = miniGeo(p.char), mat = body.material.clone(), vk = visK(geo);
+  const N = Math.max(20, Math.min(MINI_MAX, Math.round(M / 1500))); { let live = 0; for (let j = BURSTS.length - 1; j >= 0; j--) for (const q of BURSTS[j].q) if (q.l > 0) { live++; if (live + N > MINI_LIVE) q.l = Math.min(q.l, 1.2); } } const im = new THREE.InstancedMesh(geo, mat, N); im.frustumCulled = false; scene.add(im);
+  const B = { im, geo, own: 0, mat, vk, q: [] }; const off = Math.random() * 6.283;
+  for (let i = 0; i < N; i++) { const rr = Math.sqrt((i + .5) / N) * (ARENA - 4) * rnd(.93, 1), a = i * 2.39996 + off + rnd(-.12, .12); // espiral de girasol: reparto uniforme
+    B.q.push({ x: ox * .85, z: oz * .85, tx: Math.cos(a) * rr, tz: Math.sin(a) * rr, m: 6, s: MINI_S * rnd(.85, 1.15), yaw: Math.random() * 6.283, l: rnd(16, 24), d: rnd(0, .3), e: 1.4 }); }
+  BURSTS.push(B);
+  for (const o of p.cells) if (o !== c) removeCell(o); p.cells = [c]; c.m = START_M; c.rr = massR(START_M); c.sq = 1; c.merge = 0; c.loose = 0; c.st.length = 0; c.bx = c.bz = 0; c.vx = c.vz = 0; c.tvx = c.tvz = undefined; p.prot = PROT; }
+function clearBursts() { for (const B of BURSTS) { scene.remove(B.im); B.im.dispose(); B.mat.dispose(); if (B.own) B.geo.dispose(); } BURSTS.length = 0; }
+function stepCrumbs(DT) { for (let j = BURSTS.length - 1; j >= 0; j--) { const B = BURSTS[j]; let live = 0;
+  for (const q of B.q) { if (q.l <= 0) continue; q.l -= DT; live++; if (q.d > 0) { q.d -= DT; continue; } const k = damp(3.5, DT); q.x += (q.tx - q.x) * k; q.z += (q.tz - q.z) * k; if (q.e > 0) { q.e -= DT; continue; } /* volando: aún no se pueden comer */
+    for (const c of cells) { if (c.dead) continue; const dx = q.x - c.x, dz = q.z - c.z; if (dx * dx + dz * dz <= c.rr * c.rr) { c.m += q.m; c.sq = Math.max(c.sq, .55); q.l = 0; if (c.p === me) sfx.pop(4, 0); break; } } }
+  if (!live) { scene.remove(B.im); B.im.dispose(); B.mat.dispose(); if (B.own) B.geo.dispose(); BURSTS.splice(j, 1); } } }
+function drawCrumbs(t) { for (const B of BURSTS) { let n = 0; for (const q of B.q) { if (q.l <= 0) continue; const s = q.s * B.vk * Math.min(1, q.l / 1.5) * (1 + Math.sin(t * 5 + q.yaw) * .06); TQ.setFromEuler(EUL.set(0, q.yaw + t * .5, 0)); M4.compose(SC.set(q.x, s * .9 + .05, q.z), TQ, TV2.setScalar(s)); B.im.setMatrixAt(n++, M4); } B.im.count = n; B.im.instanceMatrix.needsUpdate = true; } }
 function doEject(p) {
   if (!G.on || !p || !p.alive) return; let any = 0;
   for (const c of p.cells) { if (c.m < 18 || food.length >= MAXF) continue; c.m -= 3; c.rr = massR(c.m); any = 1;
@@ -520,7 +529,7 @@ const colOf = p => G.teams ? TEAMS[p.team].c : (p === me ? 0xffffff : p.col || 0
 function teamScores() { if (!G.teams) return [0, 0, 0, 0]; const s = [0, 0, 0, 0]; for (const c of cells) s[c.p.team] += c.m; return s; }
 let selChar = null;
 function startGame(opts = {}) { if (!opts.roster && G.net === 'h') { mpLeave(); } if (G.net === 'c') return; resetJoy(); G.dead = 0; acc = 0; last = performance.now(); for (const s of ['over', 'dead', 'help']) $(s).classList.add('hide'); G.cd = navigator.webdriver ? 0 : 2.1; $('cd').classList.toggle('hide', !G.cd);
-  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; for (const q of crumbs) q.l = 0; { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
+  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; clearBursts(); { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
   const ch = allChars(); selChar = ch.find(c => c.id === S.char && !premLocked(c)) || ch[0]; G.trialUsed = selChar.prem && S.trial === selChar.id && !premOwned(selChar.id);
   G.teams = S.mode === 'equipos'; G.inf = S.dur === 'inf'; G.el = 0; $('bExit').classList.remove('hide'); $('bEndInf').classList.remove('hide'); me = { name: 'Tú', team: G.teams ? S.team : 100, char: selChar, cells: [], bot: 0, dirx: 0, dirz: 1, tx: 0, tz: 1, alive: 0, pud: 0, aggr: 1, boost: 0 };
   players.push(me); spawnPlayer(me, START_M);
@@ -907,4 +916,4 @@ function mpSetup() {
 }
 
 mpSetup();
-window.__ar = { step, CHARS, PREMS, get players() { return players; }, netStart: netHostStart, get NET() { return NET; }, vis: () => Object.entries(THC).map(([k, c]) => k + ":" + c.arenaG.visible + "," + c.foodIMs[0].visible).join(" "), ri: () => [renderer.info.memory.geometries, renderer.info.memory.textures, renderer.info.programs.length, scene.children.length], food: () => food, endGame, dbg: () => [foodIMs.length, NT, OBJG.length, [...new Set(food.map(f => f.t))]], doSplit, setTheme, THEMES, initFood, cam: () => ({ h: +camH.toFixed(1), fog: scene.fog.far | 0 }), MAXM,  G, S, startGame, openSculpt, get me() { return me; }, get cells() { return cells; }, sculpt, brush, frames: () => G.frames };
+window.__ar = { BURSTS, step, CHARS, PREMS, get players() { return players; }, netStart: netHostStart, get NET() { return NET; }, vis: () => Object.entries(THC).map(([k, c]) => k + ":" + c.arenaG.visible + "," + c.foodIMs[0].visible).join(" "), ri: () => [renderer.info.memory.geometries, renderer.info.memory.textures, renderer.info.programs.length, scene.children.length], food: () => food, endGame, dbg: () => [foodIMs.length, NT, OBJG.length, [...new Set(food.map(f => f.t))]], doSplit, setTheme, THEMES, initFood, cam: () => ({ h: +camH.toFixed(1), fog: scene.fog.far | 0 }), MAXM,  G, S, startGame, openSculpt, get me() { return me; }, get cells() { return cells; }, sculpt, brush, frames: () => G.frames };
