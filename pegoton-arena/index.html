@@ -1,0 +1,54 @@
+<!doctype html><html lang="es"><head><meta http-equiv="Cache-Control" content="no-cache"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a1640"><title>Pegotón Arena</title>
+<link rel="icon" href="data:,"><link rel="stylesheet" href="style.css?v=680"></head><body>
+<canvas id="c"></canvas>
+<div id="hud" class="hide">
+ <div id="topbar"><div id="timer"><span class="ic">⏱</span><b>3:00</b></div><div id="massbox"><div id="mass">10</div><div class="lbl">MASA</div></div><button id="bExit" class="hide">⏸</button><div id="teamDot"><span id="teamName">Rosa</span></div></div>
+ <div id="teams"></div>
+ <canvas id="mini" width="132" height="132"></canvas>
+ <div id="lb"></div>
+ <div id="msg"></div><div id="cd" class="hide">3</div><div id="combo"></div><div id="joy"><div id="joyArr"></div><div id="joyK"></div></div><div id="pops"></div>
+ <div id="btns"><button id="bEject" class="act"><span>💧</span><small>SOLTAR</small></button><button id="bSplit" class="act big2"><span>✂️</span><small>DIVIDIR</small></button></div>
+</div>
+<div id="menu" class="screen">
+ <div class="mhead"><div class="logo">PEGO<span>TÓN</span></div><div class="tag2">ARENA</div><div class="tag">Rueda · Pega · ¡Cómetelos!</div></div>
+ <div class="card hero"><img id="heroImg"><div class="heroTxt"><div id="heroName">Fresi</div><div class="best" id="bestTxt"></div></div></div>
+ <div class="card"><div class="sec">MODO DE JUEGO</div><div id="modePick" class="seg modes"></div></div>
+ <div class="card"><div class="sec">DIFICULTAD</div><div id="diffPick" class="seg arenas"></div></div>
+ <div class="card"><div class="sec">DURACIÓN</div><div id="durPick" class="seg modes"></div></div>
+ <div class="card"><div class="sec">PISTA</div><div id="arenaPick" class="seg arenas"></div></div>
+ <div class="card" id="teamCard"><div class="sec">EQUIPO</div><div id="teamPick" class="seg"></div></div>
+ <div class="card grow"><div class="sec">PERSONAJE <button id="bCreate" class="mk">🎨 Crear el mío</button></div><div id="charPick" class="chars"></div></div>
+ <button id="bPlay" class="big">JUGAR<small>Partida de 2 min · 38 bolas</small></button>
+ <button id="bMP" class="big mpb">👥 MULTIJUGADOR<small>Juega con amigos con un código de sala</small></button>
+ <div class="row"><button id="bSnd" class="sm">🔊</button><button id="bHelp" class="sm">❓ Cómo se juega</button></div>
+</div>
+<div id="mp" class="screen hide"><div class="panel">
+ <div id="mpHome"><h2>👥 Multijugador</h2><div class="mpRow"><label>Tu nombre</label><input id="mpNick" maxlength="12" placeholder="Tu nombre"></div>
+  <button id="mpCreate" class="big">✨ Crear sala</button>
+  <div class="mpRow"><input id="mpCodeIn" maxlength="4" placeholder="CÓDIGO" autocapitalize="characters"><button id="mpJoin">Unirse</button></div>
+  <div id="mpMsg" class="mpInfo"></div><button id="mpBack">← Volver</button></div>
+ <div id="mpLobby" class="hide"><h2>Sala</h2><div id="mpCode" class="mpCode">----</div><button id="mpShare">📤 Compartir enlace</button>
+  <div id="mpList"></div><div class="mpInfo">El anfitrión elige modo, dificultad, duración y pista en su menú antes de crear la sala.</div>
+  <button id="mpStart" class="big">▶ EMPEZAR</button><div id="mpWait" class="mpInfo hide">⏳ Esperando a que el anfitrión empiece…</div><button id="mpLeave">Salir de la sala</button></div>
+</div></div>
+<div id="help" class="screen hide"><div class="panel"><h2>Cómo se juega</h2><div class="htxt">
+🕹️ Arrastra en cualquier sitio para moverte.<br>🍬 Come chuches para crecer.<br>😋 Si eres un poco más grande que otra bola, ¡cómetela!<br>✂️ <b>Dividir</b>: lanza media bola para cazar. Luego se vuelven a juntar.<br>💧 <b>Soltar</b>: suelta masa (lanza masa, como en Agar.io).<br>🟢 Aro verde: te la puedes comer · 🔴 Aro rojo: huye.<br>⚔️ Modos: <b>Todos contra todos</b> (te comes a cualquiera más pequeño) o <b>Por equipos</b> (a tus compañeros no).</div><button id="bHelpClose" class="big">¡Vale!</button></div></div>
+<div id="dead" class="screen hide"><div class="panel"><h2>¡Te han comido! 😵</h2><div id="deadInfo"></div>
+ <button id="bRevAd" class="big gold">▶ Ver anuncio · volver con la mitad</button><button id="bRev">↻ Reaparecer pequeño</button><button id="bEndInf" class="hide">🏁 Terminar partida</button></div></div>
+<div id="over" class="screen hide"><div class="panel"><h2 id="ovTitle">¡Fin de la partida!</h2><div id="podium"></div><div id="tbars"></div><div id="ovInfo"></div>
+ <div class="row"><button id="bAgain" class="big">↻ Otra</button></div><button id="bMenu">🏠 Menú</button></div></div>
+<div id="sculpt" class="hide">
+ <div class="stop"><button id="sBack">←</button><div class="stitle">Crea tu personaje</div><button id="sSave" class="gold">✔ Guardar</button></div>
+ <div class="shint">Arrastra sobre la bola para moldearla · fuera de ella para girarla</div>
+ <div class="sbar">
+  <div class="tools"><button data-tool="pull" class="on">⬆️<small>Estirar</small></button><button data-tool="push">⬇️<small>Hundir</small></button><button data-tool="smooth">〰️<small>Suavizar</small></button><button data-tool="rot">🔄<small>Girar</small></button></div>
+  <div class="tools"><span>Pincel</span><input id="sSize" type="range" min="15" max="75" value="42"><button id="sEyes">👀</button><button id="sUndo">↶</button><button id="sReset">⟲</button></div>
+  <div id="sCols" class="pick"></div>
+ </div></div>
+<div id="premDlg" class="screen hide"><div class="panel"><h2 id="premName">👑</h2><img id="premImg" class="premImg"><div class="mpInfo">Personaje premium: modelo 3D con accesorios animados, brillo y estela.</div><button id="premTry" class="big gold">▶ Probar 1 partida (ver anuncio)</button><button id="premBuy" class="big">Comprar · 0,99 €</button><div class="mpInfo">⚠️ Compra de PRUEBA: no se cobra nada. Aquí irá la tienda real (Google Play / App Store).</div><button id="premClose">Cerrar</button></div></div>
+<div id="adfake" class="hide"><div>📺 Anuncio de prueba…<br><small>(aquí irá AdMob recompensado)</small></div></div>
+<div id="toast"></div>
+<script src="peerjs.min.js"></script><script type="module" src="game.js?v=680"></script>
+</body></html>
