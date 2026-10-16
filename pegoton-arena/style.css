@@ -191,3 +191,8 @@ body.zurdo #bEject{left:auto;right:14px}
 body.zurdo #bPeg{grid-area:1/2}body.zurdo #bAbs{grid-area:1/1}body.zurdo #bJoin{grid-area:2/2}body.zurdo #bSplit{grid-area:2/1}
 #bEject{position:fixed;left:14px;right:auto;bottom:max(22px,env(safe-area-inset-bottom))}
 body.zurdo #bEject{left:auto;right:14px}
+
+/* v6.27 destello al entrar al élite */
+#flash{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0%,#ffe27a88 40%,#ffd84a00 75%);z-index:6}
+#flash.go{animation:fl 1.1s ease-out}
+@keyframes fl{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
