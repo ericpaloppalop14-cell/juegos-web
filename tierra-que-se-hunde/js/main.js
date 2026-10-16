@@ -6,12 +6,12 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v11';
-import { makeCharacter, animCharacter } from './gfx.js?v=v11';
-import { chOf } from './chars.js?v=v11';
-import { createShell } from './shell.js?v=v11';
-import { Sfx } from './sfx.js?v=v11';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v11';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v12';
+import { makeCharacter, animCharacter } from './gfx.js?v=v12';
+import { chOf } from './chars.js?v=v12';
+import { createShell } from './shell.js?v=v12';
+import { Sfx } from './sfx.js?v=v12';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v12';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -395,7 +395,8 @@ function joyMove(e) { if (!drag || e.pointerId !== drag.id) return; let dx = e.c
 joy.addEventListener('pointermove', joyMove);
 const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyA = null; joy.classList.remove('on'); knob.style.transform = 'translate(-50%,-50%)'; };
 function hop() { if (!playing) return; const c = chars.get(me); if (!c || !c.alive) return; send({ k: 'jump' }); }
-$('hopB').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sfx.init(); hop(); });
+{ const hb = $('hopB'); hb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sfx.init(); hop(); hb.classList.add('press'); hb.classList.remove('boing'); void hb.offsetWidth; hb.classList.add('boing'); });
+  const up = () => hb.classList.remove('press'); ['pointerup', 'pointercancel', 'pointerleave'].forEach(k => hb.addEventListener(k, up)); }
 joy.addEventListener('pointerup', endDrag); joy.addEventListener('pointercancel', endDrag); joy.addEventListener('lostpointercapture', endDrag);
 const KMAP = { ArrowLeft: 'L', a: 'L', A: 'L', ArrowRight: 'R', d: 'R', D: 'R', ArrowUp: 'U', w: 'U', W: 'U', ArrowDown: 'D', s: 'D', S: 'D' };
 const setKey = (k, v) => { if (k === 'L') keyL = v; if (k === 'R') keyR = v; if (k === 'U') keyU = v; if (k === 'D') keyD = v; };
