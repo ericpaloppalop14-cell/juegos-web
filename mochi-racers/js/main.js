@@ -25,7 +25,12 @@ let qualityHi = save.settings.quality === 'alta' || (save.settings.quality === '
 if (params.get('q') === 'low') qualityHi = false;
 const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio, qualityHi ? 1.75 : 1.0) * (qualityHi ? 1 : (isTouch ? 0.85 : 1))); resize(); }
+// v2: resolución por niveles (hasta 2×). Auto: arranca en 1,5× en móvil / 2× en PC, baja si va lento y vuelve a subir si sobra.
+const PRL = [2, 1.75, 1.5, 1.25, 1, 0.85]; let prLv = 0, prGood = 0, prWarned = false;
+function prBase() { const q = save.settings.quality; return q === 'alta' ? 0 : q === 'baja' ? (isTouch ? 5 : 4) : (isTouch ? 2 : 0); }
+prLv = prBase(); if (params.get('q') === 'low') prLv = 4;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio, PRL[prLv])); const sh = prLv <= 2 && !params.has('noshadows'); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; try { app.race && app.race.scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); } catch (e) {} } resize(); }
 function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera, podCam]) if (c) { c.aspect = a; c.updateProjectionMatrix(); } checkRotate(); }
 addEventListener('resize', () => resize());
 
@@ -223,7 +228,7 @@ function syncSettings() { for (const seg of document.querySelectorAll('.seg')) f
 for (const seg of document.querySelectorAll('.seg')) for (const b of seg.children) b.addEventListener('click', () => {
   Audio.init(); save.settings[seg.dataset.k] = b.dataset.v; persist(); syncSettings(); Audio.sfxPlay('click');
   if (seg.dataset.k === 'controls' && b.dataset.v === 'tilt') requestTilt();
-  if (seg.dataset.k === 'quality') { qualityHi = b.dataset.v === 'alta' || (b.dataset.v === 'auto' && !isTouch); applyPR(); }
+  if (seg.dataset.k === 'quality') { qualityHi = b.dataset.v === 'alta' || (b.dataset.v === 'auto' && !isTouch); prLv = prBase(); applyPR(); }
 });
 function applySettings() {
   Audio.on = save.settings.sound === '1'; Audio.musicOn = save.settings.music === '1'; Audio.apply();
@@ -353,8 +358,10 @@ const STEP = 1 / 60;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.1, (now - last) / 1000); last = now;
-  fpsAcc += dt; fpsN++; if (fpsAcc >= 1) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; $('fps').textContent = fps.toFixed(0) + ' fps' + (qualityHi ? ' · alta' : ' · baja');
-    if (app.state === 'race' && save.settings.quality === 'auto' && qualityHi && app.race && app.race.state === 'race') { lowFpsT = fps < 42 ? lowFpsT + 1 : 0; if (lowFpsT >= 3) { qualityHi = false; applyPR(); app.ui.toast('Calidad baja para ir más fluido'); } } }
+  fpsAcc += dt; fpsN++; if (fpsAcc >= 1) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; $('fps').textContent = fps.toFixed(0) + ' fps · ' + Math.min(devicePixelRatio, PRL[prLv]).toFixed(2) + '×';
+    if (app.state === 'race' && save.settings.quality === 'auto' && app.race && app.race.state === 'race') { lowFpsT = fps < 42 ? lowFpsT + 1 : 0;
+      if (lowFpsT >= 3 && prLv < PRL.length - 1) { lowFpsT = 0; prGood = 0; prLv++; applyPR(); if (!prWarned && prLv >= 4) { prWarned = true; app.ui.toast('Calidad ajustada para ir más fluido'); } }
+      else if (fps > 57) { if (++prGood >= 6 && prLv > (isTouch ? 1 : 0)) { prGood = 0; prLv--; applyPR(); } } else prGood = 0; } }
   const t = now / 1000;
   if (app.state === 'race' && app.race) {
     readInput();
@@ -401,7 +408,7 @@ document.fonts && document.fonts.load('700 20px Fredoka').finally(() => {
 
 // test hooks
 window.__kart = {
-  app, CHARS, CUPS, save,
+  app, CHARS, CUPS, save, renderer, get pr() { return renderer.getPixelRatio(); },
   get state() { return app.state; }, get race() { return app.race; }, get fps() { return fps; },
   setSpeed(n) { app.speed = n; }, setAutopilot(v) { app.autopilot = v; },
   pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },

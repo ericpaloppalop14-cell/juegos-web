@@ -57,6 +57,9 @@ export class Race {
     sc.fog = new THREE.Fog(c.fog, this.quality.hi ? 180 : 130, this.quality.hi ? 750 : 520);
     sc.add(new THREE.HemisphereLight(c.theme === 'space' || c.theme === 'storm' ? '#c9b8ff' : '#ffffff', c.theme === 'space' || c.theme === 'storm' ? '#4a3080' : '#ffd6ea', c.theme === 'storm' ? 1.25 : 0.95));
     const d = new THREE.DirectionalLight('#fff4e8', c.theme === 'storm' || c.theme === 'space' ? 1.35 : 2.0); d.position.set(80, 160, 60); sc.add(d);
+    // v2: sombras reales finas que siguen al jugador (solo si el render va en calidad alta)
+    d.castShadow = true; d.shadow.mapSize.set(1024, 1024); d.shadow.bias = -0.0006; d.shadow.normalBias = 0.04; d.shadow.radius = 2.5; { const sc2 = d.shadow.camera; sc2.left = sc2.bottom = -34; sc2.right = sc2.top = 34; sc2.near = 10; sc2.far = 260; } sc.add(d.target); this.sun = d;
+    this.track.group.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.material && o.material.vertexColors) o.receiveShadow = true; });
     if (c.theme === 'space' || c.theme === 'storm') {
       const n = 1400, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = R() * 6.28, b = Math.acos(R() * 2 - 1) * (c.theme === 'storm' ? 0.45 : 1); p[i * 3] = Math.sin(b) * Math.cos(a) * 1100; p[i * 3 + 1] = Math.cos(b) * 1100 * (c.theme === 'storm' ? 1 : 1); p[i * 3 + 2] = Math.sin(b) * Math.sin(a) * 1100; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
@@ -70,8 +73,9 @@ export class Race {
   }
   makeKartState(ch, isPlayer, gi) {
     const m = makeKart(ch, gi);
+    m.traverse(o => { if (o.isMesh) o.castShadow = true; });
     const s = ch.stats;
-    const shield = mesh(new THREE.SphereGeometry(2.4, 20, 14), toon('#bff4ff', { opacity: 0.35, rim: 1, emissive: '#7ff5ff', ei: 0.3 }), m, [0, 1.3, 0]); shield.visible = false; shield.renderOrder = 4;
+    const shield = mesh(new THREE.SphereGeometry(2.4, 20, 14), toon('#bff4ff', { opacity: 0.35, rim: 1, emissive: '#7ff5ff', ei: 0.3 }), m, [0, 1.3, 0]); shield.visible = false; shield.renderOrder = 4; shield.castShadow = false;
     const pers = [{ name: 'prudente', laneAmp: 0.15, aggr: 0.3, skill: 0.95 }, { name: 'agresivo', laneAmp: 0.45, aggr: 0.9, skill: 0.98 }, { name: 'travieso', laneAmp: 0.35, aggr: 0.7, skill: 0.93 }, { name: 'veloz', laneAmp: 0.2, aggr: 0.5, skill: 1.0 }][gi % 4];
     return {
       ch, isPlayer, mesh: m, shield, pos: new V3(), yaw: 0, vx: 0, vz: 0, fs: 0, y: 0, vy: 0, air: false, airT: 0,
@@ -133,6 +137,7 @@ export class Race {
     this.kick = Math.max(0, this.kick - dt * 2.2);
     if (this.fireworks && this.state === 'finish') { this.fwT -= dt; if (this.fwT <= 0) { this.fwT = 0.3 + R() * 0.3; const p = this.player.pos, a = R() * 6.28, c = new V3(p.x + Math.cos(a) * (10 + R() * 14), this.player.y + 14 + R() * 10, p.z + Math.sin(a) * (10 + R() * 14)); const col = ['#ff5fd2', '#ffe066', '#7ff5ff', '#9dff7a', '#ff8f5f'][Math.floor(R() * 5)]; for (let i = 0; i < 28; i++) { const v = new V3(R() - 0.5, R() - 0.5, R() - 0.5).normalize().multiplyScalar(9 + R() * 3); this.emit(c, col, 1.1, 1.1, v); } Audio.sfxPlay('firework'); } }
     this.placeCamera(false, dt);
+    if (this.sun && this.player) { const p = this.player.pos; this.sun.target.position.set(p.x, this.player.y, p.z); this.sun.position.set(p.x + 60, this.player.y + 120, p.z + 45); }
     if (this.player) Audio.engineSet(Math.abs(this.player.fs), this.player.boostT > 0 || this.player.megaT > 0);
   }
   startBoosts() {

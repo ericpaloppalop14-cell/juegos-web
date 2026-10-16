@@ -106,5 +106,5 @@ export function addSurreal(T, Q, scene) {
     const n = Q.hi ? 16 : 8, danc = []; for (let k = 0; k < n; k++) { const ii = Math.round(N * k / n), sd = k % 2 ? 1 : -1; const pp = off(ii, sd * (S[ii].wall + 4.5)); const d = mesh(new THREE.SphereGeometry(1.2, 12, 9), toon('#ffffff', { emissive: ['#ff5fd2', '#5ff5ff', '#ffe066'][k % 3], ei: 0.6, nocache: true }), scene, [pp.x, pp.y + 1.3, pp.z]); danc.push([d, k, pp.y + 1.3]); }
     items.push(t => danc.forEach(([d, k, y0]) => { d.position.y = y0 + Math.abs(Math.sin(t * 6 + k)) * 1.4; d.scale.set(1, 1 + Math.sin(t * 12 + k) * 0.15, 1); }));
   }
-  return { spots, update(t, dt, race) { for (const u of items) u(t, dt, race); for (const a of T.anims) a(t, dt); } };
+  return { spots, update(t, dt, race) { for (const u of items) u(t, dt, race); for (const a of T.anims) a(t, dt, race); } };
 }

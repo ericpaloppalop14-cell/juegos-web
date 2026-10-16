@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
+import { addDeco } from './deco.js';
 
 const V3 = THREE.Vector3;
 let seed = 1; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -312,6 +313,7 @@ const M = (x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) => new THREE
 const W = () => toon('#ffffff', { rim: 0.35 });
 function scenery(T, Q) {
   edgeProps(T, Q); stands(T, Q);
+  if (!/nodeco/.test(location.search)) try { T.deco = addDeco(T, Q, { off, rnd }); } catch (e) { console.warn('deco', e); } // v2: decoración extra (solo visual)
   const k = Q.hi ? 1 : 0.55; const n = x => Math.round(x * k);
   const sphG = new THREE.SphereGeometry(1, 14, 10), cylG = new THREE.CylinderGeometry(1, 1, 1, 12), coneG = new THREE.ConeGeometry(1, 1, 12);
   const th = T.theme;
