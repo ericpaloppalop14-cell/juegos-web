@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS } from './data.js';
 import { makeKart, animKart, toon, mesh, outline } from './gfx.js';
-import { Race } from './race.js';
+import { Race } from './race.js?v=m9';
 import { buildTrack } from './track.js';
 import { Audio } from './audio.js';
 import { Net, netAvailable } from './net.js';
@@ -35,7 +35,7 @@ const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, pow
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 // densidad de píxeles limitada: 1,5 en alta, 1,0 en baja (los móviles de gama media van sobrados)
 function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, prCap)); resize(); }
-function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera]) if (c) { c.aspect = a; c.updateProjectionMatrix(); } checkRotate(); }
+function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera]) if (c) { c.aspect = a; c.zoom = c === (app.race && app.race.camera) && a < 1 ? Math.max(0.55, a / 1.05) : 1; c.updateProjectionMatrix(); } checkRotate(); }
 addEventListener('resize', () => resize());
 
 // ---------------- app / UI ----------------
@@ -90,7 +90,7 @@ $('tName').value = save.name;
 $('tName').addEventListener('input', () => { save.name = $('tName').value.trim().slice(0, 14) || 'Piloto'; persist(); });
 $('tName').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); e.stopPropagation(); });
 const syncTitle = () => { $('tCharN').textContent = app.playerChar.name; };
-$('tHint').textContent = isTouch ? 'Se juega en vertical y con una mano' : 'Teclado: ← → girar · Espacio turbo · X objeto · se acelera solo';
+$('tHint').textContent = isTouch ? 'Se juega en vertical y con una mano' : 'Teclado: ← → girar · Espacio derrapar · X objeto · se acelera solo';
 btn('tQuick', () => { tryFullscreen(); app.mode = 'quick'; openRoutes(); });
 btn('tOnline', () => { tryFullscreen(); openOnline(); });
 btn('tChar', () => openChars('title'));
@@ -156,7 +156,7 @@ function startRace(cup, grid, net) {
     app.race = new Race(app, { cup, reverse: false, playerChar: app.playerChar, grid, cupIndex: 1, quality: { hi: qualityHi }, net });
     for (const k of app.race.karts) if (!k.isPlayer) k.mesh.add(nameTag(k.pname, k.ch.color));
     resize(); $('loading').style.display = 'none';
-    show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>TURBO</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
+    show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>DERRAPE</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
     $('waitNet').style.display = net ? 'block' : 'none';
     app.ui.toast(cup.name + (net ? ' · online' : ''), '#ffffff');
     Audio.init(); Audio.playSong(cup.music, CUPS.indexOf(cup) * 7 + 3); Audio.engineStart();
@@ -299,10 +299,10 @@ function applySettings() {
   Audio.on = save.settings.sound === '1'; Audio.musicOn = save.settings.music === '1'; for (const k of ['mus', 'sfx', 'eng']) Audio.vol[k] = +(save.settings[k + 'V'] ?? DEF[k + 'V']) / 100; Audio.apply();
   for (const r of document.querySelectorAll('input.vol')) r.value = save.settings[r.dataset.k] ?? DEF[r.dataset.k];
   $('fps').style.display = save.settings.fps === '1' ? 'block' : 'none';
-  app.autoDrift = false;
+  app.autoDrift = true; // v9: derrape asistido como en Mochi Racers (su ajuste por defecto)
   const tilt = save.settings.controls === 'tilt';
-  $('padL').style.display = $('padR').style.display = tilt ? 'none' : 'flex';
-  $('padHint').textContent = tilt ? 'Inclina el móvil para girar' : 'Mantén o arrastra el pulgar para girar';
+  $('bL').style.display = $('bR').style.display = tilt ? 'none' : 'flex'; $('stick').style.display = 'none';
+  $('tiltHint').style.display = tilt && isTouch ? 'block' : 'none';
 }
 btn('sOk', () => { if (setReturn === 'pause') show('pause'); else goTitle(); });
 
@@ -334,35 +334,9 @@ function holdBtn(id, name) {
   const up = () => { held[name] = false; el.classList.remove('down'); };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
 }
-holdBtn('bD', 'drift'); holdBtn('bI', 'item');
-// zona de giro (v2): toda la parte baja de la pantalla es un joystick analógico flotante.
-//  · Mantener pulsado a la izquierda o a la derecha = giro (más fuerte cuanto más al borde).
-//  · Arrastrar el pulgar = giro analógico continuo (sin saltos al pasar de un modo a otro).
-//  · Multitáctil: el pulgar que gira y los dedos de DERRAPE/objeto van por separado.
-const PAD = { range: 62, deadzone: 5, minHold: 0.6 };
-let padSteer = 0; { const pad = $('pad'), th = $('thumb'), knob = $('knob'); let id = null, x0 = 0, y0 = 0;
-  const set = v => { padSteer = v; $('padL').classList.toggle('on', v < -0.2); $('padR').classList.toggle('on', v > 0.2); };
-  const showThumb = (x, y) => { const top = pad.getBoundingClientRect().top; th.style.display = 'block'; th.style.left = (x0) + 'px'; th.style.top = (y0 - top) + 'px'; knob.style.display = 'block'; knob.style.left = x + 'px'; knob.style.top = (y - top) + 'px'; };
-  const valueAt = x => { let dx = x - x0; if (Math.abs(dx) > PAD.range) { x0 = x - Math.sign(dx) * PAD.range; dx = x - x0; } // el centro sigue al dedo: invertir el giro es inmediato
-    const a = Math.max(0, Math.abs(dx) - PAD.deadzone) / (PAD.range - PAD.deadzone); return Math.sign(dx) * Math.min(1, a); };
-  pad.addEventListener('pointerdown', e => { e.preventDefault(); if (id != null) return; Audio.init(); id = e.pointerId; try { pad.setPointerCapture(id); } catch (x) { }
-    // valor inicial según el lado: cerca del centro giro suave, cerca del borde giro completo
-    const cx = innerWidth / 2, side = e.clientX < cx ? -1 : 1, v0 = side * Math.min(1, PAD.minHold + Math.abs(e.clientX - cx) / cx * 0.8);
-    x0 = e.clientX - v0 * PAD.range; y0 = e.clientY; set(valueAt(e.clientX)); showThumb(e.clientX, e.clientY); if (app.race && app.race.state === 'intro') app.skipIntro = true; }, { passive: false });
-  pad.addEventListener('pointermove', e => { if (e.pointerId !== id) return; e.preventDefault(); set(valueAt(e.clientX)); showThumb(e.clientX, e.clientY); }, { passive: false });
-  const end = e => { if (e.pointerId !== id) return; id = null; set(0); th.style.display = 'none'; knob.style.display = 'none'; };
-  pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end); pad.addEventListener('lostpointercapture', end); }
-// flechas ◀ ▶ (v3): botones de verdad, con prioridad sobre el joystick; pointer events + respaldo con touch events
-const arrows = { L: new Set(), R: new Set() };
-for (const [id, k] of [['padL', 'L'], ['padR', 'R']]) { const el = $(id);
-  const down = key => { Audio.init(); arrows[k].add(key); el.classList.add('down'); if (app.race && app.race.state === 'intro') app.skipIntro = true; };
-  const up = key => { arrows[k].delete(key); if (!arrows[k].size) el.classList.remove('down'); };
-  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); try { el.setPointerCapture(e.pointerId); } catch (x) { } down('p' + e.pointerId); }, { passive: false });
-  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, e => up('p' + e.pointerId));
-  el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); for (const t of e.changedTouches) down('t' + t.identifier); }, { passive: false });
-  for (const ev of ['touchend', 'touchcancel']) el.addEventListener(ev, e => { e.preventDefault(); for (const t of e.changedTouches) up('t' + t.identifier); }, { passive: false });
-}
-const arrowSteer = () => (arrows.R.size ? 1 : 0) - (arrows.L.size ? 1 : 0);
+holdBtn('bL', 'left'); holdBtn('bR', 'right'); holdBtn('bD', 'drift'); holdBtn('bI', 'item'); holdBtn('bB', 'brake'); // v9: botones de Mochi Racers v6
+for (const id of ['bL', 'bR']) $(id).addEventListener('pointerdown', () => { if (app.race && app.race.state === 'intro') app.skipIntro = true; });
+let padSteer = 0; const arrowSteer = () => 0; // (el joystick de zona de la v2 se sustituye por los botones ◀ ▶ de Mochi Racers)
 // sin scroll, zoom, menú de pulsación larga ni selección durante la carrera
 for (const ev of ['touchstart', 'touchmove', 'touchend', 'gesturestart']) $('ctl').addEventListener(ev, e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
 document.addEventListener('touchmove', e => { if (app.state === 'race' && e.cancelable) e.preventDefault(); }, { passive: false });
@@ -376,7 +350,8 @@ let adT = 0, adOn = false; const AUTO_DRIFT = { steer: 0.7, hold: 0.22, release:
 function readInput(dt) {
   let steer = 0;
   if (keys.ArrowLeft || keys.KeyA) steer -= 1; if (keys.ArrowRight || keys.KeyD) steer += 1;
-  steer += save.settings.controls === 'tilt' && isTouch ? tiltX : (arrowSteer() || padSteer);
+  if (held.left) steer -= 1; if (held.right) steer += 1;
+  if (save.settings.controls === 'tilt' && isTouch) steer += tiltX;
   steer = Math.max(-1, Math.min(1, steer));
   const R = app.race, P = R.player, T = R.track;
   let drift = !!(keys.Space || keys.ShiftLeft || keys.ShiftRight || held.drift);
@@ -388,7 +363,7 @@ function readInput(dt) {
   } else { adOn = false; adT = 0; }
   const item = !!(keys.KeyX || keys.KeyE || keys.Enter || keys.KeyK || held.item);
   const r = R.input;
-  r.steer = -steer; r.brake = !!(keys.ArrowDown || keys.KeyS); r.throttle = 1;
+  r.steer = -steer; r.brake = !!(keys.ArrowDown || keys.KeyS || held.brake); r.throttle = 1;
   r.drift = drift; r.driftEdge = drift && !driftPrev; r.itemEdge = item && !itemPrev; driftPrev = drift; itemPrev = item;
 }
 
@@ -421,8 +396,10 @@ function drawHUD(dt) {
   $('hPos').classList.toggle('p1', P.place === 1);
   const pip = $('hPips'); if (pip.childElementCount !== laps) pip.innerHTML = '<b></b>'.repeat(laps); [...pip.children].forEach((b, i) => b.classList.toggle('on', i <= P.lap));
   const kmh = Math.max(0, Math.round(P.fs * 3.2)); $('hKmh').textContent = kmh; $('hBar').style.width = Math.min(100, kmh / 2.2) + '%';
-  const fr = P.turboT > 0 ? P.turboT / 1.8 : P.tc, rdy = P.tc >= 1 && P.turboT <= 0, rg = $('dRing'); rg.style.strokeDashoffset = 283 * (1 - fr); rg.style.stroke = P.turboT > 0 ? '#ff5f3f' : rdy ? '#ff9f4a' : '#ffd84a';
-  const bd = $('bD'); bd.classList.toggle('ready', rdy); const tl = P.turboT > 0 ? '¡a tope!' : rdy ? '¡LISTO!' : 'cargando ' + Math.floor(P.tc * 100) + '%'; if ($('tLbl').textContent !== tl) $('tLbl').textContent = tl;
+  // v9: anillo de carga del derrape, igual que Mochi Racers v6
+  const lv = P.driftDir ? (P.driftT > 1.6 ? 3 : P.driftT > 1.0 ? 2 : P.driftT > 0.5 ? 1 : 0) : 0;
+  const fr = P.driftDir ? Math.min(1, P.driftT / 1.6) : 0, rg = $('dRing'); rg.style.strokeDashoffset = 283 * (1 - fr); rg.style.stroke = ['#ffffff', '#7fd8ff', '#ffb36b', '#ff7fe0'][lv];
+  const bd = $('bD'); for (let i = 1; i <= 3; i++) bd.classList.toggle('l' + i, lv === i);
   $('cream').style.opacity = P.creamT > 0 ? Math.min(1, P.creamT) * 0.92 : 0;
   $('flash').style.opacity = Math.min(1, R.kick * 0.9 + (P.boostT > 0 ? 0.12 : 0));
   drawFx(R, P);
@@ -483,9 +460,9 @@ function frame(now) {
 
 // ---------------- orientación / pantalla completa ----------------
 let rotAny = false;
-function checkRotate() { const land = innerWidth > innerHeight * 1.05; $('rotate').style.display = isTouch && land && !rotAny ? 'flex' : 'none'; }
+function checkRotate() { $('rotate').style.display = 'none'; } // v9: se juega en vertical y en horizontal, como Mochi Racers
 btn('rotAny', () => { rotAny = true; checkRotate(); });
-function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => {})).catch(() => {}); }
+function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.catch) p.catch(() => {}); }
 
 // ---------------- arranque ----------------
 const boot = () => { applyPR(); applySettings(); goTitle(); $('loading').style.display = 'none'; requestAnimationFrame(frame); if (params.get('sala')) { openOnline(); oMsg('Te han invitado a la sala ' + $('jCode').value + '. Pulsa «Unirse».'); } };

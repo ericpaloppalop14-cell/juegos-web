@@ -117,25 +117,33 @@ h1.logo small{display:block;font-size:.3em;-webkit-text-stroke:1.5px #8b5cc2;tex
 #bD.ready{animation:rdy .6s ease-in-out infinite alternate;box-shadow:0 0 34px #ff9f4a}@keyframes rdy{from{transform:scale(1)}to{transform:scale(1.08)}}
 #flash{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,0) 35%,rgba(255,240,180,.85) 100%);opacity:0}
 /* controles táctiles (vertical, una mano) */
+/* v9 Mochi Party: botones táctiles de Mochi Racers v6 (mismo diseño y colocación) */
 #ctl{position:fixed;inset:0;z-index:4;display:none;pointer-events:none}
 #ctl.on{display:block}
-#pad{position:absolute;left:0;right:0;top:calc(110px + env(safe-area-inset-top));bottom:0;pointer-events:auto}
-#padL,#padR{position:absolute;z-index:6;bottom:calc(20px + env(safe-area-inset-bottom));width:104px;height:104px;border-radius:50%;border:4px solid rgba(255,255,255,.85);background:rgba(255,255,255,.22);color:#fff;font-size:44px;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:none;text-shadow:0 2px 3px rgba(120,40,100,.5);transition:transform .06s}
-#padL{left:calc(10px + env(safe-area-inset-left))}#padR{left:calc(122px + env(safe-area-inset-left))}
-#padL.on,#padR.on,#padL.down,#padR.down{background:rgba(255,140,200,.75);transform:scale(.93)}
-#padHint{bottom:calc(132px + env(safe-area-inset-bottom)) !important}
-#padHint{position:absolute;left:12px;bottom:calc(106px + env(safe-area-inset-bottom));font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(80,30,90,.8);pointer-events:none}
-#thumb{position:absolute;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;border:3px solid rgba(255,255,255,.6);background:rgba(255,255,255,.12);display:none;pointer-events:none}
-#knob{position:absolute;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;border:3px solid #fff;background:rgba(255,160,210,.5);display:none;pointer-events:none}
-#ctl,#pad,#bD,#bI{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.tb{position:absolute;pointer-events:auto;border-radius:50%;background:rgba(255,255,255,.38);border:3px solid rgba(255,255,255,.88);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;text-shadow:0 2px 3px rgba(120,40,100,.5);box-shadow:0 4px 12px rgba(120,40,100,.18)}
-.tb.down{background:rgba(255,160,210,.72);transform:scale(.94)}
-#bD{right:calc(14px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));width:132px;height:132px;font-size:15px;flex-direction:column;line-height:1.05;background:radial-gradient(circle at 50% 40%,rgba(255,190,230,.62),rgba(255,120,190,.4))}
+.tb{position:absolute;pointer-events:auto;border-radius:50%;background:rgba(255,255,255,.38);border:3px solid rgba(255,255,255,.85);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;text-shadow:0 2px 3px rgba(120,40,100,.5);box-shadow:0 4px 12px rgba(120,40,100,.18)}
+.tb.down{background:rgba(255,160,210,.7);transform:scale(.94)}
+#bL{left:calc(16px + env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:104px;height:104px;font-size:44px}
+#bR{left:calc(132px + env(safe-area-inset-left));bottom:calc(18px + env(safe-area-inset-bottom));width:104px;height:104px;font-size:44px}
+#stick{left:calc(20px + env(safe-area-inset-left));bottom:calc(20px + env(safe-area-inset-bottom));width:170px;height:170px;display:none}
+#knob{position:absolute;left:50%;top:50%;width:70px;height:70px;margin:-35px 0 0 -35px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 3px 8px rgba(120,40,100,.3)}
+#bD{right:calc(14px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));width:146px;height:146px;font-size:16px;flex-direction:column;line-height:1.05;background:radial-gradient(circle at 50% 40%,rgba(255,190,230,.6),rgba(255,120,190,.38));letter-spacing:.5px}
 #bD svg.ring{position:absolute;inset:-9px;width:calc(100% + 18px);height:calc(100% + 18px);transform:rotate(-90deg);pointer-events:none}
 #bD svg.ring circle{fill:none;stroke-width:9;stroke-linecap:round}
-#bD .ico{width:48px;height:48px;margin-bottom:2px}
+#bD .ico{width:54px;height:54px;margin-bottom:2px}
 #bD.l1{box-shadow:0 0 22px #7fd8ff}#bD.l2{box-shadow:0 0 26px #ffb36b}#bD.l3{box-shadow:0 0 32px #ff7fe0}
-#bI{right:calc(30px + env(safe-area-inset-right));bottom:calc(168px + env(safe-area-inset-bottom));width:96px;height:96px;font-size:40px}
+#bD.l3 .ico{animation:wob .25s infinite alternate}@keyframes wob{from{transform:rotate(-8deg) scale(1)}to{transform:rotate(8deg) scale(1.12)}}
+#bI{right:calc(150px + env(safe-area-inset-right));bottom:calc(34px + env(safe-area-inset-bottom));width:88px;height:88px;font-size:38px}
+#bB{right:calc(40px + env(safe-area-inset-right));bottom:calc(150px + env(safe-area-inset-bottom));width:64px;height:64px;font-size:13px}
+@media (orientation:portrait){
+#bL{width:90px;height:90px;font-size:38px;bottom:calc(22px + env(safe-area-inset-bottom))}
+#bR{left:calc(116px + env(safe-area-inset-left));width:90px;height:90px;font-size:38px;bottom:calc(22px + env(safe-area-inset-bottom))}
+#stick{width:150px;height:150px}
+#bD{width:124px;height:124px;font-size:14px;bottom:calc(18px + env(safe-area-inset-bottom))}#bD .ico{width:44px;height:44px}
+#bI{right:calc(30px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:76px;height:76px;font-size:32px}
+#bB{right:calc(150px + env(safe-area-inset-right));bottom:calc(130px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:12px}
+}
+#ctl,#bL,#bR,#bD,#bI,#bB{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#tiltHint{position:absolute;left:calc(20px + env(safe-area-inset-left));bottom:calc(30px + env(safe-area-inset-bottom));font-size:15px;color:#fff;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.4);display:none}
 #bI.has{background:rgba(255,230,140,.6);animation:pulse .8s infinite alternate}
 @keyframes pulse{from{box-shadow:0 0 0 rgba(255,220,80,.0)}to{box-shadow:0 0 22px rgba(255,220,80,.95)}}
 /* overlays */
@@ -244,11 +252,12 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
   <div id="fps"></div>
 </div>
 <div id="ctl">
-  <div id="pad"><div id="thumb"></div><div id="knob"></div></div>
-  <div id="padL">◀</div><div id="padR">▶</div>
-  <div id="padHint">Mantén o arrastra el pulgar para girar</div>
+  <div class="tb" id="bL">◀</div><div class="tb" id="bR">▶</div>
+  <div class="tb" id="stick"><div id="knob"></div></div>
+  <div id="tiltHint">Inclina el móvil para girar</div>
   <div class="tb" id="bI">·</div>
-  <div class="tb" id="bD"><svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="rgba(255,255,255,.35)"/><circle id="dRing" cx="50" cy="50" r="45" stroke="#7fd8ff" stroke-dasharray="283" stroke-dashoffset="283"/></svg><svg class="ico" viewBox="0 0 96 64" style="width:78px;height:52px"><g fill="#fff" stroke="#c0508a" stroke-width="2.5"><circle cx="14" cy="42" r="9" opacity=".85"/><circle cx="24" cy="33" r="10"/><circle cx="23" cy="48" r="8" opacity=".9"/><circle cx="6" cy="30" r="5" opacity=".6"/></g><g stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".9"><path d="M30 14 H46"/><path d="M26 22 H40"/><path d="M34 56 H48"/></g><path d="M38 50 Q36 22 58 18 Q80 16 80 40 Q80 52 60 52 Z" fill="#ff8fc0" stroke="#a03060" stroke-width="3" stroke-linejoin="round"/><ellipse cx="54" cy="24" rx="7" ry="4" fill="#fff" opacity=".55"/><circle cx="66" cy="34" r="3.2" fill="#2a1838"/><circle cx="74" cy="34" r="3.2" fill="#2a1838"/><path d="M66 42 Q70 46 75 42" fill="none" stroke="#2a1838" stroke-width="2.5" stroke-linecap="round"/><g fill="#ffd84a" stroke="#a05000" stroke-width="2" stroke-linejoin="round"><path d="M80 6 L88 12 L80 18 Z"/><path d="M87 6 L95 12 L87 18 Z"/></g></svg>TURBO<small id="tLbl" style="font-size:10px">cargando…</small></div>
+  <div class="tb" id="bD"><svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" stroke="rgba(255,255,255,.35)"/><circle id="dRing" cx="50" cy="50" r="45" stroke="#7fd8ff" stroke-dasharray="283" stroke-dashoffset="283"/></svg><svg class="ico" viewBox="0 0 64 64"><path d="M10 44 Q32 8 54 30" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="M46 20 L56 31 L42 34" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="52" r="4" fill="#fff"/><circle cx="26" cy="54" r="3" fill="#fff" opacity=".7"/></svg>DERRAPE<small style="font-size:10px">salto · truco</small></div>
+  <div class="tb" id="bB">FRENO</div>
 </div>
 
 <div id="results" class="screen"><div class="card"><div id="rTitle" class="title2" style="margin-bottom:8px"></div><table id="rTable"></table><div id="rRec"></div><div id="rNet"></div><div class="row" style="margin-top:12px"><button class="btn" id="rNext">Otra carrera</button><button class="btn sec" id="rMenu">Menú</button></div></div></div>
@@ -271,7 +280,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
   <div class="set">Giro<div class="seg" data-k="controls"><button data-v="toque">Toque / arrastre</button><button data-v="tilt">Inclinación</button></div></div>
   <div class="set">Calidad<div class="seg" data-k="quality"><button data-v="alta">Alta</button><button data-v="media">Media</button><button data-v="baja">Baja</button><button data-v="auto">Auto</button></div></div>
   <div class="set">Mostrar FPS<div class="seg" data-k="fps"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
-  <div class="keys">Móvil en vertical: toca o mantén la mitad izquierda/derecha (o arrastra el pulgar) para girar. El botón TURBO se recarga solo cada pocos segundos: úsalo en las rectas. En el aire, haz una acrobacia.<br>Teclado: ← → girar · Espacio turbo · X objeto · ↓ frenar · P pausa</div>
+  <div class="keys">Móvil: botones ◀ ▶ para girar, DERRAPE para derrapar (carga el turbo: suelta para salir disparado) y FRENO, como en Mochi Racers. En el aire, DERRAPE hace una acrobacia.<br>Teclado: ← → girar · Espacio derrapar · X objeto · ↓ frenar · P pausa</div>
   <div class="row" style="margin-top:12px"><button class="btn" id="sOk">Listo</button></div>
 </div></div>
 
@@ -279,7 +288,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 
 <script src="lib/peerjs.min.js"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js?v=m9"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>

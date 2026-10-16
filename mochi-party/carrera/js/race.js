@@ -132,7 +132,7 @@ export class Race {
     const pers = [{ name: 'prudente', laneAmp: 0.15, aggr: 0.3, skill: 0.95 }, { name: 'agresivo', laneAmp: 0.45, aggr: 0.9, skill: 0.98 }, { name: 'travieso', laneAmp: 0.35, aggr: 0.7, skill: 0.93 }, { name: 'veloz', laneAmp: 0.2, aggr: 0.5, skill: 1.0 }][gi % 4];
     return {
       ch, isPlayer, mesh: m, shield, proxy, pos: new V3(), _p0: new V3(), _p1: new V3(), _y0: 0, _y1: 0, steerS: 0, yaw: 0, vx: 0, vz: 0, fs: 0, y: 0, vy: 0, air: false, airT: 0,
-      vmax: 48.6 + (s.vel - 2) * 2.4, acc: 0.82 + (s.acel - 3) * 0.14, turn: 2.15 + (s.man - 3) * 0.2, // v6: la velocidad mínima = Lava antigua (48.6)
+      vmax: 43 + (s.vel - 3) * 2.8, acc: 0.74 + (s.acel - 3) * 0.14, turn: 2.0 + (s.man - 3) * 0.2, // v9: mismos valores que Mochi Racers v6
       weight: 0.7 + s.peso * 0.15,
       idx: 0, prevIdx: 0, dist: 0, lap: 0, finished: false, finishTime: 0, place: gi + 1,
       item: null, rollT: 0, tc: R() * 0.35, turboT: 0, tinyT: 0, creamT: 0, coins: 0, boostT: 0, megaT: 0, megaS: 1, shieldT: 0, magT: 0, spinT: 0, squashT: 0, blindT: 0, invT: 0,
@@ -233,7 +233,7 @@ export class Race {
     a.scSlow = false;
     for (const sc of T.shortcuts) {
       const di = (sc.i0 - k.idx + T.N) % T.N;
-      if (di < 25 && a.takeSC !== sc && a.scDec !== sc.i0 + '/' + k.lap) { a.scDec = sc.i0 + '/' + k.lap; a.takeSC = (k.boostT > 0 || (k.tc >= 1 && R() < 0.55) || k.megaT > 0 || k.item === 'turbo' || k.item === 'seta' || R() < 0.35 * a.skill) ? sc : false; if (a.takeSC === false) a.scSkipIdx = sc.i0; else { k.scCount = (k.scCount || 0) + 1; if (k.tc >= 1 && !k.air) inp.driftEdge = true; } }
+      if (di < 25 && a.takeSC !== sc && a.scDec !== sc.i0 + '/' + k.lap) { a.scDec = sc.i0 + '/' + k.lap; a.takeSC = (k.boostT > 0 || (k.tc >= 1 && R() < 0.55) || k.megaT > 0 || k.item === 'turbo' || k.item === 'seta' || R() < 0.35 * a.skill) ? sc : false; if (a.takeSC === false) a.scSkipIdx = sc.i0; else { k.scCount = (k.scCount || 0) + 1; } }
       if (a.takeSC === sc) {
         if (di < 12 || T.inShortcut(k.pos.x, k.pos.z) != null) {
           // aim at a point further along the path
@@ -262,8 +262,9 @@ export class Race {
     // drift on bends
     const curv = Math.abs(T.S[(k.idx + 10) % T.N].curv);
     if (av === 'brake') { a.drift = false; return Object.assign(inp, { drift: false }); }
-    a.drift = false;
-    if (k.tc >= 1 && !k.air && k.spinT <= 0 && (curv < 0.12 || k.place > 4) && R() < dt * (1.2 + a.skill)) inp.driftEdge = true;
+    if (!a.drift && curv > 0.3 && k.fs > 22 && !k.air && Math.abs(inp.steer) > 0.35 && R() < a.skill) a.drift = true; // v9: derrape de Mochi Racers
+    if (a.drift && (curv < 0.1 || k.fs < 14)) a.drift = false;
+    inp.drift = a.drift;
     // items
     if (k.item) {
       a.itemDelay -= dt;
@@ -326,24 +327,17 @@ export class Race {
     else if (inp.brake) { fs -= 34 * dt; if (fs < -9) fs = -9; }
     else if (inp.throttle > 0) { if (fs < vmax) fs += (vmax - fs) * k.acc * dt * (k.boostT > 0 ? 3 : 1) + (fs < 5 ? 6 * dt : 0); else fs += (vmax - fs) * 1.6 * dt; }
     else fs *= Math.exp(-dt * 0.8);
+    // v9 Mochi Party: dirección y derrape copiados tal cual de Mochi Racers v6
     // steering
-    let tgt = ctrl ? clamp(inp.steer, -1, 1) : 0;
-    if (k.isPlayer) { tgt = Math.sign(tgt) * Math.pow(Math.abs(tgt), 1 + STEER.expo); // curva analógica
-      const grow = Math.abs(tgt) > Math.abs(k.steerS) && tgt * k.steerS >= 0; const rate = 1 / (grow ? STEER.rampIn : STEER.rampOut);
-      k.steerS += clamp(tgt - k.steerS, -rate * dt, rate * dt); } else k.steerS = tgt;
-    const steer = k.steerS;
+    const steer = ctrl ? inp.steer : 0;
     k.steerVis = lerp(k.steerVis, steer, 1 - Math.exp(-dt * 10));
-    const spdK = clamp(Math.abs(fs) / STEER.lowSpeedFull, 0, 1) * Math.sign(fs || 1);
-    const hiCut = 1 - STEER.highSpeedCut * clamp((Math.abs(fs) - 20) / 28, 0, 1);
+    const spdK = clamp(Math.abs(fs) / 10, 0, 1) * Math.sign(fs || 1);
     let yawRate;
-    // TURBO recargable (sustituye al derrape): se carga solo para todos
-    k.tc = Math.min(1, k.tc + dt / TURBO.charge);
-    if (inp.driftEdge && !k.air && k.tc >= 1 && ctrl && !k.finished) this.fireTurbo(k);
-    // (derrape eliminado en v4)
-    const auto = false;
+    // drift start/stop
+    const auto = k.isPlayer && this.app.autoDrift !== false;
     let wantDir = Math.abs(steer) > (auto ? 0.15 : 0.3) ? Math.sign(steer) : 0;
     if (auto && !wantDir) { const a = T.S[(k.idx + 2) % T.N].fl; let best = 0; for (let j = 6; j <= 36; j += 3) { const b = T.S[(k.idx + j) % T.N].fl, cr = a.x * b.z - a.z * b.x; if (Math.abs(cr) > Math.abs(best)) best = cr; } wantDir = Math.abs(best) > 0.04 ? -Math.sign(best) : (k.lastDD || 1); }
-    if (false && inp.drift && !k.air && k.driftDir === 0 && wantDir && fs > 12 && ctrl) { k.driftDir = wantDir; k.lastDD = wantDir; k.driftT = 0; k.vy = 3.2; k.air = true; k.hop = true; if (k.isPlayer) Audio.sfxPlay('drift'); }
+    if (inp.drift && !k.air && k.driftDir === 0 && wantDir && fs > 12 && ctrl) { k.driftDir = wantDir; k.lastDD = wantDir; k.driftT = 0; k.vy = 3.2; k.air = true; k.hop = true; if (k.isPlayer) Audio.sfxPlay('drift'); }
     if (k.driftDir !== 0 && (!inp.drift || fs < 6 || !ctrl)) {
       const lvl = dlvl(k.driftT);
       if (lvl && ctrl) { k.boostT = Math.max(k.boostT, [0, 0.7, 1.1, 1.6][lvl]); if (k.isPlayer) { Audio.sfxPlay('mini', 1 + lvl * 0.25); this.msg(['', '¡Mini-turbo!', '¡Súper turbo!', '¡Turbo arcoíris!'][lvl], k, ['', '#7fd8ff', '#ffb36b', '#ff8fd8'][lvl]); } }
@@ -355,14 +349,13 @@ export class Race {
       if (auto) { // forgiving drift: follow the road line, steer only nudges it
         const f = T.frame(k.pos.x, k.pos.z, k.idx), sAh = T.S[(k.idx + 6) % T.N], ty = Math.atan2(sAh.fl.x, sAh.fl.z);
         const back = clamp(f.lat / Math.max(4, f.w) * 0.35, -0.35, 0.35); // pull toward centre (+yaw reduces lat)
-        yawRate = angDiff(k.yaw, ty + back + steer * STEER.autoDriftSteer) * 3.2 * Math.min(1, spdK + 0.3);
+        yawRate = angDiff(k.yaw, ty + back + steer * 0.35) * 3.2 * Math.min(1, spdK + 0.3);
       } else yawRate = k.turn * (k.driftDir * 0.72 + steer * 0.45) * spdK;
       const lvl = dlvl(k.driftT);
       if (lvl > k.dLvl) { k.dLvl = lvl; if (k.isPlayer) { Audio.sfxPlay('level', 1 + lvl * 0.26); for (let i = 0; i < 10; i++) this.emit(k.pos.clone().add(new V3(0, 0.6, 0)), ['', '#7fd8ff', '#ffb36b', '#ff7fe0'][lvl], 0.8, 0.45); } }
       if (lvl && R() < (this.quality.hi ? 0.9 : 0.5)) for (const sd of [-1, 1]) { const p = k.pos.clone().add(new V3(-fwdX * 1.3 + rX * sd * 1.0, 0.35, -fwdZ * 1.3 + rZ * sd * 1.0)); this.emit(p, ['', '#7fd8ff', '#ffb36b', '#ff7fe0'][lvl], 0.55, 0.3); }
-    } else { yawRate = k.turn * steer * spdK * (k.air ? 0.6 : 1) * (k.isPlayer ? hiCut : (1 - Math.min(0.3, Math.abs(fs) / 200)));
-      if (k.isPlayer && ctrl && Math.abs(steer) < 0.3 && !k.air && fs > 4) { const sa = T.S[(k.idx + 5) % T.N], f0 = T.frame(k.pos.x, k.pos.z, k.idx); const ty = Math.atan2(sa.fl.x, sa.fl.z) + clamp(f0.lat / Math.max(4, f0.w), -1, 1) * 0.12, d = angDiff(k.yaw, ty);
-        if (Math.abs(d) < STEER.assistMax) yawRate += d * STEER.assist * (1 - Math.abs(steer) / 0.3); } }
+    } else { yawRate = k.turn * steer * spdK * (k.air ? 0.6 : 1) * (1 - Math.min(0.3, Math.abs(fs) / 200));
+      if (k.isPlayer && ctrl && Math.abs(steer) < 0.25 && !k.air) { const ty = Math.atan2(T.S[(k.idx + 4) % T.N].fl.x, T.S[(k.idx + 4) % T.N].fl.z), d = angDiff(k.yaw, ty); if (Math.abs(d) < 0.6) yawRate += d * 1.6; } }
     if (k.spinT > 0) yawRate = 0;
     k.yaw += yawRate * dt;
     // grip
@@ -385,10 +378,10 @@ export class Race {
       const s = T.S[k.idx], sg = Math.sign(f2.lat), over = Math.abs(f2.lat) - wall;
       k.pos.x -= s.right.x * sg * over; k.pos.z -= s.right.z * sg * over;
       const vr = k.vx * s.right.x + k.vz * s.right.z;
-      if (vr * sg > 0) { const rf = k.isPlayer ? 1.0 : 1.15; k.vx -= s.right.x * vr * rf; k.vz -= s.right.z * vr * rf; const kk = k.isPlayer ? Math.max(STEER.wallKeep, 1 - Math.abs(vr) / 160) : 1 - Math.min(0.3, Math.abs(vr) / 80); k.vx *= kk; k.vz *= kk;
+      if (vr * sg > 0) { const rf = k.isPlayer ? 1.1 : 1.3; k.vx -= s.right.x * vr * rf; k.vz -= s.right.z * vr * rf; const kk = 1 - Math.min(k.isPlayer ? 0.18 : 0.3, Math.abs(vr) / 80); k.vx *= kk; k.vz *= kk;
         if (k.bumpCD <= 0 && Math.abs(vr) > 4) { k.bumpCD = 0.4; if (k.isPlayer) Audio.sfxPlay('bump'); for (let i = 0; i < 4; i++) this.emit(k.pos.clone().add(new V3(s.right.x * sg * 1.2, 0.8, s.right.z * sg * 1.2)), '#ffffff', 0.5, 0.3); }
         // steer heading back along the road a bit
-        const ty = Math.atan2(s.fl.x, s.fl.z); if (Math.abs(angDiff(k.yaw, ty)) < 1.5) k.yaw += angDiff(k.yaw, ty) * (k.isPlayer ? STEER.wallAlign : 0.15); }
+        const ty = Math.atan2(s.fl.x, s.fl.z); if (Math.abs(angDiff(k.yaw, ty)) < 1.5) k.yaw += angDiff(k.yaw, ty) * (k.isPlayer ? 0.3 : 0.15); }
     }
     // height
     const gy = inSC != null ? Math.max(inSC, f2.y) : f2.y;
@@ -703,41 +696,33 @@ export class Race {
     if (this.state === 'intro') {
       const a = this.introT * 0.45 + 2.2, r = 26 - this.introT * 3;
       cam.position.set(k.pos.x + Math.sin(k.yaw + a) * r, k.y + 9 - this.introT * 1.6, k.pos.z + Math.cos(k.yaw + a) * r);
-      cam.lookAt(k.pos.x, k.y + 1.5, k.pos.z); cam.fov = cam.aspect < 1 ? 78 : 60; cam.updateProjectionMatrix(); return;
+      cam.lookAt(k.pos.x, k.y + 1.5, k.pos.z); cam.fov = 60; cam.updateProjectionMatrix(); return;
     }
     if (this.state === 'finish') {
       const a = this.finishT * 0.35; const r = 13;
       cam.position.lerp(new V3(k.pos.x + Math.sin(k.yaw + Math.PI * 0.75 + a) * r, k.y + 5, k.pos.z + Math.cos(k.yaw + Math.PI * 0.75 + a) * r), 1 - Math.exp(-dt * 3));
       cam.lookAt(k.pos.x, k.y + 1.6, k.pos.z); return;
     }
-    const por = cam.aspect < 1, C = por ? CAM.portrait : CAM.landscape, s = k.megaS, sf = clamp(k.fs / 45, 0, 1.3), T = this.track;
-    const sc = 1 + (s - 1) * 0.9;
-    const back = C.dist * sc + sf * CAM.pullBack + (k.boostT > 0 ? 0.6 : 0) + this.kick * 0.6, up = C.height * (1 + (s - 1) * 0.85);
-    // yaw objetivo: el del kart, abierto hacia fuera en derrape
-    const yaw = k.yaw + k.driftDir * CAM.driftSwing;
+    // v9 Mochi Party: cámara de conducción de Mochi Racers v6
+    const s = k.megaS, sf = clamp(k.fs / 45, 0, 1.4), back = 6.5 * (1 + (s - 1) * 0.9) + (k.boostT > 0 ? 0.9 : 0) + sf * 0.6 + this.kick * 0.8, up = 2.85 * (1 + (s - 1) * 0.85);
+    const pv = cam.aspect < 1, pB = pv ? 1.12 : 1, pU = pv ? 2.3 : 1, pA = pv ? 1.2 : 1; // v5: cámara vertical más alta y mirando más lejos (horizontal intacta)
+    const yaw = k.yaw + k.driftDir * 0.12;
     if (snap || this._cy == null) this._cy = yaw;
-    this._cy += angDiff(this._cy, yaw) * (1 - Math.exp(-dt * CAM.yawLag));
-    const fx = Math.sin(this._cy), fz = Math.cos(this._cy), side = k.driftDir * CAM.driftSide;
-    const want = this._cw.set(k.pos.x - fx * back - fz * side, k.y + up, k.pos.z - fz * back + fx * side);
-    // anti-fachadas: si la cámara saldría por detrás de las aceras, se acerca al kart y sube
-    { const ci = T.nearest(want.x, want.z, k.idx, 12, 12), f = T.frame(want.x, want.z, ci), lim = f.wall + CAM.wallMargin;
+    this._cy += angDiff(this._cy, yaw) * (1 - Math.exp(-dt * 7));
+    const want = new V3(k.pos.x - Math.sin(this._cy) * back * pB, k.y + up * pU, k.pos.z - Math.cos(this._cy) * back * pB);
+    { const T = this.track, ci = T.nearest(want.x, want.z, k.idx, 12, 12), f = T.frame(want.x, want.z, ci), lim = f.wall + CAM.wallMargin; // calles de la ciudad: la cámara no atraviesa fachadas
       if (Math.abs(f.lat) > lim) { const ex = Math.abs(f.lat) - lim, rs = T.S[ci].right, sg = Math.sign(f.lat); want.x -= rs.x * sg * ex; want.z -= rs.z * sg * ex; want.y += Math.min(3, ex * 0.6); }
       want.y = Math.max(want.y, f.y + 1.6); }
-    const la = C.lookAhead; const look = this._cl.set(k.pos.x + Math.sin(this._cy) * la, k.y + C.lookHeight * s, k.pos.z + Math.cos(this._cy) * la);
+    const look = new V3(k.pos.x + Math.sin(this._cy) * 5 * pA, k.y + 1.35 * s, k.pos.z + Math.cos(this._cy) * 6 * pA);
     if (snap) { this.camPos.copy(want); this.camLook.copy(look); this.camVel.set(0, 0, 0); }
-    // muelle críticamente amortiguado (sin rebote ni tirones)
-    const w = CAM.posSpring; const ax = w * w * (want.x - this.camPos.x) - 2 * w * this.camVel.x, ay = w * w * (want.y - this.camPos.y) - 2 * w * this.camVel.y, az = w * w * (want.z - this.camPos.z) - 2 * w * this.camVel.z;
-    this.camVel.x += ax * dt; this.camVel.y += ay * dt; this.camVel.z += az * dt; this.camPos.addScaledVector(this.camVel, dt);
-    // nunca dejar que se quede demasiado lejos (p. ej. tras un turbo o un respawn)
-    const dd = this.camPos.distanceTo(want); if (dd > back * 0.9) this.camPos.lerp(want, 1 - (back * 0.9) / dd);
-    this.camPos.y = Math.max(this.camPos.y, want.y - 1.2);
-    this.camLook.lerp(look, 1 - Math.exp(-dt * CAM.lookSpring));
+    this.camPos.lerp(want, 1 - Math.exp(-dt * 10)); this.camPos.y = Math.max(this.camPos.y, want.y - 1.5);
+    this.camLook.lerp(look, 1 - Math.exp(-dt * 14));
     cam.position.copy(this.camPos);
-    const sh = (Math.max(0, sf - 0.85) * 0.05 + (k.boostT > 0 ? 0.04 : 0) + this.kick * 0.2) * (k.air ? 0.4 : 1) * CAM.shake; this.shake = sh;
-    if (sh > 0) { const tt = this.time * 40; cam.position.x += Math.sin(tt) * sh * 0.5; cam.position.y += Math.sin(tt * 1.37) * sh * 0.5; }
+    const sh = (Math.max(0, sf - 0.75) * 0.06 + (k.boostT > 0 ? 0.06 : 0) + this.kick * 0.28) * (k.air ? 0.4 : 1); this.shake = sh;
+    if (sh > 0) cam.position.add(new V3((R() - 0.5) * sh, (R() - 0.5) * sh, (R() - 0.5) * sh));
     cam.lookAt(this.camLook);
-    const fov = C.fov + clamp((k.fs - 15) / 30, 0, 1) * CAM.fovSpeed + (k.boostT > 0 || k.megaT > 0 ? CAM.fovBoost : 0) + (k.turboT > 0 ? 9 : 0) + this.kick * 4;
-    cam.fov = lerp(cam.fov, fov, 1 - Math.exp(-dt * 4)); cam.updateProjectionMatrix();
+    const fov = 64 + Math.min(14, Math.max(0, k.fs - 18) * 0.45) + (k.boostT > 0 ? 8 : 0) + (k.turboT > 0 ? 9 : 0) + this.kick * 8;
+    cam.fov = lerp(cam.fov, fov, 1 - Math.exp(-dt * 5)); cam.updateProjectionMatrix();
   }
   // ---------- interpolación de render (física a paso fijo, pantalla a cualquier Hz) ----------
   saveInterp() { if (this._interped) { this.camera.position.copy(this.camP1); this.camera.quaternion.copy(this.camQ1); for (const k of this.karts) { k.mesh.position.copy(k._p1); k.mesh.rotation.y = k._y1; } this._interped = false; } this.camP0.copy(this.camP1); this.camQ0.copy(this.camQ1); for (const k of this.karts) { k._p0.copy(k._p1); k._y0 = k._y1; } }
