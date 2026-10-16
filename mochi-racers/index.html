@@ -130,6 +130,56 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 #loading{position:fixed;inset:0;z-index:30;background:linear-gradient(180deg,#ffd6ec,#d9c8ff);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#c0508a}
 .keys{font-size:13px;color:#a080c0;margin-top:8px;text-align:center}
 @media (max-height:500px){#settings .card{display:grid!important;grid-template-columns:1fr 1fr;column-gap:22px;row-gap:0;width:min(94vw,860px);max-width:94vw}#settings .title2,#settings .keys,#settings .row{grid-column:1/-1}#settings .keys{font-size:12px}#settings .set{gap:10px}}
+
+/* v3: horizontal bajo — la ficha de stats no tapa pilotos ni botones */
+@media (orientation:landscape) and (max-height:560px){
+#chars{padding-right:calc(min(34vw,300px) + 34px + env(safe-area-inset-right));padding-bottom:8px}
+#cInfo{width:min(34vw,300px);padding:10px 14px;top:calc(50% + 22px);max-height:calc(100vh - 76px);overflow:auto}
+#cName{font-size:24px}#cVeh{font-size:14px;margin:2px 0 4px}#cDesc{font-size:12px;margin-bottom:4px}.stat{margin:1px 0;font-size:12px}.stat span{width:74px}
+#cList{max-width:100%;margin-bottom:6px;gap:5px}.chip{font-size:13px;padding:5px 10px}
+#cGo{padding:8px 26px;font-size:19px}
+#cNext{right:calc(min(34vw,300px) + 40px + env(safe-area-inset-right))!important}
+.arrow{top:38%;width:48px;height:48px;font-size:26px}
+.title2{font-size:24px}
+#cupList{padding:6px 6px 10px}.cup{padding:8px 8px 10px}.cup svg{width:52px;height:52px}
+#title{padding-top:3vh;padding-bottom:4vh}
+}
+/* v3: vertical completo */
+@media (orientation:portrait){
+.title2{font-size:24px}
+.btn{font-size:20px;padding:11px 26px}.btn.sm{font-size:15px;padding:7px 14px}
+#title{padding-top:14vh;padding-bottom:12vh}
+#chars{justify-content:flex-end;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+#cInfo{position:relative;right:auto;top:auto;transform:none;width:min(92vw,440px);padding:10px 16px;margin-bottom:8px}
+#cName{font-size:24px}#cVeh{font-size:14px;margin:2px 0 4px}#cDesc{font-size:13px;margin-bottom:4px}.stat{margin:2px 0}
+#cList{max-width:96vw;gap:5px}.chip{font-size:13px;padding:6px 10px}
+#cNext{right:calc(14px + env(safe-area-inset-right))!important}
+.arrow{top:26%}
+#cups{justify-content:center}
+#cupList{max-width:100vw;padding:10px 14px 16px}.cup{width:62vw;min-width:0;max-width:260px}
+#settings .card{min-width:0;width:94vw;padding:14px 16px}.set{font-size:15px;gap:8px;margin:8px 0}.seg button{font-size:12px;padding:6px 8px}
+#results .card{padding:12px 12px}td{padding:3px 5px;font-size:14px}
+#podTitle{font-size:32px}
+/* HUD */
+#hPos{font-size:44px;padding:2px 10px 4px;border-radius:18px}#hPos small{font-size:18px}
+#mini{top:calc(66px + env(safe-area-inset-top));width:96px;height:96px}
+#hLap{font-size:18px}#hLap span{font-size:13px}
+#hItem{width:62px;height:62px;font-size:34px;border-radius:18px}
+#hItemName{top:calc(74px + env(safe-area-inset-top));font-size:12px}
+#pauseB{right:calc(84px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));width:42px;height:42px;font-size:18px}
+#hSpd{top:calc(82px + env(safe-area-inset-top));bottom:auto;width:130px;font-size:16px}
+#toast{font-size:24px;top:26%;white-space:normal;width:90vw;text-align:center}
+#count{font-size:96px}
+#wrong{font-size:20px;white-space:nowrap}
+#startHint{white-space:normal;width:86vw;text-align:center;font-size:15px;bottom:34%}
+/* controles táctiles */
+#bL{width:90px;height:90px;font-size:38px;bottom:calc(22px + env(safe-area-inset-bottom))}
+#bR{left:calc(116px + env(safe-area-inset-left));width:90px;height:90px;font-size:38px;bottom:calc(22px + env(safe-area-inset-bottom))}
+#stick{width:150px;height:150px}
+#bD{width:124px;height:124px;font-size:14px;bottom:calc(18px + env(safe-area-inset-bottom))}#bD .ico{width:44px;height:44px}
+#bI{right:calc(30px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:76px;height:76px;font-size:32px}
+#bB{right:calc(150px + env(safe-area-inset-right));bottom:calc(130px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -216,7 +266,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 <div id="rotate"><div class="ph">📱</div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div>Mochi Racers se juega mejor en horizontal.</div><button class="btn sec sm" id="rotAny">Jugar en vertical igualmente</button></div>
 
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/main.js?v=3"></script>
+<script type="module" src="js/main.js?v=4"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>

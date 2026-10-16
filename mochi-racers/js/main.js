@@ -31,8 +31,8 @@ function prBase() { const q = save.settings.quality; return q === 'alta' ? 0 : q
 prLv = prBase(); if (params.get('q') === 'low') prLv = 4;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio, PRL[prLv])); const sh = prLv <= 2 && !params.has('noshadows'); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; try { app.race && app.race.scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); } catch (e) {} } resize(); }
-function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera, podCam]) if (c) { c.aspect = a; c.updateProjectionMatrix(); } checkRotate(); }
-addEventListener('resize', () => resize());
+function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera, podCam]) if (c) { c.aspect = a; c.zoom = a < 1 ? Math.max(0.55, a / 1.05) : 1; c.updateProjectionMatrix(); } checkRotate(); }
+addEventListener('resize', () => resize()); addEventListener('orientationchange', () => setTimeout(resize, 120));
 
 // ---------------- app / UI ----------------
 const app = { race: null, state: 'title', autopilot: params.has('auto'), skipIntro: false, speed: 1, cup: null, raceNo: 0, points: {}, lastOrder: null, playerChar: null };
@@ -83,7 +83,7 @@ function setPreview(ch) {
 }
 
 // ---------------- title ----------------
-$('tHint').textContent = isTouch ? 'Toca ¡Jugar! · se juega en horizontal' : 'Teclado: ← → girar · Espacio derrapar · X objeto · se acelera solo';
+$('tHint').textContent = isTouch ? 'Toca ¡Jugar! · en vertical u horizontal' : 'Teclado: ← → girar · Espacio derrapar · X objeto · se acelera solo';
 btn('tPlay', () => { tryFullscreen(); openChars(); });
 btn('tSet', () => openSettings('title'));
 
@@ -396,9 +396,9 @@ function frame(now) {
 
 // ---------------- orientation / fullscreen ----------------
 let rotAny = false;
-function checkRotate() { const portrait = innerHeight > innerWidth * 1.05; $('rotate').style.display = isTouch && portrait && !rotAny ? 'flex' : 'none'; }
+function checkRotate() { $('rotate').style.display = 'none'; } // v3: sin bloqueo de orientación, se juega en vertical y horizontal
 btn('rotAny', () => { rotAny = true; checkRotate(); });
-function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {}); }
+function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.catch) p.catch(() => {}); }
 
 // ---------------- boot ----------------
 document.fonts && document.fonts.load('700 20px Fredoka').finally(() => {
