@@ -6,12 +6,12 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v10';
-import { makeCharacter, animCharacter } from './gfx.js?v=v10';
-import { chOf } from './chars.js?v=v10';
-import { createShell } from './shell.js?v=v10';
-import { Sfx } from './sfx.js?v=v10';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v10';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v11';
+import { makeCharacter, animCharacter } from './gfx.js?v=v11';
+import { chOf } from './chars.js?v=v11';
+import { createShell } from './shell.js?v=v11';
+import { Sfx } from './sfx.js?v=v11';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v11';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);

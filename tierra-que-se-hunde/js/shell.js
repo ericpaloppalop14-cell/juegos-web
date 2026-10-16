@@ -3,10 +3,10 @@
 //  partida en solitario con bots y salas multijugador con código (PeerJS).
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS, chOf } from './chars.js?v=v10';
-import { makeCharacter, animCharacter } from './gfx.js?v=v10';
-import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v10';
-import { Sfx } from './sfx.js?v=v10';
+import { CHARS, chOf } from './chars.js?v=v11';
+import { makeCharacter, animCharacter } from './gfx.js?v=v11';
+import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v11';
+import { Sfx } from './sfx.js?v=v11';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
@@ -40,7 +40,7 @@ export function createShell(G) {
     <div class="lbl">Dificultad de los bots</div><div class="chips" id="cDiff"></div>
     <div class="lbl mapl">Mapa</div><div class="chips" id="cMap"></div>
     <div class="row"><button class="btn big" id="bSolo">▶ Jugar</button></div>
-    <div class="row"><button class="btn lila" id="bMulti">👥 Multijugador</button><button class="btn" id="bHow">❓ Cómo se juega</button></div>
+    <div class="row"><button class="btn lila" id="bMulti">👥 Multijugador</button><button class="btn" id="bHow">❓ Cómo se juega</button><button class="btn" id="bSet">⚙️ Ajustes</button></div>
   </section>
   <section class="scr" id="sChars">
     <div class="chartop"><button class="btn" id="bCharBack">‹ Volver</button><h3>Personajes</h3><span style="width:80px"></span></div>
@@ -49,6 +49,7 @@ export function createShell(G) {
     <div class="grid" id="cGrid"></div>
     <div class="row"><button class="btn big" id="bCharOk">¡Elegir!</button></div>
   </section>
+  <section class="scr" id="sSet" style="justify-content:center"><div class="card"><h2>Ajustes</h2><div class="lbl" style="color:#b0508a;text-shadow:none">✋ Modo zurdo</div><div class="chips" id="cZurdo"></div><div class="ds" style="font-size:13px;opacity:.8;margin-top:6px">Activado: joystick abajo a la izquierda (con Salto encima) y números a la derecha.</div><div class="row"><button class="btn big" id="bSetOk">Listo</button></div></div></section>
   <section class="scr" id="sHow" style="justify-content:center"><div class="card"><h2>Cómo se juega</h2>${G.how}<div class="row"><button class="btn big" id="bHowOk">¡Entendido!</button></div></div></section>
   <section class="scr" id="sMulti" style="justify-content:center"><div class="card"><h2>Multijugador</h2>
     <div class="lbl" style="color:#b08ac8;text-shadow:none">Tu nombre</div><input class="txt" id="iName" maxlength="12" placeholder="Jugador">
@@ -120,6 +121,11 @@ export function createShell(G) {
   $('bChar').onclick = () => { Sfx.init(); Sfx.tap(); openChars('sHome'); };
   $('bCharBack').onclick = () => { Sfx.tap(); refreshMe(); show(charReturn); };
   $('bCharOk').onclick = () => { Sfx.ok(); myCh = pickCh; localStorage.setItem('ms_ch', myCh); refreshMe(); if (net) { net.pick(myCh); room(); } show(charReturn); };
+  // v11: modo zurdo (se guarda en localStorage)
+  const applyZurdo = on => document.body.classList.toggle('zurdo', on);
+  applyZurdo(localStorage.getItem('hunde_zurdo') === '1');
+  chips('cZurdo', [['0', 'No'], ['1', 'Sí']], localStorage.getItem('hunde_zurdo') === '1' ? '1' : '0', v => { localStorage.setItem('hunde_zurdo', v); applyZurdo(v === '1'); });
+  $('bSet').onclick = () => { Sfx.init(); Sfx.tap(); show('sSet'); }; $('bSetOk').onclick = () => { Sfx.tap(); show('sHome'); };
   $('bHow').onclick = () => { Sfx.init(); Sfx.tap(); show('sHow'); }; $('bHowOk').onclick = () => { Sfx.tap(); show('sHome'); };
   $('bMute').onclick = () => { $('bMute').textContent = Sfx.toggle() ? '🔇' : '🔊'; };
 
