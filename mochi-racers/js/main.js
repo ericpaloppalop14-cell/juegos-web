@@ -122,6 +122,7 @@ function openCups() {
     L.appendChild(d);
   });
   const c = CUPS[uSel];
+  requestAnimationFrame(() => { const sel = L.children[uSel]; if (sel) L.scrollTo({ left: sel.offsetLeft - (L.clientWidth - sel.offsetWidth) / 2, behavior: 'instant' }); }); // v6: copa elegida centrada
   $('uInfo').textContent = `${c.name}: ${RACES_PER_CUP} carreras (ida y vuelta) · ${CONFIG.laps} vueltas · gana quien sume más puntos`;
   // 3D trophy preview next to the kart
   stage.clear(); menuKarts.length = 0;
@@ -377,7 +378,8 @@ function frame(now) {
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
     podData.cd.forEach((c, i) => { c.p.y -= c.v * dt; if (c.p.y < 0) c.p.y = 20; c.r += dt * 4; q.setFromEuler(new THREE.Euler(c.r, c.r * 0.7, 0)); m4.compose(new THREE.Vector3(c.p.x + Math.sin(t + i) * 0.5, c.p.y, c.p.z), q, new THREE.Vector3(1, 1, 1)); podData.conf.setMatrixAt(i, m4); });
     podData.conf.instanceMatrix.needsUpdate = true;
-    podCam.position.x = 1.5 + Math.sin(t * 0.25) * 3; podCam.lookAt(1.5, 2.4, 0);
+    if (innerWidth < innerHeight) { podCam.position.set(1.5 + Math.sin(t * 0.25) * 1.2, 7.5, 27); podCam.lookAt(1.5, 3.2, 0); } // v6: vertical, podio entero
+    else { podCam.position.x = 1.5 + Math.sin(t * 0.25) * 3; podCam.lookAt(1.5, 2.4, 0); }
     renderer.render(podScene, podCam); return;
   }
   if (app.state === 'results' && app.race) { acc += dt; let n = 0; while (acc >= STEP && n < 4) { app.race.update(STEP); acc -= STEP; n++; } renderer.render(app.race.scene, app.race.camera); return; }
@@ -389,7 +391,8 @@ function frame(now) {
     if (previewKart) { previewKart.rotation.y = app.state === 'chars' ? t * 0.7 : 0.5 + Math.sin(t * 0.6) * 0.3; animKart(previewKart, t, 15); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12; }
     if (trophyPreview && app.state === 'cups') trophyPreview.rotation.y = t * 0.8;
     const w = innerWidth / innerHeight;
-    if (app.state === 'chars' && w < 1) { menuCam.position.set(0, 3.6, 13.5); menuCam.lookAt(0, -0.3, 0); } // v5: vertical, piloto centrado sobre la ficha
+    if (app.state === 'cups' && w < 1) { menuCam.position.set(0.1, 3.4, 18); menuCam.lookAt(0.1, -2.2, 0); } // v6: vertical, piloto y trofeo arriba
+    else if (app.state === 'chars' && w < 1) { menuCam.position.set(0, 3.6, 13.5); menuCam.lookAt(0, -0.3, 0); } // v5: vertical, piloto centrado sobre la ficha
     else if (app.state === 'chars') { menuCam.position.set(2.4, 4.2, 13.5); menuCam.lookAt(2.4, 1.6, 0); }
     else { menuCam.position.set(0, 4.5, 13 / Math.min(1.3, w / 1.5)); menuCam.lookAt(0, 1.8, 0); }
   }

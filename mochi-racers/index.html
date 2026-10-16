@@ -181,6 +181,23 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 #bB{right:calc(150px + env(safe-area-inset-right));bottom:calc(130px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:12px}
 }
 
+
+/* v6: repaso vertical de menús */
+@media (orientation:portrait){
+#cups{justify-content:flex-end;gap:10px;padding-bottom:calc(5vh + env(safe-area-inset-bottom))}
+#cupList{width:100vw;max-width:100vw;box-sizing:border-box;padding:10px calc(50vw - min(31vw,130px)) 16px;scroll-snap-type:x mandatory;scrollbar-width:none;gap:14px;flex-shrink:0}
+#cupList::-webkit-scrollbar{display:none}
+.cup{width:min(62vw,260px);box-sizing:border-box;scroll-snap-align:center}
+#cups>.row{width:100%;box-sizing:border-box;padding:0 calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left))}
+#uInfo{text-align:center;max-width:420px;margin:0 auto;line-height:1.3}
+#uGo{margin-top:4px!important;font-size:22px;padding:13px 40px}
+#pause .card{width:min(84vw,360px);box-sizing:border-box}
+#pause .btn{width:100%;margin:5px 0}
+#podium{padding:calc(6vh + env(safe-area-inset-top)) 16px calc(6vh + env(safe-area-inset-bottom))}
+#podium .row{flex-wrap:wrap;justify-content:center}
+#results .card{width:min(94vw,440px);box-sizing:border-box}
+#title .row{gap:12px}
+}
 /* v5: elección de orientación */
 #orient{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:2.5vh;padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));background:radial-gradient(circle at 30% 20%,#fff2fa 0,transparent 40%),radial-gradient(circle at 80% 85%,#e4f7ff 0,transparent 45%),linear-gradient(180deg,#ffd6ec,#d9c8ff);text-align:center;overflow:auto}
 #orient.on{display:flex}
@@ -293,7 +310,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 <div id="rotate"><div class="ph">📱</div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div id="rotMsg">Has elegido jugar en horizontal.</div><button class="btn sec sm" id="rotAny">Cambiar orientación</button></div>
 
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/main.js?v=5"></script>
+<script type="module" src="js/main.js?v=6"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>
