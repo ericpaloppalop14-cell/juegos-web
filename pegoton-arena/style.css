@@ -172,3 +172,12 @@ body.zurdo #btns{right:auto;left:14px;flex-direction:row-reverse}
 #bPeg{width:62px;height:62px}
 #bPeg span{font-size:22px}
 #bPeg.off{opacity:.4;filter:grayscale(1)}
+
+/* v6.25: Soltar pequeño en la esquina contraria; Juntar junto a Dividir */
+#bEject{position:fixed;left:14px;right:auto;bottom:max(22px,env(safe-area-inset-bottom));width:58px;height:58px}
+#bEject span{font-size:20px}#bEject small{font-size:9px}
+body.zurdo #bEject{left:auto;right:14px}
+#bJoin.off{opacity:.4;filter:grayscale(1)}
+
+#skills{display:flex;flex-direction:column;gap:8px;align-items:center}
+#bAbs{width:62px;height:62px}#bAbs span{font-size:22px}#bAbs small{font-size:8px}#bAbs.off{opacity:.45;filter:grayscale(.8)}

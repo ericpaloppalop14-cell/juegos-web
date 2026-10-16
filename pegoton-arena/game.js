@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=688';
+import * as THREE from './three.js?v=689';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -321,8 +321,8 @@ const THEMES = [
   { name: '🧸 Juguetería', toys: TOYS_JUG, bg: 0xb9d8ff, out: 0x9cc3ff, hemi: [0xffffff, 0x9fb6e6, 1.55], sun: 0xfff3e0, tiles: ['#8fd0ff', '#ffd76b'], tline: '#ffffffcc', deco: '#ffd06b', sect: ['#ff5fa2', '#4cc3ff', '#ffc93f', '#5ee07a'], rim: ['#ffffff', '#4c9dff'], beads: [0xff5fa2, 0x4cc3ff, 0xffc93f, 0x5ee07a], cols: [0xff4f9a, 0x3fb8ff, 0xffc21a, 0x3fd36a, 0xa368ff, 0xff7a3a], baked: 1, fixed: {}, movers: { 1: 3.2, 7: 2.4 }, big: { 1: [.8, 1.15], 5: [.9, 1.3], 7: [1.0, 1.4], 8: [.9, 1.3], 2: [.75, 1.05] }, scen: 0, paint: paintJug },
   { name: '👽 Planeta alien', toys: TOYS_ALIEN, bg: 0x2b1b52, out: 0x22184a, hemi: [0xd7c8ff, 0x3a2a7a, 1.5], sun: 0xc8fff4, tiles: ['#5b3f9e', '#523891'], tline: '#7fe3d455', deco: '#2fd3c9', sect: ['#2fd3c9', '#a368ff', '#7fe37a', '#ff7ad9'], rim: ['#2fd3c9', '#1a1240'], beads: [0x2fd3c9, 0xa368ff, 0x7fe37a, 0xff7ad9], cols: [0x7fe37a, 0x2fd3c9, 0xff7ad9, 0xb48cff, 0xfff27a, 0x5ee0ff], fixed: { 0: 0xffffff, 1: 0xffffff, 2: 0xffffff, 3: 0xffffff, 4: 0xffffff, 5: 0xffffff, 6: 0xffffff, 7: 0xffffff }, movers: { 0: 3.0, 2: 2.4, 3: 2.8, 4: 3.4 }, hop: 1, big: { 0: [.75, 1.0], 1: [1.0, 1.35], 2: [.75, 1.0], 3: [.75, 1.0], 4: [.7, .95], 5: [1.5, 2.3], 6: [1.0, 1.5], 7: [.9, 1.3] }, craters: 1, alienDeco: 1, baked: 1, planets: 1 },
   { name: '♻️ Vertedero chulo', toys: TOYS_BASURA, bg: 0xbfe9ff, out: 0x8fd18a, hemi: [0xffffff, 0x9cbf8a, 1.6], sun: 0xfff6e0, tiles: ['#b9e48f', '#a7d97c'], tline: '#ffffffcc', deco: '#ffd23f', sect: ['#ffd23f', '#3fb8ff', '#3fd36a', '#ff7a3a'], rim: ['#ffd23f', '#2b2b33'], beads: [0xffd23f, 0x3fb8ff, 0x3fd36a, 0xff7a3a], cols: [0xff4f6a, 0x3fb8ff, 0x3fd36a, 0xffc21a, 0xa368ff, 0xff7a3a], baked: 1, fixed: {}, big: { 2: [.9, 1.3], 3: [.9, 1.3], 7: [1.1, 1.6], 8: [.9, 1.3] }, scen: 2, paint: paintBas },
-  { name: '🐠 Fondo del mar', toys: TOYS_MAR, bg: 0x2fa8d8, out: 0x1f8fc4, hemi: [0xd8fbff, 0x2a7fb0, 1.5], sun: 0xb8f0ff, tiles: ['#d9cf98', '#d9cf98'], tline: '#ffffff66', deco: '#f2c98a', sect: ['#ff7a8a', '#2fd3c9', '#ffc93f', '#a368ff'], rim: ['#ff7a8a', '#ffd3b0'], beads: [0xff7a8a, 0x2fd3c9, 0xffc93f, 0xffffff], cols: [0xff7a3a, 0xffc21a, 0x2fd3c9, 0xff5fa2, 0x7fe37a, 0xa368ff], baked: 1, fixed: {}, movers: { 0: 3.4, 1: 2.8, 2: 1.3, 3: 1.8, 4: .9 }, big: { 2: [.9, 1.3], 4: [.75, 1.05], 7: [1.0, 1.5] }, scen: 3, paint: paintMar },
-  { name: '🧁 Pastelería', toys: TOYS_PAST, bg: 0xc9b6ff, out: 0xb9a3ff, hemi: [0xfff6fb, 0x9f86d6, 1.55], sun: 0xfff0e0, tiles: ['#ffc4df', '#ffe0ee'], tline: '#ffffffcc', deco: '#ff8fc4', sect: ['#ff5fa2', '#4cc3ff', '#ffc93f', '#5ee07a', '#a368ff', '#ff7a3a'], rim: ['#ffffff', '#ff5fa2'], beads: [0xff5fa2, 0x4cc3ff, 0xffc93f, 0x5ee07a], cols: [0xff4f9a, 0x3fb8ff, 0xffc21a, 0x3fd36a, 0xa368ff, 0xff7a3a], baked: 1, fixed: {}, big: { 1: [.8, 1.15], 4: [.8, 1.15], 2: [.8, 1.15], 9: [.8, 1.15] }, scen: 4, paint: paintPast },
+  { name: '🐠 Fondo del mar', toys: TOYS_MAR, bg: 0x2fa8d8, out: 0x1f8fc4, hemi: [0xd8fbff, 0x2a7fb0, 1.5], sun: 0xb8f0ff, tiles: ['#f2d184', '#f2d184'], tline: '#ffffff66', deco: '#f2c98a', sect: ['#ff7a8a', '#2fd3c9', '#ffc93f', '#a368ff'], rim: ['#ff7a8a', '#ffd3b0'], beads: [0xff7a8a, 0x2fd3c9, 0xffc93f, 0xffffff], cols: [0xff7a3a, 0xffc21a, 0x2fd3c9, 0xff5fa2, 0x7fe37a, 0xa368ff], baked: 1, fixed: {}, movers: { 0: 3.4, 1: 2.8, 2: 1.3, 3: 1.8, 4: .9 }, big: { 2: [.9, 1.3], 4: [.75, 1.05], 7: [1.0, 1.5] }, scen: 3, paint: paintMar },
+  { name: '🧁 Pastelería', toys: TOYS_PAST, bg: 0xc9b6ff, out: 0xb9a3ff, hemi: [0xfff6fb, 0x9f86d6, 1.55], sun: 0xfff0e0, tiles: ['#ff8fbf', '#ffb3d3'], tline: '#ffffffcc', deco: '#ff8fc4', sect: ['#ff5fa2', '#4cc3ff', '#ffc93f', '#5ee07a', '#a368ff', '#ff7a3a'], rim: ['#ffffff', '#ff5fa2'], beads: [0xff5fa2, 0x4cc3ff, 0xffc93f, 0x5ee07a], cols: [0xff4f9a, 0x3fb8ff, 0xffc21a, 0x3fd36a, 0xa368ff, 0xff7a3a], baked: 1, fixed: {}, big: { 1: [.8, 1.15], 4: [.8, 1.15], 2: [.8, 1.15], 9: [.8, 1.15] }, scen: 4, paint: paintPast },
 ];
 let NTOY = 8, TH = THEMES[4], OBJG = [], NT = 10, foodIMs = [], stkIMs = [], arenaG = null, FCOLS = TH.cols;
 const MAXS = 1400, objMat = new THREE.MeshStandardMaterial({ roughness: .38, vertexColors: true, emissive: 0xffffff, emissiveIntensity: .05 });
@@ -408,7 +408,7 @@ const MAXM = 1e9; // v6.17: sin tope de tamaño (antes radio ≤ 1/4 de arena �
 const BURST_R = ARENA * .9; // v6.17: al ocupar ~90% del mapa la bola explota en trozos
 const START_M = 12, EAT_K = 1.05, PROT = 2; // 12 % más masa ≈ se ve claramente más grande con los juguetes; basta con que tu borde cubra su centro
 const massR = m => 0.32 * Math.sqrt(m);
-const speedOf = m => 22.8 * /* v6.20: +15% */ (0.363 + 0.637 / (1 + Math.pow(Math.max(1, m) / 55, 0.7))); // v6.11: los grandes conservan chispa // v6.9: curva más marcada, siempre baja con la masa // siempre baja con la masa: 12→12,1 · 200→8,9 · 1000→7,1 · máx→6
+const speedOf = m => 26.2 * /* v6.25: +15% más (v6.20: +15%) */ (0.363 + 0.637 / (1 + Math.pow(Math.max(1, m) / 55, 0.7))); // v6.11: los grandes conservan chispa // v6.9: curva más marcada, siempre baja con la masa // siempre baja con la masa: 12→12,1 · 200→8,9 · 1000→7,1 · máx→6
 const shieldIM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0x7ff6ff, transparent: true, opacity: .28, depthWrite: false }), 48); shieldIM.count = 0; shieldIM.frustumCulled = false; shieldIM.renderOrder = 5; scene.add(shieldIM);
 function newCell(p, x, z, m) { const cid = ++CID;
   const mesh = makeCharMesh(p.char, G.teams && TEAMS[p.team] ? p.team : null); const ring = new THREE.Mesh(G.teams ? ringGeoT : ringGeo, new THREE.MeshBasicMaterial({ color: colOf(p), transparent: true, opacity: .85 })); ring.material.opacity = G.teams ? 1 : 0; ring.rotation.x = -Math.PI / 2; const ind = new THREE.Mesh(indGeo, new THREE.MeshBasicMaterial({ color: 0x3fd36a, transparent: true, opacity: 0, depthWrite: false })); ind.rotation.x = -Math.PI / 2; scene.add(ind); const sh = new THREE.Mesh(shGeo, shMat); sh.rotation.x = -Math.PI / 2;
@@ -448,7 +448,7 @@ function burst(x, z, col, n, s = 1) { for (let i = 0; i < n; i++) { const q = pa
 let drag = null, joyA = null, joyM = 1; const joyEl = $('joy'), knob = $('joyK'); const joy = { on: 0 };
 // v6.17: joystick FIJO (mismo aspecto, semitransparente) encima de los botones; Diestro = derecha, Zurdo = izquierda
 const JR = 52; let joyC = { x: 0, y: 0 };
-function placeJoy() { document.body.classList.toggle('zurdo', S.hand === 'z'); const r1 = $('bEject').getBoundingClientRect(), r2 = $('bSplit').getBoundingClientRect(), bb = { left: Math.min(r1.left, r2.left), width: Math.max(r1.right, r2.right) - Math.min(r1.left, r2.left), top: Math.min(r1.top, r2.top) }; /* v6.24: sin contar el botón Pegado */ const w = bb.width > 10 ? bb : { left: S.hand === 'z' ? 14 : innerWidth - 186, width: 172, top: innerHeight - 112 };
+function placeJoy() { document.body.classList.toggle('zurdo', S.hand === 'z'); const r1 = $('bJoin').getBoundingClientRect(), r2 = $('bSplit').getBoundingClientRect(), bb = { left: Math.min(r1.left, r2.left), width: Math.max(r1.right, r2.right) - Math.min(r1.left, r2.left), top: Math.min(r1.top, r2.top) }; /* v6.24: sin contar el botón Pegado */ const w = bb.width > 10 ? bb : { left: S.hand === 'z' ? 14 : innerWidth - 186, width: 172, top: innerHeight - 112 };
   joyC.x = w.left + w.width / 2 + (S.hand === 'z' ? 1 : -1) * Math.min(44, innerWidth * .1); /* v6.18: un poco hacia el centro */ joyC.y = w.top - 84; joyEl.style.left = joyC.x + 'px'; joyEl.style.top = joyC.y + 'px'; }
 addEventListener('resize', () => setTimeout(placeJoy, 50));
 function joyShow(v) { joyEl.classList.toggle('on', !!v); joyEl.classList.add('fixed'); if (v) { placeJoy(); setTimeout(placeJoy, 120); } }
@@ -465,6 +465,8 @@ addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDra
 function resetJoy() { joyRel(); joyM = 0; joy.on = 0; joyShow(1); }
 const keys = {}; addEventListener('keydown', e => { keys[e.code] = 1; if (e.code === 'Space') doSplit(me); if (e.code === 'KeyW') doEject(me); }); addEventListener('keyup', e => keys[e.code] = 0);
 $('bSplit').addEventListener('pointerdown', e => { e.stopPropagation(); if (G.net === 'c') NET.send({ t: 'sp', a: joyA }); else doSplit(me); });
+$('bJoin').addEventListener('pointerdown', e => { e.stopPropagation(); if (G.net === 'c') NET.send({ t: 'jn' }); else doJoin(me); });
+$('bAbs').addEventListener('pointerdown', e => { e.stopPropagation(); doAbs(); });
 $('bPeg').addEventListener('pointerdown', e => { e.stopPropagation(); doPeg(); });
 $('bEject').addEventListener('pointerdown', e => { e.stopPropagation(); if (G.net === 'c') NET.send({ t: 'ej' }); else doEject(me); });
 
@@ -483,7 +485,8 @@ function miniGeo(ch) { const key = ch.id === 'custom' ? 'custom:' + (S.shape || 
   for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), r = sampleR(radii, x, y, z); pa.setXYZ(i, x * r, y * r, z * r); } g.computeVertexNormals(); g.userData.mini = 1; return MINIG[key] = g; } // figura del personaje en baja resolución (320 triángulos)
 function bigBurst(c) { const p = c.p, ox = c.x, oz = c.z, col = colOf(p), M = p.cells.reduce((a, o) => a + o.m, 0);
   wave(ox, oz, ARENA * 1.4, 0xffffff); wave(ox, oz, ARENA, col); burst(ox, oz, col, 40, 3); burst(ox, oz, 0xffd84a, 20, 2.4);
-  if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); if (!G.pegOn && G.net !== 'c') { G.pegOn = 1; G.pegUsed = new Set(); setTimeout(() => { if (G.pegOn) { msg('🧲 ¡Nueva habilidad: PEGADO!', 2.5); pegUI(); } }, 2300); pegUI(); } }
+  if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); G.burstN = (G.burstN || 0) + 1; if (G.burstN === 2 && !G.absOn && G.net !== 'c') { G.absOn = 1; G.absCD = 0; setTimeout(() => { if (G.absOn) { msg('🌀 ¡Nueva habilidad: ABSORBER!', 2.5); absUI(); } }, 2400); absUI(); }
+    if (!G.pegOn && G.net !== 'c') { G.pegOn = 1; G.pegUsed = new Set(); setTimeout(() => { if (G.pegOn) { msg('🧲 ¡Nueva habilidad: PEGADO!', 2.5); pegUI(); } }, 2300); pegUI(); } }
   const body = c.mesh.body, geo = miniGeo(p.char), mat = body.material.clone(), vk = visK(geo);
   const N = Math.max(20, Math.min(MINI_MAX, Math.round(M / 1500))); { let live = 0; for (let j = BURSTS.length - 1; j >= 0; j--) for (const q of BURSTS[j].q) if (q.l > 0) { live++; if (live + N > MINI_LIVE) q.l = Math.min(q.l, 1.2); } } const im = new THREE.InstancedMesh(geo, mat, N); im.frustumCulled = false; scene.add(im);
   const B = { im, geo, own: 0, mat, vk, q: [] }; const off = Math.random() * 6.283;
@@ -498,7 +501,7 @@ function stepCrumbs(DT) { for (let j = BURSTS.length - 1; j >= 0; j--) { const B
   if (!live) { scene.remove(B.im); B.im.dispose(); B.mat.dispose(); if (B.own) B.geo.dispose(); BURSTS.splice(j, 1); } } }
 function drawCrumbs(t) { for (const B of BURSTS) { let n = 0; for (const q of B.q) { if (q.l <= 0) continue; const s = q.s * B.vk * Math.min(1, q.l / 1.5) * (1 + Math.sin(t * 5 + q.yaw) * .06); TQ.setFromEuler(EUL.set(0, q.yaw + t * .5, 0)); M4.compose(SC.set(q.x, s * .9 + .05, q.z), TQ, TV2.setScalar(s)); B.im.setMatrixAt(n++, M4); } B.im.count = n; B.im.instanceMatrix.needsUpdate = true; } }
 // v6.24: habilidad PEGADO (tras explotar): te enganchas 4 s a un rival cercano, invulnerable; una vez por rival
-const PEG_T = 4, PEG_RANGE = 45;
+const PEG_T = 4, PEG_RANGE = 45; const TGT = { c: null, a: new Set(), t: 0 };
 function pegMain() { return me && me.cells.length ? me.cells.reduce((a, b) => a.m >= b.m ? a : b) : null; }
 function pegCand() { const c = pegMain(); if (!c || !me.alive) return null; let best = null, bd = 1e9;
   for (const o of cells) { if (o.dead || o.p === me || !o.p.alive || G.pegUsed.has(o.p) || (G.teams && o.p.team === me.team)) continue; const d = Math.hypot(o.x - c.x, o.z - c.z) - o.rr - c.rr; if (d < PEG_RANGE && d < bd) { bd = d; best = o; } } return best; }
@@ -512,6 +515,23 @@ function pegStep(DT) { if (!(G.pegT > 0)) return; let t = G.pegTg; if (!t || t.d
   G.pegT = 0; const c = pegMain(); if (c && t) { let a = G.pegA, ok = 0; for (let k = 0; k < 16 && !ok; k++) { const D = t.rr + c.rr + 18, x = t.x + Math.cos(a) * D, z = t.z + Math.sin(a) * D; if (Math.hypot(x, z) < ARENA - c.rr - 2) { ok = 1; for (const o of me.cells) { o.x = x + rnd(-1, 1); o.z = z + rnd(-1, 1); o.vx = o.vz = 0; } } else a += .4 * (k % 2 ? k : -k); }
     if (!ok) for (const o of me.cells) { o.x *= .2; o.z *= .2; } wave(c.x, c.z, c.rr * 3, 0x7ff6ff); }
   me.prot = 1; G.pegTg = null; pegUI(); }
+// v6.25: JUNTAR: atrae y fusiona todas tus piezas en una sola bola (≈0,6 s)
+function doJoin(p) { if (!G.on || !p || !p.alive || p.cells.length < 2) return; p.joinT = .9; for (const c of p.cells) { c.merge = 0; wave(c.x, c.z, c.rr * 2.2, 0xffffff); } if (p === me) sfx.combo(3); }
+function btnUI() { const j = $('bJoin'); if (j) j.classList.toggle('off', !(me && me.cells.length >= 2)); }
+// v6.25: ABSORBER (2ª explosión): hasta 3 rivales cercanos pierden el 12 % de su masa (tope: máx(40, 50 % de tu masa) por rival); la masa vuela hacia ti. Espera 25 s
+const ABS_R = 60, ABS_PCT = .12, ABS_CD = 25, ABS_N = 3; const orbs = [], ORBN = 90, orbIM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshStandardMaterial({ roughness: .3, emissive: 0x6a3fd8, emissiveIntensity: .35 }), ORBN); orbIM.count = 0; orbIM.frustumCulled = false; scene.add(orbIM);
+function absTargets() { const c = pegMain(); if (!c || !me.alive) return []; const L = [];
+  for (const p of players) { if (p === me || !p.alive || !p.cells.length || (p.prot > 0) || (G.teams && p.team === me.team)) continue; const o = p.cells.reduce((a, b) => a.m >= b.m ? a : b), d = Math.hypot(o.x - c.x, o.z - c.z) - o.rr - c.rr; if (d < ABS_R) L.push([d, p, o]); }
+  return L.sort((a, b) => a[0] - b[0]).slice(0, ABS_N); }
+function absUI() { const b = $('bAbs'); if (!b) return; b.classList.toggle('hide', !G.absOn); if (!G.absOn) return; const cd = G.absCD > 0; b.classList.toggle('off', cd || !absTargets().length); b.querySelector('small').textContent = cd ? Math.ceil(G.absCD) + ' s' : 'ABSORBER'; }
+function doAbs() { if (!G.on || !G.absOn || G.absCD > 0 || G.pegT > 0) return; const c = pegMain(), T = absTargets(); if (!c || !T.length) { if (c) msg('Ningún rival cerca', 1); return; }
+  const myM = pMass(me), cap = Math.max(40, myM * .5); let tot = 0;
+  for (const [, p, o] of T) { const pm = p.cells.reduce((a, q) => a + q.m, 0), take = Math.min(pm * ABS_PCT, cap, o.m - START_M); if (take <= 1) continue; o.m -= take; o.rr = massR(o.m); o.sq = 1; tot += take; burst(o.x, o.z, 0xa87bff, 10, 1);
+    const n = Math.min(12, 4 + (take / 40 | 0)); for (let i = 0; i < n; i++) { if (orbs.length >= ORBN) break; const a = Math.random() * 6.283; orbs.push({ x0: o.x + Math.cos(a) * o.rr * .8, z0: o.z + Math.sin(a) * o.rr * .8, t: -i * .05, dur: rnd(.55, .8), m: take / n, s: Math.min(2.2, .6 + Math.sqrt(take / n) * .25), col: colOf(p) }); }
+    if (p.remote && G.net === 'h') NEV.push(['k', p.remote, '🌀']); }
+  G.absCD = ABS_CD; sfx.combo(6); G.shake = .3; msg('🌀 ¡Absorbes ' + Math.round(tot) + ' de masa!', 1.5); absUI(); }
+function stepOrbs(DT) { for (let i = orbs.length - 1; i >= 0; i--) { const q = orbs[i]; q.t += DT; if (q.t >= q.dur) { const c = pegMain(); if (c) { c.m += q.m; c.sq = Math.max(c.sq, .5); } orbs.splice(i, 1); if (i % 3 === 0) sfx.pop(5, 0); } } }
+function drawOrbs() { const c = pegMain(); let n = 0; if (c) for (const q of orbs) { const k = Math.max(0, q.t / q.dur), e = k * k * (3 - 2 * k); const x = q.x0 + (c.x - q.x0) * e, z = q.z0 + (c.z - q.z0) * e, y = 1 + Math.sin(k * Math.PI) * 10 + c.rr * e * .6; M4.compose(SC.set(x, y, z), FSQ, TV2.setScalar(q.s * (1 - e * .5))); orbIM.setMatrixAt(n, M4); orbIM.setColorAt(n, COL.set(q.col)); n++; } orbIM.count = n; orbIM.instanceMatrix.needsUpdate = true; if (orbIM.instanceColor) orbIM.instanceColor.needsUpdate = true; }
 function doEject(p) {
   if (!G.on || !p || !p.alive) return; let any = 0;
   for (const c of p.cells) { if (c.m < 18 || food.length >= MAXF) continue; c.m -= 3; c.rr = massR(c.m); any = 1;
@@ -554,7 +574,7 @@ const colOf = p => G.teams ? TEAMS[p.team].c : (p === me ? 0xffffff : p.col || 0
 function teamScores() { if (!G.teams) return [0, 0, 0, 0]; const s = [0, 0, 0, 0]; for (const c of cells) s[c.p.team] += c.m; return s; }
 let selChar = null;
 function startGame(opts = {}) { if (!opts.roster && G.net === 'h') { mpLeave(); } if (G.net === 'c') return; resetJoy(); G.dead = 0; acc = 0; last = performance.now(); for (const s of ['over', 'dead', 'help']) $(s).classList.add('hide'); G.cd = navigator.webdriver ? 0 : 2.1; $('cd').classList.toggle('hide', !G.cd);
-  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; clearBursts(); G.pegOn = 0; G.pegT = 0; G.pegTg = null; G.pegUsed = new Set(); { const b = document.getElementById('bPeg'); if (b) b.classList.add('hide'); } { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
+  for (const c of cells) removeCell(c); cells = []; players = []; flights.length = 0; clearBursts(); G.pegOn = 0; G.pegT = 0; G.pegTg = null; G.pegUsed = new Set(); G.burstN = 0; G.absOn = 0; G.absCD = 0; orbs.length = 0; for (const id of ['bPeg', 'bAbs']) { const b = document.getElementById(id); if (b) b.classList.add('hide'); } { const pk = +S.arena; if (pk >= 0 && pk < THEMES.length) G.th = pk; else { let n; do n = (Math.random() * THEMES.length) | 0; while (n === G.th && THEMES.length > 1); G.th = n; } } setTheme(G.th); initFood(); puddles.forEach(placePuddle);
   const ch = allChars(); selChar = ch.find(c => c.id === S.char && !premLocked(c)) || ch[0]; G.trialUsed = selChar.prem && S.trial === selChar.id && !premOwned(selChar.id);
   G.teams = S.mode === 'equipos'; G.inf = S.dur === 'inf'; G.el = 0; $('bExit').classList.remove('hide'); $('bEndInf').classList.remove('hide'); me = { name: 'Tú', team: G.teams ? S.team : 100, char: selChar, cells: [], bot: 0, dirx: 0, dirz: 1, tx: 0, tz: 1, alive: 0, pud: 0, aggr: 1, boost: 0 };
   players.push(me); spawnPlayer(me, START_M);
@@ -599,11 +619,11 @@ function step0() {
   // células propias: cohesión, separación o fusión
   for (const p of players) { const cs = p.cells; if (cs.length < 2) continue; const main = cs.reduce((a, b) => a.m >= b.m ? a : b);
     // imán suave hacia el trozo principal (más grande), limitado para no dar velocidad extra
-    for (const c of cs) { if (c === main || c.loose > 0) continue; const dx = main.x - c.x, dz = main.z - c.z, d = Math.hypot(dx, dz) || 1, mv = Math.min(Math.max(0, d - (main.merge <= 0 && c.merge <= 0 && main.m >= c.m * EAT_K ? 0 : (main.rr + c.rr) * .5)), Math.max(speedOf(c.m) * .15, speedOf(c.m) - Math.hypot(c.vx, c.vz)) * .6 * DT); c.x += dx / d * mv; c.z += dz / d * mv; }
+    for (const c of cs) { if (c === main || c.loose > 0) continue; if (p.joinT > 0) { const k = damp(9, DT); c.x += (main.x - c.x) * k; c.z += (main.z - c.z) * k; c.merge = 0; } const dx = main.x - c.x, dz = main.z - c.z, d = Math.hypot(dx, dz) || 1, mv = Math.min(Math.max(0, d - (main.merge <= 0 && c.merge <= 0 && main.m >= c.m * EAT_K ? 0 : (main.rr + c.rr) * .5)), Math.max(speedOf(c.m) * .15, speedOf(c.m) - Math.hypot(c.vx, c.vz)) * .6 * DT); c.x += dx / d * mv; c.z += dz / d * mv; }
     for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) { const a = cs[i], b = cs[j]; if (a.dead || b.dead) continue; const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz) || .01, rs = a.rr + b.rr;
       const big = a.m >= b.m ? a : b, sm = big === a ? b : a;
       // fusión = misma regla que comer: el grande (≥ EAT_K) cubre el centro del pequeño; iguales no se fusionan, solo se tocan
-      if (!(big.loose > 0) && !(sm.loose > 0) && big.merge <= 0 && sm.merge <= 0 && big.m >= sm.m * EAT_K) { if (d < big.rr - sm.rr * .05) { big.m += sm.m; transfer(sm, big); big.sq = 1; removeCell(sm); } }
+      if (!(big.loose > 0) && !(sm.loose > 0) && big.merge <= 0 && sm.merge <= 0 && (big.m >= sm.m * EAT_K || p.joinT > 0)) { if (d < big.rr - sm.rr * .05) { big.m += sm.m; transfer(sm, big); big.sq = 1; removeCell(sm); } }
       else if (d < rs * .92) { const o = (rs * .92 - d) / d * .5 * damp(6, DT); a.x -= dx * o; a.z -= dz * o; b.x += dx * o; b.z += dz * o; } }
     p.cells = cs.filter(c => !c.dead); }
   cells = cells.filter(c => !c.dead);
@@ -612,7 +632,7 @@ function step0() {
     if (me && me.alive) for (const c of me.cells) { const dx = f.x - c.x, dz = f.z - c.z; if (dx * dx + dz * dz < (c.rr + 5) ** 2) { f.ang = Math.atan2(dz, dx) + rnd(-.4, .4); sp = f.mv * 1.4; break; } }
     f.x += Math.cos(f.ang) * sp * DT; f.z += Math.sin(f.ang) * sp * DT; const d = Math.hypot(f.x, f.z); if (d > ARENA - 2) { f.ang += PI; f.x *= (ARENA - 2) / d; f.z *= (ARENA - 2) / d; } f.ry = -f.ang + PI / 2; }
   for (const f of food) if (f.ej) { f.x += f.vx * DT; f.z += f.vz * DT; const k = damp(3.5, DT); f.vx -= f.vx * k; f.vz -= f.vz * k; if (f.ot > 0) f.ot -= DT; const d = Math.hypot(f.x, f.z); if (d > ARENA - 1) { f.x *= (ARENA - 1) / d; f.z *= (ARENA - 1) / d; } f.dirty = 1; }
-  pegStep(DT); if (G.pegOn && (G.pegUiT = (G.pegUiT || 0) - DT) <= 0) { G.pegUiT = .25; pegUI(); }
+  pegStep(DT); stepOrbs(DT); if (G.absCD > 0) G.absCD -= DT; if (G.absOn && (G.absUiT = (G.absUiT || 0) - DT) <= 0) { G.absUiT = .25; absUI(); } if ((G.btnT = (G.btnT || 0) - DT) <= 0) { G.btnT = .2; btnUI(); } if (G.pegOn && (G.pegUiT = (G.pegUiT || 0) - DT) <= 0) { G.pegUiT = .25; pegUI(); }
   FGRID.clear(); for (const f of food) { if (f.x > 999) continue; const k = ((f.x / GS + 64) | 0) * 256 + ((f.z / GS + 64) | 0); let b = FGRID.get(k); if (!b) FGRID.set(k, b = []); b.push(f); }
   let anyGone = 0;
   for (const c of cells) { if (G.pegT > 0 && c.p === me) continue; const r2 = (c.rr + 2.4) ** 2, R0 = c.rr + 2.4, x0 = ((c.x - R0) / GS + 64) | 0, x1 = ((c.x + R0) / GS + 64) | 0, z0 = ((c.z - R0) / GS + 64) | 0, z1 = ((c.z + R0) / GS + 64) | 0;
@@ -636,20 +656,24 @@ function step0() {
     for (const p of players) { if (!p.alive || p.pud > 0 || p.team === q.team) continue; if (p.bot && !p.goPud && Math.random() < .995) continue;
       if (p.cells.some(c => Math.hypot(c.x - q.x, c.z - q.z) < q.r + c.rr * .3)) { const old = p.team; setTeam(p, q.team); p.pud = 8; p.goPud = 0; burst(q.x, q.z, TEAMS[q.team].c, 24, 1.2);
         if (p === me) { G.betray++; sfx.paint(); msg('🎨 ¡Traición! Ahora eres ' + TEAMS[q.team].n); setTeamHud(); } } } }
-  for (const p of players) { if (p.pud > 0) p.pud -= DT; if (p.boost > 0) p.boost -= DT; if (p.splitCD > 0) p.splitCD -= DT; if (p.prot > 0) p.prot -= DT; }
+  for (const p of players) { if (p.alive && p.cells.length) p.lastM = p.cells.reduce((a, c) => a + c.m, 0); if (p.joinT > 0) p.joinT -= DT; if (p.pud > 0) p.pud -= DT; if (p.boost > 0) p.boost -= DT; if (p.splitCD > 0) p.splitCD -= DT; if (p.prot > 0) p.prot -= DT; }
   if (G.comboT > 0 && (G.comboT -= DT) <= 0) { G.combo = 0; $('combo').style.opacity = 0; }
   if ((G.frenzy -= DT) <= 0) { G.frenzy = 30; const a = Math.random() * 6.283, r = rnd(0, ARENA * .5), cx = Math.cos(a) * r, cz = Math.sin(a) * r; for (let i = 0; i < 160 && food.length < MAXF; i++) { const f = spawnFood(); const b = Math.random() * 6.283, d = Math.sqrt(Math.random()) * 16; f.x = cx + Math.cos(b) * d; f.z = cz + Math.sin(b) * d; f.fr = 1; f.m = 2; food.push(f); } G.fz = { x: cx, z: cz, t: 8 }; msg('🍬 ¡LLUVIA DE CHUCHES!', 2); sfx.win(); wave(cx, cz, 18, 0xffd84a); }
-  if (me.alive) G.maxM = Math.max(G.maxM, pMass(me));
+  if (me.alive) { G.maxM = Math.max(G.maxM, pMass(me)); G.lastM = pMass(me); const mc = me.cells.reduce((a, b) => (a && a.m >= b.m) ? a : b, null); if (mc) { G.dX = mc.x; G.dZ = mc.z; } } // v6.25: masa/posición justo antes de morir
 }
 function addCombo(n) { G.combo = G.comboT > 0 ? G.combo + n : n; G.comboT = 1.1; G.bestCombo = Math.max(G.bestCombo || 0, G.combo); const e = $('combo'); if (G.combo >= 5) { e.textContent = 'x' + G.combo + (G.combo >= 40 ? ' 🔥🔥' : G.combo >= 20 ? ' 🔥' : ''); e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); e.style.opacity = 1; } }
 function feed(a, b) { const e = document.createElement('div'); e.innerHTML = `<b style="color:${TEAMS[a.team].css}">${a === me ? 'Tú' : a.name}</b> 😋 <b style="color:${TEAMS[b.team].css}">${b === me ? 'Tú' : b.name}</b>`; if (a === me || b === me) e.className = 'mine'; const f = $('feed'); f.prepend(e); while (f.children.length > 4) f.lastChild.remove(); setTimeout(() => e.remove(), 4000); }
 function premTrail(c) { const q = parts[pi = (pi + 1) % PN]; Object.assign(q, { x: c.x + rnd(-.4, .4) * c.rr, y: .4, z: c.z + rnd(-.4, .4) * c.rr, vx: -c.vx * .15, vy: 1.2, vz: -c.vz * .15, l: .55, s: .16 + c.rr * .06 }); partIM.setColorAt(pi, COL.set(c.mesh.prem.tr)); partIM.instanceColor.needsUpdate = true; }
 function trail(c) { const q = parts[pi = (pi + 1) % PN]; Object.assign(q, { x: c.x + rnd(-.5, .5) * c.rr, y: .3, z: c.z + rnd(-.5, .5) * c.rr, vx: -c.vx * .2, vy: 2, vz: -c.vz * .2, l: .35, s: .2 + c.rr * .12 }); partIM.setColorAt(pi, COL.set(0x7ff6ff)); partIM.instanceColor.needsUpdate = true; }
-function onDeath(killer) { G.dead = 1; joy.on = 0; sfx.lose(); $('deadInfo').innerHTML = 'Te ha comido <b>' + killer.name + '</b>' + (G.teams ? ' (' + TEAMS[killer.team].n + ')' : '') + '<br>Masa máxima: <b>' + Math.round(G.maxM) + '</b>'; $('dead').classList.remove('hide'); }
+function onDeath(killer) { G.dead = 1; G.deathM = Math.max(G.lastM || START_M, START_M); joy.on = 0; sfx.lose(); $('deadInfo').innerHTML = 'Te ha comido <b>' + killer.name + '</b>' + (G.teams ? ' (' + TEAMS[killer.team].n + ')' : '') + '<br>Masa máxima: <b>' + Math.round(G.maxM) + '</b>'; $('dead').classList.remove('hide'); }
 $('bExit').onclick = () => { sfx.click(); if (G.net === 'c') { endGame(); mpLeave(); return; } if (G.on) endGame(); }; $('bEndInf').onclick = () => { sfx.click(); endGame(); };
-function revive(m) { resetJoy(); $('dead').classList.add('hide'); G.dead = 0; spawnPlayer(me, m); }
+function revive(m, near) { resetJoy(); $('dead').classList.add('hide'); G.dead = 0; if (!near) return spawnPlayer(me, m);
+  // v6.25: reaparece en la MISMA partida, cerca de donde murió, en un punto seguro, con invulnerabilidad breve
+  const R = massR(m); let bx = 0, bz = 0, bs = -1e9; for (let k = 0; k < 40; k++) { const a = Math.random() * 6.283, d = R + rnd(12, 40) + k * 1.5; let x = (G.dX || 0) + Math.cos(a) * d, z = (G.dZ || 0) + Math.sin(a) * d; const L = Math.hypot(x, z), lim = ARENA - R * .6 - 2; if (L > lim) { x *= lim / L; z *= lim / L; }
+    let sc = 0; for (const o of cells) { if (o.dead || o.p === me) continue; const gap = Math.hypot(o.x - x, o.z - z) - o.rr - R; if (o.m * EAT_K > m) sc += Math.min(0, gap - 12) * 10; else sc += Math.min(0, gap); } sc -= Math.hypot(x - (G.dX || 0), z - (G.dZ || 0)) * .05; if (sc > bs) { bs = sc; bx = x; bz = z; } if (sc >= -3) break; }
+  newCell(me, bx, bz, m); me.alive = 1; me.prot = 2.5; wave(bx, bz, R * 3, 0x7ff6ff); }
 $('bRev').onclick = () => { sfx.click(); if (G.net === 'c') { NET.send({ t: 'rev' }); $('dead').classList.add('hide'); G.dead = 0; return; } revive(START_M); };
-$('bRevAd').onclick = () => { sfx.click(); ads.showRewarded(() => { if (G.net === 'c') { NET.send({ t: 'rev', half: 1 }); $('dead').classList.add('hide'); G.dead = 0; return; } revive(Math.max(START_M, G.maxM / 2)); }); };
+$('bRevAd').onclick = () => { sfx.click(); ads.showRewarded(() => { if (G.net === 'c') { NET.send({ t: 'rev', half: 1 }); $('dead').classList.add('hide'); G.dead = 0; return; } revive(Math.max(START_M, (G.deathM || START_M) / 2), 1); }); };
 function setTeamHud() { $('teamDot').style.background = G.teams ? TEAMS[me.team].css : '#7c4dff'; $('teamName').textContent = G.teams ? TEAMS[me.team].n : '⚔️ Todos'; $('teams').style.display = G.teams ? '' : 'none'; }
 function endGame() {
   if (G.trialUsed) { G.trialUsed = 0; S.trial = null; if (!premOwned(S.char)) S.char = 'fresa'; save(); setTimeout(() => toast('Fin de la prueba del personaje premium'), 600); }
@@ -681,6 +705,7 @@ function frame1(now) {
   else if (G.on && (!G.dead || G.net === 'h')) { acc += dt; let n = 0; while (acc >= DT && n < 6 && G.on) { try { step(); } catch (e) { G.errN = (G.errN || 0) + 1; if (G.errN < 20) console.warn('step', e); } acc -= DT; n++; } if (n >= 6) acc = 0; }
   const al = acc / DT, t = now / 1000;
   { let n = 0; if (G.on) for (const c of cells) { if (!(c.p.prot > 0) || c.dead) continue; if (n >= 48) break; const r = c.rr * (1.18 + Math.sin(t * 8) * .03); M4.compose(V.set(c.ix ?? c.x, c.rr, c.iz ?? c.z), TQ.identity(), SC.setScalar(r)); shieldIM.setMatrixAt(n++, M4); } shieldIM.count = n; shieldIM.instanceMatrix.needsUpdate = true; shieldIM.material.opacity = me && me.prot > 0 && me.prot < .6 ? .28 * (Math.sin(t * 20) > 0 ? 1 : .3) : .28; }
+  if ((TGT.t -= dt) <= 0) { TGT.t = .1; TGT.c = null; TGT.a.clear(); if (G.on && me && me.alive && G.pegUsed) { const k = pegCand(); TGT.c = k; if (G.absOn && !(G.absCD > 0)) for (const [, , o] of absTargets()) TGT.a.add(o); } }
   for (const c of cells) { const x = c.px + (c.x - c.px) * al, z = c.pz + (c.z - c.pz) * al, r = c.rr; c.ix = x; c.iz = z;
     const sp = Math.hypot(c.vx + c.bx, c.vz + c.bz); if (sp > .5) { const ty = Math.atan2((c.vx + c.bx) / sp * .9, 1); let d = ty - c.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); c.yaw += d * damp(10, dt); }
     if (c.jig > 0) c.jig = Math.max(0, c.jig - dt * 2.2); const w = Math.sin(t * 9 + c.x) * .03 + c.sq * Math.sin(c.sq * 18) * .12 + (c.jig || 0) * Math.sin(t * 34) * .06, bob = Math.abs(Math.sin(t * 7 + c.z)) * Math.min(.3, sp * .02) * r;
@@ -688,8 +713,8 @@ function frame1(now) {
     if (sp > .2) { TV2.set(c.vz + c.bz, 0, -(c.vx + c.bx)).normalize(); TQ.setFromAxisAngle(TV2, sp * dt / Math.max(.3, r)); c.q.premultiply(TQ); } c.mesh.body.quaternion.copy(c.q);
     c.ring.position.set(x, .05, z); c.ring.scale.setScalar(r);
     { let mine = 0; if (me && G.on && me.alive && c.p !== me) for (const q of me.cells) mine = Math.max(mine, q.m); const I = c.ind.material;
-      if (!mine) I.opacity = 0; else if (c.p.prot > 0) { I.color.set(0x7ff6ff); I.opacity = .8; } else if (c.p.team === me.team) { I.color.set(0xffffff); I.opacity = .55; } else if (mine >= c.m * EAT_K) { I.color.set(0x2fd36a); I.opacity = .65 + Math.sin(t * 8) * .3; } else if (c.m >= mine * EAT_K) { I.color.set(0xff3b4f); I.opacity = .7; } else I.opacity = 0;
-      c.ind.position.set(x, .06, z); c.ind.scale.setScalar(r); } c.sh.position.set(x + r * .15, .03, z + r * .1); c.sh.scale.setScalar(r * (1 - bob * .1)); }
+      if (!mine) I.opacity = 0; else if (c.p.prot > 0) { I.color.set(0x7ff6ff); I.opacity = .8; } else if (c.p.team === me.team) { I.color.set(0xffffff); I.opacity = .55; } else if (mine >= c.m * EAT_K) { I.color.set(0x2fd36a); I.opacity = .65 + Math.sin(t * 8) * .3; } else if (c.m >= mine * EAT_K) { I.color.set(0xff3b4f); I.opacity = .7; } else I.opacity = 0; c.indK = 1; if (c.p !== me && I.opacity > 0 && !(c.p.prot > 0)) { if (c === TGT.c) { I.color.set(mine >= c.m * EAT_K ? 0x00ff4c : 0xff0f2e); I.opacity = 1; c.indK = 1.08; } else if (TGT.a.has(c)) I.opacity = Math.min(1, I.opacity + .18); } /* v6.25: objetivo más cercano = anillo intensificado */
+      c.ind.position.set(x, .06, z); c.ind.scale.setScalar(r * (c.indK || 1)); } c.sh.position.set(x + r * .15, .03, z + r * .1); c.sh.scale.setScalar(r * (1 - bob * .1)); }
   // objetos pegados (Katamari): se hunden en la bola según crece
   const sc = new Array(NT).fill(0);
   for (const c of cells) { if (c.m >= FIX_M && (!c.fix || c.st.length !== c.fixN)) buildFixed(c); else if (c.fix && c.m < FIX_M * .8) { c.fix = 0; c.fixN = 0; for (const o of c.st) { o.s = o.fr * c.rr; delete o.fr; } }
@@ -712,7 +737,7 @@ function frame1(now) {
   const fc = new Array(NT).fill(0); let nfs = 0;
   const vx0 = camX, vz0 = camZp, vw = camH * camera.aspect * .62 + 3, vh = camH * .62 + 3; for (const f of food) { if (f.x > 999 || Math.abs(f.x - vx0) > vw || Math.abs(f.z - vz0) > vh) continue; const im = foodIMs[f.t]; if (fc[f.t] >= 1300) continue; const s = (f.ej ? .55 : f.s) * (1 + Math.sin(t * (f.k ? 6 : 3) + f.ph) * (f.k ? .15 : .05));
     TQ.setFromEuler(EUL.set(f.rx, f.mv ? f.ry : t * (f.k ? 2 : .6) + f.ph, f.rz)); const hq = f.mv ? Math.abs(Math.sin(t * (6 + f.mv * 1.5) + f.ph)) : 0; M4.compose(V.set(f.x, s + .05 + (f.k ? Math.sin(t * 3 + f.ph) * .25 + .4 : 0) + hq * s * .35, f.z), TQ, f.mv ? SC.set(s * (1.08 - hq * .1), s * (.88 + hq * .2), s * (1.08 - hq * .1)) : SC.setScalar(s)); im.setMatrixAt(fc[f.t], M4); im.setColorAt(fc[f.t], COL.set(f.c)); fc[f.t]++; if (nfs < 1500) { M4.compose(V.set(f.x + s * .12, .025, f.z + s * .08), FSQ, SC.set(s * 2.1, 1, s * 2.1)); fshIM.setMatrixAt(nfs++, M4); } }
-  fshIM.count = nfs; fshIM.instanceMatrix.needsUpdate = true; drawCrumbs(t);
+  fshIM.count = nfs; fshIM.instanceMatrix.needsUpdate = true; drawCrumbs(t); drawOrbs();
   foodIMs.forEach((im, i) => { im.count = fc[i]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; });
   for (const q of puddles) { const s = q.r * (1 + Math.sin(t * 3) * .05) * Math.min(1, (q.t > 2 ? 1 : q.t / 2)); q.m.scale.setScalar(Math.max(.01, s)); }
   for (const w of waves) if (w.l > 0) { w.l -= dt * 2.2; const k = 1 - Math.max(0, w.l); w.m.scale.setScalar(.3 + k * w.r); w.m.material.opacity = Math.max(0, w.l) * .8; if (w.l <= 0) w.m.visible = false; }
@@ -892,7 +917,7 @@ function netHostTick() { if (!NET || !NET.isHost || !G.on) return; netT += DT; i
   if (netMvT > .25) netMvT = 0;
   NET.send({ t: 's', T: Math.round(G.t * 10), c, fd, mv, gone: NEV.gone || [], ev: NEV.splice(0) }); NEV.gone = []; }
 function netHostMsg(d) { const p = players.find(q => q.remote === d.from); if (!p) return;
-  if (d.t === 'i') { p.netA = d.a; p.netM = d.m; } else if (d.t === 'sp') { if (d.a != null) { p.dirx = Math.sin(d.a); p.dirz = -Math.cos(d.a); } doSplit(p); } else if (d.t === 'ej') doEject(p);
+  if (d.t === 'i') { p.netA = d.a; p.netM = d.m; } else if (d.t === 'sp') { if (d.a != null) { p.dirx = Math.sin(d.a); p.dirz = -Math.cos(d.a); } doSplit(p); } else if (d.t === 'ej') doEject(p); else if (d.t === 'jn') doJoin(p);
   else if (d.t === 'rev') { if (!p.alive) spawnPlayer(p, d.half ? Math.max(START_M, (p.lastM || 20) / 2) : START_M); } }
 function netRemoteInput() { for (const p of players) { if (!p.remote || !p.alive) continue; if (p.netA == null) p.inp = 0; else { p.inp = p.netM ?? 1; p.dirx += (Math.sin(p.netA) - p.dirx) * .5; p.dirz += (-Math.cos(p.netA) - p.dirz) * .5; const L = Math.hypot(p.dirx, p.dirz) || 1; p.dirx /= L; p.dirz /= L; } } }
 // --- invitado ---
@@ -944,4 +969,4 @@ function mpSetup() {
 }
 
 mpSetup();
-window.__ar = { BURSTS, doPeg, pegCand, step, CHARS, PREMS, get players() { return players; }, netStart: netHostStart, get NET() { return NET; }, vis: () => Object.entries(THC).map(([k, c]) => k + ":" + c.arenaG.visible + "," + c.foodIMs[0].visible).join(" "), ri: () => [renderer.info.memory.geometries, renderer.info.memory.textures, renderer.info.programs.length, scene.children.length], food: () => food, endGame, dbg: () => [foodIMs.length, NT, OBJG.length, [...new Set(food.map(f => f.t))]], doSplit, setTheme, THEMES, initFood, cam: () => ({ h: +camH.toFixed(1), fog: scene.fog.far | 0 }), MAXM,  G, S, startGame, openSculpt, get me() { return me; }, get cells() { return cells; }, sculpt, brush, frames: () => G.frames };
+window.__ar = { BURSTS, doPeg, pegCand, doAbs, absTargets, doJoin, get orbs() { return orbs; }, step, CHARS, PREMS, get players() { return players; }, netStart: netHostStart, get NET() { return NET; }, vis: () => Object.entries(THC).map(([k, c]) => k + ":" + c.arenaG.visible + "," + c.foodIMs[0].visible).join(" "), ri: () => [renderer.info.memory.geometries, renderer.info.memory.textures, renderer.info.programs.length, scene.children.length], food: () => food, endGame, dbg: () => [foodIMs.length, NT, OBJG.length, [...new Set(food.map(f => f.t))]], doSplit, setTheme, THEMES, initFood, cam: () => ({ h: +camH.toFixed(1), fog: scene.fog.far | 0 }), MAXM,  G, S, startGame, openSculpt, get me() { return me; }, get cells() { return cells; }, sculpt, brush, frames: () => G.frames };
