@@ -228,6 +228,7 @@ function syncSettings() { for (const seg of document.querySelectorAll('.seg')) f
 for (const seg of document.querySelectorAll('.seg')) for (const b of seg.children) b.addEventListener('click', () => {
   Audio.init(); save.settings[seg.dataset.k] = b.dataset.v; persist(); syncSettings(); Audio.sfxPlay('click');
   if (seg.dataset.k === 'controls' && b.dataset.v === 'tilt') requestTilt();
+  if (seg.dataset.k === 'orient') { lockOrient(); checkRotate(); }
   if (seg.dataset.k === 'quality') { qualityHi = b.dataset.v === 'alta' || (b.dataset.v === 'auto' && !isTouch); prLv = prBase(); applyPR(); }
 });
 function applySettings() {
@@ -388,7 +389,8 @@ function frame(now) {
     if (previewKart) { previewKart.rotation.y = app.state === 'chars' ? t * 0.7 : 0.5 + Math.sin(t * 0.6) * 0.3; animKart(previewKart, t, 15); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12; }
     if (trophyPreview && app.state === 'cups') trophyPreview.rotation.y = t * 0.8;
     const w = innerWidth / innerHeight;
-    if (app.state === 'chars') { menuCam.position.set(2.4, 4.2, 13.5); menuCam.lookAt(2.4, 1.6, 0); }
+    if (app.state === 'chars' && w < 1) { menuCam.position.set(0, 3.6, 13.5); menuCam.lookAt(0, -0.3, 0); } // v5: vertical, piloto centrado sobre la ficha
+    else if (app.state === 'chars') { menuCam.position.set(2.4, 4.2, 13.5); menuCam.lookAt(2.4, 1.6, 0); }
     else { menuCam.position.set(0, 4.5, 13 / Math.min(1.3, w / 1.5)); menuCam.lookAt(0, 1.8, 0); }
   }
   renderer.render(menuScene, menuCam);
@@ -396,13 +398,21 @@ function frame(now) {
 
 // ---------------- orientation / fullscreen ----------------
 let rotAny = false;
-function checkRotate() { $('rotate').style.display = 'none'; } // v3: sin bloqueo de orientación, se juega en vertical y horizontal
-btn('rotAny', () => { rotAny = true; checkRotate(); });
-function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.catch) p.catch(() => {}); }
+// v5: el jugador elige vertical u horizontal al abrir; se guarda en ajustes (localStorage)
+function checkRotate() { const o = save.settings.orient, portrait = innerHeight > innerWidth * 1.05, land = innerWidth > innerHeight * 1.05;
+  const bad = isTouch && !$('orient').classList.contains('on') && ((o === 'h' && portrait) || (o === 'v' && land));
+  $('rotate').style.display = bad ? 'flex' : 'none';
+  if (bad) { $('rotMsg').textContent = o === 'h' ? 'Has elegido jugar en horizontal: gira el móvil.' : 'Has elegido jugar en vertical: gira el móvil.'; $('rotate').querySelector('.ph').classList.toggle('pv', o === 'v'); } }
+function lockOrient() { const o = save.settings.orient; try { if (o && screen.orientation && screen.orientation.lock && document.fullscreenElement) screen.orientation.lock(o === 'v' ? 'portrait' : 'landscape').catch(() => {}); } catch (e) {} }
+function pickOrient(o) { save.settings.orient = o; persist(); $('orient').classList.remove('on'); syncSettings(); tryFullscreen(); lockOrient(); checkRotate(); }
+btn('oV', () => pickOrient('v')); btn('oH', () => pickOrient('h'));
+function openOrient() { $('orient').classList.add('on'); for (const k of ['v', 'h']) $('o' + k.toUpperCase()).classList.toggle('sel', save.settings.orient === k); checkRotate(); }
+btn('rotAny', () => openOrient());
+function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.then) p.then(lockOrient).catch(() => {}); else lockOrient(); }
 
 // ---------------- boot ----------------
 document.fonts && document.fonts.load('700 20px Fredoka').finally(() => {
-  applyPR(); applySettings(); setTitleStage(); show('title'); $('loading').style.display = 'none';
+  applyPR(); applySettings(); setTitleStage(); show('title'); $('loading').style.display = 'none'; if (!save.settings.orient) openOrient();
   requestAnimationFrame(frame);
 });
 
@@ -414,6 +424,6 @@ window.__kart = {
   pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },
   give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, use() { app.race.useItem(app.race.player); },
   forceFinish() { const R = app.race; for (const k of R.karts) { if (!k.finished) { k.finished = true; k.finishTime = R.raceT + k.place; } } },
-  openChars, openCups, showPodium,
+  openChars, openCups, showPodium, pickOrient, openOrient,
   trackShape(id, rev) { const T = buildTrack(CUPS.find(c => c.id === id), rev, { hi: false }); return { S: T.S.map(s => [s.p.x, s.p.z, s.w, s.wall, s.p.y]), sc: T.shortcuts.map(c => c.pts.map(p => [p.x, p.z])), feats: T.feats.map(f => [f.type, T.idxOf(f.t)]), L: T.L }; }, get quality() { return qualityHi ? 'alta' : 'baja'; },
 };

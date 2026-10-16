@@ -514,11 +514,12 @@ export class Race {
       cam.lookAt(k.pos.x, k.y + 1.6, k.pos.z); return;
     }
     const s = k.megaS, sf = clamp(k.fs / 45, 0, 1.4), back = 6.5 * (1 + (s - 1) * 0.9) + (k.boostT > 0 ? 0.9 : 0) + sf * 0.6 + this.kick * 0.8, up = 2.85 * (1 + (s - 1) * 0.85);
+    const pv = cam.aspect < 1, pB = pv ? 1.12 : 1, pU = pv ? 2.3 : 1, pA = pv ? 1.2 : 1; // v5: cámara vertical más alta y mirando más lejos (horizontal intacta)
     const yaw = k.yaw + k.driftDir * 0.12;
     if (snap || this._cy == null) this._cy = yaw;
     this._cy += angDiff(this._cy, yaw) * (1 - Math.exp(-dt * 7));
-    const want = new V3(k.pos.x - Math.sin(this._cy) * back, k.y + up, k.pos.z - Math.cos(this._cy) * back);
-    const look = new V3(k.pos.x + Math.sin(this._cy) * 5, k.y + 1.35 * s, k.pos.z + Math.cos(this._cy) * 6);
+    const want = new V3(k.pos.x - Math.sin(this._cy) * back * pB, k.y + up * pU, k.pos.z - Math.cos(this._cy) * back * pB);
+    const look = new V3(k.pos.x + Math.sin(this._cy) * 5 * pA, k.y + 1.35 * s, k.pos.z + Math.cos(this._cy) * 6 * pA);
     if (snap) { this.camPos.copy(want); this.camLook.copy(look); }
     this.camPos.lerp(want, 1 - Math.exp(-dt * 10)); this.camPos.y = Math.max(this.camPos.y, want.y - 1.5);
     this.camLook.lerp(look, 1 - Math.exp(-dt * 14));

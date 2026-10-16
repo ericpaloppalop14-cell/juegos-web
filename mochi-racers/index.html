@@ -180,6 +180,28 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 #bI{right:calc(30px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:76px;height:76px;font-size:32px}
 #bB{right:calc(150px + env(safe-area-inset-right));bottom:calc(130px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:12px}
 }
+
+/* v5: elección de orientación */
+#orient{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:2.5vh;padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));background:radial-gradient(circle at 30% 20%,#fff2fa 0,transparent 40%),radial-gradient(circle at 80% 85%,#e4f7ff 0,transparent 45%),linear-gradient(180deg,#ffd6ec,#d9c8ff);text-align:center;overflow:auto}
+#orient.on{display:flex}
+#orient .oT{font-size:clamp(30px,8vmin,54px);font-weight:700;color:#fff;-webkit-text-stroke:2px #e0609f;text-shadow:0 4px 0 #e0609f,0 10px 20px rgba(200,80,140,.3);line-height:1}
+#orient .oS{font-size:clamp(15px,3.6vmin,20px);color:#9b5cb8;font-weight:600}
+#orient .oRow{display:flex;gap:4vmin;align-items:stretch;justify-content:center;flex-wrap:wrap}
+.oOpt{font-family:inherit;border:none;cursor:pointer;width:clamp(150px,40vmin,230px);padding:18px 12px 16px;border-radius:30px;background:rgba(255,255,255,.92);box-shadow:0 7px 0 rgba(200,120,190,.45),0 14px 30px rgba(150,80,160,.22);display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:14px;transition:transform .1s;animation:oPop .5s backwards}
+.oOpt:nth-child(2){animation-delay:.1s}.oOpt:active{transform:translateY(4px) scale(.97);box-shadow:0 3px 0 rgba(200,120,190,.45)}
+.oOpt.sel{outline:4px solid #ff8fc0}
+@keyframes oPop{from{transform:scale(.7);opacity:0}}
+.oPh{position:relative;border-radius:16px;background:linear-gradient(180deg,#8fdcff,#ffd0ea 60%,#ffb3d6);border:6px solid #8b5cc2;box-shadow:inset 0 0 0 2px #fff6,0 5px 0 #6b3fa0}
+.oPh::before{content:"";position:absolute;background:#6b3fa0;border-radius:4px}
+.oPh i{position:absolute;font-style:normal;font-size:26px;left:50%;bottom:16%;transform:translateX(-50%);animation:oBob 1.2s ease-in-out infinite}
+.oPh b{position:absolute;left:18%;right:18%;bottom:0;top:52%;background:#fff;clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);opacity:.8}
+.oPh.v{width:70px;height:122px}.oPh.v::before{width:22px;height:4px;top:5px;left:50%;margin-left:-11px}
+.oPh.h{width:122px;height:70px;margin:26px 0}.oPh.h::before{width:4px;height:22px;left:5px;top:50%;margin-top:-11px}
+.oPh.h i{bottom:8%}
+@keyframes oBob{50%{transform:translateX(-50%) translateY(-5px)}}
+.oOpt .oL{font-size:clamp(17px,4.2vmin,22px);font-weight:700;color:#fff;background:linear-gradient(180deg,#ffa9cf,#f37fb4);border-radius:999px;padding:9px 16px;box-shadow:0 4px 0 #d0609a;white-space:nowrap}
+.oOpt.h .oL{background:linear-gradient(180deg,#9df0d6,#5fc7a6);box-shadow:0 4px 0 #3fa585}
+#rotate .ph.pv{animation:rotv 2s ease-in-out infinite}@keyframes rotv{0%,30%{transform:rotate(-90deg)}60%,100%{transform:rotate(0)}}
 </style>
 </head>
 <body>
@@ -253,6 +275,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 
 <div id="settings" class="screen" style="background:rgba(80,40,110,.25)"><div class="card">
   <div class="title2" style="text-align:center">Ajustes</div>
+  <div class="set">Orientación<div class="seg" data-k="orient"><button data-v="v">📱 Vertical</button><button data-v="h">📱 Horizontal</button></div></div>
   <div class="set">Sonido<div class="seg" data-k="sound"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
   <div class="set">Música<div class="seg" data-k="music"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
   <div class="set">Controles<div class="seg" data-k="controls"><button data-v="botones">Botones</button><button data-v="stick">Joystick</button><button data-v="tilt">Inclinación</button></div></div>
@@ -263,10 +286,14 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
   <div class="row" style="margin-top:12px"><button class="btn" id="sOk">Listo</button></div>
 </div></div>
 
-<div id="rotate"><div class="ph">📱</div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div>Mochi Racers se juega mejor en horizontal.</div><button class="btn sec sm" id="rotAny">Jugar en vertical igualmente</button></div>
+<div id="orient"><div class="oT">Mochi Racers</div><div class="oS">¿Cómo quieres jugar?</div><div class="oRow">
+<button class="oOpt v" id="oV"><div class="oPh v"><b></b><i>🍡</i></div><div class="oL">Jugar en vertical</div></button>
+<button class="oOpt h" id="oH"><div class="oPh h"><b></b><i>🍡</i></div><div class="oL">Jugar en horizontal</div></button>
+</div><div class="oS" style="font-size:13px;opacity:.8">Puedes cambiarlo luego en Ajustes</div></div>
+<div id="rotate"><div class="ph">📱</div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div id="rotMsg">Has elegido jugar en horizontal.</div><button class="btn sec sm" id="rotAny">Cambiar orientación</button></div>
 
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/main.js?v=4"></script>
+<script type="module" src="js/main.js?v=5"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>
