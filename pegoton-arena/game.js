@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=691';
+import * as THREE from './three.js?v=692';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -528,12 +528,17 @@ function stepCrumbs(DT) { for (let j = BURSTS.length - 1; j >= 0; j--) { const B
 function drawCrumbs(t) { for (const B of BURSTS) { let n = 0; for (const q of B.q) { if (q.l <= 0) continue; const s = q.s * B.vk * Math.min(1, q.l / 1.5) * (1 + Math.sin(t * 5 + q.yaw) * .06); TQ.setFromEuler(EUL.set(0, q.yaw + t * .5, 0)); M4.compose(SC.set(q.x, s * .9 + .05, q.z), TQ, TV2.setScalar(s)); B.im.setMatrixAt(n++, M4); } B.im.count = n; B.im.instanceMatrix.needsUpdate = true; } }
 // v6.24: habilidad PEGADO (tras explotar): te enganchas 4 s a un rival cercano, invulnerable; una vez por rival
 // v6.26: aura arcoíris para bolas 'chetadas' (han explotado): nivel 1 suave, nivel 2+ más intensa con chispas
-const auraG = (() => { const g = new THREE.RingGeometry(1.6, 1.86, 64, 1); const n = g.attributes.position.count, col = new Float32Array(n * 3), C = new THREE.Color(); for (let i = 0; i < n; i++) { const a = Math.atan2(g.attributes.position.getY(i), g.attributes.position.getX(i)); C.setHSL((a / 6.283 + 1) % 1, .95, .55); col.set([C.r, C.g, C.b], i * 3); } g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.rotateX(-Math.PI / 2); return g; })();
-const auraIM = [.4, .65].map(o => { const m = new THREE.InstancedMesh(auraG, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: o, depthWrite: false }), 64); m.count = 0; m.frustumCulled = false; m.renderOrder = -1; scene.add(m); return m; });
+// v6.28: aura arcoíris pulida desde la 1ª explosión: halo suave con degradado (capa 1) + línea brillante aditiva que gira al revés (capa 2) + chispas finas
+function auraGeo(r0, r1, seg, fall) { const g = new THREE.RingGeometry(r0, r1, 128, seg); const P = g.attributes.position, n = P.count, col = new Float32Array(n * 4), C = new THREE.Color(), rm = (r0 + r1) / 2, hw = (r1 - r0) / 2;
+  for (let i = 0; i < n; i++) { const x = P.getX(i), y = P.getY(i), a = Math.atan2(y, x), r = Math.hypot(x, y); C.setHSL((a / 6.283 + 1) % 1, 1, .55); const al = fall ? Math.pow(Math.max(0, 1 - Math.abs(r - rm) / hw), 1.6) : 1; col.set([C.r, C.g, C.b, al], i * 4); }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 4)); g.rotateX(-Math.PI / 2); return g; }
+const auraIM = [[auraGeo(1.52, 2.3, 6, 1), .95, THREE.NormalBlending], [auraGeo(1.64, 1.76, 1, 0), 1, THREE.NormalBlending]].map(([g, o, bl]) => { const m = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: o, depthWrite: false, blending: bl }), 64); m.count = 0; m.frustumCulled = false; m.renderOrder = -1; scene.add(m); return m; });
 let auraSp = 0;
-function drawAura(t, dt) { const n = [0, 0]; auraSp -= dt; const sp = auraSp <= 0; if (sp) auraSp = .25; for (const c of cells) { const L = c.p.burstN || 0; if (!L || c.dead) continue; const k = L >= 2 ? 1 : 0, im = auraIM[k]; if (n[k] >= 64) continue; const r = c.rr * (1 + Math.sin(t * 3 + c.id) * .025);
-  TQ.setFromAxisAngle(YUP, t * (k ? 1.6 : 1)); M4.compose(SC.set(c.ix ?? c.x, .07, c.iz ?? c.z), TQ, TV2.set(r, 1, r)); im.setMatrixAt(n[k]++, M4); if (k && sp && Math.random() < .6) { const a = Math.random() * 6.283; burst((c.ix ?? c.x) + Math.cos(a) * r * 1.6, (c.iz ?? c.z) + Math.sin(a) * r * 1.6, new THREE.Color().setHSL(Math.random(), .9, .7).getHex(), 1, .25); } }
-  auraIM.forEach((im, i) => { im.count = n[i]; im.instanceMatrix.needsUpdate = true; }); }
+function drawAura(t, dt) { let n = 0; auraSp -= dt; const sp = auraSp <= 0; if (sp) auraSp = .12; for (const c of cells) { if (!(c.p.burstN > 0) || c.dead || n >= 64) continue; const x = c.ix ?? c.x, z = c.iz ?? c.z, r = c.rr * (1 + Math.sin(t * 3 + c.id) * .03);
+  TQ.setFromAxisAngle(YUP, t * 1.2); M4.compose(SC.set(x, .07, z), TQ, TV2.set(r, 1, r)); auraIM[0].setMatrixAt(n, M4);
+  TQ.setFromAxisAngle(YUP, -t * 2.2); M4.compose(SC.set(x, .09, z), TQ, TV2.set(r * (1 + Math.sin(t * 5) * .02), 1, r * (1 + Math.sin(t * 5) * .02))); auraIM[1].setMatrixAt(n, M4); n++;
+  if (sp && Math.random() < .7) { const a = Math.random() * 6.283, rr = r * rnd(1.6, 2.2); burst(x + Math.cos(a) * rr, z + Math.sin(a) * rr, new THREE.Color().setHSL(a / 6.283, 1, .7).getHex(), 1, .18); } }
+  for (const im of auraIM) { im.count = n; im.instanceMatrix.needsUpdate = true; } }
 const PEG_T = 4, PEG_RANGE = 45; const TGT = { c: null, a: new Set(), t: 0 };
 function pegMain() { return me && me.cells.length ? me.cells.reduce((a, b) => a.m >= b.m ? a : b) : null; }
 function pegCand() { const c = pegMain(); if (!c || !me.alive) return null; let best = null, bd = 1e9;
