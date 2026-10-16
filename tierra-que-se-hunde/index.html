@@ -7,7 +7,7 @@
 <title>Tierra que se hunde</title><link rel="manifest" href="manifest.json"><meta property="og:title" content="Tierra que se hunde"><meta property="og:site_name" content="Tierra que se hunde"><meta name="application-name" content="Tierra que se hunde"><meta name="apple-mobile-web-app-title" content="Tierra que se hunde">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="js/style.css?v=v9">
+<link rel="stylesheet" href="js/style.css?v=v10">
 <style>
 #hud{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:5}
 #hud.on{display:flex}
@@ -37,6 +37,20 @@
 #spect.on{display:block}
 #steerHint{position:absolute;left:0;right:80px;bottom:calc(env(safe-area-inset-bottom) + 120px);text-align:center;display:none;z-index:5;pointer-events:none}
 #steerHint.on{display:block}
+
+/* v10: números a la IZQUIERDA (mano izquierda) y joystick fijo ABAJO A LA DERECHA (mano derecha), pequeños y pegados al borde */
+#nums{left:calc(env(safe-area-inset-left) + 6px)!important;right:auto!important;width:min(13vw,50px)!important;gap:4px!important;top:calc(env(safe-area-inset-top) + 70px)!important;bottom:calc(env(safe-area-inset-bottom) + 8px)!important}
+#nums button{max-height:52px!important;min-height:30px!important;font-size:min(6vw,22px)!important;border-radius:13px!important}
+#numCd{left:auto!important;right:-7px}
+@media (orientation:landscape) and (max-height:540px){#nums.on{width:min(14vw,92px)!important;top:calc(env(safe-area-inset-top) + 58px)!important}#nums button{font-size:min(4.6vh,20px)!important}}
+#mm{left:auto!important;right:calc(env(safe-area-inset-right) + 8px)!important;width:96px!important;height:96px!important}
+#hOut,#steerHint{left:60px!important;right:60px!important}
+#joy{left:auto!important;top:auto!important;right:calc(env(safe-area-inset-right) + 10px);bottom:calc(env(safe-area-inset-bottom) + 10px);width:112px!important;height:112px!important;margin:0!important;pointer-events:auto!important;touch-action:none;background:rgba(255,255,255,.16)!important;opacity:.85}
+#joy::before{content:'';position:absolute;inset:-26px;border-radius:50%}
+#nums.on ~ #joy{display:block}
+#joy.on{opacity:1;background:rgba(255,255,255,.26)!important}
+#joyK{width:46px!important;height:46px!important;pointer-events:none}
+#hopB{right:calc(env(safe-area-inset-right) + 30px)!important;bottom:calc(env(safe-area-inset-bottom) + 140px)!important;width:60px!important;height:60px!important;font-size:24px!important}
 </style>
 </head>
 <body>
@@ -48,10 +62,10 @@
 <canvas id="mm" width="220" height="220"></canvas>
 <div id="hOut"><span class="pill warn">🌀 ¡Estás fuera de la zona! ¡Vuelve!</span></div>
 <div id="joy"><div id="joyK"></div></div>
-<div id="steerHint"><span class="pill">🕹️ Arrastra el dedo para ir · pulsa un número para hundir</span></div>
+<div id="steerHint"><span class="pill">🕹️ Joystick abajo a la derecha · números a la izquierda</span></div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="lib/peerjs.min.js"></script>
 <script>if (/localnet/.test(location.search)) document.write('<script src="lib/fakepeer.js"><\/script>');</script>
-<script type="module" src="js/main.js?v=v9"></script>
+<script type="module" src="js/main.js?v=v10"></script>
 </body>
 </html>

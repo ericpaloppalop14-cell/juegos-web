@@ -45,7 +45,7 @@ export function createRenderer(canvas) {
 export function addLights(scene, th, span = 30) {
   const hemi = new THREE.HemisphereLight(th.hemiS, th.hemiG, 0.75); scene.add(hemi);
   const sun = new THREE.DirectionalLight(th.sun, 1.9); sun.position.set(-span * 0.6, span * 1.1, span * 0.7);
-  sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.radius = 3; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 3; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
   const c = sun.shadow.camera; c.left = c.bottom = -span; c.right = c.top = span; c.near = 1; c.far = span * 4;
   scene.add(sun); scene.add(sun.target);
   const fill = new THREE.DirectionalLight('#ffd6f0', 0.55); fill.position.set(span, span * 0.4, -span); scene.add(fill);

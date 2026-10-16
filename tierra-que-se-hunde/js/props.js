@@ -17,7 +17,7 @@ const add = (parent, geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx =
 function stripeTex(c1, c2, n = 16, trim = '#e8b84a') { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const x = cv.getContext('2d');
   for (let k = 0; k < n; k++) { const g = x.createLinearGradient(k * 1024 / n, 0, (k + 1) * 1024 / n, 0); const c = k % 2 ? c2 : c1; g.addColorStop(0, c); g.addColorStop(0.5, new THREE.Color(c).lerp(new THREE.Color('#ffffff'), 0.18).getStyle()); g.addColorStop(1, c); x.fillStyle = g; x.fillRect(k * 1024 / n, 0, 1024 / n + 1, 256); }
   x.fillStyle = trim; for (let k = 0; k <= n; k++) x.fillRect(k * 1024 / n - 2, 0, 4, 256);
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16; return t; }
 // bombillas cálidas instanciadas alrededor de un aro
 function bulbRing(parent, r, y, n, mat, size = 0.26) { const g = new THREE.SphereGeometry(size, 10, 8), ms = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; ms.push(mat4(Math.cos(a) * r, y, Math.sin(a) * r)); } const im = inst(g, mat, ms); parent.add(im); return im; }
 
@@ -31,7 +31,7 @@ export function buildCarousel({ P, glowM, NUMCOL, mergeInto }) {
   { const cv = document.createElement('canvas'); cv.width = cv.height = 1024; const x = cv.getContext('2d'); x.translate(512, 512);
     for (let k = 0; k < 24; k++) { x.fillStyle = k % 2 ? '#fff6ea' : '#ffd9e8'; x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, 512, k / 24 * Math.PI * 2, (k + 1) / 24 * Math.PI * 2); x.fill(); }
     x.strokeStyle = '#e9b949'; for (const [r, w] of [[500, 10], [470, 4], [250, 6], [160, 4]]) { x.lineWidth = w; x.beginPath(); x.arc(0, 0, r, 0, 7); x.stroke(); }
-    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
     add(plat, new THREE.CircleGeometry(8.45, 64), new THREE.MeshStandardMaterial({ map: t, roughness: 0.45 }), 0, 1.605, 0, -Math.PI / 2); }
   add(plat, new THREE.TorusGeometry(8.6, 0.12, 8, 96), gold, 0, 1.56, 0, Math.PI / 2);
   add(plat, new THREE.TorusGeometry(9.0, 0.1, 8, 96), gold, 0, 0.27, 0, Math.PI / 2);
@@ -190,7 +190,7 @@ function clockFaceTex() { const cv = document.createElement('canvas'); cv.width 
   for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2, big = i % 5 === 0; x.save(); x.rotate(a); x.fillStyle = big ? '#6b3fa0' : '#b494d6'; x.fillRect(-(big ? 7 : 3), -470, big ? 14 : 6, big ? 46 : 22); x.restore(); }
   x.fillStyle = '#6b3fa0'; x.font = '700 110px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
   for (let k = 1; k <= 12; k++) { const a = k / 12 * Math.PI * 2; x.fillText(String(k), Math.sin(a) * 365, -Math.cos(a) * 365 + 6); }
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16; return t; }
 export function buildClockCenter({ P }) {
   const g = new THREE.Group(), gold = P('#e9b949', { metalness: 0.55, roughness: 0.28 });
   add(g, lathe([[2.65, 0], [2.65, 0.3], [2.35, 0.48], [2.3, 0.6], [2.3, 1.55], [2.45, 1.65], [2.62, 1.8], [2.62, 2.15], [0.001, 2.15]], 48), P('#ffcf7a', { metalness: 0.25, roughness: 0.3 }));

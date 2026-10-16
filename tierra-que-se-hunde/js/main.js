@@ -6,12 +6,12 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v9';
-import { makeCharacter, animCharacter } from './gfx.js?v=v9';
-import { chOf } from './chars.js?v=v9';
-import { createShell } from './shell.js?v=v9';
-import { Sfx } from './sfx.js?v=v9';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v9';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v10';
+import { makeCharacter, animCharacter } from './gfx.js?v=v10';
+import { chOf } from './chars.js?v=v10';
+import { createShell } from './shell.js?v=v10';
+import { Sfx } from './sfx.js?v=v10';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v10';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -144,7 +144,7 @@ class Sim {
 // ---------------------------------------------------------------- VISTA 3D
 const { renderer, scene, camera, composer } = createRenderer($('c3d'));
 window.__renderer = renderer; window.__scene = scene; window.__camera = camera;
-const Q = window.__Q = { lv: 0, dprs: [2, 1.75, 1.5, 1.25, 1, 0.85, 0.7], acc: 0, n: 0, last: 0, good: 0 }; // v9: hasta 2× en móvil; baja si va lento y vuelve a subir si sobra
+const Q = window.__Q = { lv: 1, dprs: [2.5, 2, 1.75, 1.5, 1.25, 1, 0.85, 0.7], acc: 0, n: 0, last: 0, good: 0, bad: 0, fail: {} }; // v10: hasta 2,5× en pantallas muy densas; objetivo 60 fps estables // v9: hasta 2× en móvil; baja si va lento y vuelve a subir si sobra
 camera.fov = 60; camera.updateProjectionMatrix();
 const world = buildWorld(scene, 'atardecer', 22);
 world.lights.sun.shadow.camera.left = world.lights.sun.shadow.camera.bottom = -HALF - 4; world.lights.sun.shadow.camera.right = world.lights.sun.shadow.camera.top = HALF + 4; world.lights.sun.shadow.camera.updateProjectionMatrix();
@@ -154,7 +154,7 @@ const TILE_COLS = ['#ff9cc8', '#b9a2f7', '#7ee3c4', '#ffcf7a', '#9fd0ff'];
 // --- la sala: suelo de casillas, paredes decoradas, columnas, guirnaldas, farolillos
 function roundedTile() { const s = TS - 0.18, r = 0.38, h = s / 2, sh = new THREE.Shape();
   sh.moveTo(-h + r, -h); sh.lineTo(h - r, -h); sh.quadraticCurveTo(h, -h, h, -h + r); sh.lineTo(h, h - r); sh.quadraticCurveTo(h, h, h - r, h); sh.lineTo(-h + r, h); sh.quadraticCurveTo(-h, h, -h, h - r); sh.lineTo(-h, -h + r); sh.quadraticCurveTo(-h, -h, -h + r, -h);
-  const g = new THREE.ExtrudeGeometry(sh, { depth: 0.8, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 1, curveSegments: 2 }); g.rotateX(-Math.PI / 2); g.translate(0, -0.92, 0); return g; }
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 0.8, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 2, curveSegments: 4 }); g.rotateX(-Math.PI / 2); g.translate(0, -0.92, 0); return g; }
 const TG = roundedTile();
 const crackTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 512; const x = cv.getContext('2d'); x.scale(2, 2); x.strokeStyle = 'rgba(120,30,70,.9)'; x.lineCap = 'round';
   for (let k = 0; k < 8; k++) { let px = 128, py = 128, a = k / 8 * 6.28 + Math.random() * 0.4; x.beginPath(); x.moveTo(px, py);
@@ -164,7 +164,7 @@ const crackTex = (() => { const cv = document.createElement('canvas'); cv.width 
 const ATL = (() => { const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 1024; const x = cv.getContext('2d'); x.scale(2, 2); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
   for (let hot = 0; hot < 2; hot++) for (let n = 1; n <= 10; n++) { const c = (n - 1 + hot * 10), ox = (c % 5) * 128, oy = (c / 5 | 0) * 128;
     x.font = `700 ${n === 10 ? 74 : 92}px Fredoka, sans-serif`; x.lineWidth = 14; x.strokeStyle = hot ? '#b0124f' : new THREE.Color(NUMCOL[n]).offsetHSL(0, 0, -0.25).getStyle(); x.strokeText(String(n), ox + 64, oy + 70); x.fillStyle = '#fff'; x.fillText(String(n), ox + 64, oy + 70); }
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; })();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16; return t; })();
 const TCOL = [], THOT = new THREE.Color('#ff6aa6');
 for (let n = 1; n <= 10; n++) TCOL[n] = new THREE.Color(NUMCOL[n]).lerp(new THREE.Color('#ffffff'), 0.38);
 const tileIM = new THREE.InstancedMesh(TG, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.42, metalness: 0, envMapIntensity: 0.8 }), N * N);
@@ -385,17 +385,18 @@ function onEvents(evs) {
 // ---------------------------------------------------------------- CONTROLES
 let keyL = false, keyR = false, keyU = false, keyD = false, joyM = 1, sentM = 1; const numBusy = new Array(11).fill(false);
 function send(d) { if (!playing) return; if (online && !shell.isHost) shell.send({ t: 'gin', ...d }); else sim && sim.input(me, d); }
-// joystick flotante: toca en cualquier sitio, arrastra hacia donde quieras ir (referencia fija al empezar)
+// v10: joystick fijo abajo a la derecha (mano derecha); números a la izquierda. Multitouch: cada dedo va por su pointerId.
 const cv3 = $('c3d'); let drag = null, joyA = null, sentHd = undefined; const joy = $('joy'), knob = $('joyK');
-cv3.addEventListener('pointerdown', e => { if (!playing || drag) return; Sfx.init(); drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, ref: camYaw };
-  try { cv3.setPointerCapture(e.pointerId); } catch (x) { } joy.style.left = e.clientX + 'px'; joy.style.top = e.clientY + 'px'; knob.style.transform = 'translate(-50%,-50%)'; joy.classList.add('on'); });
-cv3.addEventListener('pointermove', e => { if (!drag || e.pointerId !== drag.id) return; let dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; const R = 52, d = Math.hypot(dx, dy);
-  if (d > R) { dx *= R / d; dy *= R / d; } knob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-  joyA = d > 7 ? Math.atan2(dx, -dy) : null; joyM = Math.max(0, Math.min(1, (Math.min(d, R) - 7) / (R - 22))); });
-const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyA = null; joy.classList.remove('on'); };
+joy.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!playing || drag) return; Sfx.init(); const r = joy.getBoundingClientRect(); drag = { id: e.pointerId, x0: r.left + r.width / 2, y0: r.top + r.height / 2, ref: camYaw };
+  try { joy.setPointerCapture(e.pointerId); } catch (x) { } knob.style.transform = 'translate(-50%,-50%)'; joy.classList.add('on'); joyMove(e); });
+function joyMove(e) { if (!drag || e.pointerId !== drag.id) return; let dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; const R = 52, d = Math.hypot(dx, dy);
+  if (d > R) { dx *= R / d; dy *= R / d; } const v = Math.min(1, 40 / R); knob.style.transform = `translate(calc(-50% + ${dx * v}px),calc(-50% + ${dy * v}px))`;
+  joyA = d > 7 ? Math.atan2(dx, -dy) : null; joyM = Math.max(0, Math.min(1, (Math.min(d, R) - 7) / (R - 22))); }
+joy.addEventListener('pointermove', joyMove);
+const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyA = null; joy.classList.remove('on'); knob.style.transform = 'translate(-50%,-50%)'; };
 function hop() { if (!playing) return; const c = chars.get(me); if (!c || !c.alive) return; send({ k: 'jump' }); }
 $('hopB').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sfx.init(); hop(); });
-cv3.addEventListener('pointerup', endDrag); cv3.addEventListener('pointercancel', endDrag);
+joy.addEventListener('pointerup', endDrag); joy.addEventListener('pointercancel', endDrag); joy.addEventListener('lostpointercapture', endDrag);
 const KMAP = { ArrowLeft: 'L', a: 'L', A: 'L', ArrowRight: 'R', d: 'R', D: 'R', ArrowUp: 'U', w: 'U', W: 'U', ArrowDown: 'D', s: 'D', S: 'D' };
 const setKey = (k, v) => { if (k === 'L') keyL = v; if (k === 'R') keyR = v; if (k === 'U') keyU = v; if (k === 'D') keyD = v; };
 addEventListener('keydown', e => { if (!playing) return; if (KMAP[e.key]) { e.preventDefault(); setKey(KMAP[e.key], true); }
@@ -489,10 +490,12 @@ function frame() {
     if ((mmAcc += dt) > 0.12) { mmAcc = 0; drawMini(); } } else { zoneWall.visible = nextRing.visible = false; }
   world.update(t); parts.update(dt); if (!NORENDER) composer.render();
   // calidad adaptativa según FPS reales: solo baja, nunca sube
-  if (playing && !NORENDER) { Q.acc += rdt; Q.n++; if (Q.acc > 2) { const avg = Q.acc / Q.n * 1000; Q.acc = 0; Q.n = 0; Q.last = avg;
-    const setQ = lv => { Q.lv = lv; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dprs[lv])); renderer.setSize(innerWidth, innerHeight, false); parts.pts.visible = lv < 6; const sh = lv <= 2 && !/noshadows/.test(location.search); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); } };
-    if (avg > 18.5 && Q.lv < Q.dprs.length - 1) { Q.good = 0; setQ(Q.lv + (avg > 30 ? 2 : 1) > Q.dprs.length - 1 ? Q.dprs.length - 1 : Q.lv + (avg > 30 ? 2 : 1)); }
-    else if (avg < 12.5 && Q.lv > 0) { if (++Q.good >= 3) { Q.good = 0; setQ(Q.lv - 1); } } else Q.good = 0; } }
+  if (playing && !NORENDER) { Q.acc += rdt; Q.n++; if (Q.acc > 1) { const avg = Q.acc / Q.n * 1000; Q.acc = 0; Q.n = 0; Q.last = avg;
+    const setQ = lv => { Q.lv = lv; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dprs[lv])); renderer.setSize(innerWidth, innerHeight, false); parts.pts.visible = lv < 7; const sh = lv <= 3 && !/noshadows/.test(location.search); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); } };
+    // v10: baja enseguida si no llega a ~55 fps; sube solo tras 4 s estables a 60 y sin reintentar un nivel que falló hace poco
+    const now = performance.now();
+    if (avg > 18.2 && Q.lv < Q.dprs.length - 1) { if (++Q.bad >= (avg > 24 ? 1 : 2)) { Q.bad = 0; Q.good = 0; Q.fail[Q.lv] = now; setQ(Math.min(Q.dprs.length - 1, Q.lv + (avg > 30 ? 2 : 1))); } }
+    else if (avg < 17.3 && Q.lv > 0) { Q.bad = 0; if (++Q.good >= 4 && !(now - (Q.fail[Q.lv - 1] || -1e9) < 30000)) { Q.good = 0; setQ(Q.lv - 1); } } else { Q.good = 0; Q.bad = 0; } } }
   requestAnimationFrame(frame);
 }
 
