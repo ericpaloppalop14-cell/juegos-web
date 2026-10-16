@@ -87,7 +87,7 @@ function podio(res) {
 function final() {
   show('sPodio'); const order = Object.entries(S.pts).sort((a, b) => b[1] - a[1]).map(([id, p]) => ({ id, p }));
   const meP = order.findIndex(o => o.id === 'me') + 1;
-  $('pTitle').textContent = meP === 1 ? '🏆 ¡Campeón de Mochi Rivals!' : `Torneo terminado · ${meP}º`;
+  $('pTitle').textContent = meP === 1 ? '🏆 ¡Campeón de Mochi Party!' : `Torneo terminado · ${meP}º`;
   drawPodio(order.slice(0, 3).map(o => o.id));
   const w = CH(order[0].id === 'me' ? S.rv[0] : order[0].id); $('pQuote').innerHTML = `<b>${w.name}:</b> «${meP === 1 ? 'Te has ganado el trofeo de gelatina. Por esta vez.' : pick(w.lines)}»`;
   $('pTable').innerHTML = '<tr><td></td><td>Mochi</td><td class="n">Puntos</td></tr>' + order.map((o, i) => `<tr class="${o.id === 'me' ? 'me' : ''}"><td>${i + 1}º</td><td><span class="dot" style="background:${chOf(o.id).color}"></span>${nm(o.id)}</td><td class="n">${o.p}</td></tr>`).join('');
@@ -98,13 +98,24 @@ $('bPodioMenu').onclick = () => menu();
 function drawPodio(ids) {
   const cv = $('podioCv'), x = cv.getContext('2d'); let fr = 0;
   const draw = () => { if (!$('sPodio').classList.contains('on') || fr++ > 900) return;
-    x.clearRect(0, 0, cv.width, cv.height);
-    const steps = [{ i: 1, x: 120, h: 120, c: '#c8d2e8' }, { i: 0, x: 340, h: 170, c: '#ffd23a' }, { i: 2, x: 560, h: 90, c: '#ffb38a' }];
-    for (const s of steps) { const id = ids[s.i]; if (!id) continue; x.fillStyle = s.c; x.beginPath(); x.roundRect(s.x - 95, 400 - s.h, 190, s.h, 16); x.fill(); x.fillStyle = '#fff'; x.font = '700 48px Fredoka'; x.textAlign = 'center'; x.fillText(s.i + 1, s.x, 400 - s.h + 60);
-      const jump = Math.abs(Math.sin(performance.now() / 300 + s.i)) * (s.i === 0 ? 18 : 6);
-      drawMochi(x, s.x, 400 - s.h - 62 - jump, 58, { ch: chOf(id), mood: s.i === 0 ? 'happy' : 'ok', seed: s.i });
-      x.font = '700 28px Fredoka'; x.fillStyle = '#6a3f9a'; x.fillText(nm(id), s.x, 400 - s.h - 140 - jump); }
-    for (let i = 0; i < 30; i++) { const t = performance.now() / 1000; x.fillStyle = ['#ff9cc8', '#7ee3c4', '#ffe27a', '#b9a2f7'][i % 4]; x.fillRect((i * 97 + t * 40) % 680, (i * 53 + t * 120) % 260, 8, 12); }
+    x.setTransform(2, 0, 0, 2, 0, 0); x.clearRect(0, 0, 680, 420); const t = performance.now() / 1000;
+    x.save(); x.translate(340, 170); x.rotate(t * .15); for (let i = 0; i < 12; i++) { x.rotate(Math.PI / 6); x.fillStyle = i % 2 ? 'rgba(255,230,140,.16)' : 'rgba(255,190,225,.12)'; x.beginPath(); x.moveTo(0, 0); x.lineTo(-40, -420); x.lineTo(40, -420); x.closePath(); x.fill(); } x.restore();
+    const steps = [{ i: 1, x: 120, h: 120, c: ['#eef2fb', '#c8d2e8', '#9fabc8'] }, { i: 0, x: 340, h: 170, c: ['#fff1a8', '#ffd23a', '#e6a810'] }, { i: 2, x: 560, h: 90, c: ['#ffe0cc', '#ffb38a', '#e08a5a'] }];
+    for (const s of steps) { const id = ids[s.i]; if (!id) continue; const top = 400 - s.h;
+      x.fillStyle = 'rgba(120,50,130,.18)'; x.beginPath(); x.ellipse(s.x, 404, 104, 12, 0, 0, 7); x.fill();
+      const g = x.createLinearGradient(0, top, 0, 400); g.addColorStop(0, s.c[0]); g.addColorStop(.25, s.c[1]); g.addColorStop(1, s.c[2]);
+      x.fillStyle = g; x.beginPath(); x.roundRect(s.x - 95, top, 190, s.h, [18, 18, 8, 8]); x.fill();
+      x.strokeStyle = 'rgba(255,255,255,.95)'; x.lineWidth = 4; x.beginPath(); x.roundRect(s.x - 93, top + 2, 186, s.h - 2, [16, 16, 7, 7]); x.stroke();
+      x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.roundRect(s.x - 82, top + 8, 164, 14, 7); x.fill();
+      x.font = '700 50px Fredoka'; x.textAlign = 'center'; x.lineWidth = 8; x.strokeStyle = s.c[2]; x.strokeText(s.i + 1, s.x, top + 66); x.fillStyle = '#fff'; x.fillText(s.i + 1, s.x, top + 66);
+      const jump = Math.abs(Math.sin(t / .3 + s.i)) * (s.i === 0 ? 18 : 6);
+      if (s.i === 0) { x.font = '44px serif'; x.fillText('👑', s.x, top - 132 - jump); }
+      x.fillStyle = 'rgba(80,30,100,.18)'; x.beginPath(); x.ellipse(s.x, top - 4, 48 - jump, 8, 0, 0, 7); x.fill();
+      drawMochi(x, s.x, top - 62 - jump, 58, { ch: chOf(id), mood: s.i === 0 ? 'happy' : 'ok', seed: s.i });
+      x.font = '700 26px Fredoka'; const nw = x.measureText(nm(id)).width + 28, ny = top - 152 - jump - (s.i === 0 ? 34 : 0);
+      x.fillStyle = 'rgba(255,255,255,.95)'; x.beginPath(); x.roundRect(s.x - nw / 2, ny - 22, nw, 34, 17); x.fill(); x.strokeStyle = chOf(id).color; x.lineWidth = 3; x.stroke();
+      x.fillStyle = '#6a3f9a'; x.fillText(nm(id), s.x, ny + 4); }
+    for (let i = 0; i < 36; i++) { x.save(); x.translate((i * 97 + t * 40) % 680, (i * 53 + t * 120) % 300); x.rotate(t * 3 + i); x.fillStyle = ['#ff9cc8', '#7ee3c4', '#ffe27a', '#b9a2f7', '#8fd0ff'][i % 5]; x.beginPath(); x.roundRect(-4, -6, 8, 12, 3); x.fill(); x.restore(); }
     requestAnimationFrame(draw); };
   draw();
 }

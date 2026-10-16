@@ -89,6 +89,32 @@ tr.me{background:#fff0f8;font-weight:700}
 #sMenu>*{flex-shrink:0}
 @media (max-height:700px){#sMenu{gap:8px}.mLogo{font-size:42px}.mLogo .l2{font-size:48px}#menuHero{width:150px;height:126px}.mSub{font-size:13px;margin-top:4px}}
 @media (prefers-reduced-motion:reduce){#sMenu *{animation:none!important}}
+
+/* ---------- pulido v3: elegir mochi, presentación y podio (la pantalla de inicio no se toca) ---------- */
+#sChars,#sIntro,#sPodio{isolation:isolate;background:radial-gradient(120% 70% at 50% 0%,#fff6fb 0%,#ffe3f1 45%,#f3dcff 100%)}
+#sChars::before,#sIntro::before,#sPodio::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 12% 18%,rgba(255,255,255,.8) 0 3px,transparent 4px),radial-gradient(circle at 86% 30%,rgba(255,255,255,.7) 0 2px,transparent 3px),radial-gradient(circle at 70% 82%,rgba(255,255,255,.7) 0 3px,transparent 4px),radial-gradient(circle at 22% 70%,rgba(255,182,220,.35) 0 60px,transparent 61px),radial-gradient(circle at 90% 90%,rgba(200,170,255,.3) 0 80px,transparent 81px)}
+#sChars h2,#sIntro h2,#sPodio h2{font-size:27px;line-height:1.1;color:#ff5fa4;text-shadow:0 3px 0 #fff,2px 0 0 #fff,-2px 0 0 #fff,0 -2px 0 #fff,0 6px 10px rgba(180,80,160,.25);padding:0 8px}
+#iIcon{width:96px;height:96px;display:grid;place-items:center;border-radius:30px;background:radial-gradient(circle at 32% 26%,#fff,#ffe6f3 60%,#f7cde8);border:3px solid #fff;box-shadow:0 8px 20px rgba(170,80,160,.25),inset 0 -4px 0 rgba(220,140,200,.3);font-size:56px!important;animation:iBob 2.4s ease-in-out infinite}
+@keyframes iBob{50%{transform:translateY(-5px) rotate(-3deg)}}
+#sIntro .sub{max-width:350px;background:rgba(255,255,255,.6);border:1.5px solid rgba(255,255,255,.95);border-radius:18px;padding:8px 14px;line-height:1.3;box-shadow:0 4px 12px rgba(150,80,170,.1)}
+.quote{border:2px solid #fff;border-radius:20px;background:linear-gradient(#fff,#fff5fb);box-shadow:0 6px 16px rgba(150,80,170,.18),inset 0 -3px 0 rgba(220,170,230,.3);padding:9px 16px;color:#6a3f9a}
+.quote b{color:#e0559a}
+#sIntro table,#sPodio table{border-collapse:separate;border-spacing:0;border:2px solid #fff;border-radius:20px;box-shadow:0 8px 22px rgba(140,70,160,.18);background:linear-gradient(#fff,#fdf6ff);overflow:hidden}
+#sIntro tr:first-child td,#sPodio tr:first-child td{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#b07ccc;background:#fbf0ff}
+#sIntro td,#sPodio td{padding:7px 10px;border-bottom:1px solid #f6e8f6}
+#sIntro tr:last-child td,#sPodio tr:last-child td{border-bottom:none}
+#sPodio tr.me td{background:linear-gradient(90deg,#ffe8f4,#fff3fa)}#sPodio tr.me td:first-child{box-shadow:inset 4px 0 0 #ff6fae}
+#sPodio tr:nth-child(2) td:first-child::before{content:'🥇';margin-right:2px}#sPodio tr:nth-child(3) td:first-child::before{content:'🥈';margin-right:2px}#sPodio tr:nth-child(4) td:first-child::before{content:'🥉';margin-right:2px}
+.dot{width:13px;height:13px;border:2px solid #fff;box-shadow:0 1px 3px rgba(80,30,100,.35)}
+#sChars .btn,#sIntro .btn,#sPodio .btn{position:relative;overflow:hidden;background:linear-gradient(#ffa4cf,#ff79b5 55%,#f562a6);box-shadow:0 6px 0 #d94c91,0 12px 18px rgba(230,80,150,.3);border-radius:22px;text-shadow:0 2px 0 rgba(0,0,0,.12)}
+#sChars .btn::before,#sIntro .btn::before,#sPodio .btn::before{content:'';position:absolute;left:8%;right:8%;top:4px;height:42%;border-radius:20px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none}
+#sChars .btn.s,#sIntro .btn.s,#sPodio .btn.s{background:linear-gradient(#fff,#fbf3ff);color:#9a6ac8;box-shadow:0 4px 0 rgba(160,110,200,.3),0 8px 14px rgba(150,80,170,.15);border:1.5px solid #fff;text-shadow:none}
+#sChars .btn:active,#sIntro .btn:active,#sPodio .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #d94c91}
+.chars{gap:10px}
+.chars button{border:2px solid #fff;border-radius:20px;background:radial-gradient(circle at 35% 25%,#fff,#fff0f8 65%,#f6dcf0);box-shadow:0 4px 0 rgba(170,110,200,.28),0 8px 14px rgba(150,80,170,.14);transition:transform .15s cubic-bezier(.3,1.6,.5,1)}
+.chars button.on{outline:none;border-color:#ff86bd;box-shadow:0 0 0 3px #ff86bd,0 4px 0 #e0559a,0 10px 18px rgba(230,80,150,.3);transform:translateY(-3px) scale(1.04)}
+#charWho{background:linear-gradient(#fff,#fff4fa);border:2px solid #fff;border-radius:18px;padding:8px 16px;box-shadow:0 6px 14px rgba(150,80,170,.16);max-width:340px}
+#podio{position:relative;padding:4px;border-radius:26px;background:linear-gradient(rgba(255,255,255,.7),rgba(255,255,255,.35));border:2px solid #fff;box-shadow:0 10px 26px rgba(140,70,160,.18)}
 </style>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>{if(r.scope.endsWith("/mochi-party/"))r.unregister()}));if(window.caches)caches.keys().then(k=>k.filter(n=>n.startsWith("mochi-v")).forEach(n=>caches.delete(n)))}</script></head>
 <body>
@@ -136,16 +162,16 @@ tr.me{background:#fff0f8;font-weight:700}
 
 <div class="scr" id="sPodio">
   <h2 id="pTitle"></h2>
-  <div id="podio"><canvas id="podioCv" width="680" height="420"></canvas></div>
+  <div id="podio"><canvas id="podioCv" width="1360" height="840"></canvas></div>
   <div class="quote" id="pQuote"></div>
   <table id="pTable"></table>
   <button class="btn" id="bNext">Siguiente</button>
   <button class="btn s" id="bPodioMenu">Menú</button>
 </div>
 
-<script src="js/rivals.js?v=m4"></script>
+<script src="js/rivals.js?v=m8"></script>
 <script src="js/pruebas.js?v=m4"></script>
-<script src="js/torneo.js?v=m5"></script>
+<script src="js/torneo.js?v=m8"></script>
 <script src="js/inicio.js?v=m7"></script>
 </body>
 </html>

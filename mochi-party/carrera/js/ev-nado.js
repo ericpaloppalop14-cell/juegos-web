@@ -1,14 +1,21 @@
 // 🫧 NADO EN GELATINA (3D): piscina translúcida de gelatina con medusas, montañas de flan y arcoíris
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js';
-const L = 160, LW = 2, VM = 8.6, V0 = 6.5, BSTEP = .3, BMAX = 1.8, ACT = .75;
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m8';
+const L = 160, LW = 2, VM = 8.6, V0 = 6.5, BSTEP = .3, BMAX = 1.8, ACT = .9, Z0 = 26;
+// posiciones FIJAS: medusa ARRIBA flota en el aire (bucea), medusa ABAJO está en el fondo (salta). Nunca a medias.
+const YUP = 1.25, YDN = -1.35, WARN = 2.2;
+function signTex(dive) { const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d'); const c = dive ? '#5b8cff' : '#ff5fa8';
+  x.fillStyle = 'rgba(0,0,0,.18)'; x.beginPath(); x.arc(128, 136, 108, 0, 7); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(128, 128, 110, 0, 7); x.fill(); x.fillStyle = c; x.beginPath(); x.arc(128, 128, 94, 0, 7); x.fill();
+  x.fillStyle = '#fff'; x.beginPath(); if (dive) { x.moveTo(128, 205); x.lineTo(62, 125); x.lineTo(102, 125); x.lineTo(102, 55); x.lineTo(154, 55); x.lineTo(154, 125); x.lineTo(194, 125); } else { x.moveTo(128, 51); x.lineTo(62, 131); x.lineTo(102, 131); x.lineTo(102, 201); x.lineTo(154, 201); x.lineTo(154, 131); x.lineTo(194, 131); } x.closePath(); x.fill();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
 const laneX = l => (l - 2.5) * LW;
 function checker() { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d'); for (let i = 0; i < 16; i++) for (let j = 0; j < 4; j++) { x.fillStyle = (i + j) % 2 ? '#fff' : '#5a3a6e'; x.fillRect(i * 16, j * 16, 16, 16); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
 function tiles() { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'); x.fillStyle = '#ffe6f2'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#ffb3d6'; x.lineWidth = 4; for (let i = 0; i <= 128; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 128); x.moveTo(0, i); x.lineTo(128, i); x.stroke(); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(7, 90); t.colorSpace = THREE.SRGBColorSpace; return t; }
 export default {
   id: 'nado', name: 'Nado en Gelatina', icon: '🫧', maxT: 70, music: { bpm: 124, root: 65, scale: 'pentatonic' }, netKeys: ['z', 'v', 'act', 'ak', 'stun', 'lane', 'perf', 'streak', 'bonus'], seed: 47, tagY: 1.7, tagS: .55, buttons: true,
-  how: 'Nadas solo. Medusa ARRIBA: 🫧 bucea (desliza abajo). Medusa ABAJO: ⬆ salta (toca o desliza arriba). ¡Justo a tiempo = Perfecto y turbo!',
+  how: 'Medusa ROSA en el aire 🔽 = 🫧 BUCEA. Medusa AZUL en el fondo 🔼 = ⬆ SALTA. Si pulsas antes, tu mochi lo hace solo en el momento justo. ¡Pulsar justo a tiempo = Perfecto y turbo!',
   dispose() { const d = document.getElementById('perf'); if (d) d.remove(); const L0 = document.getElementById('bL'), R0 = document.getElementById('bR'), M0 = document.getElementById('bM'); L0.innerHTML = '⬅'; R0.innerHTML = '➡'; M0.style.display = ''; L0.style.cssText = R0.style.cssText = ''; },
   init(E) {
+    E.REACT = new URLSearchParams(location.search).has('react');
     const sc = E.scene; sc.fog = new THREE.Fog('#ffe0f0', 50, 190); this.sky = skyDome(sc, '#8fd0ff', '#ffd6ec', '#fff2dc'); this.sky.renderOrder = -1; lights(sc, '#ffffff', '#ffc6e2', 1.0, 2.0);
     // fondo de azulejos y paredes
     const W = LW * 6 + 1;
@@ -34,12 +41,20 @@ export default {
     ['#ff7f9f', '#ffb36b', '#ffe27a', '#7ee3c4', '#8fd0ff', '#c9b2ff'].forEach((c, i) => { const m = toon(c, { emissive: c, ei: .35, rim: 0 }); m.fog = false; mesh(new THREE.TorusGeometry(60 - i * 2.4, 1.2, 8, 60, Math.PI), m, rb); });
     for (let i = 0; i < 10; i++) { const c = new THREE.Group(); c.position.set(rnd(-90, 90), rnd(25, 45), -rnd(20, L + 80)); for (let k = 0; k < 5; k++) mesh(new THREE.SphereGeometry(rnd(3, 5), 12, 9), toon('#ffffff', { rim: .7 }), c, [k * 3.2 - 6, rnd(-1, 1.5), rnd(-1, 1)]); sc.add(c); }
     // medusas
-    this.J = []; const dm = new THREE.MeshPhongMaterial({ color: '#c9b2ff', transparent: true, opacity: .75, emissive: '#8f6bff', emissiveIntensity: .35, shininess: 90 }), tm = new THREE.MeshToonMaterial({ color: '#e8d8ff', transparent: true, opacity: .8 });
-    for (let z = 14; z < L - 6; z += rnd(10, 15)) for (let l = 0; l < 6; l++) { if (Math.random() < .25) continue; const g = new THREE.Group(); sc.add(g);
-      const d = mesh(new THREE.SphereGeometry(.55, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), dm, g); outline(d, '#7a4ad0', 1.06);
-      for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(.07, 8, 6), toon('#2a1838'), g, [s * .18, .25, .45]);
-      const tn = []; for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283, t = mesh(new THREE.CylinderGeometry(.04, .02, .9, 5), tm, g, [Math.cos(a) * .32, -.45, Math.sin(a) * .32]); tn.push(t); }
-      g.add(glowSprite('#d8b8ff', 2.2, .35)); this.J.push({ z, lane: l, ph: rnd(0, 6), g, tn, up: Math.random() < .5 }); }
+    // medusas: color + posición + cartel dicen lo mismo. ARRIBA (rosa, en el aire) = 🫧 bucea · ABAJO (azul, en el fondo) = ⬆ salta
+    this.J = []; const mk = up => ({ dm: new THREE.MeshPhongMaterial({ color: up ? '#ff9cd0' : '#5fd0ff', transparent: true, opacity: .92, emissive: up ? '#ff4fa0' : '#1fa0ff', emissiveIntensity: up ? .4 : .85, shininess: 110 }), tm: new THREE.MeshToonMaterial({ color: up ? '#ffd6ec' : '#d4ecff', transparent: true, opacity: .85 }), ol: up ? '#c0306f' : '#2f5fc0', sign: new THREE.SpriteMaterial({ map: signTex(up), depthTest: false, transparent: true, fog: false }), mark: new THREE.MeshBasicMaterial({ color: up ? '#ff5fa8' : '#5b8cff', transparent: true, opacity: .5, depthWrite: false }) });
+    const MAT = { true: mk(true), false: mk(false) }; const domeG = new THREE.SphereGeometry(.55, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), tenG = new THREE.CylinderGeometry(.045, .02, .9, 6), eyeG = new THREE.SphereGeometry(.075, 10, 8), hiG = new THREE.SphereGeometry(.028, 6, 4), markG = new THREE.RingGeometry(.55, .82, 28);
+    // curva de dificultad: filas separadas y con huecos al principio, más juntas y llenas al final (siempre > 1 s de reacción)
+    for (let z = Z0; z < L - 8;) { const d = clamp((z - Z0) / (L - Z0 - 8), 0, 1), empty = lerp(.5, .15, d);
+      for (let l = 0; l < 6; l++) { if (Math.random() < empty) continue; const up = Math.random() < .5, M = MAT[up], g = new THREE.Group(); sc.add(g); g.position.set(laneX(l), up ? YUP : YDN, -z);
+        const body = new THREE.Group(); g.add(body); const dd = mesh(domeG, M.dm, body); outline(dd, M.ol, 1.06);
+        for (const s2 of [-1, 1]) { const e = mesh(eyeG, toon('#2a1838', { rim: 0 }), body, [s2 * .19, .24, .46]); mesh(hiG, toon('#ffffff', { rim: 0 }), e, [.025, .03, .06]); mesh(new THREE.CircleGeometry(.07, 10), toon('#ff8fb8', { rim: 0 }), body, [s2 * .3, .13, .5]); }
+        const tn = []; for (let k = 0; k < 7; k++) { const a = k / 7 * 6.283, t2 = mesh(tenG, M.tm, body, [Math.cos(a) * .32, -.45, Math.sin(a) * .32]); tn.push(t2); }
+        body.add(glowSprite(up ? '#ffb8e0' : '#b8dcff', 2.2, .4));
+        const sg2 = new THREE.Sprite(M.sign); sg2.scale.setScalar(.95); sg2.position.y = up ? 1.05 : 2.75; sg2.renderOrder = 8; g.add(sg2);
+        const mkr = mesh(markG, M.mark, sc, [laneX(l), .09, -z], [-Math.PI / 2, 0, 0]); mkr.renderOrder = 3;
+        this.J.push({ z, lane: l, ph: rnd(0, 6), g, body, tn, up, sign: sg2, mkr }); }
+      z += lerp(16, 10, d) + rnd(-.8, .8); }
     // nadadores
     E.racers.forEach((r, k) => { r.lane = E.online ? [2, 3, 1, 4, 0, 5][k] : r.me ? 2 : [0, 1, 3, 4, 5][k - 1]; r.obj = makeRunner(r.ch, k, .6); r.obj.userData.shadow.visible = false; r.obj.rotation.y = Math.PI; sc.add(r.obj); r.z = 0; r.v = 0; r.act = null; r.ak = 0; r.actT = 9; r.stun = 0; r.boost = 0; r.roll = 0; r.perf = 0; r.streak = 0; r.bonus = 0; });
     { const L0 = document.getElementById('bL'), R0 = document.getElementById('bR'); document.getElementById('bM').style.display = 'none'; const st = 'width:120px;height:120px;font-size:20px;line-height:1.1;background:rgba(155,130,240,.6)'; L0.innerHTML = '🫧<br><small style="font-size:15px">Bucear</small>'; R0.innerHTML = '⬆<br><small style="font-size:15px">Saltar</small>'; L0.style.cssText = st; R0.style.cssText = st.replace('155,130,240', '255,134,189'); }
@@ -49,8 +64,11 @@ export default {
   jUp(j) { return j.up; },
   // reglas iguales para todos: nadas solo hacia delante a la misma velocidad base.
   // Ante cada medusa: si está ARRIBA, bucea; si está ABAJO, sáltala. Acción a tiempo = ¡Perfecto! (turbo + velocidad acumulada)
-  act(E, r, type, j) { if (r.act || r.stun > 0) return; r.act = type; r.ak = 0; r.actT = j ? (j.z - r.z) / Math.max(1, r.v) : 9; if (r.me) Audio.sfxPlay(type === 'd' ? 'pop' : 'jump'); E.burst(new THREE.Vector3(laneX(r.lane), .2, -r.z), '#ffffff', type === 'd' ? 10 : 6, 3, .5, .35, -3); },
+  act(E, r, type, j, q) { if ((r.act && r.ak < ACT * .55) || r.stun > 0) return;
+    if (j && !q && (j.z - r.z) / Math.max(1, r.v) > .62) { r.queued = { type, j }; if (r.me) { Audio.sfxPlay('beep'); E.ui.toast(type === 'd' ? '🫧 ¡Listo para bucear!' : '⬆ ¡Listo para saltar!', '#ffffff'); } return; }
+    r.queued = null; r.act = type; r.ak = 0; r.actT = j ? (j.z - r.z) / Math.max(1, r.v) : 9; if (r.me) Audio.sfxPlay(type === 'd' ? 'pop' : 'jump'); E.burst(new THREE.Vector3(laneX(r.lane), .2, -r.z), '#ffffff', type === 'd' ? 10 : 6, 3, .5, .35, -3); },
   update(E, dt) {
+    window.__nado = { hits: E.me.hits || 0, perf: E.me.perf, jellies: this.J.length, t: E.t };
     for (const r of E.racers) {
       if (r.remote) continue;
       if (r.fin) { r.v *= Math.pow(.3, dt); r.z = Math.min(L - .8, r.z + r.v * dt); continue; }
@@ -60,18 +78,20 @@ export default {
       const vmax = V0 + r.bonus + (r.boost > 0 ? 1.2 : 0);
       if (r.stun <= 0) r.v = r.v < vmax ? Math.min(vmax, r.v + 5 * dt) : Math.max(vmax, r.v - 3 * dt);
       const next = this.J.find(j => j.lane === r.lane && j.z > r.z), tt = next ? (next.z - r.z) / Math.max(1, r.v) : 9;
+      if (r.queued && (r.queued.j !== next)) r.queued = null;
+      if (r.queued && tt <= .42) this.act(E, r, r.queued.type, next, true);
       if (r.me && !E.AUTO) {
         if (E.swipe || E.side.includes('L')) this.act(E, r, 'd', next);
         else if (E.swipeUp || E.side.includes('R') || E.ups.length) this.act(E, r, 'j', next);
       } else if (next && r.stun <= 0) {
         if (!r.plan || r.plan.j !== next) { const u = Math.random(), pP = r.me ? 1 : .2 + .6 * r.skill, pF = r.me ? 0 : .03 + .15 * (1 - r.skill), good = next.up ? 'd' : 'j';
-          r.plan = u < pP ? { j: next, f: r.me ? .22 : rnd(.15, .3), a: good } : u < pP + pF ? { j: next, f: .22, a: good === 'd' ? 'j' : 'd' } : { j: next, f: rnd(.4, .6), a: good }; }
+          r.plan = u < pP ? { j: next, f: r.me ? (E.REACT ? WARN - rnd(.3, 1.9) : .22) : rnd(.15, .3), a: good } : u < pP + pF ? { j: next, f: .22, a: good === 'd' ? 'j' : 'd' } : { j: next, f: rnd(.4, .6), a: good }; }
         if (tt < r.plan.f && !r.plan.done) { r.plan.done = true; this.act(E, r, r.plan.a, next); }
       }
       const oz = r.z; r.z += r.v * dt;
       for (const j of this.J) if (j.lane === r.lane && oz < j.z && r.z >= j.z) {
         const ok = r.act === (j.up ? 'd' : 'j');
-        if (!ok) { r.v *= .3; r.stun = .5; r.expr = 'squash'; r.bonus *= .5; r.streak = 0; r.act = null; E.burst(new THREE.Vector3(laneX(r.lane), .6, -j.z), '#c9b2ff', 14, 4, .6, .5); if (r.me) { Audio.sfxPlay('hit'); E.shake = .3; E.ui.toast(j.up ? '¡Bzzz! ¡Tenías que bucear! 🫧' : '¡Bzzz! ¡Tenías que saltar! ⬆', '#c9b2ff'); } else E.say(r, pick(['¡Me ha picado!', '¡Cosquillas eléctricas!', ...OUCH])); }
+        if (!ok) { r.hits = (r.hits || 0) + 1; r.v *= .3; r.stun = .5; r.expr = 'squash'; r.bonus *= .5; r.streak = 0; r.act = null; E.burst(new THREE.Vector3(laneX(r.lane), .6, -j.z), '#c9b2ff', 14, 4, .6, .5); if (r.me) { Audio.sfxPlay('hit'); E.shake = .3; E.ui.toast(j.up ? '¡Bzzz! ¡Tenías que bucear! 🫧' : '¡Bzzz! ¡Tenías que saltar! ⬆', '#c9b2ff'); } else E.say(r, pick(['¡Me ha picado!', '¡Cosquillas eléctricas!', ...OUCH])); }
         else if (r.actT > .12 && r.actT < .34) { r.perf++; r.streak++; r.boost = .8; r.bonus = Math.min(BMAX, r.bonus + BSTEP); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('trick'); E.ui.toast(r.streak > 1 ? `¡Perfecto! ⚡ x${r.streak}` : '¡Perfecto! ⚡', '#ffe27a'); } }
         else r.streak = 0;
         r.actT = 9;
@@ -85,7 +105,9 @@ export default {
     const p = this.sg.attributes.position.array, b = this.base, cz = -me.z + L / 2;
     for (let i = 0; i < p.length; i += 3) { const x = b[i], z = b[i + 2]; let y = Math.sin(x * 1.3 + t * 2.2) * .06 + Math.sin(z * .8 - t * 2.8) * .07; for (const r of E.racers) { const dx = x - laneX(r.lane), dz = z - (-r.z + L / 2); const d2 = dx * dx + dz * dz; if (d2 < 9) y += Math.sin(Math.sqrt(d2) * 4 - t * 12) * .08 * (1 - d2 / 9) * (r.v / VM); } p[i + 1] = y; }
     this.sg.attributes.position.needsUpdate = true; this.sg.computeVertexNormals();
-    for (const j of this.J) { j.g.visible = j.z > me.z - 8 && j.z < me.z + 60; if (!j.g.visible) continue; const up = j.up, ty = up ? .35 : -.8; j.g.position.set(laneX(j.lane), lerp(j.g.position.y || ty, ty, Math.min(1, dt * 6)) + Math.sin(t * 3 + j.ph) * .05, -j.z); j.g.scale.set(1 + Math.sin(t * 5 + j.ph) * .08, 1 - Math.sin(t * 5 + j.ph) * .08, 1); j.tn.forEach((tt, k) => { tt.rotation.x = Math.sin(t * 6 + k + j.ph) * .4; tt.rotation.z = Math.cos(t * 5 + k) * .3; }); }
+    for (const j of this.J) { const dz = j.z - me.z, vis = dz > -8 && dz < 70; j.g.visible = j.mkr.visible = vis; if (!vis) continue; const tt = dz / Math.max(2, me.v || V0), warn = tt < WARN && dz > 0;
+      j.body.position.y = Math.sin(t * 2.4 + j.ph) * .07; j.body.scale.set(1 + Math.sin(t * 5 + j.ph) * .07, 1 - Math.sin(t * 5 + j.ph) * .07, 1); j.tn.forEach((q, k) => { q.rotation.x = Math.sin(t * 6 + k + j.ph) * .35; q.rotation.z = Math.cos(t * 5 + k) * .25; });
+      const ps = warn ? 1.45 + Math.sin(t * 12) * .15 : 1.1; j.sign.scale.setScalar(ps * (j.lane === me.lane ? 1.15 : .9)); j.mkr.scale.setScalar(warn && j.lane === me.lane ? 1.15 + Math.sin(t * 12) * .1 : 1); }
     for (const r of E.racers) { const o = r.obj; r.roll = lerp(r.roll, 0, Math.min(1, dt * 5)); const k = r.act ? clamp(r.ak / ACT, 0, 1) : 0, y = r.act === 'd' ? -.28 - Math.sin(k * Math.PI) * 1.1 : r.act === 'j' ? -.28 + Math.sin(k * Math.PI) * 1.6 : -.28 + Math.sin(t * 6 + r.k) * .05; r.roll = Math.sin(t * 7 + r.k) * .3;
       o.position.set(laneX(r.lane), lerp(o.position.y, y, Math.min(1, dt * 14)), -r.z); o.userData.pivot.rotation.set(r.act === 'j' ? -.55 - k * 6.283 : -.55, 0, r.roll * .35 + (r.stun > 0 ? Math.sin(t * 30) * .3 : 0));
       if (r.act === 'd' && Math.random() < .5) E.burst(new THREE.Vector3(laneX(r.lane) + rnd(-.3, .3), .1, -r.z), '#ffffff', 1, 1.5, .35, .25, -3); }

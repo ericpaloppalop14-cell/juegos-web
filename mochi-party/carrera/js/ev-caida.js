@@ -2,7 +2,7 @@
 //  1 Corteza: raíces, topos, tuberías y tesoros · 2 Fósiles: dinos que se mueven, conchas y ámbar
 //  3 Cristales: geodas, murciélagos y setas luminosas · 4 Magma: ríos de lava, salamandras y rocas flotantes
 //  5 Núcleo: esfera dorada y meta épica. Reglas justas: misma velocidad base; turbo por habilidad.
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m8';
 const D = 460, R = 7.5, XM = 5.4, H = D / 5, V0 = 16, BSTEP = 1.1, BMAX = 6.6;
 // medidas ÚNICAS para dibujar y para chocar: lo que ves es lo que choca
 const RR = .45, ZS = 2.6; // radio del mochi (para chocar solo cuenta el 40%: hitbox generosa)
@@ -43,19 +43,37 @@ function geode(g) { const ge = new THREE.Group(); g.add(ge); const shellM = toon
 function sala(g) { const s = new THREE.Group(); g.add(s); const parts = []; for (let i = 0; i < 7; i++) { const p = mesh(new THREE.SphereGeometry(.26 - i * .025, 10, 8), toon(i % 2 ? '#ff7a2a' : '#ffb030', { emissive: '#ff5a1a', ei: .35 }), s, [-i * .36, 0, 0]); parts.push(p); }
   outline(parts[0], '#7a1a0a', 1.08); eyes(s, .12, .2, 1.1, .12); blush(s, -.02, .22, .8, .2); const fl = glowSprite('#ff9a3a', 1.6, .8); fl.position.set(.1, .3, 0); s.add(fl); for (const k of [-1, 1]) for (const x of [-.3, -1.3]) mesh(new THREE.SphereGeometry(.09, 6, 4), toon('#ffb030'), s, [x, -.2, k * .22]); s.userData.parts = parts; return s; }
 function lavaTex() { const cv = document.createElement('canvas'); cv.width = 32; cv.height = 128; const x = cv.getContext('2d'); const gr = x.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#ff3a10'); gr.addColorStop(.3, '#ffd040'); gr.addColorStop(.6, '#ff6a10'); gr.addColorStop(1, '#ff3a10'); x.fillStyle = gr; x.fillRect(0, 0, 32, 128); for (let i = 0; i < 20; i++) { x.fillStyle = 'rgba(255,255,200,.6)'; x.beginPath(); x.arc(rnd(0, 32), rnd(0, 128), rnd(1, 3), 0, 7); x.fill(); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; }
+// estratos geológicos pintados (bandas, piedrecitas, vetas) para cada capa
+const STR = [['#b98256', '#8f5e3a', '#c99a6a', '#6f4a2c', '#a8744c'], ['#efd8aa', '#d6b886', '#f6e6c4', '#c49e6c', '#e6cc9c'], ['#4a3a90', '#2e2462', '#6a52c0', '#3d2f78', '#8a72e0'], ['#5a1e26', '#3a1218', '#7a2a2a', '#ff5a1a', '#4a1a26'], ['#ffd76a', '#ffe9a0', '#ffc040', '#fff3c8', '#ffcf5a']];
+function strataTex(i) { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 1024; const x = cv.getContext('2d'); const P = STR[i]; let y = 0;
+  while (y < 1024) { const h = rnd(18, 70); x.fillStyle = pick(P); x.beginPath(); x.moveTo(0, y); for (let k = 0; k <= 256; k += 16) x.lineTo(k, y + Math.sin(k * .05 + y) * 6); x.lineTo(256, y + h + 8); x.lineTo(0, y + h + 8); x.fill(); y += h; }
+  for (let k = 0; k < 420; k++) { x.fillStyle = `rgba(${i === 3 ? '255,180,80' : i === 2 ? '200,220,255' : '255,255,255'},${rnd(.05, i >= 2 ? .45 : .2)})`; x.beginPath(); x.ellipse(rnd(0, 256), rnd(0, 1024), rnd(1, 5), rnd(1, 3), 0, 0, 7); x.fill(); }
+  for (let k = 0; k < 140; k++) { x.fillStyle = `rgba(0,0,0,${rnd(.05, .18)})`; x.beginPath(); x.ellipse(rnd(0, 256), rnd(0, 1024), rnd(3, 10), rnd(2, 6), rnd(0, 3), 0, 7); x.fill(); }
+  if (i === 3) { x.strokeStyle = 'rgba(255,170,40,.75)'; x.lineWidth = 3; for (let k = 0; k < 14; k++) { x.beginPath(); let px = rnd(0, 256), py = rnd(0, 1024); x.moveTo(px, py); for (let j = 0; j < 8; j++) { px += rnd(-14, 14); py += rnd(8, 24); x.lineTo(px, py); } x.stroke(); } }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 2); t.anisotropy = 8; t.colorSpace = THREE.SRGBColorSpace; return t; }
+// obstáculo kawaii que flota en el pozo (lo que ves es lo que choca: radio rr)
+function rock(g, li, rr) { const o = new THREE.Group(); g.add(o); const col = ['#8a5a3a', '#f2e2c0', '#8a72e0', '#3a2028', '#ffb030'][li];
+  const b = mesh(new THREE.DodecahedronGeometry(rr, 1), toon(col, { rim: .5, emissive: li === 3 ? '#ff4010' : li === 2 ? '#5a3ab0' : '#000', ei: li >= 2 ? .35 : 0 }), o); outline(b, li === 4 ? '#b06a10' : '#2a1020', 1.06);
+  if (li === 2) for (let k = 0; k < 5; k++) { const c = pick(['#b9a2ff', '#7ee3ff', '#ff9cf0']); const cr = mesh(new THREE.OctahedronGeometry(rr * .38, 0), toon(c, { emissive: c, ei: .9 }), o, [Math.cos(k * 1.26) * rr * .8, rr * .55, Math.sin(k * 1.26) * rr * .8], null, [1, 1.8, 1]); cr.lookAt(0, -rr * 2, 0); }
+  else if (li === 3) { o.add(glowSprite('#ff7a2a', rr * 3.4, .55)); }
+  else if (li === 1) { const bn = mesh(new THREE.CapsuleGeometry(rr * .16, rr * 1.4, 4, 8), toon('#fffaf0'), o, [0, rr * .9, 0], [0, 0, Math.PI / 2]); for (const k of [-1, 1]) mesh(new THREE.SphereGeometry(rr * .24, 10, 8), toon('#fffaf0'), bn, [0, k * rr * .8, 0]); }
+  else if (li === 0) { for (let k = 0; k < 3; k++) mesh(new THREE.CylinderGeometry(.05, .14, rr * 1.4, 6), toon('#6a4a2a'), o, [rnd(-.3, .3) * rr, rr * .7, rnd(-.3, .3) * rr], [rnd(-.6, .6), 0, rnd(-.6, .6)]); }
+  const face = new THREE.Group(); face.position.y = rr * .93; face.rotation.x = -Math.PI / 2; o.add(face); eyes(face, .05 * rr, .02, rr * 1.4, .2); blush(face, -.12 * rr, .03, rr * 1.1, .34);
+  const warn = mesh(new THREE.RingGeometry(rr + .1, rr + .28, 28), new THREE.MeshBasicMaterial({ color: '#ff4f6a', transparent: true, opacity: .8, depthWrite: false, fog: false }), o, [0, rr * .2, 0], [-Math.PI / 2, 0, 0]);
+  o.userData.warn = warn; return o; }
 // pared del túnel con forma propia de cada capa (bultos, estratos, facetas, grumos)
 function wall(ly, i) { const geo = new THREE.CylinderGeometry(R + .4, R + .4, H + .6, ly.seg, 24, true); const p = geo.attributes.position; const v = new THREE.Vector3();
   for (let k = 0; k < p.count; k++) { v.fromBufferAttribute(p, k); const a = Math.atan2(v.z, v.x), y = v.y; let d = 0;
     if (i === 0) d = Math.sin(a * 5 + y * .4) * .35 + Math.sin(a * 11 - y * .9) * .2; else if (i === 1) d = Math.round(Math.sin(y * .7) * 2) * .18 + Math.sin(a * 3) * .1; else if (i === 2) d = (Math.sin(a * 9) > 0 ? .4 : -.2) * Math.sin(y * .5); else if (i === 3) d = Math.sin(a * 4 + y * .3) * .45 + Math.sin(y * 1.3) * .2; else d = Math.sin(y * 1.6) * .15;
     const yy = (y + H / 2) / H; const edge = Math.min(yy, 1 - yy) < .06 ? 0 : 1; const s = (R + .4 + d * ly.bump * edge) / (R + .4); p.setXYZ(k, v.x * s, y, v.z * s); }
-  geo.computeVertexNormals(); const m = toon(ly.w, { rim: .3, emissive: i === 2 ? '#3a2a80' : i === 3 ? '#5a1a10' : i === 4 ? '#ffb030' : '#000', ei: i >= 2 ? .25 : 0 }); m.side = THREE.BackSide; if (i === 2) m.flatShading = true; return new THREE.Mesh(geo, m); }
+  geo.computeVertexNormals(); const m = toon('#ffffff', { nocache: true, rim: .3, emissive: i === 2 ? '#3a2a80' : i === 3 ? '#5a1a10' : i === 4 ? '#ffb030' : '#000', ei: i >= 2 ? .25 : 0 }); m.side = THREE.BackSide; m.map = strataTex(i); if (i === 2) m.flatShading = true; return new THREE.Mesh(geo, m); }
 const onWall = (g, a, y, inset = .5) => { const o = new THREE.Group(); o.position.set(Math.cos(a) * (R - inset), y, Math.sin(a) * (R - inset)); o.lookAt(0, y, 0); o.scale.setScalar(1.7); g.add(o); return o; };
 export default {
   id: 'caida', name: 'Caída al Centro de la Tierra', icon: '🌋', maxT: 70, music: { bpm: 128, root: 57, scale: 'minor' }, netKeys: ['x', 'y', 'z', 'tx', 'tz', 'v', 'stun', 'boost', 'perf', 'streak', 'bonus'], seed: 31, tagY: 2.0, tagS: .7,
-  how: 'Arrastra el dedo en cualquier dirección para guiar a tu mochi y cuélate por los AGUJEROS redondos de cada plataforma. El punto verde marca dónde caerás: si está dentro del círculo, pasas. ¡Por el centro = Perfecto! Las gotas 💧 dan turbo.',
-  dispose() { const d = document.getElementById('perf'); if (d) d.remove(); },
+  how: 'Miras hacia abajo por el pozo. Arrastra el dedo para mover a tu mochi, esquiva las ROCAS con aro rojo y cuélate por los AGUJEROS. Punto verde = pasas. ¡Por el centro = Perfecto! Las gotas 💧 dan turbo.',
+  dispose() { const d = document.getElementById('perf'); if (d) d.remove(); camera.up.set(0, 1, 0); },
   init(E) {
-    const sc = E.scene; sc.background = new THREE.Color(LAY[0].fog); sc.fog = new THREE.Fog(LAY[0].fog, 16, 75); this.L = lights(sc, LAY[0].sky, LAY[0].gr, 1.1, 1.6); this.L.d.position.set(10, 60, 20);
+    const sc = E.scene; sc.background = new THREE.Color(LAY[0].fog); sc.fog = new THREE.Fog(LAY[0].fog, 22, 95); this.L = lights(sc, LAY[0].sky, LAY[0].gr, 1.1, 1.6); this.L.d.position.set(10, 60, 20);
     this.pl = new THREE.PointLight('#ffffff', 0, 30, 1.5); sc.add(this.pl); this.anim = []; this.LG = []; const A = this.anim;
     // superficie: césped con flores y un cartel
     const top = new THREE.Group(); sc.add(top); mesh(new THREE.RingGeometry(R, 50, 48), toon('#8fdcae', { rim: 0 }), top, [0, 0, 0], [-Math.PI / 2, 0, 0]);
@@ -139,6 +157,14 @@ export default {
       if (n > 0 && Math.random() < .5) this.O.push({ y: y + gap * .5, boost: true, x: (hx + px) / 2, z: (hz + pz) / 2, g: null, spin: 0 });
       px = hx; pz = hz; n++; y -= gap; }
     this.O.sort((a, b) => b.y - a.y);
+    // obstáculos flotantes entre plataformas, siempre fuera de la ruta directa entre un agujero y el siguiente
+    { const rings = this.O.filter(o => o.ring), add = [];
+      for (let i = 1; i < rings.length - 1; i++) { const a = rings[i], b = rings[i + 1], li = a.li, n2 = li === 0 ? 1 : li >= 3 ? 3 : 2;
+        for (let k = 0; k < n2; k++) { const rr = rnd(.8, 1.25); let x, z, ok = false; for (let tr = 0; tr < 30 && !ok; tr++) { const an = rnd(0, 6.283), d = rnd(0, XM - .3); x = Math.cos(an) * d; z = Math.sin(an) * d;
+            const vx = b.hx - a.hx, vz = b.hz - a.hz, l2 = vx * vx + vz * vz || 1, tt = clamp(((x - a.hx) * vx + (z - a.hz) * vz) / l2, 0, 1), dd = Math.hypot(x - a.hx - vx * tt, z - a.hz - vz * tt); ok = dd > rr + 1.9 && add.every(o => Math.abs(o.y - (a.y + b.y) / 2) > 2 || Math.hypot(o.x - x, o.z - z) > o.rr + rr + .6); }
+          if (!ok) continue; const y = lerp(a.y, b.y, rnd(.4, .6)), g = new THREE.Group(); g.position.set(x, y, z); sc.add(g); const ro = rock(g, li, rr); const ph = rnd(0, 6); this.anim.push(t => { ro.rotation.y = t * .6 + ph; ro.position.y = Math.sin(t * 2 + ph) * .12; ro.userData.warn.material.opacity = .45 + Math.sin(t * 8 + ph) * .3; });
+          add.push({ y, x, z, rr, rock: true, g, spin: 0 }); } }
+      this.O.push(...add); this.O.sort((a, b) => b.y - a.y); }
     for (const o of this.O) if (o.boost) { const g = new THREE.Group(); g.position.set(o.x, o.y, o.z); const d = mesh(new THREE.SphereGeometry(.45, 14, 10), toon('#7ee3ff', { emissive: '#3fc6ff', ei: .8 }), g, [0, 0, 0], null, [1, 1.3, 1]); eyes(d, .05, .4, .9, .15); g.add(glowSprite('#9ff0ff', 2.6, .8)); sc.add(g); o.g = g; }
     // marcador de aterrizaje: dónde caerás en la próxima plataforma (verde = pasas, rojo = chocas)
     this.mk = new THREE.Group(); sc.add(this.mk); this.mkM = new THREE.MeshBasicMaterial({ color: '#5dff9a', transparent: true, opacity: .9, depthTest: false, fog: false });
@@ -155,7 +181,7 @@ export default {
   hole(o) { if (!o.spin) return [o.hx, o.hz]; const a = this.T * o.spin, c = Math.cos(a), s = Math.sin(a); return [o.hx * c + o.hz * s, -o.hx * s + o.hz * c]; },
   idle(E, dt) { this.render(E, dt); },
   update(E, dt) {
-    const me = E.me; this.T += dt;
+    const me = E.me; this.T += dt; window.__caida = { hits: me.hits || 0, perf: me.perf, rocks: this.O.filter(o => o.rock).length, t: E.t };
     for (const o of this.O) if (o.spin) o.g.rotation.y = this.T * o.spin;
     for (const r of E.racers) {
       if (r.remote || r.fin) continue;
@@ -168,16 +194,18 @@ export default {
       else if (next) {
         if (!r.plan || r.plan.o !== next) { const u = Math.random(), good = r.me ? 1 : .55 + .4 * r.skill, a = rnd(0, 6.283);
           const off = u < good ? rnd(0, next.hr * .45) : rnd(next.hr * .7, next.hr + 1.2); r.plan = { o: next, ox: Math.cos(a) * off, oz: Math.sin(a) * off }; }
-        const [hx, hz] = this.hole(next); if (r.y - next.y < 16) { r.tx = hx + r.plan.ox; r.tz = hz + r.plan.oz; } }
+        const [hx, hz] = this.hole(next); if (r.y - next.y < 16) { r.tx = hx + r.plan.ox; r.tz = hz + r.plan.oz; }
+        for (const o of this.O) if (o.rock && o.y < r.y && o.y > r.y - 7) { const dx = r.tx - o.x, dz = r.tz - o.z, l = Math.hypot(dx, dz) || .01, need = o.rr + 1.1; if (l < need && (r.me || Math.random() < .5 + .5 * r.skill)) { r.tx = o.x + dx / l * need; r.tz = o.z + dz / l * need; } } }
       { const l = Math.hypot(r.tx, r.tz); if (l > XM) { r.tx *= XM / l; r.tz *= XM / l; } }
       r.vx += ((r.tx - r.x) * 60 - r.vx * 13) * dt; r.vz += ((r.tz - r.z) * 60 - r.vz * 13) * dt; r.x += r.vx * dt; r.z += r.vz * dt;
       { const l = Math.hypot(r.x, r.z); if (l > XM + .3) { r.x *= (XM + .3) / l; r.z *= (XM + .3) / l; } }
       const oy = r.y; r.y -= r.v * dt;
       for (const o of this.O) if (oy > o.y && r.y <= o.y) {
+        if (o.rock) { if (r.inv <= 0 && Math.hypot(r.x - o.x, r.z - o.z) < o.rr + RR * .55) { r.v = 9; r.stun = .3; r.inv = .7; const dx = r.x - o.x, dz = r.z - o.z, l = Math.hypot(dx, dz) || 1; r.vx = dx / l * 9; r.vz = dz / l * 9; r.expr = 'squash'; r.boost = 0; r.bonus *= .7; r.streak = 0; r.hits = (r.hits || 0) + 1; E.burst(new THREE.Vector3(r.x, o.y, r.z), '#ffd0a0', 12, 5, .5, .5, 2); if (r.me) { Audio.sfxPlay('hit'); E.shake = .3; E.ui.toast(pick(['¡Pum! ¡Una roca!', '¡Ay, qué dura!', '¡Esquiva las rocas!']), '#ff9cc8'); } else E.say(r, pick(OUCH)); } continue; }
         if (o.boost) { if (Math.hypot(r.x - o.x, r.z - o.z) < 1.3 && !r.got.has(o)) { r.got.add(o); r.boost = 1; r.bonus = Math.min(BMAX, r.bonus + BSTEP * .5); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('boost'); E.ui.toast('¡Gota turbo! 💧', '#7ee3ff'); E.ui.flash(); } } continue; }
         const [hx, hz] = this.hole(o), d = Math.hypot(r.x - hx, r.z - hz);
         if (d > o.hr - RR * .4 && r.inv <= 0) { // choque: frena, rebota hacia el agujero y te deja un momento de gracia
-          r.v = 8; r.stun = .35; r.inv = .7; const k = 1 / Math.max(.01, d); r.vx = (hx - r.x) * k * 7; r.vz = (hz - r.z) * k * 7; r.expr = 'squash'; r.boost = 0; r.bonus *= .6; r.streak = 0;
+          r.v = 8; r.stun = .35; r.inv = .7; r.hits = (r.hits || 0) + 1; const k = 1 / Math.max(.01, d); r.vx = (hx - r.x) * k * 7; r.vz = (hz - r.z) * k * 7; r.expr = 'squash'; r.boost = 0; r.bonus *= .6; r.streak = 0;
           E.burst(new THREE.Vector3(r.x, o.y + .5, r.z), '#ffffff', 14, 6, .6, .5, 4); if (r.me) { Audio.sfxPlay('hit'); E.shake = .35; E.ui.toast(pick(['¡Pum! Fuera del agujero', '¡Ay, mi flan!', '¡Choque blandito!']), '#ff9cc8'); } else E.say(r, pick(OUCH)); }
         else if (d < o.hr * .4) { r.perf++; r.streak++; r.boost = .7; r.bonus = Math.min(BMAX, r.bonus + BSTEP); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('trick'); E.ui.toast(r.streak > 1 ? `¡Perfecto! ⚡ x${r.streak}` : '¡Perfecto! ⚡', '#ffe27a'); E.burst(new THREE.Vector3(r.x, o.y, r.z), '#ffe27a', 16, 6, .6, .6, 0); } }
         else { if (r.me) Audio.sfxPlay('pop'); }
@@ -193,23 +221,23 @@ export default {
     this.L.h.color.set(LAY[i0].sky).lerp(C2.set(LAY[i1].sky), k); this.L.h.groundColor.set(LAY[i0].gr).lerp(C2.set(LAY[i1].gr), k);
     this.L.d.intensity = lerp(1.6, .5, clamp(-me.y / D * 1.6, 0, 1)) + (f > 3.6 ? 1.5 : 0);
     this.pl.position.set(me.x, me.y + 4, me.z + 3); this.pl.intensity = f > 1.5 ? 25 : 0; this.pl.color.set(f > 2.6 ? '#ffb070' : '#d8c8ff');
-    this.LG.forEach(g => { const top = g.position.y, bot = top - H; g.visible = me.y - 75 < top && me.y + 14 > bot; });
+    this.LG.forEach(g => { const top = g.position.y, bot = top - H; g.visible = me.y - 100 < top && me.y + 14 > bot; });
     for (const a of this.anim) a(t);
     if (this.lavaT) this.lavaT.offset.y = -t * .6;
     if (this.embers) for (const s of this.embers) { s.position.y += dt * 2; if (s.position.y > -1) s.position.y -= H - 2; }
     const next = this.O.find(o => o.ring && o.y < me.y - .3);
-    for (const o of this.O) { if (!o.g) continue; if (o.boost) o.g.rotation.y = t * 3; o.g.visible = !(o.boost && me.got.has(o)) && o.y < me.y + .8 && o.y > me.y - 60; if (o.ring) { const on = o === next; o.rim.material.emissiveIntensity = on ? 1.3 + Math.sin(t * 10) * .3 : .5; o.gs.material.opacity = on ? .7 : .25; } }
+    for (const o of this.O) { if (!o.g) continue; if (o.boost) o.g.rotation.y = t * 3; o.g.visible = !(o.boost && me.got.has(o)) && o.y < me.y + .8 && o.y > me.y - 90; if (o.ring) { const on = o === next; o.rim.material.emissiveIntensity = on ? 1.3 + Math.sin(t * 10) * .3 : .5; o.gs.material.opacity = on ? .7 : .25; } }
     // marcador de aterrizaje en la próxima plataforma
     if (next && !me.fin) { const [hx, hz] = this.hole(next), d = Math.hypot(me.x - hx, me.z - hz), ok = d <= next.hr - RR * .4; this.mk.visible = this.beam.visible = true; this.mk.position.set(me.x, next.y + .4, me.z); this.mkM.color.set(d < next.hr * .4 ? '#ffe27a' : ok ? '#5dff9a' : '#ff4f6a'); this.mk.scale.setScalar(1 + Math.sin(t * 8) * .08);
       const h = Math.max(.1, me.y - next.y - .6); this.beam.scale.set(1, h, 1); this.beam.position.set(me.x, next.y + .4 + h / 2, me.z); this.beam.material.color.copy(this.mkM.color); } else this.mk.visible = this.beam.visible = false;
     const sp = clamp((me.v - 8) / 16, 0, 1.3); this.lines.material.opacity = .08 + sp * .28;
     this.LP.forEach((p, i) => { p.y += (me.v + 10) * dt; if (p.y > 6) { p.y = rnd(-30, -10); p.a = rnd(0, 6.283); } this.tmp.position.set(Math.cos(p.a) * p.r, me.y + p.y, Math.sin(p.a) * p.r); this.tmp.scale.set(1, .5 + sp * 2.5, 1); this.tmp.updateMatrix(); this.lines.setMatrixAt(i, this.tmp.matrix); }); this.lines.instanceMatrix.needsUpdate = true;
-    for (const r of E.racers) { const o = r.obj; o.position.set(r.x, r.y, r.z); o.visible = r.me || r.y < me.y + 4; o.rotation.z = Math.sin(t * 2 + r.k) * .25 + (r.stun > 0 ? t * 12 : 0); o.rotation.y = (r.x - (r.tx ?? r.x)) * -.15;
+    for (const r of E.racers) { const o = r.obj; o.position.set(r.x, r.y, r.z); o.visible = r.me || r.y < me.y + 1; o.rotation.z = Math.sin(t * 2 + r.k) * .25 + (r.stun > 0 ? t * 12 : 0); o.rotation.y = (r.x - (r.tx ?? r.x)) * -.15;
       const s = .6 * (1 + Math.sin(t * 9 + r.k) * .04); o.userData.pivot.scale.set(s, s, s * (r.boost > 0 ? 1.15 : 1)); if (r.me && r.inv > 0 && Math.sin(t * 30) < 0) o.visible = false;
       if (E.phase === 'run' && !r.fin && Math.random() < (r.boost > 0 ? .9 : .25)) E.burst(new THREE.Vector3(r.x + rnd(-.4, .4), r.y + 1.4, r.z), r.boost > 0 ? '#9ff0ff' : '#ffffff', 1, 1, .4, .35, 0); }
     this.pd.innerHTML = `⚡ Perfectos: ${me.perf}<br>🔥 Racha: x${me.streak}<br>🚀 +${Math.round(me.bonus / V0 * 100)}% vel.`;
-    this.camY = lerp(this.camY, me.y + 15, Math.min(1, dt * 8)); camera.fov = lerp(camera.fov, 62 + sp * 5 + (me.boost > 0 ? 4 : 0), Math.min(1, dt * 4)); camera.updateProjectionMatrix();
-    // cenital: el agujero de abajo y tu marcador siempre a la vista
-    camera.position.set(me.x * .35, this.camY, me.z * .35 + 1.2); camera.lookAt(me.x * .5, me.y - 12, me.z * .5 - .3);
+    // VISTA CENITAL: miras hacia abajo por el pozo; los mochis caen alejándose de ti y los agujeros y rocas suben hacia la cámara
+    this.camY = lerp(this.camY, me.y + 8.5, Math.min(1, dt * 10)); camera.fov = lerp(camera.fov, 74 + sp * 8 + (me.boost > 0 ? 5 : 0), Math.min(1, dt * 4)); camera.updateProjectionMatrix();
+    camera.up.set(0, 0, -1); camera.position.set(me.x * .28, this.camY, me.z * .28); camera.lookAt(me.x * .28, me.y - 40, me.z * .28);
   }
 };

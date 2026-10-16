@@ -72,7 +72,7 @@ function nameTag(x, cx, y, txt, col, me) {
 
 // ---------------- Canvas y entrada ----------------
 const cv = $('c'), X = cv.getContext('2d'); let W = 0, H = 0, DPR = 1;
-function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
+function resize() { DPR = Math.min(3, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
 addEventListener('resize', resize); resize();
 const input = { taps: [], px: null, down: false, dsy: 0, dsx: 0, swipes: [] };
 cv.addEventListener('pointerdown', e => { input.down = true; input.px = e.clientX; input.dsx = e.clientX; input.dsy = e.clientY; input.taps.push({ x: e.clientX, y: e.clientY }); });

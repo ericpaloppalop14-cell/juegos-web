@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#ffd6ec">
-<title>Mochi Rivals</title>
+<title>Mochi Party</title>
 <style>
 @font-face{font-family:Fredoka;src:url(fredoka.woff2) format('woff2');font-weight:300 700;font-display:block}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
@@ -41,6 +41,22 @@ html,body{margin:0;height:100%;overflow:hidden;background:#ffd6ec;font-family:Fr
 #flash{position:absolute;inset:0;background:#fff;opacity:0;transition:opacity .25s}
 #load{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#c0508a;background:#ffd6ec}
 #exitB{position:absolute;right:calc(10px);bottom:calc(10px + env(safe-area-inset-bottom));pointer-events:auto;border:none;border-radius:14px;background:rgba(255,255,255,.7);font:700 13px Fredoka;color:#8b5cc2;padding:6px 10px;display:none}
+
+/* ---- pulido v3: bordes, sombras y radios coherentes ---- */
+#hPos,#hIcon{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#hPos{border-radius:22px;box-shadow:0 6px 16px rgba(160,50,120,.3),inset 0 2px 0 #fff,inset 0 -3px 0 rgba(224,96,159,.18)}
+#hIcon{border-radius:22px;background:linear-gradient(#fff,#ffeef8);box-shadow:0 6px 16px rgba(160,50,120,.28),inset 0 -3px 0 rgba(200,100,170,.2)}
+#hBar{height:14px;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(150,40,110,.3),inset 0 2px 3px rgba(120,40,100,.2)}
+#hBar b{box-shadow:inset 0 2px 0 rgba(255,255,255,.55)}
+#hBoard div{background:linear-gradient(rgba(120,70,160,.62),rgba(95,50,135,.62));border:1.5px solid rgba(255,255,255,.55);border-radius:12px;padding:2px 9px 2px 5px;box-shadow:0 2px 6px rgba(70,30,100,.22)}
+#hBoard div.me{background:linear-gradient(#ff7fb6,#ea5a98);border-color:#fff}
+#perf{border:1.5px solid rgba(255,255,255,.6)!important;border-radius:14px!important;box-shadow:0 3px 10px rgba(70,30,100,.25);background:linear-gradient(rgba(120,70,160,.66),rgba(95,50,135,.66))!important}
+#hint{border:2px solid #fff;border-radius:18px;background:linear-gradient(rgba(255,255,255,.96),rgba(255,240,250,.94));box-shadow:0 6px 18px rgba(150,60,140,.22);color:#6a3f9a;line-height:1.25}
+#say div{border:1.5px solid #fff;box-shadow:0 4px 12px rgba(150,60,140,.2)}
+#ctl button{box-shadow:0 6px 0 rgba(150,60,130,.28),0 10px 22px rgba(160,50,120,.3),inset 0 3px 0 rgba(255,255,255,.45)}
+#toast{text-shadow:0 3px 0 #c0508a,0 0 14px rgba(255,255,255,.5)}
+#load{background:radial-gradient(circle at 50% 40%,#fff3fa,#ffd6ec 70%);text-shadow:0 2px 0 #fff}
+#exitB{border:1.5px solid #fff;box-shadow:0 3px 8px rgba(150,60,140,.2)}
 </style>
 </head>
 <body>
@@ -55,6 +71,6 @@ html,body{margin:0;height:100%;overflow:hidden;background:#ffd6ec;font-family:Fr
 </div>
 <div id="load">Preparando la prueba…</div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/pruebas3d.js?v=m6"></script>
+<script type="module" src="js/pruebas3d.js?v=m8"></script>
 </body>
 </html>

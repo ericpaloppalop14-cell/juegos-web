@@ -19,7 +19,9 @@ const OUCH = ['¡Ay, mi culete!', '¡Eso no vale!', '¡Uy, uy, uy!', '¡Mi cara 
 // ---------------- renderer ----------------
 const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, Q.get('q') === 'low' ? 1 : 2));
+// nitidez: hasta x3 en móviles con pantalla densa; baja sola si el móvil no llega a ~48 fps (ver frame())
+const PR_MAX = Math.min(devicePixelRatio || 1, Q.get('q') === 'low' ? 1 : 3); let PR = PR_MAX;
+renderer.setPixelRatio(PR);
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 900);
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -58,18 +60,20 @@ function makeRunner(ch, idx, scale = 1) {
   return g;
 }
 function nameSprite(text, color, me) {
-  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d');
-  x.font = '700 34px Fredoka, sans-serif'; const w = Math.min(248, x.measureText(text).width + 30);
-  x.fillStyle = me ? 'rgba(240,96,159,.9)' : 'rgba(80,40,110,.72)'; x.beginPath(); x.roundRect((256 - w) / 2, 8, w, 48, 22); x.fill();
-  x.fillStyle = color; x.beginPath(); x.arc((256 - w) / 2 + 18, 32, 8, 0, 7); x.fill();
-  x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 128 + 8, 33);
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  const S2 = 2, cv = document.createElement('canvas'); cv.width = 256 * S2; cv.height = 64 * S2; const x = cv.getContext('2d'); x.scale(S2, S2);
+  x.font = '700 34px Fredoka, sans-serif'; const w = Math.min(244, x.measureText(text).width + 34), l = (256 - w) / 2;
+  x.shadowColor = 'rgba(60,20,80,.35)'; x.shadowBlur = 6; x.shadowOffsetY = 2;
+  x.fillStyle = me ? '#f0609f' : 'rgba(80,40,110,.78)'; x.beginPath(); x.roundRect(l, 8, w, 46, 23); x.fill(); x.shadowColor = 'transparent';
+  x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 3; x.beginPath(); x.roundRect(l + 1.5, 9.5, w - 3, 43, 21.5); x.stroke();
+  x.fillStyle = color; x.beginPath(); x.arc(l + 20, 31, 8, 0, 7); x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 2.5; x.stroke();
+  x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 128 + 9, 32);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(3.2, 0.8, 1); s.renderOrder = 10; return s;
 }
 function skyDome(scene, top, mid, bot) {
-  const cv = document.createElement('canvas'); cv.width = 4; cv.height = 256; const x = cv.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 256); g.addColorStop(0, top); g.addColorStop(.5, mid); g.addColorStop(1, bot); x.fillStyle = g; x.fillRect(0, 0, 4, 256);
+  const cv = document.createElement('canvas'); cv.width = 4; cv.height = 512; const x = cv.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, top); g.addColorStop(.5, mid); g.addColorStop(1, bot); x.fillStyle = g; x.fillRect(0, 0, 4, 512);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false })); scene.add(m); return m;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(600, 48, 24), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false })); scene.add(m); return m;
 }
 function lights(scene, sky = '#ffffff', ground = '#ffd6ea', hi = 0.95, sun = 2.0) {
   const h = new THREE.HemisphereLight(sky, ground, hi); scene.add(h); const d = new THREE.DirectionalLight('#fff4e8', sun); d.position.set(80, 160, 60); scene.add(d); return { h, d };
@@ -144,6 +148,7 @@ function run(EV, opts = {}) {
     updParts(dt);
     for (const r of racers) animCharacter(r.obj.userData.char, now / 1000 + r.k, 1, r.expr || '');
     renderer.render(scene, camera);
+    if (EV.id !== 'anillos' && PR > 1.25) { const ft = (now - (E._fpsT0 || now)); E._fpsN = (E._fpsN || 0) + 1; if (!E._fpsT0) E._fpsT0 = now; else if (ft > 1500) { const fps = E._fpsN * 1000 / ft; E._fpsN = 0; E._fpsT0 = now; if (fps < 48 && E.t > 1) { PR = Math.max(1.25, PR - .5); renderer.setPixelRatio(PR); resize(); } } }
     hud(dt);
     if (E.phase !== 'done' || (ON && !E.stopped)) raf = requestAnimationFrame(frame);
   }
