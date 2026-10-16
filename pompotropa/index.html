@@ -1,0 +1,45 @@
+<!doctype html><html lang="es"><head><meta http-equiv="Cache-Control" content="no-cache"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#3a1d5c"><title>Pompotropa</title><meta property="og:title" content="Pompotropa: ¡junta, fusiona, arrasa!">
+<link rel="manifest" href="manifest.json"><meta property="og:site_name" content="Pompotropa"><link rel="icon" href="data:,"><link rel="stylesheet" href="style.css?v=1"></head><body>
+<canvas id="c"></canvas>
+<div id="hud" class="hide">
+ <div id="topbar"><div id="timer">⏱ <b>3:00</b></div><button id="bPause">⏸</button></div>
+ <div id="army"><div id="armyN">1</div><div class="lbl">EJÉRCITO</div><div id="armyU"></div></div>
+ <div id="lb"></div><div id="labels"></div><div id="pops"></div>
+ <div id="msg"></div><div id="cd" class="hide">3</div>
+ <div id="joy"><div id="joyK"></div></div>
+</div>
+<div id="menu" class="screen">
+ <div class="logo">POMPO<span>TROPA</span></div><div class="tag">¡Junta · Fusiona · Arrasa!</div>
+ <div class="coins">🪙 <b id="coinTxt">0</b> · Récord <b id="bestTxt">0</b></div>
+ <div class="card"><div class="sec">LÍDER</div><div id="leadPick" class="leads"></div></div>
+ <div class="card"><div class="sec">MODO</div><div id="modePick" class="seg"></div></div>
+ <div class="card"><div class="sec">DIFICULTAD</div><div id="diffPick" class="seg"></div></div>
+ <button id="bPlay" class="big">JUGAR<small>vs 7 bots</small></button>
+ <button id="bMP" class="mid">👥 Multijugador con código</button>
+ <div class="row"><button id="bSnd" class="sm">🔊</button><button id="bHelp" class="sm">❓ Cómo se juega</button></div>
+</div>
+<div id="help" class="screen hide"><div class="panel"><h2>Cómo se juega</h2><div class="htxt">
+🕹️ Toca en cualquier sitio y arrastra para mover a tu líder.<br>🧶 Pasa por encima de los pompones sueltos: se unen a tu tropa.<br>✨ 3 pompones del <b>mismo color y tamaño</b> se fusionan en uno más grande… hasta el <b>👑 rey gigante</b> (vale 27).<br>⚔️ Si tu tropa choca con otra, pelean uno contra uno. Quien se queda sin fuerza pierde y <b>sus supervivientes se pasan al ganador</b>.<br>🫧 Recién aparecido llevas una burbuja: nadie te puede atacar.<br>🏆 Gana el ejército más grande al acabar el tiempo.</div><button id="bHelpX" class="big">¡Vale!</button></div></div>
+<div id="mp" class="screen hide"><div class="panel">
+ <div id="mpHome"><h2>👥 Multijugador</h2><input id="mpNick" maxlength="12" placeholder="Tu nombre">
+  <button id="mpCreate" class="big">✨ Crear sala</button>
+  <div class="row"><input id="mpCode" maxlength="4" placeholder="CÓDIGO" autocapitalize="characters"><button id="mpJoin">Unirse</button></div>
+  <div id="mpMsg" class="info"></div><button id="mpBack">← Volver</button></div>
+ <div id="mpLobby" class="hide"><h2>Sala</h2><div id="mpCodeBig" class="codeBig">----</div><button id="mpShare">📤 Compartir</button>
+  <div id="mpList"></div><div class="info">Hasta 8 jugadores; los huecos se rellenan con bots. El anfitrión usa el modo y la dificultad de su menú.</div>
+  <button id="mpStart" class="big">▶ EMPEZAR</button><div id="mpWait" class="info hide">⏳ Esperando al anfitrión…</div><button id="mpLeave">Salir</button></div>
+</div></div>
+<div id="dead" class="screen hide"><div class="panel"><h2>¡Tu tropa ha caído! 😵</h2><div id="deadInfo" class="info"></div>
+ <button id="bRevAd" class="big gold">▶ Anuncio · volver con la mitad</button><button id="bRev">↻ Volver con 3 pompones</button><button id="bQuit">🏁 Terminar</button></div></div>
+<div id="pause" class="screen hide"><div class="panel"><h2>Pausa</h2><button id="bResume" class="big">▶ Seguir</button><button id="bPauseMenu">🏠 Salir al menú</button></div></div>
+<div id="over" class="screen hide"><div class="panel"><h2 id="ovT">¡Fin!</h2><div id="podium"></div><div id="ovInfo" class="info"></div>
+ <button id="bDbl" class="big gold">▶ Anuncio · monedas x2</button><button id="bAgain" class="big">↻ Otra</button><button id="bMenu">🏠 Menú</button></div></div>
+<div id="prem" class="screen hide"><div class="panel"><h2 id="premN">👑</h2><canvas id="premC" width="220" height="220"></canvas><div id="premD" class="info"></div>
+ <button id="premTry" class="big gold">▶ Probar 1 partida (anuncio)</button><button id="premBuy" class="big">Comprar · 0,99 €</button>
+ <div class="info small">⚠️ Compra de PRUEBA: no se cobra nada. Aquí irá la tienda real de Google Play.</div><button id="premX">Cerrar</button></div></div>
+<div id="adfake" class="hide"><div>📺 Anuncio de prueba…<br><small>(aquí irá AdMob recompensado)</small></div></div>
+<div id="toast"></div>
+<script src="peerjs.min.js"></script><script type="module" src="game.js?v=1"></script>
+</body></html>
