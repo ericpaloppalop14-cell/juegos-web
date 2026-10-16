@@ -13,7 +13,7 @@ const matCache = new Map();
 export function toon(color, o = {}) {
   const key = color + JSON.stringify(o);
   if (!o.nocache && matCache.has(key)) return matCache.get(key);
-  const m = new THREE.MeshToonMaterial({ color, gradientMap: gradient(), transparent: o.opacity != null && o.opacity < 1, opacity: o.opacity ?? 1,
+  const m = new THREE.MeshStandardMaterial({ color, roughness: o.rough ?? 0.5, metalness: 0, flatShading: !!o.flat, envMapIntensity: 0.9, transparent: o.opacity != null && o.opacity < 1, opacity: o.opacity ?? 1,
     emissive: o.emissive || '#000000', emissiveIntensity: o.ei ?? 1, side: o.side || THREE.FrontSide, vertexColors: !!o.vc });
   if (o.opacity != null && o.opacity < 1) m.depthWrite = o.depthWrite ?? false;
   if (o.po) { m.polygonOffset = true; m.polygonOffsetFactor = -o.po; m.polygonOffsetUnits = -o.po * 2; }
@@ -24,7 +24,7 @@ export function toon(color, o = {}) {
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float rimStr;')
         .replace('#include <opaque_fragment>', `
           { float fr = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
-            outgoingLight += vec3(1.0, 0.97, 1.0) * smoothstep(0.55, 1.0, fr) * rimStr; }
+            outgoingLight += vec3(1.0, 0.95, 0.98) * smoothstep(0.5, 1.0, fr) * rimStr * 0.8; }
           #include <opaque_fragment>`);
     };
     m.customProgramCacheKey = () => 'rim' + rim;
@@ -32,6 +32,11 @@ export function toon(color, o = {}) {
   if (!o.nocache) matCache.set(key, m);
   return m;
 }
+let _blush;
+function blushMat() { if (_blush) return _blush; const cv = document.createElement('canvas'); cv.width = 64; cv.height = 40; const x = cv.getContext('2d');
+  const g = x.createRadialGradient(32, 20, 0, 32, 20, 30); g.addColorStop(0, 'rgba(255,120,160,.75)'); g.addColorStop(1, 'rgba(255,120,160,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 40);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  return _blush = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }); }
 const outlineMats = new Map();
 function outlineMat(color) {
   if (!outlineMats.has(color)) outlineMats.set(color, new THREE.MeshBasicMaterial({ color, side: THREE.BackSide }));
@@ -63,16 +68,12 @@ const hex = c => '#' + c.getHexString();
 function bodyGeo() {
   return geo('body', () => {
     const p = [];
-    for (let i = 0; i <= 20; i++) {
-      const a = i / 20; // 0 bottom -> 1 top
-      const y = a * 1.62;
-      let r = Math.sin(Math.PI * Math.min(1, 0.18 + a * 0.82)) * 1.0;
-      r = a < 0.12 ? 0.78 + a * 1.6 : r * (1 - Math.max(0, a - 0.6) * 0.25);
-      if (a > 0.97) r *= (1 - (a - 0.97) * 20);
-      p.push(new THREE.Vector2(Math.max(0.001, r), y));
-    }
+    // v8: mochi redondito (cúpula suave y base plana), como el de Mochi Party
+    for (let i = 0; i <= 22; i++) { const th = -0.36 * Math.PI + i / 22 * 0.86 * Math.PI;
+      const r = Math.pow(Math.max(0, Math.cos(th)), 0.72) * 1.02, y = 0.72 + Math.sin(th) * 0.86;
+      p.push(new THREE.Vector2(Math.max(0.001, r), Math.max(0.02, y))); }
     p.unshift(new THREE.Vector2(0.001, 0.02));
-    const g = new THREE.LatheGeometry(p, 14); g.computeVertexNormals(); return g;
+    const g = new THREE.LatheGeometry(p, 20); g.computeVertexNormals(); return g;
   });
 }
 
@@ -82,28 +83,40 @@ export function makeCharacter(ch, opts = {}) {
   const c = new THREE.Color(ch.color);
   const inner = new THREE.Group(); root.add(inner);
   buildInner(ch.inner, inner, ch);
-  const body = mesh(bodyGeo(), toon(hex(col(ch.color, 0.05)), { opacity: 0.72, rim: 0.55, depthWrite: false }), root);
+  const body = mesh(bodyGeo(), toon(hex(col(ch.color, 0.1)), { opacity: 0.86, rim: 0.5, depthWrite: false, rough: 0.32 }), root);
   body.renderOrder = 2;
-  const ol = outline(body, hex(col(ch.color, -0.55)), 1.045); ol.renderOrder = 1;
-  // face (front = +z)
-  const eyeM = toon('#2a1838', { rim: 0 }), whiteM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+  const ol = outline(body, hex(col(ch.color, -0.32)), 1.03); ol.renderOrder = 1;
+  // cara kawaii (front = +z): ojos grandes y brillantes, coloretes difuminados, boquita ω, bracitos y pies
+  const eyeM = toon('#2e1a36', { rim: 0, rough: 0.25 }), whiteM = new THREE.MeshBasicMaterial({ color: '#ffffff' }), irisM = new THREE.MeshBasicMaterial({ color: '#7d5a98' });
+  const eyes = [];
   for (const s of [-1, 1]) {
-    const e = mesh(sph(14), eyeM, root, [s * 0.36, 0.86, 0.86], null, [0.17, 0.21, 0.1]);
-    mesh(sph(8), whiteM, e, [0.35, 0.4, 0.6], null, 0.38);
-    mesh(sph(8), whiteM, e, [-0.3, -0.35, 0.7], null, 0.17);
-    mesh(sph(10), toon('#ff7fae', { opacity: 0.75, rim: 0 }), root, [s * 0.6, 0.66, 0.74], [0, s * 0.6, 0], [0.16, 0.08, 0.05]);
+    const e = mesh(sph(14), eyeM, root, [s * 0.35, 0.8, 0.86], [0, s * 0.36, 0], [0.2, 0.26, 0.1]); eyes.push(e);
+    mesh(sph(10), irisM, e, [0, -0.42, 0.62], null, [0.62, 0.36, 0.45]);
+    mesh(sph(10), whiteM, e, [-0.3, 0.36, 0.78], null, [0.44, 0.46, 0.3]);
+    mesh(sph(8), whiteM, e, [0.34, -0.34, 0.82], null, 0.2);
+    const bl = mesh(geo('blushP', () => new THREE.PlaneGeometry(1, 1)), blushMat(), root, [s * 0.62, 0.6, 0.79], [0, s * 0.66, 0], [0.42, 0.26, 1]); bl.renderOrder = 4;
   }
-  const mouth = mesh(tor(0.25, 12), eyeM, root, [0, 0.66, 0.93], [0.2, 0, Math.PI], [0.09, 0.07, 0.07]);
-  mouth.geometry = geo('mouth', () => new THREE.TorusGeometry(1, 0.28, 6, 12, Math.PI));
-  root.userData.eyes = root.children.filter(m => m.material === eyeM && m !== mouth);
-  root.userData.mouth = mouth;
+  const mouth = new THREE.Group(); mouth.position.set(0, 0.63, 0.975); mouth.rotation.x = -0.15; root.add(mouth);
+  const mG = geo('mouthW', () => new THREE.TorusGeometry(1, 0.24, 6, 12, Math.PI));
+  for (const s of [-1, 1]) mesh(mG, eyeM, mouth, [s * 0.05, 0, 0], [0, 0, Math.PI], [0.05, 0.045, 0.04]);
+  const tongue = mesh(sph(10), toon('#ff8fa8', { rim: 0 }), mouth, [0, -0.045, -0.005], null, [0.04, 0.03, 0.02]); tongue.visible = false;
+  root.userData.eyes = eyes; root.userData.mouth = mouth; root.userData.tongue = tongue;
+  // brillo especular suave del cuerpo (luz arriba a la izquierda)
+  const hl = mesh(sph(12), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false }), root, [-0.36, 1.22, 0.7], [0.5, -0.45, 0.6], [0.2, 0.11, 0.05]); hl.renderOrder = 4;
+  mesh(sph(8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false }), root, [-0.45, 1.26, 0.64], null, [0.05, 0.035, 0.03]).renderOrder = 4;
+  // bracitos y piececitos
+  const limbM = toon(hex(col(ch.color, -0.06)), { rim: 0.4 });
+  const arms = [];
+  for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(s * 0.92, 0.55, 0.12); root.add(a); mesh(sph(10), limbM, a, [s * 0.08, -0.05, 0], null, [0.15, 0.2, 0.14]); arms.push(a);
+    mesh(sph(10), limbM, root, [s * 0.36, 0.06, 0.42], null, [0.2, 0.1, 0.22]); }
+  root.userData.arms = arms;
   const happy = new THREE.Group(), xx = new THREE.Group(); root.add(happy); root.add(xx); happy.visible = xx.visible = false;
   const arcG = geo('arc', () => new THREE.TorusGeometry(1, 0.3, 6, 12, Math.PI));
   for (const s of [-1, 1]) {
-    mesh(arcG, eyeM, happy, [s * 0.36, 0.84, 0.9], [0.2, 0, 0], [0.13, 0.13, 0.1]);
-    for (const r of [0.6, -0.6]) mesh(box(), eyeM, xx, [s * 0.36, 0.86, 0.92], [0.2, 0, r * (s > 0 ? 1 : -1) + (s > 0 ? 0 : 0)], [0.28, 0.06, 0.05]);
+    mesh(arcG, eyeM, happy, [s * 0.35, 0.78, 0.92], [0.2, s * 0.36, 0], [0.14, 0.14, 0.1]);
+    for (const r of [0.6, -0.6]) mesh(box(), eyeM, xx, [s * 0.35, 0.8, 0.92], [0.2, s * 0.36, r], [0.28, 0.06, 0.05]);
   }
-  const ohMouth = mesh(sph(10), eyeM, xx, [0, 0.62, 0.93], null, [0.1, 0.13, 0.05]);
+  mesh(sph(10), eyeM, xx, [0, 0.6, 0.95], null, [0.09, 0.11, 0.05]);
   root.userData.happy = happy; root.userData.xx = xx;
   // ears
   const earM = toon(hex(col(ch.color, -0.05)), { opacity: 0.85, rim: 0.5 });
@@ -111,9 +124,9 @@ export function makeCharacter(ch, opts = {}) {
   const E = ch.ears;
   for (const s of [-1, 1]) {
     if (E === 'bunny') { const g = new THREE.Group(); g.position.set(s * 0.42, 1.38, 0); g.rotation.z = -s * 0.35; ears.add(g);
-      const e = mesh(sph(12), earM, g, [0, 0.55, 0], null, [0.2, 0.62, 0.17]); outline(e, hex(col(ch.color, -0.55)), 1.08); }
-    if (E === 'bear') { const e = mesh(sph(12), earM, ears, [s * 0.62, 1.42, 0], null, [0.26, 0.24, 0.16]); outline(e, hex(col(ch.color, -0.55)), 1.08); }
-    if (E === 'cat') { const e = mesh(cone(4), earM, ears, [s * 0.5, 1.6, 0], [0, 0, -s * 0.3], [0.26, 0.42, 0.2]); outline(e, hex(col(ch.color, -0.55)), 1.1); }
+      const e = mesh(sph(12), earM, g, [0, 0.55, 0], null, [0.2, 0.62, 0.17]); outline(e, hex(col(ch.color, -0.32)), 1.05); }
+    if (E === 'bear') { const e = mesh(sph(12), earM, ears, [s * 0.62, 1.42, 0], null, [0.26, 0.24, 0.16]); outline(e, hex(col(ch.color, -0.32)), 1.05); }
+    if (E === 'cat') { const e = mesh(cone(4), earM, ears, [s * 0.5, 1.6, 0], [0, 0, -s * 0.3], [0.26, 0.42, 0.2]); outline(e, hex(col(ch.color, -0.32)), 1.06); }
     if (E === 'horns') mesh(cone(8), toon('#fff3b0', { rim: 0.4 }), ears, [s * 0.45, 1.55, 0], [0, 0, -s * 0.45], [0.13, 0.38, 0.13]);
     if (E === 'fins') mesh(cone(4), earM, ears, [s * 0.98, 0.85, -0.1], [0, 0, -s * 1.9], [0.3, 0.5, 0.06]);
     if (E === 'antenna') { const g = new THREE.Group(); g.position.set(s * 0.32, 1.48, 0); g.rotation.z = -s * 0.3; ears.add(g);
@@ -166,7 +179,8 @@ function buildInner(kind, g, ch) {
 }
 export function animCharacter(c, t, k = 1, expr = '') {
   const u = c.userData;
-  if (u.happy) { u.happy.visible = expr === 'happy'; u.xx.visible = expr === 'squash'; for (const e of u.eyes) e.visible = !expr; u.mouth.scale.set(expr === 'happy' ? 0.13 : 0.09, expr === 'happy' ? 0.11 : 0.07, 0.07); u.mouth.visible = expr !== 'squash'; }
+  if (u.happy) { u.happy.visible = expr === 'happy'; u.xx.visible = expr === 'squash'; for (const e of u.eyes) e.visible = !expr; u.mouth.scale.setScalar(expr === 'happy' ? 1.35 : 1); u.mouth.visible = expr !== 'squash'; if (u.tongue) u.tongue.visible = expr === 'happy'; }
+  if (u.arms) u.arms.forEach((a, i) => { const sg = i ? 1 : -1; a.rotation.z = sg * (0.25 + Math.sin(t * 5 + i * 1.3) * 0.18 * k + (expr === 'happy' ? 0.6 + Math.sin(t * 16) * 0.3 : 0)); });
   for (const [type, m, p] of u.inner.userData.anim) {
     if (type === 'spin') m.rotation.y = t * p;
     else if (type === 'spinz') m.rotation.z = t * p;
@@ -179,7 +193,7 @@ export function animCharacter(c, t, k = 1, expr = '') {
   if (u.spin) u.spin.rotation.z = t * 0.6;
   if (u.spinKey) u.spinKey.rotation.z = t * 3;
   const blink = (t * 0.9 + ((u.seed || 0) % 7) * 0.3) % 3.4 < 0.12;
-  for (const e of u.eyes) e.scale.y = blink ? 0.03 : 0.21;
+  for (const e of u.eyes) e.scale.y = blink ? 0.03 : 0.26;
   u.ears.rotation.x = Math.sin(t * 6) * 0.08 * k;
 }
 

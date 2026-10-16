@@ -6,18 +6,18 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js';
-import { makeCharacter, animCharacter } from './gfx.js';
-import { chOf } from './chars.js';
-import { createShell } from './shell.js';
-import { Sfx } from './sfx.js';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v8';
+import { makeCharacter, animCharacter } from './gfx.js?v=v8';
+import { chOf } from './chars.js?v=v8';
+import { createShell } from './shell.js?v=v8';
+import { Sfx } from './sfx.js?v=v8';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
 const N = 23, C = (N - 1) / 2, TS = 3.6, HALF = N * TS / 2, FY = 3;   // rejilla 15×15, casillas de 3,4 m
 const STEP = 1 / 60, HOP_T = 0.62, HOP_CD = 2.6; // física a 60 Hz fija
 const SPEED = 6.4, TURN = 2.5, CRACK = 1.75, SHRINK_CRACK = 2.6, COOLDOWN = 3.6, SHRINK_EVERY = 8.5, RESPAWN = 3.2, MAX_BUSY = 2;
-const NUMCOL = ['', '#ff7fb0', '#ffa04d', '#f5c400', '#6fd36a', '#2fc6b4', '#4aa8ff', '#8a7dff', '#c56cf0', '#ff6f7d', '#a0835c'];
+const NUMCOL = ['', '#ff8fb8', '#ffa673', '#f2c64e', '#7fd08a', '#4fcabb', '#6eaef2', '#9789f2', '#c487e6', '#f4878f', '#b39478'];
 // ---------------------------------------------------------------- MAPAS (compartidos por simulación y vista)
 const H4 = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
 export const MAPS = {
@@ -166,7 +166,7 @@ const ATL = (() => { const cv = document.createElement('canvas'); cv.width = 640
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })();
 const TCOL = [], THOT = new THREE.Color('#ff6aa6');
 for (let n = 1; n <= 10; n++) TCOL[n] = new THREE.Color(NUMCOL[n]).lerp(new THREE.Color('#ffffff'), 0.38);
-const tileIM = new THREE.InstancedMesh(TG, new THREE.MeshLambertMaterial({ color: '#ffffff' }), N * N);
+const tileIM = new THREE.InstancedMesh(TG, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.42, metalness: 0, envMapIntensity: 0.8 }), N * N);
 const LABG = new THREE.PlaneGeometry(3, 3), CRG = new THREE.PlaneGeometry(2.9, 2.9);
 const aCell = new THREE.InstancedBufferAttribute(new Float32Array(N * N), 1); LABG.setAttribute('aCell', aCell);
 const labMat = new THREE.MeshBasicMaterial({ map: ATL, transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 });
@@ -190,9 +190,9 @@ function syncTiles(pulse) { // vuelca la posición/giro de cada casilla a las 3 
   tileIM.instanceMatrix.needsUpdate = labIM.instanceMatrix.needsUpdate = crIM.instanceMatrix.needsUpdate = true; tileIM.instanceColor.needsUpdate = true;
 }
 // foso brillante bajo el suelo (se ve al caer las casillas)
-{ const pit = new THREE.Mesh(new THREE.PlaneGeometry(N * TS + 2, N * TS + 2), new THREE.MeshStandardMaterial({ color: '#5a3d9a', emissive: '#7a4fd0', emissiveIntensity: 0.35, roughness: 0.6 }));
-  pit.rotation.x = -Math.PI / 2; pit.position.y = FY - 9; scene.add(pit);
-  const glow = new THREE.PointLight('#c79bff', 40, 30, 1.6); glow.position.set(0, FY - 6, 0); scene.add(glow); }
+{ const pit = new THREE.Mesh(new THREE.PlaneGeometry(N * TS + 2, N * TS + 2), new THREE.MeshStandardMaterial({ color: '#1d1430', emissive: '#2b1a52', emissiveIntensity: 0.35, roughness: 0.9 }));
+  pit.rotation.x = -Math.PI / 2; pit.position.y = FY - 1.45; scene.add(pit); // v8: foso oscuro justo bajo el suelo (por encima del mar) para que los agujeros se vean claros
+  const glow = new THREE.PointLight('#a98bff', 4, 14, 1.8); glow.position.set(0, FY - 1.2, 0); scene.add(glow); }
 // paredes y decoración
 const room = new THREE.Group(); scene.add(room);
 {
@@ -370,7 +370,7 @@ function drawMini() {
 const chars = new Map(); let me = 'h', roster = [];
 // sombra de mancha (sin mapa de sombras: mucho más barato en móvil)
 const BLOBG = new THREE.CircleGeometry(1, 20), blobMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, map: (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d');
-  const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(60,20,80,.55)'); g.addColorStop(1, 'rgba(60,20,80,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })() });
+  const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(70,30,90,.5)'); g.addColorStop(.45, 'rgba(70,30,90,.28)'); g.addColorStop(1, 'rgba(70,30,90,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })() });
 function nameTag(name, mine) { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 72; const x = cv.getContext('2d');
   x.font = '700 34px Fredoka, sans-serif'; const w = Math.min(240, x.measureText(name).width + 34); x.fillStyle = mine ? '#ff7fb6' : 'rgba(255,255,255,.9)'; x.beginPath(); x.roundRect(128 - w / 2, 10, w, 50, 25); x.fill();
   x.fillStyle = mine ? '#fff' : '#8a5aa8'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(name, 128, 37);
@@ -499,18 +499,20 @@ function frame() {
   const port = camera.aspect < 1;
   const tgtId = (chars.get(me) && chars.get(me).alive) ? me : (specId && chars.get(specId) && chars.get(specId).alive ? specId : ([...chars.entries()].find(([, c]) => c.alive) || [])[0]);
   const fc = tgtId ? chars.get(tgtId) : null;
-  if (fc && (sim || online)) { const back = port ? 10.5 : 8, up = port ? 7.4 : 4.8;
+  if (fc && (sim || online)) { const back = port ? 12.6 : 9.8, up = port ? 11.2 : 7.2; // v8: más alta y alejada para ver los agujeros de alrededor
     if (!camInit) { camYaw = fc.h; camInit = true; }
     // la cámara sigue la dirección real de avance (suave, sin pelearse con el personaje) y mira un poco hacia delante
     const vx = fc.vx != null && sim == null ? fc.vx : (simP && simP.get(tgtId) ? simP.get(tgtId).vx : Math.sin(fc.h)), vz = fc.vz != null && sim == null ? fc.vz : (simP && simP.get(tgtId) ? simP.get(tgtId).vz : Math.cos(fc.h));
     // cámara de ángulo fijo que se realinea despacio detrás del movimiento (nunca gira de golpe; si corres hacia la cámara no se da la vuelta)
     { const spv = Math.hypot(vx, vz), df = wrap(Math.atan2(vx, vz) - camYaw), al = Math.max(0, Math.cos(df) + 0.35) / 1.35;
       const rate = 0.95 * Math.min(1, spv / SPEED) * al; camYawV += (wrap(df) * rate - camYawV) * (1 - Math.exp(-dt * 4)); camYaw = wrap(camYaw + camYawV * dt); }
-    const la = port ? 6.5 : 4.5; camP.set(fc.x - Math.sin(camYaw) * back, FY + up, fc.z - Math.cos(camYaw) * back); camT.set(fc.x + Math.sin(camYaw) * la + vx * 0.25, FY + 0.4, fc.z + Math.cos(camYaw) * la + vz * 0.25);
+    const la = port ? 4.2 : 3.4; camP.set(fc.x - Math.sin(camYaw) * back, FY + up, fc.z - Math.cos(camYaw) * back); camT.set(fc.x + Math.sin(camYaw) * la + vx * 0.25, FY + 0.4, fc.z + Math.cos(camYaw) * la + vz * 0.25);
     camera.position.lerp(camP, 1 - Math.exp(-dt * 12)); camLook.lerp(camT, 1 - Math.exp(-dt * 12)); }
-  else if ($('sChars').classList.contains('on')) { camP.set(0, FY + 2.6, 15.5); camT.set(0, FY - 1.3, 0); camera.position.lerp(camP, 1 - Math.exp(-dt * 3)); camLook.lerp(camT, 1 - Math.exp(-dt * 3)); }
+  if (mapG) mapG.visible = !$('sChars').classList.contains('on'); // que el decorado no tape al personaje al elegir
+  if (fc && (sim || online)) {} else if ($('sChars').classList.contains('on')) { camP.set(0, FY + 2.6, 15.5); camT.set(0, FY - 1.3, 0); camera.position.lerp(camP, 1 - Math.exp(-dt * 3)); camLook.lerp(camT, 1 - Math.exp(-dt * 3)); }
   else { camP.set(Math.sin(t * 0.1) * 3, FY + 6, 14.5); camT.set(0, FY + 1.6, 0); camera.position.lerp(camP, 1 - Math.exp(-dt * 3)); camLook.lerp(camT, 1 - Math.exp(-dt * 3)); }
   camera.lookAt(camLook); if (window.__onFrame) window.__onFrame(rdt);
+  fadeOccluders(fc && (sim || online) ? fc : null, dt);
   if (S && S.z && (sim || online)) { const [cx, cz, r, ncx, ncz, nr, zt, st] = S.z; const R = Math.min(r, HALF * 1.6);
     zoneWall.visible = true; zoneWall.position.set(cx, FY + 7, cz); zoneWall.scale.set(R, 22, R); zoneMat.uniforms.uT.value = t; zoneMat.uniforms.uR.value = R;
     nextRing.visible = st !== 2 && nr < r - 0.5; nextRing.position.set(ncx, FY + 0.08, ncz); nextRing.scale.setScalar(Math.max(0.6, nr)); nextRing.material.opacity = 0.6 + 0.4 * Math.sin(t * 5);
@@ -522,6 +524,24 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+// v8: con la cámara más alta, el decorado que queda entre la cámara y tu mochi se vuelve translúcido para que nunca te tape
+const _bx = new THREE.Box3(), _bs = new THREE.Sphere();
+function fadeOccluders(fc, dt) {
+  for (const g of mapG.children) {
+    let u = g.userData.occ; if (!u) { _bx.setFromObject(g); if (_bx.isEmpty()) { g.userData.occ = { skip: true }; continue; } _bx.getBoundingSphere(_bs);
+      u = g.userData.occ = { skip: _bx.max.y < FY + 2 || _bs.radius > HALF * 0.8, cx: _bs.center.x, cz: _bs.center.z, r: Math.min(_bs.radius, Math.max(_bx.max.x - _bx.min.x, _bx.max.z - _bx.min.z) / 2) + 1, a: 1, mats: null }; }
+    if (u.skip) continue;
+    let tgt = 1;
+    if (fc) { const ax = camera.position.x, az = camera.position.z, bx = fc.root.position.x, bz = fc.root.position.z, dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1;
+      const k = Math.max(0, Math.min(1, ((u.cx - ax) * dx + (u.cz - az) * dz) / L2)), px = ax + dx * k - u.cx, pz = az + dz * k - u.cz;
+      if (k < 0.98 && px * px + pz * pz < u.r * u.r) tgt = 0.28; }
+    if (Math.abs(u.a - tgt) < 0.01 && !u.mats) continue;
+    u.a += (tgt - u.a) * (1 - Math.exp(-dt * 8));
+    if (!u.mats) { u.mats = []; g.traverse(o => { if (o.isMesh && o.material && !Array.isArray(o.material)) { const m = o.material.clone(); m.userData.o0 = o.material.opacity; m.userData.t0 = o.material.transparent; m.userData.d0 = o.material.depthWrite; o.material = m; u.mats.push(m); } }); }
+    const fading = u.a < 0.985;
+    for (const m of u.mats) { if (m.transparent !== (fading || m.userData.t0)) { m.transparent = fading || m.userData.t0; m.needsUpdate = true; } m.opacity = m.userData.o0 * (fading ? u.a : 1); m.depthWrite = fading ? false : m.userData.d0; }
+  }
+}
 // ---------------------------------------------------------------- MENÚ / ARRANQUE
 function resetBoard() { for (let i = 0; i < N * N; i++) { const T = tiles[i]; T.s = 0; T.sinkT = 0; T.rise = 0; T.perm = 0; T.g.visible = !T.hole; T.n = (i * 7 + (i / N | 0) * 3) % 10 + 1; drawNum(T, T.n, false); } }
 function setShowcase(chId) { if (showcase) scene.remove(showcase); showcase = makeCharacter(chOf(chId)); showcase.scale.setScalar(1.3); showcase.position.set(0, FY, 4); showcase.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(showcase); }

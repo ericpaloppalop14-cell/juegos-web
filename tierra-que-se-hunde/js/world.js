@@ -19,14 +19,14 @@ export function createRenderer(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: false });
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   renderer.setPixelRatio(dpr);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.86;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.8;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = /shadows/.test(location.search); // sin mapa de sombras por defecto (sombras de mancha bajo los mochis) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 900);
   const pm = new THREE.PMREMGenerator(renderer);
   scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.25;
+  scene.environmentIntensity = 0.32;
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   // brillo suave: umbral alto y poca fuerza para que no deslumbre
@@ -139,7 +139,7 @@ function sparkles(scene, n = 260, R = 60) {
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d');
   const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,220,240,.6)'); gr.addColorStop(1, 'rgba(255,200,230,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
-  const m = new THREE.PointsMaterial({ size: 0.55, map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.7 });
+  const m = new THREE.PointsMaterial({ size: 0.45, map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.45 });
   const pts = new THREE.Points(g, m); scene.add(pts); return pts;
 }
 
@@ -162,7 +162,7 @@ export function buildWorld(scene, themeName = 'atardecer', R = 14) {
       seaU.uT.value = t;
       for (const g of isl) g.position.y += Math.sin(t * 0.6 + g.userData.phase) * 0.004;
       for (const c of cl.children) { c.position.x += 0.01 * c.userData.sp; if (c.position.x > R * 8) c.position.x = -R * 8; }
-      sp.rotation.y = t * 0.02; sp.material.opacity = 0.55 + Math.sin(t * 2) * 0.15;
+      sp.rotation.y = t * 0.02; sp.material.opacity = 0.38 + Math.sin(t * 2) * 0.08;
     },
   };
 }
@@ -176,8 +176,8 @@ export class Particles {
     this.n = n; this.i = 0; this.v = new Float32Array(n * 3); this.life = new Float32Array(n);
     const g = new THREE.BufferGeometry(); this.p = new Float32Array(n * 3).fill(-999); this.c = new Float32Array(n * 3);
     g.setAttribute('position', new THREE.BufferAttribute(this.p, 3)); g.setAttribute('color', new THREE.BufferAttribute(this.c, 3));
-    const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.beginPath(); x.arc(16, 16, 14, 0, 7); x.fill();
-    this.pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.32, map: new THREE.CanvasTexture(cv), vertexColors: true, transparent: true, alphaTest: 0.3 }));
+    const cv = document.createElement('canvas'); cv.width = cv.height = 32; const x = cv.getContext('2d'); const gr = x.createRadialGradient(16, 16, 0, 16, 16, 15); gr.addColorStop(0, '#fff'); gr.addColorStop(.6, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
+    this.pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.32, map: new THREE.CanvasTexture(cv), vertexColors: true, transparent: true, depthWrite: false }));
     this.pts.frustumCulled = false; scene.add(this.pts);
   }
   burst(pos, color, n = 30, spd = 6, up = 4) {

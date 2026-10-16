@@ -12,11 +12,11 @@ body{font-family:'Fredoka',ui-rounded,'Nunito','Segoe UI',system-ui,sans-serif;c
 @keyframes wob{0%,100%{transform:translateY(0) scale(1,1)}20%{transform:translateY(-6px) scale(.94,1.08)}40%{transform:translateY(0) scale(1.06,.94)}55%{transform:scale(1,1)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
-.sub{margin-top:12px;font-size:18px;font-weight:600;color:#a374c4;background:rgba(255,255,255,.7);padding:4px 14px;border-radius:16px;text-align:center}
+.sub{margin-top:12px;font-size:17px;font-weight:600;color:#9a6bbd;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:0 6px 16px rgba(150,80,150,.14);padding:4px 14px;border-radius:16px;text-align:center}
 .grow{flex:1 1 auto;min-height:12px}
-.btn{font-family:inherit;font-weight:700;border:none;cursor:pointer;color:#8b5cc2;background:rgba(255,255,255,.92);border-radius:30px;box-shadow:0 4px 0 rgba(180,120,200,.45);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:19px;padding:10px 22px;transition:transform .08s}
+.btn{font-family:inherit;font-weight:700;border:1.5px solid rgba(255,255,255,.95);cursor:pointer;color:#8b5cc2;background:linear-gradient(180deg,#fff,rgba(255,244,250,.92));border-radius:30px;box-shadow:0 3px 0 rgba(180,120,200,.3),0 8px 18px rgba(150,80,150,.16);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:19px;padding:10px 22px;transition:transform .08s}
 .btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(180,120,200,.45)}
-.btn.big{font-size:26px;color:#fff;background:linear-gradient(180deg,#ffa9cf,#f37fb4);padding:14px 38px;box-shadow:0 6px 0 #d2609a,0 12px 24px rgba(200,80,150,.3);animation:pulse 1.6s ease-in-out infinite}
+.btn.big{font-size:26px;color:#fff;background:radial-gradient(120% 100% at 30% 10%,rgba(255,255,255,.45),rgba(255,255,255,0) 50%),linear-gradient(180deg,#ffa9cf,#f286b8);padding:14px 38px;text-shadow:0 2px 3px rgba(170,50,110,.3);box-shadow:0 5px 0 #d86fa3,0 14px 28px rgba(200,80,150,.28);animation:pulse 1.6s ease-in-out infinite}
 .btn.mint{color:#fff;background:linear-gradient(180deg,#8fecd0,#4fcaa4);box-shadow:0 4px 0 #2f9f7f}
 .btn.lila{color:#fff;background:linear-gradient(180deg,#c9b4ff,#9c7ff0);box-shadow:0 4px 0 #6f53c8}
 .btn:disabled{opacity:.5}
@@ -25,7 +25,7 @@ body{font-family:'Fredoka',ui-rounded,'Nunito','Segoe UI',system-ui,sans-serif;c
 .chips button{font-family:inherit;font-weight:700;font-size:15px;border:none;border-radius:16px;padding:6px 12px;background:rgba(255,255,255,.75);color:#9a74c0;cursor:pointer}
 .chips button.on{background:linear-gradient(90deg,#ff9ec7,#b9a1f5);color:#fff}
 .lbl{font-size:14px;font-weight:700;color:#fff;text-shadow:0 2px 0 rgba(170,100,180,.5);margin-top:10px}
-.card{background:rgba(255,255,255,.93);border-radius:28px;padding:18px 22px 20px;text-align:center;box-shadow:0 8px 0 rgba(200,140,210,.45),0 20px 40px rgba(150,80,150,.25);max-width:94vw;width:420px}
+.card{background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1.5px solid #fff;border-radius:28px;padding:18px 22px 20px;text-align:center;box-shadow:0 8px 0 rgba(200,140,210,.45),0 20px 40px rgba(150,80,150,.25);max-width:94vw;width:420px}
 .card h2{margin:0 0 6px;font-size:34px;color:#f27bb2}
 .card p,.card li{font-size:16px;line-height:1.35;color:#8a5aa8;text-align:left}
 .card ul{padding-left:20px;margin:6px 0}
@@ -49,7 +49,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;width:150px}
 .plist div.me{background:#ffe0ef}.plist div.bot{opacity:.65}
 .plist img{width:30px;height:30px;border-radius:50%}
 .topbar{position:absolute;top:calc(env(safe-area-inset-top) + 10px);left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none;z-index:6}
-.round{width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.8);box-shadow:0 3px 0 rgba(180,120,200,.45);font-size:22px;pointer-events:auto;cursor:pointer}
+.round{width:46px;height:46px;border-radius:50%;border:1.5px solid #fff;background:rgba(255,255,255,.8);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 6px 14px rgba(150,80,150,.2);font-size:22px;pointer-events:auto;cursor:pointer}
 #toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 64px);transform:translate(-50%,-10px);background:rgba(255,255,255,.93);color:#8a5aa8;font-weight:700;font-size:19px;padding:8px 18px;border-radius:20px;box-shadow:0 4px 0 rgba(190,130,200,.35);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:9;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 .big-msg{position:absolute;left:0;right:0;top:32%;text-align:center;font-size:min(18vw,96px);font-weight:700;color:#fff;text-shadow:0 5px 0 #f08cbc,0 10px 0 #c58ae0,0 18px 30px rgba(150,80,150,.4);pointer-events:none;opacity:0;transform:scale(.6);transition:opacity .2s,transform .25s cubic-bezier(.3,1.6,.5,1);z-index:8}
