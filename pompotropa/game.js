@@ -60,7 +60,7 @@ function buildLevel(L) { clearLevel(); rs = 1234 + L * 7919; const len = Math.mi
     else if (t < .6) { const n = ri(3, 5 + L); items.push({ k: 'ally', z, x: rnd(-3, 3), n }); E += n; z -= 13; }
     else if (t < .82 && z < -40) { const n = Math.max(2, Math.round(E * rnd(.15, .45))); items.push({ k: 'rival', z, x: rnd(-2.5, 2.5), n }); E += n; z -= 16; }
     else { items.push({ k: 'trap', z, w: rnd(3, 4.5), sp: rnd(1.2, 2 + L * .1), ph: rnd(0, 6) }); E = Math.round(E * .9); z -= 16; } }
-  const endZ = z - 8, B = Math.max(6, Math.round(E * Math.min(.8, .38 + .035 * L)));
+  const endZ = z - 8, B = Math.max(6, Math.round(E * Math.min(.65, .38 + .025 * L)));
   // suelo y bordes
   const fl = new THREE.Mesh(new THREE.PlaneGeometry(W, -endZ + 60), new THREE.MeshStandardMaterial({ map: TT, roughness: .8 })); TT.repeat.set(1, (-endZ + 60) / 6); fl.rotation.x = -Math.PI / 2; fl.position.z = endZ / 2 - 10; LV.add(fl);
   const railM = new THREE.MeshStandardMaterial({ color: '#ff8cc0', roughness: .35 }), railG = new THREE.CylinderGeometry(.28, .28, -endZ + 60, 12);
@@ -108,12 +108,12 @@ function stepRun(dt) { const L = level.L, speed = 8 + Math.min(4, L * .25); cons
   for (const it of level.items) { if (it.done) continue; const dz = it.z - army.z;
     if (it.pts && dz > R0 + it.r + 1) { it.done = 1; continue; }
     if (it.k === 'gate' && dz > 0) { it.done = 1; const g = ax < 0 ? it.L : it.R, n0 = army.n, n1 = OPS[g.op](n0, g.v); const good = n1 >= n0; setN(n1, null, gateTxt(g), good ? 'g' : 'b'); good ? sfx.good() : sfx.bad(); const side = ax < 0 ? -1 : 1; burst(side * HW / 2, 1.3, it.z, good ? new THREE.Color('#3fb5ff') : new THREE.Color('#ff4f6d'), 22, 6); it.g.children.forEach((c, i) => { if (c.geometry.type === 'BoxGeometry' && Math.sign(c.position.x) === side) c.material.opacity = .25; }); }
-    else if ((it.k === 'ally' || it.k === 'rival') && Math.abs(dz) < R0 + it.r * .6 && Math.abs(it.x - ax) < R0 + it.r * .8) { it.done = 1; it.lab.visible = false; if (it.ring) it.ring.visible = false; const sp = it.pts.map(p => ({ x: it.x + p.x, z: it.z + p.z }));
+    else if ((it.k === 'ally' || it.k === 'rival') && Math.abs(dz) < R0 + it.r * .6 && Math.abs(it.x - ax) < (R0 + it.r) * .55) { it.done = 1; it.lab.visible = false; if (it.ring) it.ring.visible = false; const sp = it.pts.map(p => ({ x: it.x + p.x, z: it.z + p.z }));
       if (it.k === 'ally') { setN(army.n + it.n, sp, '+' + it.n, 'g', it); sfx.gulp(); it.pts.forEach(p => burst(it.x + p.x, .5, it.z + p.z, p.c, 2, 3)); }
       else if (army.n > it.n) { setN(army.n + it.n, sp, '¡ÑAM! +' + it.n, 'y', it); sfx.gulp(); it.pts.forEach(p => burst(it.x + p.x, .5, it.z + p.z, p.c, 3, 4)); G.shake = .3; }
       else { setN(army.n - it.n, null, '−' + it.n, 'b', it); sfx.hit(); it.pts.forEach(p => burst(it.x + p.x, .5, it.z + p.z, p.c, 3, 4)); G.shake = .5; } }
-    else if (it.k === 'trap' && dz > -.3 && dz < R0 + .3) { const bx = Math.sin(T * it.sp + it.ph) * (HW - it.w / 2); let hit = 0; for (const u of army.units) if (!u.hit && Math.abs(u.z - it.z) < .45 && Math.abs(u.x - bx) < it.w / 2 + .2) { u.hit = 1; hit++; }
-      if (hit) { const loss = Math.max(1, Math.round(hit * army.n / Math.max(1, army.units.length))); army.units = army.units.filter(u => { if (u.hit) { burst(u.x, .4, u.z, u.c, 4, 4); return false; } return true; }); setN(army.n - loss, null, '−' + loss, 'b', { x: bx, z: it.z }); sfx.hit(); }
+    else if (it.k === 'trap' && dz > -.3 && dz < R0 + .3) { const bx = Math.sin(T * it.sp + it.ph) * (HW - it.w / 2); let hit = 0; for (const u of army.units) if (!u.hit && (it.lost || 0) < Math.ceil(army.n * .22) && Math.abs(u.z - it.z) < .3 && Math.abs(u.x - bx) < it.w / 2 + .2) { u.hit = 1; hit++; }
+      if (hit) { const loss = Math.max(1, Math.min(Math.ceil(army.n * .22) - (it.lost || 0), Math.round(hit * army.n / Math.max(1, army.units.length)))); it.lost = (it.lost || 0) + loss; army.units = army.units.filter(u => { if (u.hit) { burst(u.x, .4, u.z, u.c, 4, 4); return false; } return true; }); setN(army.n - loss, null, '−' + loss, 'b', { x: bx, z: it.z }); sfx.hit(); }
       if (dz > R0) it.done = 1; }
     else if (it.k === 'trap' && dz >= R0 + .3) it.done = 1; }
   if (army.n <= 0 && state === 'run') { endGame(false); return; }
