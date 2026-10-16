@@ -1,4 +1,4 @@
-import * as THREE from './three.js?v=692';
+import * as THREE from './three.js?v=693';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -509,7 +509,7 @@ function doSplit(p) {
 const BURSTS = []; const MINI_MAX = 120, MINI_S = .75, MINI_LIVE = 160, MINIG = {};
 function miniGeo(ch) { const key = ch.id === 'custom' ? 'custom:' + (S.shape || []).length + ':' + (S.shape ? S.shape[0] : 0) : ch.id; if (MINIG[key]) return MINIG[key]; const radii = charRadii(ch), g = new THREE.IcosahedronGeometry(1, 2), pa = g.attributes.position;
   for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), r = sampleR(radii, x, y, z); pa.setXYZ(i, x * r, y * r, z * r); } g.computeVertexNormals(); g.userData.mini = 1; return MINIG[key] = g; } // figura del personaje en baja resolución (320 triángulos)
-function bigBurst(c) { c.p.burstN = (c.p.burstN || 0) + 1; const p = c.p, ox = c.x, oz = c.z, col = colOf(p), M = p.cells.reduce((a, o) => a + o.m, 0);
+function bigBurst(c) { c.p.burstN = (c.p.burstN || 0) + 1; if (ELITE) c.p.eBurst = (c.p.eBurst || 0) + 1; /* v6.29 */ const p = c.p, ox = c.x, oz = c.z, col = colOf(p), M = p.cells.reduce((a, o) => a + o.m, 0);
   wave(ox, oz, ARENA * 1.4, 0xffffff); wave(ox, oz, ARENA, col); burst(ox, oz, col, 40, 3); burst(ox, oz, 0xffd84a, 20, 2.4);
   if (p === me) { msg('💥 ¡BOOM! Tu bola ha explotado', 2.2); G.shake = 1; sfx.win(); G.burstN = (G.burstN || 0) + 1; if (G.burstN === 2 && !G.absOn && G.net !== 'c') { G.absOn = 1; G.absCD = 0; setTimeout(() => { if (G.absOn) { msg('🌀 ¡Nueva habilidad: ABSORBER!', 2.5); absUI(); } }, 2400); absUI(); }
     if (!G.pegOn && G.net !== 'c') { G.pegOn = 1; G.pegUsed = new Set(); setTimeout(() => { if (G.pegOn) { msg('🧲 ¡Nueva habilidad: PEGADO!', 2.5); pegUI(); } }, 2300); pegUI(); } }
@@ -534,7 +534,7 @@ function auraGeo(r0, r1, seg, fall) { const g = new THREE.RingGeometry(r0, r1, 1
   g.setAttribute('color', new THREE.BufferAttribute(col, 4)); g.rotateX(-Math.PI / 2); return g; }
 const auraIM = [[auraGeo(1.52, 2.3, 6, 1), .95, THREE.NormalBlending], [auraGeo(1.64, 1.76, 1, 0), 1, THREE.NormalBlending]].map(([g, o, bl]) => { const m = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: o, depthWrite: false, blending: bl }), 64); m.count = 0; m.frustumCulled = false; m.renderOrder = -1; scene.add(m); return m; });
 let auraSp = 0;
-function drawAura(t, dt) { let n = 0; auraSp -= dt; const sp = auraSp <= 0; if (sp) auraSp = .12; for (const c of cells) { if (!(c.p.burstN > 0) || c.dead || n >= 64) continue; const x = c.ix ?? c.x, z = c.iz ?? c.z, r = c.rr * (1 + Math.sin(t * 3 + c.id) * .03);
+function drawAura(t, dt) { let n = 0; auraSp -= dt; const sp = auraSp <= 0; if (sp) auraSp = .12; for (const c of cells) { if (!((ELITE ? c.p.eBurst : c.p.burstN) > 0) || c.dead /* v6.29: en élite solo tras explotar allí */ || n >= 64) continue; const x = c.ix ?? c.x, z = c.iz ?? c.z, r = c.rr * (1 + Math.sin(t * 3 + c.id) * .03);
   TQ.setFromAxisAngle(YUP, t * 1.2); M4.compose(SC.set(x, .07, z), TQ, TV2.set(r, 1, r)); auraIM[0].setMatrixAt(n, M4);
   TQ.setFromAxisAngle(YUP, -t * 2.2); M4.compose(SC.set(x, .09, z), TQ, TV2.set(r * (1 + Math.sin(t * 5) * .02), 1, r * (1 + Math.sin(t * 5) * .02))); auraIM[1].setMatrixAt(n, M4); n++;
   if (sp && Math.random() < .7) { const a = Math.random() * 6.283, rr = r * rnd(1.6, 2.2); burst(x + Math.cos(a) * rr, z + Math.sin(a) * rr, new THREE.Color().setHSL(a / 6.283, 1, .7).getHex(), 1, .18); } }
@@ -591,7 +591,7 @@ function eliteGroup(th) { if (ELG[th]) return ELG[th]; const T = THEMES[th], G3 
 function showArena() { if (arenaG) arenaG.visible = !ELITE; for (const k in ELG) ELG[k].visible = false; if (ELITE) eliteGroup(G.th).visible = true; }
 function eliteBot(i) { const p = { snack: false, name: '👑 ' + BOTN[(Math.random() * BOTN.length) | 0], team: G.teams ? i % 4 : 201 + i, col: FFAC[i % FFAC.length], char: CHARS[(Math.random() * 10) | 0], cells: [], bot: 1, dirx: 1, dirz: 0, tx: 1, tz: 0, think: Math.random() * .3, aggr: rnd(.8, 1.2), alive: 0, pud: 0, resp: 0, burstN: 2, eliteGen: 1 }; return p; }
 function flashFx() { const f = $('flash'); if (!f) return; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
-function enterElite() { if (ELITE || !G.on || G.net) return; NSTASH = players.filter(p => p !== me).map(p => ({ p, m: Math.max(START_M, p.lastM || START_M) }));
+function enterElite() { if (ELITE || !G.on || G.net) return; for (const p of players) p.eBurst = 0; for (const e of ELROSTER) e.p.eBurst = 0; NSTASH = players.filter(p => p !== me).map(p => ({ p, m: Math.max(START_M, p.lastM || START_M) }));
   for (const c of cells) if (c.p !== me) removeCell(c); cells = cells.filter(c => !c.dead); for (const q of NSTASH) q.p.cells = [];
   ELITE = 1; showArena(); clearBursts(); flights.length = 0; players = [me];
   for (const q of ELROSTER) { players.push(q.p); spawnPlayer(q.p, q.m); } let i = 0; while (players.length < 9) { const b = eliteBot(i++); players.push(b); spawnPlayer(b, rnd(400, 4000)); }
