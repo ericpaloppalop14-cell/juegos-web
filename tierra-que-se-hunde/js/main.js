@@ -6,11 +6,12 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v8';
-import { makeCharacter, animCharacter } from './gfx.js?v=v8';
-import { chOf } from './chars.js?v=v8';
-import { createShell } from './shell.js?v=v8';
-import { Sfx } from './sfx.js?v=v8';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v9';
+import { makeCharacter, animCharacter } from './gfx.js?v=v9';
+import { chOf } from './chars.js?v=v9';
+import { createShell } from './shell.js?v=v9';
+import { Sfx } from './sfx.js?v=v9';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v9';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -142,8 +143,8 @@ class Sim {
 
 // ---------------------------------------------------------------- VISTA 3D
 const { renderer, scene, camera, composer } = createRenderer($('c3d'));
-window.__renderer = renderer; window.__scene = scene;
-const Q = window.__Q = { lv: 0, dprs: [1.5, 1.25, 1, 0.85, 0.7], acc: 0, n: 0, last: 0 };
+window.__renderer = renderer; window.__scene = scene; window.__camera = camera;
+const Q = window.__Q = { lv: 0, dprs: [2, 1.75, 1.5, 1.25, 1, 0.85, 0.7], acc: 0, n: 0, last: 0, good: 0 }; // v9: hasta 2× en móvil; baja si va lento y vuelve a subir si sobra
 camera.fov = 60; camera.updateProjectionMatrix();
 const world = buildWorld(scene, 'atardecer', 22);
 world.lights.sun.shadow.camera.left = world.lights.sun.shadow.camera.bottom = -HALF - 4; world.lights.sun.shadow.camera.right = world.lights.sun.shadow.camera.top = HALF + 4; world.lights.sun.shadow.camera.updateProjectionMatrix();
@@ -155,15 +156,15 @@ function roundedTile() { const s = TS - 0.18, r = 0.38, h = s / 2, sh = new THRE
   sh.moveTo(-h + r, -h); sh.lineTo(h - r, -h); sh.quadraticCurveTo(h, -h, h, -h + r); sh.lineTo(h, h - r); sh.quadraticCurveTo(h, h, h - r, h); sh.lineTo(-h + r, h); sh.quadraticCurveTo(-h, h, -h, h - r); sh.lineTo(-h, -h + r); sh.quadraticCurveTo(-h, -h, -h + r, -h);
   const g = new THREE.ExtrudeGeometry(sh, { depth: 0.8, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 1, curveSegments: 2 }); g.rotateX(-Math.PI / 2); g.translate(0, -0.92, 0); return g; }
 const TG = roundedTile();
-const crackTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d'); x.strokeStyle = 'rgba(120,30,70,.9)'; x.lineCap = 'round';
+const crackTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 512; const x = cv.getContext('2d'); x.scale(2, 2); x.strokeStyle = 'rgba(120,30,70,.9)'; x.lineCap = 'round';
   for (let k = 0; k < 8; k++) { let px = 128, py = 128, a = k / 8 * 6.28 + Math.random() * 0.4; x.beginPath(); x.moveTo(px, py);
     for (let s = 0; s < 6; s++) { a += (Math.random() - 0.5) * 0.9; px += Math.cos(a) * 22; py += Math.sin(a) * 22; x.lineTo(px, py); } x.lineWidth = 5; x.stroke(); }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
 // suelo con InstancedMesh: 529 casillas = 3 draw calls (cuerpo, números en un atlas, grietas)
-const ATL = (() => { const cv = document.createElement('canvas'); cv.width = 640; cv.height = 512; const x = cv.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+const ATL = (() => { const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 1024; const x = cv.getContext('2d'); x.scale(2, 2); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
   for (let hot = 0; hot < 2; hot++) for (let n = 1; n <= 10; n++) { const c = (n - 1 + hot * 10), ox = (c % 5) * 128, oy = (c / 5 | 0) * 128;
     x.font = `700 ${n === 10 ? 74 : 92}px Fredoka, sans-serif`; x.lineWidth = 14; x.strokeStyle = hot ? '#b0124f' : new THREE.Color(NUMCOL[n]).offsetHSL(0, 0, -0.25).getStyle(); x.strokeText(String(n), ox + 64, oy + 70); x.fillStyle = '#fff'; x.fillText(String(n), ox + 64, oy + 70); }
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; })();
 const TCOL = [], THOT = new THREE.Color('#ff6aa6');
 for (let n = 1; n <= 10; n++) TCOL[n] = new THREE.Color(NUMCOL[n]).lerp(new THREE.Color('#ffffff'), 0.38);
 const tileIM = new THREE.InstancedMesh(TG, new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.42, metalness: 0, envMapIntensity: 0.8 }), N * N);
@@ -174,6 +175,7 @@ labMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#inc
 const labIM = new THREE.InstancedMesh(LABG, labMat, N * N);
 const crIM = new THREE.InstancedMesh(CRG, new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, opacity: 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }), N * N);
 for (const im of [tileIM, labIM, crIM]) { im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; scene.add(im); }
+tileIM.receiveShadow = true;
 tileIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * N * 3), 3); tileIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 const tiles = [];
 for (let i = 0; i < N * N; i++) { const g = new THREE.Object3D(); g.position.set(tx(i), FY, tz(i)); // g = posición/giro lógico; se vuelca a las instancias cada frame
@@ -197,7 +199,7 @@ function syncTiles(pulse) { // vuelca la posición/giro de cada casilla a las 3 
 const room = new THREE.Group(); scene.add(room);
 {
   const W = N * TS, WH = 4.2;
-  const wallTex = (() => { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const x = cv.getContext('2d');
+  const wallTex = (() => { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const x = cv.getContext('2d'); x.scale(2, 2);
     for (let i = 0; i < 16; i++) { x.fillStyle = i % 2 ? '#ffd6ea' : '#fff3f9'; x.fillRect(i * 32, 0, 32, 128); }
     x.fillStyle = '#c9a8ff'; x.fillRect(0, 0, 512, 16); x.fillStyle = '#ff9cc8'; for (let i = 0; i < 16; i++) { x.beginPath(); x.arc(i * 32 + 16, 112, 9, 0, 7); x.fill(); }
     const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.repeat.set(4, 1); return t; })();
@@ -242,77 +244,45 @@ function lolliPost(c) { const g = new THREE.Group();
   const lol = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.45, 16), P(c)); lol.rotation.x = Math.PI / 2; lol.position.y = 5.8; lol.castShadow = true; g.add(lol);
   mapAnim.push(t => { lol.rotation.y = t * 0.6; }); return g; }
 function buildMap(id) {
-  if (curMap === id) return; curMap = id; mapG.clear(); obsMeshes = []; mapAnim = []; const M = MAPS[id];
+  if (curMap === id) return; queueMicrotask(castMap); curMap = id; mapG.clear(); obsMeshes = []; mapAnim = []; const M = MAPS[id];
   tiles.forEach((T, i) => { T.hole = M.hole(tx(i), tz(i)); T.g.visible = !T.hole; });
   mergeInto(mapG);
   const ob0 = M.obs(0);
   if (id === 'tiovivo') { // tiovivo gigante girando en el centro
-    const car = new THREE.Group(); mapG.add(car); car.position.y = FY - 1;
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(8.6, 9, 1.6, 24), P('#fff0f7')); base.position.y = 0.8; base.receiveShadow = base.castShadow = true; car.add(base);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(8.8, 0.35, 8, 32), glowM('#ffcf7a')); rim.rotation.x = Math.PI / 2; rim.position.y = 1.6; car.add(rim);
-    const spin = new THREE.Group(); car.add(spin);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 14, 12), P('#ffd36b', { metalness: 0.3 })); pole.position.y = 8; spin.add(pole);
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(10.5, 5, 16, 1, true), new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, map: (() => { const cv = document.createElement('canvas'); cv.width = 512; cv.height = 64; const x = cv.getContext('2d'); for (let k = 0; k < 16; k++) { x.fillStyle = k % 2 ? '#ffffff' : '#ff8fc0'; x.fillRect(k * 32, 0, 32, 64); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })() }));
-    roof.position.y = 16.5; roof.castShadow = true; spin.add(roof);
-    const top = new THREE.Mesh(new THREE.SphereGeometry(1.4, 10, 8), glowM('#ffcf7a')); top.position.y = 19.4; spin.add(top);
-    for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283; const b = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), glowM(NUMCOL[1 + k % 10])); b.position.set(Math.cos(a) * 10.3, 14.1, Math.sin(a) * 10.3); spin.add(b); }
-    const horses = [];
-    for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283, h = new THREE.Group(); h.position.set(Math.cos(a) * 6.3, 4, Math.sin(a) * 6.3); h.rotation.y = -a; spin.add(h);
-      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 12, 8), P('#ffe9a0', { metalness: 0.4 })); rod.position.y = 5; h.add(rod);
-      const hc = NUMCOL[1 + k % 10]; const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.9, 1.8, 6, 12), P(hc)); body.rotation.x = Math.PI / 2; h.add(body);
-      const head = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 0.9, 6, 10), P(hc)); head.position.set(0, 1, 1.3); head.rotation.x = -0.6; h.add(head);
-      const mane = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.18, 8, 12, Math.PI), P('#ffffff')); mane.position.set(0, 1.3, 1); mane.rotation.y = Math.PI / 2; h.add(mane);
-      for (const [lx, lz] of [[-0.5, -0.8], [0.5, -0.8], [-0.5, 0.8], [0.5, 0.8]]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 1.4, 8), P(hc)); l.position.set(lx, -1, lz); h.add(l); }
-      h.traverse(o => { if (o.isMesh) o.castShadow = true; }); horses.push(h); }
-    mapAnim.push(t => { spin.rotation.y = t * 0.35; horses.forEach((h, k) => { h.position.y = 4 + Math.sin(t * 2 + k) * 1.1; }); });
+    const C = buildCarousel({ P, glowM, NUMCOL, mergeInto }); C.group.position.y = FY - 1; mapG.add(C.group); C.anims.forEach(f => mapAnim.push(f)); // v9: tiovivo detallado
     ob0.slice(1).forEach((o, k) => { const g = lolliPost(NUMCOL[2 + k * 2]); g.position.set(o.x, FY, o.z); mapG.add(g); });
   }
   if (id === 'tazas') { // tazas gigantes girando por la sala + tetera
     const cups = [];
-    for (let k = 0; k < 3; k++) { const g = new THREE.Group(); mapG.add(g); const c = ['#ff9cc8', '#7ee3c4', '#b9a2f7'][k];
-      const cup = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 2.6, 3.4, 20, 1, true), P(c, { side: THREE.DoubleSide })); cup.position.y = 1.7; cup.castShadow = true; g.add(cup);
-      const bot = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.3, 20), P(c)); bot.position.y = 0.15; g.add(bot);
-      const tea = new THREE.Mesh(new THREE.CircleGeometry(3.3, 40), P('#c98a5a', { roughness: 0.1 })); tea.rotation.x = -Math.PI / 2; tea.position.y = 2.8; g.add(tea);
-      const hd = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.35, 8, 12), P(c)); hd.position.set(3.8, 1.9, 0); g.add(hd);
-      const dots = new THREE.Mesh(new THREE.TorusGeometry(3.45, 0.2, 8, 24), P('#ffffff')); dots.rotation.x = Math.PI / 2; dots.position.y = 3.3; g.add(dots);
-      const plate = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.2, 0.4, 24), P('#ffffff')); plate.position.y = 0.05; plate.receiveShadow = true; g.add(plate);
-      cups.push(g); }
+    for (let k = 0; k < 3; k++) { const g = buildCup(['#ff9cc8', '#7ee3c4', '#b9a2f7'][k], { P }); mergeInto(g); mapG.add(g); cups.push(g); }
     mapAnim.push((t, T) => { MAPS.tazas.obs(T).slice(0, 3).forEach((o, k) => { cups[k].position.set(o.x, FY, o.z); cups[k].rotation.y = T * 1.6 * (k % 2 ? 1 : -1); }); });
-    const pot = new THREE.Group(); pot.position.set(0, FY + 0.2, 0); mapG.add(pot);
-    const pb = new THREE.Mesh(new THREE.SphereGeometry(2.6, 16, 12), P('#ffcf7a')); pb.scale.y = 0.8; pb.position.y = 2; pb.castShadow = true; pot.add(pb);
-    const lid = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), P('#ff9cc8')); lid.position.y = 4; pot.add(lid);
-    const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.6, 2.8, 12), P('#ffcf7a')); sp.position.set(2.6, 2.6, 0); sp.rotation.z = -0.9; pot.add(sp);
+    const TP = buildTeapot({ P }); const pot = TP.group; pot.position.set(0, FY + 0.05, 0); pot.scale.setScalar(0.95); mergeInto(pot); mapG.add(pot); TP.anims.forEach(f => mapAnim.push(f));
     mapAnim.push(t => { pot.rotation.y = t * 0.3; });
     // terrones de azúcar y cucharas gigantes alrededor
     for (let k = 0; k < 10; k++) { const a = k / 10 * 6.283; const cube = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), P('#ffffff', { roughness: 0.8 })); cube.position.set(Math.cos(a) * (HALF + 9), FY + 6 + (k % 3) * 3, Math.sin(a) * (HALF + 9)); cube.rotation.set(k, k * 2, 0); mapG.add(cube); mapAnim.push(t => { cube.rotation.y = t * 0.4 + k; cube.position.y = FY + 6 + (k % 3) * 3 + Math.sin(t + k) * 0.8; }); }
   }
   if (id === 'reloj') { // reloj con aguja gigante que barre la sala
-    const face = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, 2.2, 16), P('#ffcf7a', { metalness: 0.3 })); face.position.set(0, FY + 1.1, 0); face.castShadow = true; mapG.add(face);
-    const hand = new THREE.Group(); hand.position.set(0, FY + 1.6, 0); mapG.add(hand);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, HALF * 0.86), P('#6b3fa0', { metalness: 0.2 })); arm.position.z = HALF * 0.43; arm.castShadow = true; hand.add(arm);
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(1.4, 3, 4), P('#6b3fa0')); tip.rotation.x = Math.PI / 2; tip.position.z = HALF * 0.86 + 1; hand.add(tip);
-    const small = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, HALF * 0.45), P('#ff6fae')); small.position.set(0, 0.9, HALF * 0.22); const sh = new THREE.Group(); sh.position.copy(hand.position); sh.add(small); mapG.add(sh);
+    const face = buildClockCenter({ P }); face.position.set(0, FY, 0); mergeInto(face); mapG.add(face);
+    const hand = new THREE.Group(); hand.position.set(0, FY + 1.6, 0); mapG.add(hand); { const h = buildClockHand(HALF * 0.86, 1.4, '#7a4fb0', { P }); mergeInto(h); hand.add(h); }
+    const sh = new THREE.Group(); sh.position.copy(hand.position); mapG.add(sh); { const h = buildClockHand(HALF * 0.45 - 2, 1.0, '#ff7fb2', { P }); h.position.y = 0.9; mergeInto(h); sh.add(h); }
     mapAnim.push((t, T) => { hand.rotation.y = T * 0.13; sh.rotation.y = -T * 0.08 + 1; });
     // números de reloj gigantes flotando alrededor
     for (let k = 1; k <= 12; k++) { const a = k / 12 * 6.283; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'); x.font = '700 90px Fredoka'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 12; x.strokeStyle = '#6b3fa0'; x.strokeText(k, 64, 68); x.fillStyle = '#fff'; x.fillText(k, 64, 68);
       const tt = new THREE.CanvasTexture(cv); tt.colorSpace = THREE.SRGBColorSpace; const sp2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: tt })); sp2.scale.set(7, 7, 1); sp2.position.set(Math.sin(a) * (HALF + 10), FY + 13, Math.cos(a) * (HALF + 10)); mapG.add(sp2); }
-    for (let k = 0; k < 3; k++) { const gear = new THREE.Mesh(new THREE.TorusGeometry(6 + k * 2, 1, 8, 12), P(['#ffcf7a', '#b9a2f7', '#7ee3c4'][k], { metalness: 0.4, flatShading: true })); gear.position.set((k - 1) * 22, FY + 22 + k * 3, -HALF - 14); mapG.add(gear); mapAnim.push(t => { gear.rotation.z = t * (k % 2 ? -0.4 : 0.3); }); }
+    for (let k = 0; k < 3; k++) { const gear = new THREE.Mesh(gearGeo(6 + k * 2, 14 + k * 4), P(['#ffcf7a', '#b9a2f7', '#7ee3c4'][k], { metalness: 0.45, roughness: 0.3 })); gear.position.set((k - 1) * 22, FY + 22 + k * 3, -HALF - 14); mapG.add(gear); mapAnim.push(t => { gear.rotation.z = t * (k % 2 ? -0.4 : 0.3); }); }
   }
   if (id === 'gelatina') { // islas de tarta de gelatina que botan y un flan en el centro
     for (const [a, b] of H4) { const g = new THREE.Group(); g.position.set(a * HALF * 0.5, FY - 2, b * HALF * 0.5); mapG.add(g); const c = NUMCOL[[1, 4, 6, 8][(a + 1) + (b + 1) / 2]];
-      const cake = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.4, 4.5, 20), P(c, { transmission: 0, opacity: 0.85, transparent: true })); cake.position.y = 2.25; cake.castShadow = true; g.add(cake);
-      const cream = new THREE.Mesh(new THREE.TorusGeometry(4.8, 0.7, 8, 20), P('#ffffff')); cream.rotation.x = Math.PI / 2; cream.position.y = 4.6; g.add(cream);
-      const cherry = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), P('#ff3d6e')); cherry.position.y = 5.8; g.add(cherry);
-      for (let k = 0; k < 8; k++) { const s2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.5, 4, 6), P(NUMCOL[1 + k % 10])); s2.position.set(Math.cos(k) * 3.5, 4.75, Math.sin(k) * 3.5); s2.rotation.set(1.57, 0, k); g.add(s2); }
+      { const ck = buildJellyCake(c, { P }); mergeInto(ck); g.add(ck); }
       mapAnim.push(t => { const q = Math.sin(t * 3 + a + b * 2); g.scale.set(1 + q * 0.04, 1 - q * 0.06, 1 + q * 0.04); }); }
-    const flan = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.4, 2.4, 16), P('#ffcf7a', { transparent: true, opacity: 0.9 })); flan.position.set(0, FY + 1.2, 0); flan.castShadow = true; mapG.add(flan);
-    const car = new THREE.Mesh(new THREE.CylinderGeometry(1.62, 1.62, 0.4, 16), P('#a0522d')); car.position.y = 1.2; flan.add(car);
+    const flan = buildFlan({ P }); flan.position.set(0, FY, 0); mergeInto(flan); mapG.add(flan);
     mapAnim.push((t, T) => { const r = MAPS.gelatina.obs(T)[4].r; flan.scale.set(r / 2.2, 2.2 / r, r / 2.2); });
     for (let k = 0; k < 7; k++) { const isl = new THREE.Group(); const a = k / 7 * 6.283; isl.position.set(Math.cos(a) * (HALF + 16), FY + 4 + (k % 3) * 4, Math.sin(a) * (HALF + 16)); mapG.add(isl);
       const c1 = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.4, 3, 16), P(NUMCOL[1 + k % 10])); isl.add(c1); const c2 = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.8, 2.4, 16), P('#ffffff')); c2.position.y = 2.6; isl.add(c2);
       mapAnim.push(t => { isl.position.y = FY + 4 + (k % 3) * 4 + Math.sin(t * 0.8 + k) * 1.2; isl.rotation.y = t * 0.2; }); }
   }
 }
+function castMap() { mapG.traverse(o => { if (o.isMesh && !(o.material && o.material.emissiveIntensity > 0.5)) o.castShadow = true; }); }
 // globos, donuts gigantes y piruletas en las esquinas
 const balloons = [], decoG = new THREE.Group(); scene.add(decoG);
 // une todas las mallas estáticas de un grupo en una sola malla por material (muchísimos menos draw calls)
@@ -377,7 +347,7 @@ function nameTag(name, mine) { const cv = document.createElement('canvas'); cv.w
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(2.8, 0.8, 1); s.renderOrder = 20; return s; }
 function buildChars() {
   for (const c of chars.values()) { scene.remove(c.root); scene.remove(c.blob); } chars.clear();
-  for (const r of roster) { const root = new THREE.Group(); const m = makeCharacter(chOf(r.ch)); m.scale.setScalar(0.95); m.userData.seed = Math.random() * 10;
+  for (const r of roster) { const root = new THREE.Group(); const m = makeCharacter(chOf(r.ch)); m.scale.setScalar(0.95); m.traverse(o => { if (o.isMesh) o.castShadow = true; }); m.userData.seed = Math.random() * 10;
     root.add(m); const blob = new THREE.Mesh(BLOBG, blobMat); blob.rotation.x = -Math.PI / 2; blob.renderOrder = 2; scene.add(blob);
     if (r.id !== me) { const tag = nameTag(r.name, false); tag.position.y = 2.5; root.add(tag); }
     scene.add(root); chars.set(r.id, { root, m, blob, x: 0, z: 0, h: 0, tx: 0, tz: 0, th: 0, alive: true, fallV: 0, expr: '' }); }
@@ -520,7 +490,9 @@ function frame() {
   world.update(t); parts.update(dt); if (!NORENDER) composer.render();
   // calidad adaptativa según FPS reales: solo baja, nunca sube
   if (playing && !NORENDER) { Q.acc += rdt; Q.n++; if (Q.acc > 2) { const avg = Q.acc / Q.n * 1000; Q.acc = 0; Q.n = 0; Q.last = avg;
-    if (avg > 18.5 && Q.lv < Q.dprs.length - 1) { Q.lv++; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dprs[Q.lv])); renderer.setSize(innerWidth, innerHeight, false); if (Q.lv >= 3) parts.pts.visible = Q.lv < 4; } } }
+    const setQ = lv => { Q.lv = lv; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dprs[lv])); renderer.setSize(innerWidth, innerHeight, false); parts.pts.visible = lv < 6; const sh = lv <= 2 && !/noshadows/.test(location.search); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); } };
+    if (avg > 18.5 && Q.lv < Q.dprs.length - 1) { Q.good = 0; setQ(Q.lv + (avg > 30 ? 2 : 1) > Q.dprs.length - 1 ? Q.dprs.length - 1 : Q.lv + (avg > 30 ? 2 : 1)); }
+    else if (avg < 12.5 && Q.lv > 0) { if (++Q.good >= 3) { Q.good = 0; setQ(Q.lv - 1); } } else Q.good = 0; } }
   requestAnimationFrame(frame);
 }
 
