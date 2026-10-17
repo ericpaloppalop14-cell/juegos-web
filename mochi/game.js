@@ -25,6 +25,8 @@ const NC = PAL.length;
 const cv = document.getElementById('c');
 const ctx = cv.getContext('2d', { alpha: false });
 let safeBottom = 0, W = 0, H = 0, DPR = 1, horizonY = 0, baseY = 0, laneW = 0;
+let LH = 1; // semiancho en carriles: 1 = 3 carriles (normal), 2 = 5 carriles (modo Online)
+const LP0 = () => { const a = []; for (let l = -LH; l <= LH; l++) a.push({ l, c: -1 }); return a; };
 const D = 6;           // perspective distance
 const FAR = 62;        // spawn distance
 function proj(x, z) {
@@ -37,7 +39,7 @@ function resize() {
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
   horizonY = H * 0.34;
-  laneW = Math.min(W * 0.29, H * 0.17);
+  laneW = Math.min(W * 0.29, H * 0.17) * (LH > 1 ? 3.1 / (2 * LH + 1.1) : 1);
   const pr = document.createElement('div'); pr.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;visibility:hidden'; document.body.appendChild(pr); safeBottom = pr.offsetHeight || 0; pr.remove();
   baseY = Math.min(H * 0.80, H - safeBottom - Math.max(118, H * 0.15));
   layoutSelector(); buildDropSprites();
@@ -902,7 +904,7 @@ function drawWorld(g) {
     g.fillRect(0, b.y, W, a.y - b.y);
   }
   // road
-  const RH = 1.55;
+  const RH = LH + 0.55;
   const n0 = proj(-RH, -2.8), n1 = proj(RH, -2.8);
   const rg = g.createLinearGradient(0, horizonY, 0, H);
   rg.addColorStop(0, rgbs(mix(P.road, P.fog, 0.4))); rg.addColorStop(1, rgbs(P.road));
@@ -940,7 +942,7 @@ function drawWorld(g) {
   // lane dashes
   g.fillStyle = P.stars > 0.5 ? 'rgba(200,170,255,0.85)' : 'rgba(232,180,215,0.75)';
   const LP = 3.2, loff = dist % LP;
-  for (const lx of [-0.5, 0.5]) {
+  for (let lx = -LH + 0.5; lx < LH; lx += 1) {
     for (let k = 0; k < 30; k++) {
       const z0 = k * LP - loff - 3, z1 = z0 + 1.5; if (z0 > FAR) break; if (z1 < -2.8) continue;
       const za = Math.max(z0, -2.8);
@@ -974,9 +976,9 @@ function updateSelector(dt) {
   }
   // next wall colour in Mochi's lane (subtle hint)
   sel.hintCol = -1;
-  const li = clamp(Math.round(mochi.x), -1, 1);
+  const li = clamp(Math.round(mochi.x), -LH, LH);
   let best = null; for (const r of rows) if (!r.done && r.z > 0 && r.z < 40 && (!best || r.z < best.z)) best = r;
-  if (best) { const c = best.cells[li + 1]; if (c.t === 'w') sel.hintCol = c.c; }
+  if (best) { const c = best.cells[li + LH]; if (c.t === 'w') sel.hintCol = c.c; }
 }
 function dropPath(g, x, y, r) {
   g.beginPath(); g.moveTo(x, y - r * 1.32);
@@ -1860,7 +1862,7 @@ function resetRun() {
   contUsed = 0; freezeT = 0; invulnT = 0; resetDash();
   runT = 0; dist = 0; speed = 12.5; score = 0; combo = 0; timeScale = 1; tsTarget = 1; shake = 0;
   mochi.lane = 0; mochi.x = 0; mochi.vx = 0; mochi.color = 0; mochi.rgb = PAL[0].rgb.slice(); mochi.dead = false; mochi.wob = 0; mochi.wobV = 0;
-  spawnZ = 26; lastPattern = ''; dCur = 0; pending = []; lastPass = [{ l: -1, c: -1 }, { l: 0, c: -1 }, { l: 1, c: -1 }]; runUnlocks = []; banners = [];
+  spawnZ = 26; lastPattern = ''; dCur = 0; pending = []; lastPass = LP0(); runUnlocks = []; banners = [];
   tutStep = tutDone ? -1 : 0; tutWaitT = 0;
   setTheme(0, false); menuThemeT = 0;
   if (tutStep === 0) spawnTutorial(); 
@@ -1878,6 +1880,24 @@ const ownedChar = i => i > 0 && MON.ownsChar(CH[i].id);
 const isUnlocked = i => DEBUG || CH[i].unlock <= maxPts() || ownedChar(i);
 if (!(selChar >= 0 && selChar < NCH) || !isUnlocked(selChar)) selChar = 0;
 let runUnlocks = [], banners = [];
+// ---- 1.2.4 · Probar personaje 1 partida (anuncio bonificado; gratis con «sin anuncios»), máx. TRIAL_MAX al día
+const TRIAL_MAX = 3;
+let trialIdx = -1, trialPrev = 0, trialDone = -1, trialBusy = false;
+const trialDay = () => new Date().toISOString().slice(0, 10);
+function trialsLeft() { const d = store.get('mochi_trial_day', ''); const n = d === trialDay() ? (parseInt(store.get('mochi_trial_n', '0'), 10) || 0) : 0; return Math.max(0, TRIAL_MAX - n); }
+function trialUse() { const left = trialsLeft(); store.set('mochi_trial_day', trialDay()); store.set('mochi_trial_n', String(TRIAL_MAX - left + 1)); }
+function trialEndRun() { if (trialIdx < 0) return; trialDone = trialIdx; selChar = trialPrev; trialIdx = -1; }
+async function startTrial() {
+  if (state !== 'select' || trialBusy || isUnlocked(selIdx) || !MON.available || trialsLeft() <= 0) return;
+  trialBusy = true; const i = selIdx;
+  let ok = MON.noAds();
+  if (!ok) { Snd.tick(); ok = await MON.showRewarded(); }
+  trialBusy = false;
+  if (!ok || state !== 'select') return;
+  trialUse(); trialPrev = selChar; trialIdx = i; selChar = i; trialDone = -1;
+  startGame();
+  showHint(T('trialTag', { n: CH[i].name }), 1.6);
+}
 function checkUnlocks() {
   for (let i = 1; i < NCH; i++) {
     const u = CH[i].unlock;
@@ -1952,6 +1972,11 @@ function updateSelectUI() {
   const pick = document.getElementById('selPick');
   pick.textContent = !un ? (pr && MON.available ? '🔒 ' + T('buyFor', { p: price }) : T('lockedBtn')) : T('playWith', { n: c.name });
   pick.classList.toggle('dis', !un && !(pr && MON.available)); pick.classList.toggle('chosen', un && selIdx === selChar);
+  const tb = document.getElementById('selTrial'), tl = document.getElementById('selTrialLeft'), canT = !un && MON.available && !DEBUG;
+  const left = trialsLeft();
+  tb.style.display = canT && left > 0 ? '' : 'none'; tb.textContent = MON.noAds() ? T('trialFree') : T('trialBtn');
+  tl.style.display = canT ? '' : 'none'; tl.textContent = left > 0 ? T('trialLeft', { n: left + '/' + TRIAL_MAX }) : T('trialNone');
+  if (canT && !pr) document.getElementById('selDesc').style.display = 'none';
   document.getElementById('selRecord').textContent = T('yourRecord', { n: fmtN(best) }) + (DEBUG ? T('debugMode') : '');
 }
 function selGo(d) { const n = clamp(selIdx + d, 0, NCH - 1); if (n !== selIdx) { selIdx = n; Snd.sel(n, d); updateSelectUI(); } }
@@ -2158,7 +2183,7 @@ function dashNeed(r, d) { const dd = Math.min(d + 0.35, 1.35), a = r.acts != nul
 // Para el muro MÁS CERCANO el jugador ya lo ha visto: solo cuentan las acciones que le FALTAN desde
 // su carril/color actual (0,18–0,2 s cada una + 0,1 s), no la reacción completa.
 function dashNeedFirst(r, d) {
-  const acts = transCost([{ l: clamp(Math.round(mochi.lane), -1, 1), c: mochi.color }], passStates(r.cells));
+  const acts = transCost([{ l: clamp(Math.round(mochi.lane), -LH, LH), c: mochi.color }], passStates(r.cells));
   return acts === 0 ? 0 : 0.1 + acts * Math.max(0.18, actT(Math.min(d + 0.35, 1.35)));
 }
 function dashCapNow(d) {
@@ -2240,7 +2265,7 @@ const dashVis = () => state === 'play' ? Math.max(dashFx(), dashEnv(dashT) * 0.8
 // embestida del muñeco en pantalla: avanza y vuelve con un pequeño rebote
 function dashLunge() { const base = turbo && state === 'play' ? 0.25 : 0; return Math.max(base, lungePos + 0.12 * Math.sin(chainFx * Math.PI)); }
 // pass states of a row: lane + required colour (-1 = any colour)
-function passStates(cells) { const s = []; cells.forEach((c, i) => { if (c.t === 'e') s.push({ l: i - 1, c: -1 }); else if (c.t === 'w') s.push({ l: i - 1, c: c.c }); }); return s; }
+function passStates(cells) { const s = []; cells.forEach((c, i) => { if (c.t === 'e') s.push({ l: i - LH, c: -1 }); else if (c.t === 'w') s.push({ l: i - LH, c: c.c }); }); return s; }
 const COLW = 0.85; // a colour change (button or tap) is a bit quicker than a swipe
 function transCost(A, B) {
   // worst case over where the player can be after A, best choice for B
@@ -2252,7 +2277,7 @@ function transCost(A, B) {
   }
   return worst;
 }
-let lastPass = [{ l: -1, c: -1 }, { l: 0, c: -1 }, { l: 1, c: -1 }], pending = [];
+let lastPass = LP0(), pending = [];
 function pick(list) { let tot = 0; for (const [, w] of list) tot += Math.max(0, w); let r = Math.random() * tot; for (const [n, w] of list) { r -= Math.max(0, w); if (r <= 0) return n; } return list[0][0]; }
 function genSequence(d) {
   const c = rint(NC), o1 = (c + 1) % NC, o2 = (c + 2) % NC, L = rint(3);
@@ -2303,10 +2328,12 @@ function genSequence(d) {
   }
   return one([E(), E(), E()]);
 }
-function spawnNormal() {
-  while (spawnZ < FAR) {
+function spawnNormal() { if (window.ONL && ONL.active) return ONL.spawn(spawnNormal0); spawnNormal0(); }
+function widenRow(q) { const o = rint(2 * LH - 1), cells = []; for (let j = 0; j <= 2 * LH; j++) { if (j >= o && j < o + 3) { const c = { ...q.cells[j - o] }; if (c.from != null) c.from += o - (LH - 1); cells.push(c); } else { const nb = q.cells[j < o ? 0 : 2]; cells.push(nb.t === 'w' ? { ...nb } : B()); } } return { cells, extra: q.extra }; }
+function spawnNormal0() {
+  while (spawnZ < FAR && !(window.ONL && ONL.active && dist + spawnZ > ONL.goal - 10)) {
     const d = diff();
-    if (!pending.length) pending = genSequence(d);
+    if (!pending.length) pending = LH > 1 ? genSequence(d).map(widenRow) : genSequence(d);
     const { cells, extra } = pending.shift();
     const B2 = passStates(cells);
     const actions = transCost(lastPass, B2);
@@ -2318,7 +2345,7 @@ function spawnNormal() {
     if (ex.flip) ex.flipZ = vB() * (reactT(d) + 2 * actT(d) * COLW + 0.2);
     if (Math.random() < 0.7) {
       const opts = []; cells.forEach((cc, i) => { if (cc.t !== 'b') opts.push(i); });
-      const lane = opts[rint(opts.length)] - 1;
+      const lane = opts[rint(opts.length)] - LH;
       const n = 3 + rint(3), sp = Math.min(1.7, gap / (n + 2));
       for (let i = 0; i < n; i++) stars.push({ lane, z: z - gap * 0.5 - (n / 2 - i) * sp, got: false, ph: Math.random() * 6 });
     }
@@ -2339,7 +2366,7 @@ function updateSpecialRows() {
       for (const c of r.cells) c.show = c.c;
       r.flipped = true;
       if (state === 'play' && r.z > 0) {
-        for (let i = 0; i < 3; i++) { const p = proj(i - 1, r.z); burst(p.x, p.y - laneW * 0.5 * p.s, PAL[r.cells[i].c].lrgb, 6, { min: 60, max: 180, g: 0, type: 'spark', life: 0.5, rmin: 2, rmax: 4 }); }
+        for (let i = 0; i < r.cells.length; i++) { const p = proj(i - LH, r.z); burst(p.x, p.y - laneW * 0.5 * p.s, PAL[r.cells[i].c].lrgb, 6, { min: 60, max: 180, g: 0, type: 'spark', life: 0.5, rmin: 2, rmax: 4 }); }
         Snd.tone(1200, 0.12, { type: 'triangle', vol: 0.06 }); Snd.tone(1600, 0.1, { type: 'triangle', vol: 0.05, delay: 0.05 });
       }
     }
@@ -2409,6 +2436,7 @@ function onAction(a) {
   if (window.__tapGuard && performance.now() < window.__tapGuard) return; // el toque de "Toca para empezar" solo arranca el audio
   Snd.init();
   if (state === 'menu') { if (a === 'tap' || a === 'start') startGame('normal'); return; }
+  if (window.ONL && ONL.active && state !== 'play') return;
   if (state === 'over') { if (overT > 0.45 && (a === 'tap' || a === 'start')) startGame(); return; }
   if (state === 'paused') { if (a === 'start') resume(); return; }
   if (state === 'cont') { if (a === 'start') acceptContinue(); return; }
@@ -2420,7 +2448,7 @@ function onAction(a) {
     return;
   }
   if (a === 'left' || a === 'right') {
-    const nl = clamp(mochi.lane + (a === 'left' ? -1 : 1), -1, 1);
+    const nl = clamp(mochi.lane + (a === 'left' ? -1 : 1), -LH, LH);
     if (nl !== mochi.lane) {
       mochi.lane = nl; mochi.wobV -= 2.2; Snd.swipe();
       const p = proj(mochi.x, 0);
@@ -2528,11 +2556,13 @@ btn('contHome', () => { if (!contBusy && state === 'cont') { Snd.tick(); decline
 btn('overHome', () => { if (state === 'over' && overT > 0.3) { Snd.tick(); goMenu(); } });
 btn('contNoAds', async () => { if (contBusy) return; contBusy = true; const ok = await MON.buy(MOCHI_CONFIG.products.noAds, T('prodNoAds')); contBusy = false; if (ok && state === 'cont') { contT = 0; offerContinue(); } });
 btn('selBuy', () => buyPrem());
+btn('selTrial', () => startTrial());
+btn('trialBuy', async () => { if (state !== 'over' || trialDone < 0 || buyPrem.busy) return; const i = trialDone, c = CH[i]; if (isUnlocked(i)) return; buyPrem.busy = true; try { const ok = await MON.buy(MON.charProduct(c.id), T('prodChar', { n: c.name })); if (ok) { selChar = i; store.set('mochi_char', String(i)); document.getElementById('overTrial').style.display = 'none'; const ul = document.getElementById('overUnlock'); ul.className = 'unl new'; ul.textContent = T('unlocked', { n: c.name }); for (let k = 0; k < 18; k++) burst(W / 2, H * 0.3, PAL[k % 3].lrgb, 1, { min: 80, max: 260, g: 200, type: 'star', life: 0.9, rmin: 2, rmax: 5 }); } } finally { buyPrem.busy = false; } });
 async function buyPrem() { const c = CH[selIdx]; if (isUnlocked(selIdx) || !MON.available || buyPrem.busy) return; buyPrem.busy = true; try { const ok = await MON.buy(MON.charProduct(c.id), T('prodChar', { n: c.name })); if (ok) { updateSelectUI(); for (let k = 0; k < 18; k++) burst(W / 2, H * 0.34, PAL[k % 3].lrgb, 1, { min: 80, max: 260, g: 200, type: 'star', life: 0.9, rmin: 2, rmax: 5 }); Snd.record(); } } finally { buyPrem.busy = false; } }
 btn('selRestore', async () => { await MON.restore(); updateSelectUI(); });
 btn('selPrivacy', () => MON.privacyForm());
 btn('selNoAds', async () => { if (MON.noAds()) return; const ok = await MON.buy(MOCHI_CONFIG.products.noAds, T('prodNoAds')); if (ok) updateSelectUI(); });
-MON.onChange(() => { if (state === 'select') updateSelectUI(); if (!isUnlocked(selChar)) selChar = 0; });
+MON.onChange(() => { if (state === 'select') updateSelectUI(); if (trialIdx < 0 && !isUnlocked(selChar)) selChar = 0; });
 Snd.create(); Music.start(); try { const p = Snd.ac && Snd.ac.resume(); if (p && p.then) p.then(() => Music.kick()).catch(() => {}); } catch (e) {}
 // cualquier primer gesto (toque, tecla) desbloquea el audio; Jugar/Elegir además lo hacen en su propio pointerdown
 ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, () => Snd.init(), { capture: true, passive: true }));
@@ -2560,6 +2590,7 @@ function setScreen(id) { ['title', 'over', 'pause', 'select', 'cont'].forEach(s 
 function startGame(mode) {
   if (mode != null) turbo = mode === 'turbo';
   if (turbo && !tutDone) { tutDone = true; store.set('mochi_tut', '1'); } // el turbo es para quien ya sabe jugar
+  if (trialIdx < 0) trialDone = -1;
   resetRun();
   if (turbo) dCur = 0.2;
   state = 'play'; stateT = 0; setScreen(null); elHud.style.opacity = 1;
@@ -2570,7 +2601,7 @@ function startGame(mode) {
 function pause() { if (state !== 'play') return; state = 'paused'; setScreen('pause'); hideHint(); updatePauseSound(); }
 function resume() { if (state !== 'paused') return; state = 'play'; setScreen(null); freezeT = Math.max(freezeT, 3); Snd.tick(); } // cuenta atrás 3-2-1
 function updatePauseSound() { document.getElementById('pSound').textContent = (Snd.muted ? '🔇 ' : '🔊 ') + T('sound'); }
-function goMenu() { resetRun(); hideHint(); state = 'menu'; stateT = 0; setScreen('title'); elHud.style.opacity = 0; updateTitleBest(); }
+function goMenu() { trialEndRun(); trialDone = -1; resetRun(); hideHint(); state = 'menu'; stateT = 0; setScreen('title'); elHud.style.opacity = 0; updateTitleBest(); }
 function skipTutorial() { if (tutStep < 0) return; tutDone = true; store.set('mochi_tut', '1'); store.set('mochi_dashhint', '1'); tutStep = -1; rows = rows.filter(r => r.tut == null); tsTarget = 1; timeScale = 1; hideHint(); spawnZ = Math.max(spawnZ, 12); showHint(T('run'), 1.2); spawnNormal(); }
 function howTo() { tutDone = false; store.set('mochi_tut', '0'); startGame('normal'); }
 let godMode = false;
@@ -2588,7 +2619,10 @@ function die(cause) {
 // ---- "Seguir donde te quedaste" (rewarded ad, or free with "sin anuncios"): 1 oferta por muerte, máx. maxContinues (3) por partida
 const CONT_TIME = 7;
 const elCont = document.getElementById('cont'), elContBar = document.getElementById('contBar');
-function canContinue() { return MON.available && tutStep < 0 && contUsed < (CFGM.maxContinues ?? 3); }
+// 1.2.4: solo se ofrece si la partida merece la pena (más de 30 s o más de la mitad del récord)
+const CONT_MIN_T = 30, CONT_MIN_FRAC = 0.5;
+function runWorthIt() { const b = turbo ? bestTurbo : best; return runT > CONT_MIN_T || (b > 0 && score > b * CONT_MIN_FRAC); }
+function canContinue() { return !(window.ONL && ONL.active) && MON.available && tutStep < 0 && contUsed < (CFGM.maxContinues ?? 3) && runWorthIt(); }
 function offerContinue() {
   state = 'cont'; contT = 0; contBusy = false;
   const left = (CFGM.maxContinues ?? 3) - contUsed, free = MON.noAds();
@@ -2614,7 +2648,7 @@ function revive() {
   contUsed++;
   // fair restart: clear everything close to Mochi, keep the far rows, 3-2-1 countdown then a short shield
   rows = rows.filter(r => r.z > 30); stars = stars.filter(st => st.z > 30);
-  pending = []; lastPass = [{ l: -1, c: -1 }, { l: 0, c: -1 }, { l: 1, c: -1 }];
+  pending = []; lastPass = LP0();
   spawnZ = Math.max(spawnZ, 30);
   mochi.dead = false; mochi.deadT = 0; mochi.wob = 0; mochi.wobV = 3; mochi.happyT = 0.6;
   combo = 0; timeScale = 1; tsTarget = 1; shake = 0; flash = 0.35; flashCol = [255, 255, 255];
@@ -2625,7 +2659,8 @@ function revive() {
   Snd.record();
 }
 function gameOver() {
-  state = 'over'; overT = 0;
+  if (window.ONL && ONL.active) { state = 'over'; overT = 0; ONL.myEnd(); return; }
+  state = 'over'; overT = 0; trialEndRun();
   const s = Math.floor(score), prev = turbo ? bestTurbo : best, isRec = s > prev;
   if (isRec) { if (turbo) { bestTurbo = s; store.set('mochi_best_turbo', String(s)); } else { best = s; store.set('mochi_best', String(best)); } setTimeout(() => Snd.record(), 250); }
   document.getElementById('finalScore').textContent = fmtN(s);
@@ -2636,6 +2671,14 @@ function gameOver() {
   const ul = document.getElementById('overUnlock');
   if (runUnlocks.length) { ul.className = 'unl new'; ul.textContent = T('unlocked', { n: runUnlocks.map(i => CH[i].name).join(', ') }); }
   else { const nx = CH.find((c, i) => !c.premium && !isUnlocked(i)); ul.className = 'unl'; ul.textContent = nx ? T('nextChar', { n: fmtN(nx.unlock) }) : CH.some((c, i) => c.premium && !isUnlocked(i)) ? T('premHint') : T('allChars'); }
+  const ot = document.getElementById('overTrial');
+  if (trialDone >= 0 && !isUnlocked(trialDone)) {
+    const c = CH[trialDone]; ot.style.display = '';
+    document.getElementById('trialEnd').textContent = T('trialEnd', { n: c.name });
+    const tb = document.getElementById('trialBuy'); tb.textContent = T('trialBuy', { p: premPrice(trialDone) }); tb.style.display = MON.available ? '' : 'none';
+    document.getElementById('trialKeep').textContent = c.premium ? T('trialKeepPrem') : T('trialKeep', { n: fmtN(c.unlock) });
+    ul.style.display = 'none';
+  } else { ot.style.display = 'none'; ul.style.display = ''; }
   setScreen('over'); elHud.style.opacity = 0;
 }
 function updateTitleBest() {
@@ -2647,8 +2690,8 @@ function updateTitleBest() {
 // ================= Update =================
 function resolveRow(r) {
   r.done = true;
-  const li = clamp(Math.round(mochi.x), -1, 1);
-  const cell = r.cells[li + 1];
+  const li = clamp(Math.round(mochi.x), -LH, LH);
+  const cell = r.cells[li + LH];
   const p = proj(mochi.x, 0);
   const hasWall = r.cells.some(c => c.t === 'w');
   if (cell.t === 'b') { die('block'); return; }
@@ -2704,7 +2747,7 @@ function update(dt) {
   } else if (state === 'play') {
     if (invulnT > 0) invulnT = Math.max(0, invulnT - gdt);
     runT += tutStep >= 0 ? 0 : gdt;
-    if (tutStep < 0) dCur = lerp(dCur, diffTarget(score), 1 - Math.exp(-gdt * 0.8));
+    if (window.ONL && ONL.active) dCur = ONL.dAt(dist); else if (tutStep < 0) dCur = lerp(dCur, diffTarget(score), 1 - Math.exp(-gdt * 0.8));
     const d = diff();
     speed = Math.min(31, 12.5 + 14.5 * Math.min(d, 1) + 8 * Math.max(0, d - 1));
     updateDash(gdt, d); updateBrake(gdt);
@@ -2714,14 +2757,15 @@ function update(dt) {
     tsTarget = 1;
     for (const r of rows) {
       if (r.tut != null && !r.done && r.z < 9) {
-        const li = clamp(Math.round(mochi.x), -1, 1);
+        const li = clamp(Math.round(mochi.x), -LH, LH);
         if (TUT[r.tut] && TUT[r.tut].need === 'dash') { if (!r.dashed) tsTarget = r.z < 3.5 ? 0 : r.z < 6 ? 0.12 : 0.4; }
-        else if (!cellOK(r.cells[li + 1])) tsTarget = r.z < 3.5 ? 0 : r.z < 6 ? 0.12 : 0.4;
+        else if (!cellOK(r.cells[li + LH])) tsTarget = r.z < 3.5 ? 0 : r.z < 6 ? 0.12 : 0.4;
       }
     }
     if (tutStep < 0) spawnNormal();
     if (tutStep < 0 && runT > 2.5 && runT < 3 && store.get('mochi_dashhint', '0') !== '1') { store.set('mochi_dashhint', '1'); showHint(T('tutDash'), 2.6); }
     checkUnlocks();
+    if (window.ONL && ONL.active) ONL.tick(gdt);
   }
   if (banners.length) banners[0].t += dt;
   if (state === 'select') selView = lerp(selView, selIdx, 1 - Math.exp(-dt * 12));
@@ -2742,7 +2786,7 @@ function update(dt) {
     }
     rows = rows.filter(r => r.z > -4);
     // stars
-    const li = clamp(Math.round(mochi.x), -1, 1);
+    const li = clamp(Math.round(mochi.x), -LH, LH);
     for (const s of stars) {
       s.z -= move;
       if (!s.got && s.z <= 0.3 && s.z > -0.8 && s.lane === li) {
@@ -2900,7 +2944,7 @@ let cheerT = 0;
 function cheerTown() {
   cheerT = 1.8;
   for (const s of scenery) if (s.type === 'inh' && s.z > 1 && s.z < 14 && Math.random() < 0.6) {
-    const p = proj(s.x, s.z), w = laneW * p.s;
+    const p = proj(s.x + Math.sign(s.x) * (LH - 1), s.z), w = laneW * p.s;
     if (p.x > 0 && p.x < W) burst(p.x, p.y - w * 0.9, [255, 226, 122], 3, { min: 30, max: 90, g: -20, type: 'star', life: 0.9, rmin: 1.5, rmax: 3 });
   }
 }
@@ -2935,7 +2979,7 @@ function groundShadow(g, x, z, wUnits) {
   g.globalAlpha = 1;
 }
 function drawInhabitant(g, s) {
-  const p = proj(s.x, s.z), units = 1.0 * s.sc, w = units * laneW * p.s;
+  const p = proj(s.x + Math.sign(s.x) * (LH - 1), s.z), units = 1.0 * s.sc, w = units * laneW * p.s;
   if (w < 3 || p.y > H + 10 || p.x < -w || p.x > W + w || s.z > 33) return;
   const a = clamp((33 - s.z) / 7, 0, 1) * (s.z < 0 ? clamp(1 + s.z / 1.5, 0, 1) : 1); if (a <= 0.02) return;
   const near = s.z > -0.5 && s.z < 7, cheer = cheerT > 0 && s.z < 30;
@@ -2967,7 +3011,7 @@ function drawScenery(g, s) {
   if (s.type === 'house') {
     groundShadow(g, s.x, s.z, 1.5);
     drawSprite(g, spr.house[s.hv], s.x, s.z, 1.5, s.flip);
-    if (TP.stars > 0.05) { const a = TP.stars; const p = proj(s.x, s.z); const w = 1.5 * laneW * p.s, img = spr.houseLit[s.hv], h = w * img.height / img.width; g.globalAlpha = fadeFar(s.z) * a; g.save(); g.translate(p.x, p.y); g.rotate(Math.sin(t * 1.6 + s.x * 3 + s.z * 0.15) * 0.045); if (s.flip) g.scale(-1, 1); g.drawImage(img, -w / 2, -h, w, h); g.restore(); g.globalAlpha = 1; }
+    if (TP.stars > 0.05) { const a = TP.stars; const p = proj(s.x + Math.sign(s.x) * (LH - 1), s.z); const w = 1.5 * laneW * p.s, img = spr.houseLit[s.hv], h = w * img.height / img.width; g.globalAlpha = fadeFar(s.z) * a; g.save(); g.translate(p.x, p.y); g.rotate(Math.sin(t * 1.6 + s.x * 3 + s.z * 0.15) * 0.045); if (s.flip) g.scale(-1, 1); g.drawImage(img, -w / 2, -h, w, h); g.restore(); g.globalAlpha = 1; }
     return;
   }
   groundShadow(g, s.x, s.z, s.type === 'gum' ? 0.9 : s.type === 'cupcake' ? 1.0 : 1.0);
@@ -3100,12 +3144,12 @@ function drawTutorialHand(g) {
   if (state !== 'play' || tutStep < 0) return;
   const need = TUT[tutStep] && TUT[tutStep].need, r = rows.find(r => r.tut != null && !r.done);
   if (!r || r.z > 18) return;
-  const li = clamp(Math.round(mochi.x), -1, 1), wrong = !cellOK(r.cells[li + 1]);
+  const li = clamp(Math.round(mochi.x), -LH, LH), wrong = !cellOK(r.cells[li + LH]);
   const p = proj(mochi.x, 0), cy = baseY - laneW * 0.2, ph = (t * 0.9) % 1, e = sstep(ph / 0.6), fa = ph < 0.75 ? 1 : 1 - (ph - 0.75) / 0.25;
   if (need === 'dash' && !r.dashed) drawFinger(g, p.x + laneW * 0.9, cy - e * laneW * 1.1, fa, 0);
   else if (need === 'tap' && wrong) { const nc = (mochi.color + 1) % NC, bp = sel.pos[nc] || { x: W / 2, y: H - 60 }; drawFinger(g, bp.x + 6, bp.y + 8, 0.95, Math.max(0, Math.sin(t * 6))); }
   else if (need === 'swipe' && wrong) {
-    let dir = 0; for (const d of [-1, 1]) for (let q = li + d; q >= -1 && q <= 1; q += d) if (cellOK(r.cells[q + 1]) && !dir) dir = d;
+    let dir = 0; for (const d of [-1, 1]) for (let q = li + d; q >= -LH && q <= LH; q += d) if (cellOK(r.cells[q + LH]) && !dir) dir = d;
     if (dir) drawFinger(g, p.x + dir * e * laneW * 1.1, cy + laneW * 0.5, fa, 0);
   }
 }
@@ -3150,13 +3194,13 @@ function drawTutorialCues(g) {
   const need = TUT[tutStep] && TUT[tutStep].need;
   const r = rows.find(r => r.tut != null && !r.done);
   if (!r || r.z > 16) return;
-  const li = clamp(Math.round(mochi.x), -1, 1);
-  const wrong = !cellOK(r.cells[li + 1]);
+  const li = clamp(Math.round(mochi.x), -LH, LH);
+  const wrong = !cellOK(r.cells[li + LH]);
   if (!wrong) return;
   const p = proj(mochi.x, 0), cy = baseY - laneW * 0.45;
   const pulse = 0.5 + 0.5 * Math.sin(t * 10);
   // Is a tap enough? (some lane wall matching after tap in current lane)
-  const cell = r.cells[li + 1];
+  const cell = r.cells[li + LH];
   if (cell.t === 'w') {
     g.strokeStyle = `rgba(255,255,255,${0.5 + pulse * 0.5})`; g.lineWidth = 4;
     g.beginPath(); g.arc(p.x, cy, laneW * (0.55 + pulse * 0.12), 0, 7); g.stroke();
@@ -3166,8 +3210,8 @@ function drawTutorialCues(g) {
   if (cell.t === 'b' || need === 'swipe' || cell.t === 'w') {
     // arrows toward ok lanes
     for (const d of [-1, 1]) {
-      const nl = li + d; if (nl < -1 || nl > 1) continue;
-      let okDir = false; for (let q = nl; q >= -1 && q <= 1; q += d) if (cellOK(r.cells[q + 1])) okDir = true;
+      const nl = li + d; if (nl < -LH || nl > LH) continue;
+      let okDir = false; for (let q = nl; q >= -LH && q <= LH; q += d) if (cellOK(r.cells[q + LH])) okDir = true;
       if (!okDir) continue;
       const ax = p.x + d * laneW * (0.62 + pulse * 0.12);
       g.fillStyle = `rgba(255,255,255,${0.6 + 0.4 * pulse})`; g.strokeStyle = 'rgba(220,120,180,0.8)'; g.lineWidth = 3;
@@ -3187,9 +3231,10 @@ function render() {
   // collect drawables sorted far->near
   const items = [];
   for (const s of scenery) items.push({ z: s.z, d: () => drawScenery(g, s) });
-  for (const r of rows) r.cells.forEach((c, i) => { if (c.t === 'w') items.push({ z: r.z + 0.01, d: () => drawWall(g, i - 1, r.z, c) }); else if (c.t === 'b') items.push({ z: r.z + 0.01, d: () => drawBlock(g, i - 1, r.z, c) }); });
+  for (const r of rows) r.cells.forEach((c, i) => { if (c.t === 'w') items.push({ z: r.z + 0.01, d: () => drawWall(g, i - LH, r.z, c) }); else if (c.t === 'b') items.push({ z: r.z + 0.01, d: () => drawBlock(g, i - LH, r.z, c) }); });
   for (const s of stars) items.push({ z: s.z, d: () => drawStar(g, s) });
   if (state !== 'select') items.push({ z: 0, mochi: true, d: () => drawMochiInWorld(g) });
+  if (window.ONL && ONL.active) ONL.items(items, g);
   items.sort((a, b) => b.z - a.z || (a.mochi ? -1 : 1));
   for (const it of items) it.d();
   // ripples
@@ -3267,7 +3312,7 @@ updateTitleBest();
 requestAnimationFrame(frame);
 const _go = gameOver; // refresh title best when returning
 // Debug / test hooks
-window.__mochi = { get ac() { return Snd.ac; }, get musicNext() { return Music.next; },
+window.__mochi = { get selChar() { return selChar; }, get trialIdx() { return trialIdx; }, get trialsLeft() { return trialsLeft(); }, set runT(v) { runT = v; }, get canCont() { return canContinue(); }, openSel(i) { openSelect("menu"); selIdx = i; updateSelectUI(); }, die: c => die(c), get ac() { return Snd.ac; }, get musicNext() { return Music.next; },
   get brakeK() { return brakeK; }, get brakeUsed() { return brakeUsed; }, get brakeT() { return brakeT; }, brake: () => onAction('down'),
   noRows() { rows = []; spawnZ = 1e9; }, get turbo() { return turbo; }, get bestTurbo() { return bestTurbo; }, get dashChain() { return dashChain; }, startGame, pause, resume, goMenu, skipTut: () => skipTutorial(), howTo, gameOver: () => gameOver(), get vB() { return vB(); },
   get dashK() { return dashK; }, get dashCap() { return dashCap; }, get dashCd() { return dashCd; }, get dashT() { return dashT; }, get dashUsed() { return dashUsed; }, dash: () => onAction('up'), act: a => onAction(a),
@@ -3295,4 +3340,143 @@ window.__mochi = { get ac() { return Snd.ac; }, get musicNext() { return Music.n
 };
 // keep title "best" fresh
 const _setScreen = setScreen;
+// ===== Mochi · MODO ONLINE (5 carriles, salas con código PeerJS, fantasmas sin colisión) =====
+// Se carga después de game.js y usa su ámbito global (state, mochi, rows, dist, LH, proj, drawMochi...).
+(() => {
+const NABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', NPRE = 'mochi-online-v1-', NMAX = 6, GOAL = 1400;
+const nCode = () => Array.from({ length: 4 }, () => NABC[(Math.random() * NABC.length) | 0]).join('');
+const GCOL = ['#ff6fae', '#5fb8ff', '#ffb43a', '#7ad67a', '#b07cff', '#ff7a5c'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t2 = Math.imul(a ^ a >>> 15, 1 | a); t2 = t2 + Math.imul(t2 ^ t2 >>> 7, 61 | t2) ^ t2; return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296; }; }
+class Net {
+  constructor() { this.peer = null; this.conns = new Map(); this.players = []; this.isHost = false; this.myId = null; this.nextId = 1; this.h = {}; this.alive = true; }
+  on(e, f) { this.h[e] = f; } emit(e, ...a) { if (this.h[e]) this.h[e](...a); }
+  _peer(id) { return new Promise((res, rej) => { if (typeof window.Peer !== 'function') return rej(new Error('broker')); let done = false; const opts = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } };
+    const p = id ? new window.Peer(id, opts) : new window.Peer(opts); const to = setTimeout(() => { if (!done) { done = true; try { p.destroy(); } catch (e) { } rej(new Error('broker')); } }, 10000);
+    p.on('open', () => { if (done) return; done = true; clearTimeout(to); res(p); });
+    p.on('error', e => { if (!done) { done = true; clearTimeout(to); try { p.destroy(); } catch (x) { } rej(new Error(e.type === 'unavailable-id' ? 'taken' : 'broker')); } else if (e.type === 'peer-unavailable' && this._jr) { this._jr(new Error('nosala')); this._jr = null; } }); }); }
+  async create(info) { for (let k = 0; k < 4 && !this.peer; k++) { const code = nCode(); try { this.peer = await this._peer(NPRE + code); this.code = code; } catch (e) { if (e.message !== 'taken') throw e; } } if (!this.peer) throw new Error('broker');
+    this.isHost = true; this.myId = 'h'; this.players = [{ id: 'h', ...info }]; this.peer.on('connection', c => this._hc(c)); this.peer.on('disconnected', () => { try { this.peer.reconnect(); } catch (e) { } }); return this.code; }
+  _hc(c) { c.on('data', d => { if (d.t === 'hello') { if (this.players.length >= NMAX || this.started) { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); return; } const id = 'p' + (this.nextId++); c.pid = id; this.conns.set(id, c);
+      this.players.push({ id, name: String(d.name || 'Invitado').slice(0, 12), ch: d.ch | 0 }); c.send({ t: 'welcome', id }); this.lobby(); return; } if (!c.pid) return; d.from = c.pid; this.emit('msg', d); });
+    c.on('close', () => this._lost(c.pid)); c.on('error', () => this._lost(c.pid)); }
+  _lost(id) { if (!id || !this.conns.has(id)) return; this.conns.delete(id); if (!this.started) this.players = this.players.filter(p => p.id !== id); this.lobby(); this.emit('left', id); }
+  lobby() { this.send({ t: 'lobby', players: this.players }); this.emit('lobby', this.players); }
+  async join(code, info) { code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); if (code.length !== 4) throw new Error('codigo'); this.peer = await this._peer(null); this.code = code;
+    return new Promise((res, rej) => { this._jr = rej; const c = this.peer.connect(NPRE + code, { reliable: true, serialization: 'json' }); this.host = c; const to = setTimeout(() => { if (this._jr) { this._jr = null; rej(new Error('nosala')); } }, 12000);
+      c.on('open', () => c.send({ t: 'hello', ...info })); c.on('data', d => { if (d.t === 'welcome') { clearTimeout(to); this._jr = null; this.myId = d.id; res(d.id); return; } if (d.t === 'full') { clearTimeout(to); this._jr = null; rej(new Error('llena')); return; }
+        if (d.t === 'lobby') { this.players = d.players; this.emit('lobby', d.players); return; } this.emit('msg', d); }); c.on('close', () => { if (this.alive) this.emit('hostgone'); }); c.on('error', () => { }); }); }
+  send(d) { if (this.isHost) { for (const c of this.conns.values()) if (c.open) try { c.send(d); } catch (e) { } } else if (this.host && this.host.open) try { this.host.send(d); } catch (e) { } }
+  close() { this.alive = false; setTimeout(() => { try { this.peer && this.peer.destroy(); } catch (e) { } }, 150); }
+}
+// ---------- UI ----------
+const css = document.createElement('style'); css.textContent = `
+#onlineBtn{font-size:17px;padding:9px 20px;color:#fff;background:linear-gradient(180deg,#7fd0ff,#5b8cff);box-shadow:0 4px 0 #3b62c8;margin-top:8px}
+#onl,#onres{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(80,40,110,.35);font-family:inherit}
+#onl.on,#onres.on{display:flex}
+.onc{pointer-events:auto;width:min(92vw,380px);background:rgba(255,255,255,.95);border-radius:26px;padding:18px 18px 16px;color:#8b5cc2;text-align:center;box-shadow:0 8px 0 rgba(180,120,200,.45);font-weight:700}
+.onc h2{margin:0 0 8px;font-size:28px;color:#ff6fae}.onc input{font-family:inherit;font-weight:700;font-size:18px;color:#8b5cc2;border:3px solid #e9cdf3;border-radius:16px;padding:8px 12px;width:100%;text-align:center;margin:4px 0;outline:none;box-sizing:border-box}
+.onc .pbtn{margin:6px auto;justify-content:center;font-size:18px;padding:9px 22px}.onc .row{display:flex;gap:8px;align-items:center}.onc .row input{flex:1}
+.onc .go{background:linear-gradient(180deg,#ff8cc0,#ff5fa2);color:#fff;box-shadow:0 4px 0 #c43c7d}
+#onCode{font-size:44px;letter-spacing:8px;color:#ff6fae;margin:2px 0}#onMsg{min-height:20px;font-size:14px;color:#c0679a}
+.onp{display:flex;align-items:center;gap:8px;padding:5px 10px;margin:4px 0;border-radius:14px;background:#f8eefc;font-size:16px;text-align:left}.onp i{width:14px;height:14px;border-radius:50%;display:inline-block}.onp b{margin-left:auto;font-size:14px}
+#onHud{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 60px);z-index:30;pointer-events:none;font-weight:700;font-size:13px;color:#fff;text-shadow:0 1px 3px rgba(120,50,130,.9);display:none;min-width:120px}
+#onHud.on{display:block}#onHud .r{display:flex;gap:5px;align-items:center;margin:2px 0;justify-content:flex-end}#onHud i{width:10px;height:10px;border-radius:50%;display:inline-block}
+#onBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 52px);width:min(60vw,260px);height:10px;border-radius:6px;background:rgba(255,255,255,.45);z-index:30;display:none;overflow:visible}
+#onBar.on{display:block}#onBar u{position:absolute;top:-3px;width:16px;height:16px;border-radius:50%;margin-left:-8px;border:2px solid #fff;box-sizing:border-box}#onBar s{position:absolute;right:-6px;top:-8px;font-size:18px;text-decoration:none}`;
+document.head.appendChild(css);
+const div = document.createElement('div'); div.innerHTML = `
+<div id="onl"><div class="onc"><h2>🌐 Online</h2><div id="onA"><input id="onName" maxlength="12" placeholder="Tu nombre"><button class="pbtn go" id="onCreate">✨ Crear sala</button><div class="row"><input id="onJoinCode" maxlength="4" placeholder="CÓDIGO" style="text-transform:uppercase"><button class="pbtn" id="onJoin">Unirse</button></div></div>
+<div id="onB" style="display:none"><div style="font-size:13px">Código de la sala</div><div id="onCode">----</div><div id="onList"></div><button class="pbtn go" id="onStart">▶ ¡Empezar carrera!</button><div id="onWait" style="font-size:14px">Esperando a que el anfitrión empiece…</div></div>
+<div id="onMsg"></div><button class="pbtn" id="onBack">← Volver</button></div></div>
+<div id="onres"><div class="onc"><h2 id="onResT">Clasificación</h2><div id="onResL"></div><div id="onResW" style="font-size:14px"></div><button class="pbtn go" id="onAgain" style="display:none">↻ Otra carrera</button><button class="pbtn" id="onMenu">Menú</button></div></div>
+<div id="onHud"></div><div id="onBar"><s>🏁</s></div>`;
+document.body.appendChild(div);
+const $ = id => document.getElementById(id);
+const mb = document.createElement('button'); mb.className = 'pbtn'; mb.id = 'onlineBtn'; mb.textContent = '🌐 Online'; $('modeRow').after(mb);
+const stop = f => e => { e.preventDefault(); e.stopPropagation(); try { Snd.init(); Snd.ui(); } catch (x) { } f(e); };
+['onl', 'onres'].forEach(id => ['pointerdown', 'touchstart', 'keydown'].forEach(ev => $(id).addEventListener(ev, e => e.stopPropagation())));
+const tap = (id, f) => $(id).addEventListener('click', stop(f));
+mb.addEventListener('pointerdown', stop(() => { if (state === 'menu') openLobby(); }));
+
+const O = window.ONL = { active: false, goal: GOAL, seed: 1, peers: {}, done: false, res: null };
+let net = null, myName = '', sendT = 0, startAt = 0, finT = 0;
+const myId = () => net ? net.myId : 'h';
+function msg(t) { $('onMsg').textContent = t || ''; }
+function openLobby() { state = 'onlobby'; setScreen(null); $('onl').classList.add('on'); $('onA').style.display = ''; $('onB').style.display = 'none'; msg(''); $('onName').value = store.get('mochi_onname', '') || ''; }
+function closeAll() { $('onl').classList.remove('on'); $('onres').classList.remove('on'); $('onHud').classList.remove('on'); $('onBar').classList.remove('on'); }
+function leave() { if (net) net.close(); net = null; O.active = false; closeAll(); LH = 1; resize(); goMenu(); }
+function info() { myName = ($('onName').value || '').trim().slice(0, 12) || 'Mochi'; store.set('mochi_onname', myName); return { name: myName, ch: selChar }; }
+function showList(pl) { $('onList').innerHTML = pl.map((p, i) => `<div class="onp"><i style="background:${GCOL[i % 6]}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.id === 'h' ? '👑' : ''}</b></div>`).join(''); }
+function wire() {
+  net.on('lobby', pl => { showList(pl); $('onStart').style.display = net.isHost ? '' : 'none'; $('onWait').style.display = net.isHost ? 'none' : ''; });
+  net.on('msg', d => onMsg(d)); net.on('left', id => { if (O.peers[id]) { O.peers[id].dead = 1; O.peers[id].gone = 1; checkEnd(); } });
+  net.on('hostgone', () => { if (O.active && !O.done) { msg(''); } toastLocal('El anfitrión se ha ido'); if (!O.active) leave(); else { O.hostGone = 1; for (const k in O.peers) if (k !== myId()) O.peers[k].dead = 1; } });
+}
+function toastLocal(t) { try { showHint(t, 2); } catch (e) { } }
+tap('onCreate', async () => { msg('Creando sala…'); try { net = new Net(); wire(); const code = await net.create(info()); $('onCode').textContent = code; $('onA').style.display = 'none'; $('onB').style.display = ''; msg(''); net.lobby(); } catch (e) { msg('No se pudo crear la sala. Revisa tu conexión.'); net = null; } });
+tap('onJoin', async () => { msg('Conectando…'); try { net = new Net(); wire(); await net.join($('onJoinCode').value, info()); $('onCode').textContent = net.code; $('onA').style.display = 'none'; $('onB').style.display = ''; msg(''); } catch (e) { msg(e.message === 'llena' ? 'La sala está llena o ya ha empezado.' : e.message === 'codigo' ? 'Escribe un código de 4 letras.' : 'No se encontró esa sala.'); net = null; } });
+tap('onStart', () => { if (!net || !net.isHost) return; if (net.players.length < 2) { msg('Necesitas al menos 2 jugadores.'); return; } net.started = true; const d = { t: 'start', seed: (Math.random() * 1e9) | 0, players: net.players }; net.send(d); begin(d); });
+tap('onBack', () => leave()); tap('onMenu', () => leave());
+tap('onAgain', () => { if (!net || !net.isHost) return; net.players = net.players.filter(p => p.id === 'h' || net.conns.has(p.id)); if (net.players.length < 2) { $('onResW').textContent = 'No quedan rivales conectados.'; return; } const d = { t: 'start', seed: (Math.random() * 1e9) | 0, players: net.players }; net.send(d); begin(d); });
+// ---------- carrera ----------
+function begin(d) {
+  O.seed = d.seed; O.rng = mulberry(d.seed); O.done = false; O.res = null; O.hostGone = 0; O.peers = {};
+  d.players.forEach((p, i) => O.peers[p.id] = { id: p.id, name: p.name, ch: p.ch | 0, col: GCOL[i % 6], d: 0, x: 0, c: 0, dead: 0, fin: 0, ft: 0 });
+  closeAll(); $('onHud').classList.add('on'); $('onBar').classList.add('on');
+  $('onBar').querySelectorAll('u').forEach(u => u.remove()); for (const k in O.peers) { const u = document.createElement('u'); u.style.background = O.peers[k].col; u.id = 'ob_' + k; $('onBar').appendChild(u); }
+  O.active = true; LH = 2; resize();
+  const td = tutDone; tutDone = true; turbo = false; startGame('normal'); tutDone = td;
+  freezeT = 3.999; startAt = performance.now(); finT = 0; hideHint();
+}
+O.dAt = w => Math.min(0.9, 0.08 + 0.82 * w / GOAL);
+O.spawn = f => { const r0 = Math.random, dc = dCur, sp = speed; Math.random = O.rng; try { dCur = O.dAt(dist + spawnZ); speed = Math.min(31, 12.5 + 14.5 * Math.min(dCur, 1)); f(); } finally { Math.random = r0; dCur = dc; speed = sp; } };
+O.tick = dt => {
+  const me = O.peers[myId()]; if (!me) return;
+  me.d = dist; me.x = mochi.x; me.c = mochi.color; finT += dt;
+  if (!me.fin && dist >= GOAL) { me.fin = 1; me.ft = finT; me.d = GOAL; Snd.record(); for (let k = 0; k < 30; k++) burst(W / 2, H * 0.35, PAL[k % 3].lrgb, 1, { min: 80, max: 300, g: 300, type: 'confetti', life: 1.2, rmin: 3, rmax: 6 }); state = 'over'; overT = 0; push(true); O.myEnd(); return; }
+  sendT -= dt; if (sendT <= 0) { sendT = 0.1; push(); }
+  hud();
+};
+function push(force) { const me = O.peers[myId()]; if (!me || !net) return; const st = { t: 'st', id: me.id, d: Math.round(me.d * 10) / 10, x: Math.round(me.x * 100) / 100, c: me.c, dead: me.dead, fin: me.fin, ft: me.ft };
+  if (net.isHost) { net.send({ t: 'all', ps: Object.values(O.peers).map(p => ({ id: p.id, d: p.d, x: p.x, c: p.c, dead: p.dead, fin: p.fin, ft: p.ft })) }); checkEnd(); } else net.send(st); }
+function onMsg(d) {
+  if (d.t === 'start') { begin(d); return; }
+  if (d.t === 'st' && net.isHost) { const p = O.peers[d.from]; if (p) Object.assign(p, { d: d.d, x: d.x, c: d.c, dead: d.dead, fin: d.fin, ft: d.ft }); checkEnd(); return; }
+  if (d.t === 'all') { for (const q of d.ps) if (q.id !== myId() && O.peers[q.id]) Object.assign(O.peers[q.id], q); if (O.done) showRes(); return; }
+  if (d.t === 'end') { for (const q of d.ps) if (O.peers[q.id] && q.id !== myId()) Object.assign(O.peers[q.id], q); O.final = 1; showRes(); }
+}
+function ranking() { return Object.values(O.peers).sort((a, b) => (b.fin - a.fin) || (a.fin ? a.ft - b.ft : b.d - a.d)); }
+function checkEnd() { if (!net || !net.isHost || !O.active) return; const ps = Object.values(O.peers); if (ps.every(p => p.dead || p.fin)) { if (!O.final) { O.final = 1; net.send({ t: 'end', ps }); } showRes(); } }
+O.myEnd = () => { const me = O.peers[myId()]; if (me && !me.fin) { me.dead = 1; me.d = dist; } O.done = true; push(true); $('onHud').classList.remove('on'); setTimeout(showRes, 600); if (O.hostGone) { O.final = 1; } };
+function showRes() { if (!O.done) return; const r = ranking(), meI = r.findIndex(p => p.id === myId());
+  $('onres').classList.add('on'); const fin = O.final || O.hostGone;
+  $('onResT').textContent = fin ? (meI === 0 ? '🏆 ¡Has ganado!' : `Has quedado ${meI + 1}º`) : 'Clasificación';
+  $('onResL').innerHTML = r.map((p, i) => `<div class="onp"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</span><i style="background:${p.col}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.fin ? '🏁 ' + p.ft.toFixed(1) + ' s' : Math.round(p.d) + ' m' + (p.dead ? '' : ' …')}</b></div>`).join('');
+  $('onResW').textContent = fin ? '' : 'Esperando a que terminen los demás…';
+  $('onAgain').style.display = fin && net && net.isHost ? '' : 'none'; }
+function hud() { if ((O._h = (O._h || 0) + 1) % 6) return; const r = ranking();
+  $('onHud').innerHTML = r.map((p, i) => `<div class="r">${i + 1}. ${esc(p.name)}${p.id === myId() ? ' ★' : ''} ${p.fin ? '🏁' : p.dead ? '💥' : Math.round(p.d) + 'm'} <i style="background:${p.col}"></i></div>`).join('');
+  for (const p of r) { const u = $('ob_' + p.id); if (u) u.style.left = Math.min(100, p.d / GOAL * 100) + '%'; } }
+// ---------- dibujo: fantasmas semitransparentes + meta ----------
+O.items = (items, g) => {
+  const zf = GOAL - dist; if (zf > -2 && zf < FAR) items.push({ z: zf + 0.02, d: () => drawFinish(g, zf) });
+  for (const k in O.peers) { if (k === myId()) continue; const p = O.peers[k], z = p.d - dist; if (z < -2.6 || z > FAR) continue; items.push({ z: z - 0.001, d: () => drawGhost(g, p, z) }); }
+};
+function drawGhost(g, p, z) {
+  const pp = proj(p.x, Math.max(z, -2.5)), size = laneW * 0.8 * pp.s; if (size < 3) return;
+  const T2 = t + p.id.length * 1.7, hop = Math.abs(Math.sin(T2 * 9)) * (p.dead ? 0 : 1);
+  try { drawMochi(g, pp.x, pp.y - hop * size * 0.16, size, { ch: p.ch, rgb: PAL[p.c] ? PAL[p.c].rgb : [255, 150, 200], sx: p.dead ? 1.4 : 1, sy: p.dead ? 0.5 : 1, rot: 0, earL: -0.5, earR: 0.5, earBend: 0.55, foot: Math.sin(T2 * 9), arm: Math.sin(T2 * 9), blink: 0, look: -1, lookX: 0, mouth: null, dead: !!p.dead, happy: 0, alpha: 0.45, solid: true }); } catch (e) { }
+  g.globalAlpha = 1; const fs = Math.max(10, Math.round(size * 0.24)); g.font = `700 ${fs}px ${I18N.FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  const ty = pp.y - size * 1.25; g.lineWidth = Math.max(3, fs * 0.3); g.strokeStyle = p.col; g.globalAlpha = 0.9; g.strokeText(p.name, pp.x, ty); g.fillStyle = '#fff'; g.fillText(p.name, pp.x, ty); g.globalAlpha = 1;
+}
+function drawFinish(g, z) { const RH = LH + 0.55, n = 10, z2 = z + 0.8;
+  for (let i = 0; i < n; i++) for (let j = 0; j < 2; j++) { const x0 = -RH + 2 * RH * i / n, x1 = -RH + 2 * RH * (i + 1) / n, za = z + j * 0.4, zb = za + 0.4; if (zb < -2.8) continue;
+    const a = proj(x0, Math.max(za, -2.8)), b = proj(x1, Math.max(za, -2.8)), c = proj(x1, zb), d = proj(x0, zb); g.fillStyle = (i + j) % 2 ? '#ffffff' : '#ff6fae'; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(c.x, c.y); g.lineTo(d.x, d.y); g.closePath(); g.fill(); }
+  const l = proj(-RH, z2), r = proj(RH, z2), h = laneW * 1.6 * l.s; g.strokeStyle = '#fff'; g.lineWidth = Math.max(2, 6 * l.s);
+  g.beginPath(); g.moveTo(l.x, l.y); g.lineTo(l.x, l.y - h); g.moveTo(r.x, r.y); g.lineTo(r.x, r.y - h); g.stroke();
+  g.fillStyle = '#ff6fae'; g.fillRect(l.x, l.y - h, r.x - l.x, h * 0.22); g.fillStyle = '#fff'; g.font = `700 ${Math.max(10, Math.round(h * 0.17))}px ${I18N.FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('META', (l.x + r.x) / 2, l.y - h * 0.89);
+}
+window.__onl = { O, get net() { return net; }, get state() { return state; }, get LH() { return LH; }, get freezeT() { return freezeT; }, setGod(v) { godMode = v; }, setDist(v) { dist = v; }, getDist() { return dist; }, kill() { godMode = false; invulnT = 0; die('block'); }, rowsSig() { return rows.slice().sort((a, b) => a.z - b.z).slice(0, 4).map(r => r.cells.map(c => c.t + (c.c ?? '')).join('') + '@' + Math.round(r.z + dist)).join(' '); } };
+})();
 })();

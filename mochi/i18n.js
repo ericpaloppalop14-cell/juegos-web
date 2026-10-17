@@ -332,6 +332,20 @@
     mfDesc: '和 Mochi 一起奔跑、變色、穿過果凍牆，解鎖 15 個內藏小世界的角色。'
   };
 
+  // 1.2.4 · probar personaje (anuncio bonificado)
+  const TR = {
+    es: { trialBtn: '▶ Probar 1 partida', trialFree: '▶ Probar 1 partida gratis', trialLeft: 'Pruebas hoy: {n}', trialNone: 'Sin pruebas por hoy · vuelve mañana', trialTag: 'Probando: {n}', trialEnd: '¿Te ha gustado {n}?', trialBuy: 'Quedártelo · {p}', trialKeep: 'O sigue jugando: se desbloquea con {n} puntos', trialKeepPrem: 'Personaje premium: solo con compra' },
+    en: { trialBtn: '▶ Try 1 run', trialFree: '▶ Try 1 run free', trialLeft: 'Trials today: {n}', trialNone: 'No trials left today · come back tomorrow', trialTag: 'Trying: {n}', trialEnd: 'Did you like {n}?', trialBuy: 'Keep it · {p}', trialKeep: 'Or keep playing: unlocks at {n} points', trialKeepPrem: 'Premium character: purchase only' },
+    'pt-BR': { trialBtn: '▶ Testar 1 partida', trialFree: '▶ Testar 1 partida grátis', trialLeft: 'Testes hoje: {n}', trialNone: 'Sem testes hoje · volte amanhã', trialTag: 'Testando: {n}', trialEnd: 'Gostou de {n}?', trialBuy: 'Ficar com ele · {p}', trialKeep: 'Ou continue jogando: desbloqueia com {n} pontos', trialKeepPrem: 'Personagem premium: só com compra' },
+    fr: { trialBtn: '▶ Essayer 1 partie', trialFree: '▶ Essayer 1 partie gratuite', trialLeft: 'Essais aujourd\'hui : {n}', trialNone: 'Plus d\'essais aujourd\'hui · reviens demain', trialTag: 'Essai : {n}', trialEnd: 'Tu as aimé {n} ?', trialBuy: 'Le garder · {p}', trialKeep: 'Ou continue : déblocage à {n} points', trialKeepPrem: 'Personnage premium : achat uniquement' },
+    de: { trialBtn: '▶ 1 Runde testen', trialFree: '▶ 1 Runde gratis testen', trialLeft: 'Tests heute: {n}', trialNone: 'Heute keine Tests mehr · komm morgen wieder', trialTag: 'Test: {n}', trialEnd: 'Hat dir {n} gefallen?', trialBuy: 'Behalten · {p}', trialKeep: 'Oder weiterspielen: frei ab {n} Punkten', trialKeepPrem: 'Premium-Figur: nur per Kauf' },
+    it: { trialBtn: '▶ Prova 1 partita', trialFree: '▶ Prova 1 partita gratis', trialLeft: 'Prove oggi: {n}', trialNone: 'Nessuna prova oggi · torna domani', trialTag: 'In prova: {n}', trialEnd: 'Ti è piaciuto {n}?', trialBuy: 'Tienilo · {p}', trialKeep: 'Oppure continua: si sblocca a {n} punti', trialKeepPrem: 'Personaggio premium: solo con acquisto' },
+    ja: { trialBtn: '▶ 1回おためし', trialFree: '▶ 1回無料でおためし', trialLeft: '今日のおためし：{n}', trialNone: '今日のおためしは終了・また明日', trialTag: 'おためし中：{n}', trialEnd: '{n}はどうだった？', trialBuy: '手に入れる · {p}', trialKeep: 'または{n}点で解放', trialKeepPrem: 'プレミアムキャラ：購入のみ' },
+    ko: { trialBtn: '▶ 1판 체험', trialFree: '▶ 1판 무료 체험', trialLeft: '오늘 체험: {n}', trialNone: '오늘 체험 끝 · 내일 다시 와요', trialTag: '체험 중: {n}', trialEnd: '{n} 마음에 들었나요?', trialBuy: '갖기 · {p}', trialKeep: '또는 계속 플레이: {n}점에 해금', trialKeepPrem: '프리미엄 캐릭터: 구매 전용' },
+    'zh-Hans': { trialBtn: '▶ 试玩 1 局', trialFree: '▶ 免费试玩 1 局', trialLeft: '今日试玩：{n}', trialNone: '今日试玩已用完 · 明天再来', trialTag: '试玩中：{n}', trialEnd: '喜欢 {n} 吗？', trialBuy: '收下它 · {p}', trialKeep: '或继续玩：{n} 分解锁', trialKeepPrem: '高级角色：仅限购买' },
+    'zh-Hant': { trialBtn: '▶ 試玩 1 局', trialFree: '▶ 免費試玩 1 局', trialLeft: '今日試玩：{n}', trialNone: '今日試玩已用完 · 明天再來', trialTag: '試玩中：{n}', trialEnd: '喜歡 {n} 嗎？', trialBuy: '收下它 · {p}', trialKeep: '或繼續玩：{n} 分解鎖', trialKeepPrem: '高級角色：僅限購買' }
+  };
+  Object.keys(TR).forEach(k => Object.assign(D[k], TR[k]));
   function detect() {
     const q = (location.search.match(/[?&]lang=([\w-]+)/) || [])[1];
     const list = q ? [q] : (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'es']);

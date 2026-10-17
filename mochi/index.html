@@ -76,6 +76,7 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 .pbtn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(180,120,200,.45)}
 #charBtn{position:absolute;bottom:calc(9vh + 140px + env(safe-area-inset-bottom));font-size:19px;padding:9px 20px}
 #charBtn .dot{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 18%,#ffb3d6 30%,#c9a8ff 100%)}
+#selTrial{background:#ffd76a;color:#7a4a00;margin-top:6px}#selTrialLeft{font-size:12px;margin-top:2px}#overTrial #trialBuy{background:#ffd76a;color:#7a4a00;margin-top:6px}#trialKeep{font-size:13px;margin-top:4px}
 .unl{margin-top:10px;font-size:16px;font-weight:600;color:#a88bc4}
 .unl.new{color:#fff;background:linear-gradient(90deg,#7ee3c4,#b9a2f7);border-radius:16px;padding:5px 12px;font-weight:700;animation:pulse .9s infinite}
 #charBtn2,#overHome,#contHome{margin-top:14px;font-size:17px;padding:8px 18px}
@@ -156,6 +157,7 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
       <div class="rec" id="finalBest">0</div>
       <div class="nr" id="newRec" data-i18n="newRecord">¡Nuevo récord!</div>
       <div class="unl" id="overUnlock"></div>
+      <div id="overTrial" style="display:none"><div class="unl new" id="trialEnd"></div><button class="pbtn" id="trialBuy"></button><div class="lbl" id="trialKeep"></div></div>
       <div><button class="pbtn" id="overHome"><span aria-hidden="true">🏠</span> <span data-i18n="home">Menú</span></button> <button class="pbtn" id="charBtn2" data-i18n="chars">Personajes</button></div>
       <div><div class="tap" data-i18n="tapRetry">Toca para repetir</div></div>
     </div>
@@ -165,7 +167,7 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
     <div id="selRecord"></div>
     <button class="pbtn arrow" id="selPrev" aria-label="Anterior" data-i18n-aria="prev">‹</button>
     <button class="pbtn arrow" id="selNext" aria-label="Siguiente" data-i18n-aria="next">›</button>
-    <div id="selInfo"><div id="selName">Mochi</div><div id="selInner"></div><div id="selDesc"></div><button class="pbtn" id="selBuy" style="display:none">Desbloquear por 0,99 €</button></div>
+    <div id="selInfo"><div id="selName">Mochi</div><div id="selInner"></div><div id="selDesc"></div><button class="pbtn" id="selBuy" style="display:none">Desbloquear por 0,99 €</button><button class="pbtn" id="selTrial" style="display:none">▶ Probar 1 partida</button><div class="lbl" id="selTrialLeft" style="display:none"></div></div>
     <div id="selShop" style="display:none"><button class="pbtn" id="selNoAds" data-i18n="noAds">Sin anuncios</button><button class="pbtn" id="selRestore" data-i18n="restore">Restaurar compras</button><button class="pbtn" id="selPrivacy" style="display:none" data-i18n="privacy">Privacidad</button></div>
     <button class="pbtn" id="selPick" data-i18n="play">¡Jugar!</button>
   </div>
@@ -203,6 +205,7 @@ I18N.apply();document.documentElement.style.setProperty('--mf',I18N.FONT);
  addEventListener('load',()=>{new MutationObserver(sch).observe(document.querySelector('.ui'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});sch();document.fonts&&document.fonts.ready.then(sch)});addEventListener('resize',sch)})();
 </script>
 <script src="monet.js"></script>
+<script src="peerjs.min.js"></script>
 <script src="game.js"></script>
 <script>
 if('serviceWorker' in navigator && location.protocol==='https:' && !(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
