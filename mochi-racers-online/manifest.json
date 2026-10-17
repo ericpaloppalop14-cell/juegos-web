@@ -1,0 +1,4 @@
+{ "name": "Mochi Racers Online", "short_name": "Mochi Online", "start_url": "./", "display": "fullscreen", "orientation": "any",
+  "background_color": "#ffd6ec", "theme_color": "#ffb3d6", "lang": "es",
+  "description": "Carrera sin fin online: huye de la Ola de Nata y llega más lejos que nadie.",
+  "icons": [ { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }, { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }, { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" } ] }
