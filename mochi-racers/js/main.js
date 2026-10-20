@@ -75,14 +75,14 @@ const menuCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 9
   menuScene.fog = new THREE.Fog('#ffe3f1', 60, 300);
 }
 const stage = new THREE.Group(); menuScene.add(stage);
-const menuKarts = []; let previewKart = null, trophyPreview = null;
+const menuKarts = []; let charPopT = -9; let previewKart = null, trophyPreview = null;
 function setTitleStage() {
   stage.clear(); menuKarts.length = 0;
   CHARS.slice(0, 6).forEach((ch, i) => { const k = makeKart(ch, i); stage.add(k); menuKarts.push({ k, a: i / 6 * Math.PI * 2 }); });
 }
 function setPreview(ch) {
   stage.clear(); menuKarts.length = 0;
-  previewKart = makeKart(ch, 0); previewKart.position.y = 0.8; previewKart.scale.setScalar(1.25); stage.add(previewKart);
+  previewKart = makeKart(ch, 0); previewKart.position.y = 0.8; previewKart.scale.setScalar(1.25); stage.add(previewKart); charPopT = performance.now() / 1000;
 }
 
 // ---------------- title ----------------
@@ -189,6 +189,7 @@ function openCups() {
     const d = document.createElement('button'); d.className = 'ccard' + (un ? '' : ' lock'); d.style.setProperty('--cc', c.color); d.style.animationDelay = (i * 0.05) + 's';
     d.innerHTML = `<div class="cic">${trophySVG(un ? c.trophy : '#8f80ad', !un)}${un ? '' : '<b class="lki">🔒</b>'}${un && tr != null ? `<b class="md">${['🥇', '🥈', '🥉'][tr]}</b>` : ''}</div><div class="cn">${c.name.replace('Copa ', '')}</div>`;
     d.addEventListener('click', () => { Audio.init(); Audio.sfxPlay('click'); setCup(i); }); G.appendChild(d); });
+  carousel.setChar(app.playerChar || CHARS[0]);
   carousel.setState(uSel, c => ({ unlocked: cupUnlocked(c), tier: save.trophies[c.id] }));
   cupInfo();
   stage.clear(); menuKarts.length = 0; previewKart = null; trophyPreview = null;
@@ -490,7 +491,7 @@ function frame(now) {
     menuKarts.forEach((m, i) => { const a = m.a + t * 0.35; m.k.position.set(Math.cos(a) * 4.2, 0.8 + Math.abs(Math.sin(t * 3 + i)) * 0.15, Math.sin(a) * 4.2); m.k.rotation.y = -a; animKart(m.k, t, 20); });
     menuCam.position.set(Math.sin(t * 0.1) * 4, 6.5, 15); menuCam.lookAt(0, 1.2, 0);
   } else {
-    if (previewKart) { previewKart.rotation.y = app.state === 'chars' ? t * 0.7 : 0.5 + Math.sin(t * 0.6) * 0.3; animKart(previewKart, t, 15); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12; }
+    if (previewKart) { previewKart.rotation.y = app.state === 'chars' ? t * 0.7 : 0.5 + Math.sin(t * 0.6) * 0.3; const pe = performance.now() / 1000 - charPopT; animKart(previewKart, t, 15, app.state === 'chars' && pe < 1.3 ? 'happy' : ''); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12 + (pe < 0.5 ? Math.sin(pe / 0.5 * Math.PI) * 0.6 : 0); }
     if (trophyPreview && app.state === 'cups') trophyPreview.rotation.y = t * 0.8;
     const w = innerWidth / innerHeight;
     if (app.state === 'cups' && w < 1) { menuCam.position.set(0.1, 3.4, 18); menuCam.lookAt(0.1, -2.2, 0); } // v6: vertical, piloto y trofeo arriba

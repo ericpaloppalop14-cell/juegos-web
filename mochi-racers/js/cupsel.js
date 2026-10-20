@@ -4,6 +4,7 @@
 //  PMREM pequeño para brillos metálicos, partículas aditivas.
 // ======================================================================
 import * as THREE from 'three';
+import { makeCharacter, animCharacter } from './gfx.js';
 
 const TAU = Math.PI * 2;
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -157,7 +158,7 @@ export function createCupCarousel(renderer, cups) {
     });
     st.sel = st.target = sel; if (!st.drag) st.pos = sel; st.chooseT = -1; burst.visible = false;
   }
-  function select(i) { i = Math.max(0, Math.min(N - 1, i)); if (i !== st.sel) { items[st.sel].out = 1; items[i].pop = 1; } st.sel = st.target = i; }
+  function select(i) { i = Math.max(0, Math.min(N - 1, i)); if (i !== st.sel) { items[st.sel].out = 1; items[i].pop = 1; gag.t = 0; } st.sel = st.target = i; }
 
   function layout() {
     const W = innerWidth, H = innerHeight; if (W === st.w && H === st.h) return; st.w = W; st.h = H;
@@ -170,14 +171,37 @@ export function createCupCarousel(renderer, cups) {
     st.view = a;
   }
 
+  // --- v9: el piloto elegido intenta sostener la copa… y la copa lo aplasta ---
+  const hero = new THREE.Group(); scene.add(hero); let heroCh = null, heroChar = null;
+  const heroShadow = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false })); heroShadow.rotation.x = -Math.PI / 2; heroShadow.position.y = 0.81; hero.add(heroShadow);
+  const heroBody = new THREE.Group(); heroBody.position.y = 0.8; hero.add(heroBody);
+  function setChar(ch) { if (!ch || ch === heroCh) return; heroCh = ch; if (heroChar) heroBody.remove(heroChar); heroChar = makeCharacter(ch); heroChar.scale.setScalar(0.85); heroBody.add(heroChar); gag.t = 0; }
+  const gag = { t: 0, L: 8.2 };
+  const HS = 0.85, TS = 0.74, Y_HOLD = 0.8 + 1.62 * HS * 0.94 - 0.1 * TS, Y_FLAT = 0.8 + 1.62 * HS * 0.27 - 0.1 * TS, Y_HOVER = Y_HOLD + 0.72;
+  const ease = x => x * x * (3 - 2 * x), clamp01 = x => Math.max(0, Math.min(1, x));
+  const elastic = x => x >= 1 ? 1 : 1 - Math.pow(2, -9 * x) * Math.cos(x * 14);
+  // devuelve { ty, tspin, trz, hsy, hx, expr, phase }
+  function gagPose(g, t) {
+    if (g < 1.6) return { ty: Y_HOVER + Math.sin(t * 2) * 0.08, spin: 1, trz: 0, hsy: 1, hx: 0, expr: 'look' };
+    if (g < 2.3) { const k = ease(clamp01((g - 1.6) / 0.7)); return { ty: Y_HOVER + (Y_HOLD - Y_HOVER) * k, spin: 1 - k, trz: 0, hsy: 1 - (k > 0.9 ? (k - 0.9) * 0.5 : 0), hx: 0, expr: k > 0.75 ? 'strain' : 'look' }; }
+    if (g < 4.1) { const k = (g - 2.3) / 1.8, w = Math.sin(g * 5.5) * (0.06 + k * 0.16); return { ty: Y_HOLD - k * 0.08 + Math.abs(Math.sin(g * 11)) * 0.03, spin: 0, trz: w * 1.2, hsy: 0.95 - k * 0.07, hx: w * 0.9, expr: 'strain' }; }
+    if (g < 4.32) { const k = clamp01((g - 4.1) / 0.22), e = k * k; return { ty: Y_HOLD - 0.08 + (Y_FLAT - Y_HOLD + 0.08) * e, spin: 0, trz: 0.2 * (1 - e), hsy: 0.88 + (0.27 - 0.88) * e, hx: 0, expr: k > 0.5 ? 'squash' : 'strain', hit: k >= 1 }; }
+    if (g < 5.9) { const k = g - 4.32, b = Math.abs(Math.sin(k * 9)) * Math.exp(-k * 4) * 0.35; return { ty: Y_FLAT + b, spin: 0, trz: Math.sin(k * 7) * Math.exp(-k * 3) * 0.12, hsy: 0.27 + b * 0.3, hx: 0, expr: 'squash' }; }
+    if (g < 6.7) { const k = clamp01((g - 5.9) / 0.8); return { ty: Y_FLAT + (Y_HOVER - Y_FLAT) * ease(clamp01(k * 1.6)), spin: k, trz: 0, hsy: 0.27 + (1 - 0.27) * elastic(k), hx: 0, hy: Math.sin(Math.min(1, k * 1.4) * Math.PI) * 0.55, expr: 'happy' }; }
+    return { ty: Y_HOVER + Math.sin(t * 2) * 0.08, spin: 1, trz: 0, hsy: 1, hx: 0, expr: 'happy' };
+  }
+
   function update(dt, t) {
     layout();
     if (!st.drag) st.pos += (st.target - st.pos) * Math.min(1, dt * 9);
     const a = st.view, choosing = st.chooseT >= 0;
     if (choosing) st.chooseT += dt;
     const ct = choosing ? Math.min(1, st.chooseT / 0.7) : 0;
-    const camZ = (a < 1 ? 13 / Math.max(0.45, a) * 0.55 + 3 : 14) - ct * 3;
-    cam.position.set(Math.sin(t * 0.2) * 1.5, 4.2 - ct * 0.8, camZ); cam.lookAt(0, 2.2, 0);
+    const camZ = (a < 1 ? 13 / Math.max(0.45, a) * 0.55 + 3 : 14) - ct * 3 + (heroChar ? 1.2 : 0);
+    cam.position.set(Math.sin(t * 0.2) * 1.5, 4.2 - ct * 0.8, camZ); cam.lookAt(0, heroChar ? 2.85 : 2.2, 0);
+    gag.t = (gag.t + dt) % gag.L; gag.shake = Math.max(0, (gag.shake || 0) - dt);
+    if (gag.shake > 0) { cam.position.x += Math.sin(t * 70) * gag.shake * 0.25; cam.position.y += Math.cos(t * 63) * gag.shake * 0.2; }
+    { const r = items[st.sel].root; hero.position.copy(r.position); hero.scale.copy(r.scale); hero.visible = !!heroChar; }
     const near = items[st.sel];
     bgU.time.value = t; bgU.tint.value.lerp(new THREE.Color(near.locked ? '#8a7aa6' : near.c.color), Math.min(1, dt * 4));
     rays.material.color.copy(bgU.tint.value); rays.rotation.z = t * 0.12; rays.material.opacity = 0.2 + Math.sin(t * 1.5) * 0.05 + ct * 0.4;
@@ -187,7 +211,17 @@ export function createCupCarousel(renderer, cups) {
       const sc = sel ? 1.25 * (1 - it.pop * 0.35 + Math.sin(it.pop * Math.PI) * 0.25) : 1.25 * it.out;
       it.root.position.set(0, 0, 0); it.root.scale.setScalar(Math.max(0.001, sc)); it.root.rotation.y = 0;
       it.spin.rotation.y = t * (it.locked ? 0.35 : 0.8) + it.pop * 4 + (sel && choosing ? st.chooseT * st.chooseT * 18 : 0);
-      it.trophy.position.y = 0.8 + Math.sin(t * 2) * 0.08 + 0.12 + (sel && choosing ? Math.sin(ct * Math.PI) * 0.9 : 0);
+      if (heroChar && sel) {
+        const P = choosing ? { ty: Y_HOVER, spin: 1, trz: 0, hsy: 1, hx: 0, expr: 'happy' } : gagPose(gag.t, t);
+        it.trophy.scale.setScalar(TS); it.trophy.position.y = P.ty + (choosing ? Math.sin(ct * Math.PI) * 0.9 : 0); it.trophy.position.x = P.hx; it.trophy.rotation.z = P.trz;
+        it.spin.rotation.y = (it.spinAcc = (it.spinAcc || 0) + dt * P.spin * (it.locked ? 0.35 : 0.9)) + it.pop * 4 + (choosing ? st.chooseT * st.chooseT * 18 : 0);
+        const sy = P.hsy, sx = 1 + (1 - sy) * 0.75;
+        heroBody.scale.set(sx, sy, sx); heroBody.position.set(P.hx * 0.6, 0.8 + (P.hy || 0) + (choosing ? Math.abs(Math.sin(st.chooseT * 12)) * 0.4 : 0), 0.15); heroBody.rotation.z = -P.trz * 0.5;
+        heroShadow.scale.setScalar(sx * (1 - (P.hy || 0) * 0.5));
+        if (P.hit && !gag.hitDone) { gag.hitDone = true; gag.shake = 0.35; } if (gag.t < 4) gag.hitDone = false;
+        heroChar && animCharacter(heroChar, t, 1, P.expr);
+      } else { it.trophy.scale.setScalar(1); it.trophy.position.x = 0; it.trophy.rotation.z = 0;
+        it.trophy.position.y = 0.8 + Math.sin(t * 2) * 0.08 + 0.12 + (sel && choosing ? Math.sin(ct * Math.PI) * 0.9 : 0); }
       it.lock.rotation.y = Math.sin(t * 1.4 + i) * 0.4; it.lock.position.y = 1.5 + Math.sin(t * 2.2 + i) * 0.08;
       it.glow.material.opacity = it.locked ? 0.25 : 0.8 + Math.sin(t * 3) * 0.15 + (sel ? ct : 0);
       it.ringM.emissiveIntensity = 0.6 + Math.sin(t * 3) * 0.3;
@@ -214,5 +248,5 @@ export function createCupCarousel(renderer, cups) {
   function pick(clientX, clientY) { cam.updateMatrixWorld(); ndc.set(clientX / innerWidth * 2 - 1, -clientY / innerHeight * 2 + 1); ray.setFromCamera(ndc, cam);
     let best = -1, bd = 1e9; items.forEach((it, i) => { if (!it.root.visible) return; const hits = ray.intersectObject(it.root, true); if (hits.length && hits[0].distance < bd) { bd = hits[0].distance; best = i; } }); return best; }
 
-  return { scene, cam, update, setState, select, choose, pick, st, items, get gap() { return st.gap; } };
+  return { scene, cam, update, setState, select, choose, pick, setChar, gag, st, items, get gap() { return st.gap; } };
 }
