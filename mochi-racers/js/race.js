@@ -102,6 +102,14 @@ export class Race {
     P.s.position.copy(p); P.s.material.color.set(color); P.s.scale.setScalar(size); P.s.visible = true; P.life = P.max = life; P.size = size;
     if (vel) P.v.copy(vel); else P.v.set((R() - 0.5) * 3, R() * 3, (R() - 0.5) * 3);
   }
+  // v13: menos draw calls. Los obstáculos lejanos (que la niebla ya casi tapa) no se dibujan y los karts lejanos
+  // dibujan sin contorno ni detalles finos. Solo se toca .visible cuando cambia el estado (sin trabajo por fotograma).
+  lodCull() {
+    const c = this.camera && this.camera.position; if (!c) return; const hi = this.quality.hi, D2 = (hi ? 210 : 160) ** 2, K2 = (hi ? 110 : 80) ** 2;
+    for (const o of this.track.obstacles) { if (o.kind === 'lightning') continue; const p = o.g.position, v = (p.x - c.x) ** 2 + (p.z - c.z) ** 2 < D2; if (o.g.visible !== v) o.g.visible = v; }
+    for (const k of this.karts) { if (k.isPlayer) continue; if (!k._ol) { k._ol = []; k.mesh.traverse(x => { if (x.isMesh && x.renderOrder === -1 && x.material && x.material.side === THREE.BackSide) k._ol.push(x); }); }
+      const near = (k.pos.x - c.x) ** 2 + (k.pos.z - c.z) ** 2 < K2; if (k._near !== near) { k._near = near; for (const x of k._ol) x.visible = near; } }
+  }
   msg(text, k, color) { if (k && !k.isPlayer) return; this.app.ui.toast(text, color); }
 
   // =================================================================
@@ -116,6 +124,7 @@ export class Race {
     } else if (this.state === 'race' || this.state === 'finish') this.raceT += dt;
     const running = this.state === 'race' || this.state === 'finish';
     for (const o of T.obstacles) o.update(this.time, dt);
+    this.lodCull();
     if (this.player) this.surreal.update(this.time, dt, this);
     for (const b of T.boxes) { if (b.t > 0) b.t -= dt; const vis = b.t <= 0; b.mesh.visible = vis; if (vis) { b.mesh.rotation.y = this.time * 1.4 + b.ph; b.mesh.rotation.x = Math.sin(this.time + b.ph) * 0.3; b.mesh.position.y = b.pos.y + Math.sin(this.time * 2.5 + b.ph) * 0.3; b.mesh.userData.cube.material.emissive.setHSL((this.time * 0.25 + b.ph * 0.2) % 1, 0.9, 0.55); const st = b.mesh.userData.star; if (st) { st.rotation.set(-b.mesh.rotation.x, this.time * 3, 0); } } }
     for (const p of T.pads) p.mesh.material.map.offset.y = -this.time * 1.2 % 1;
@@ -312,8 +321,13 @@ export class Race {
         const ty = Math.atan2(s.fl.x, s.fl.z); if (Math.abs(angDiff(k.yaw, ty)) < 1.5) k.yaw += angDiff(k.yaw, ty) * (k.isPlayer ? 0.3 : 0.15); }
     }
     // height
-    const gy = inSC != null ? Math.max(inSC, f2.y) : f2.y;
-    for (const r of T.ramps) { if (!k.air && this.crossed(k, r.idx) && k.fs > 8) { k.vy = (6.5 + k.fs * 0.16) * (T.cup.look ? 1.9 : 1); k.air = true; k.hop = false; k.airT = 0; k.trick = false; k.flip = T.cup.look ? (r.idx % 2 ? 1 : 2) : 0; k.flipDur = 2 * k.vy / (30 * T.grav); if (k.isPlayer) Audio.sfxPlay('jump'); } }
+    let gy = inSC != null ? Math.max(inSC, f2.y) : f2.y;
+    // v13: rampas robustas. Antes solo saltaba si el kart NO estaba en el aire (el saltito del derrape lo dejaba "en el aire"
+    // y atravesaba la rampa), con fs > 8 y solo al cruzar el índice exacto de la cima. Ahora la rampa es una superficie:
+    // cualquier kart dentro de su tramo (también derrapando, de lado o rápido) queda por encima y salta al pasar la cima.
+    let onRamp = false; for (const r of T.ramps) { const ry = this.rampCheck(k, r, f2.lat); if (ry > gy) { gy = ry; onRamp = true; } }
+    if (onRamp && k.air && k.y < gy) { k.y = gy; if (k.vy < 0) k.vy = 0; }
+    if (k.rampCD > 0) k.rampCD -= dt;
     if (k.air) {
       k.airT += dt; k.vy -= 30 * T.grav * dt; k.y += k.vy * dt;
       if (inp.driftEdge && !k.trick && !k.hop && k.airT > 0.08 && ctrl) { k.trick = true; k.trickT = 0; if (k.isPlayer) Audio.sfxPlay('trick'); }
@@ -357,6 +371,26 @@ export class Race {
     if (Math.abs(k.fs) < 3 && k.spinT <= 0 && k.squashT <= 0 && this.state !== 'countdown') k.stuckT += dt; else k.stuckT = Math.max(0, k.stuckT - dt);
     if ((!k.isPlayer || this.app.autopilot) ? (k.stuckT > 2.5 || k.wrongT > 2.5) : (k.stuckT > 3.5 || k.wrongT > 3.5)) { this.respawn(k); if (k.isPlayer) this.msg('¡De vuelta a la pista!', k, '#7ff5ff'); }
     this.placeKartMesh(k, dt);
+  }
+  rampU(k, r) { const dx = r.highP.x - r.lowP.x, dz = r.highP.z - r.lowP.z; return ((k.pos.x - r.lowP.x) * dx + (k.pos.z - r.lowP.z) * dz) / (dx * dx + dz * dz); }
+  // devuelve la altura de la superficie de la rampa bajo el kart (o -Infinity) y lanza el salto al pasar la cima
+  rampCheck(k, r, lat) {
+    const T = this.track, N = T.N; if (k.rampCD > 0 && k.lastRamp === r) return -Infinity;
+    if (Math.abs(lat) > r.halfW + 1.2) return -Infinity; // fuera de la rampa por el lateral
+    if (k.morphT > 0 && k.morph === 'topo') return -Infinity; // bajo tierra: pasa por debajo
+    const dNow = (k.idx - r.i0 + N) % N, dPrev = (k.prevIdx - r.i0 + N) % N, near = i => i <= r.len + 3 || i > N - 3;
+    if (!near(dNow) && !near(dPrev)) return -Infinity;
+    const u = this.rampU(k, r), uPrev = k._rampU0 != null && k._rampR === r ? k._rampU0 : u; k._rampU0 = u; k._rampR = r;
+    const surf = r.lowY + (r.highY - r.lowY) * Math.min(1, Math.max(0, u));
+    const crossedTop = (u >= 1 && uPrev < 1) || this.crossed(k, r.idx);
+    if (k.air && !k.hop && k.vy > 0 && k.y > surf + 0.4) return -Infinity; // ya vuela por encima
+    if (k.y > surf + 2.5) return -Infinity;
+    if (!crossedTop) return u > -0.05 && u < 1 ? surf : -Infinity; // subiendo: se apoya en la rampa, nunca la atraviesa
+    const v = Math.max(Math.abs(k.fs), 14);
+    k.y = Math.max(k.y, r.highY); k.vy = (6.5 + v * 0.16) * (T.cup.look ? 1.9 : 1); k.air = true; k.hop = false; k.airT = 0; k.trick = false;
+    k.flip = T.cup.look ? (r.idx % 2 ? 1 : 2) : 0; k.flipDur = 2 * k.vy / (30 * T.grav); k.lastRamp = r; k.rampCD = 0.6; k.rampJumps = (k.rampJumps || 0) + 1;
+    if (k.isPlayer) Audio.sfxPlay('jump');
+    return -Infinity;
   }
   crossed(k, idx) { const N = this.track.N; const a = k.prevIdx, b = k.idx; const da = (idx - a + N) % N, db = (b - a + N) % N; return db < N / 2 && da > 0 && da <= db; }
   respawn(k) {
@@ -525,7 +559,7 @@ export class Race {
     }
     if (this.state === 'finish') {
       const a = this.finishT * 0.35; const r = 13;
-      cam.position.lerp(new V3(k.pos.x + Math.sin(k.yaw + Math.PI * 0.75 + a) * r, k.y + 5, k.pos.z + Math.cos(k.yaw + Math.PI * 0.75 + a) * r), 1 - Math.exp(-dt * 3));
+      cam.position.lerp((this._wantV ||= new V3()).set(k.pos.x + Math.sin(k.yaw + Math.PI * 0.75 + a) * r, k.y + 5, k.pos.z + Math.cos(k.yaw + Math.PI * 0.75 + a) * r), 1 - Math.exp(-dt * 3));
       cam.lookAt(k.pos.x, k.y + 1.6, k.pos.z); return;
     }
     const s = k.megaS, sf = clamp(k.fs / 45, 0, 1.4), back = 6.5 * (1 + (s - 1) * 0.9) + (k.boostT > 0 ? 0.9 : 0) + sf * 0.6 + this.kick * 0.8 + (k.flip && k.air ? 3.5 : 0), up = 2.85 * (1 + (s - 1) * 0.85) + (k.flip && k.air ? 2.2 : 0);
@@ -533,8 +567,8 @@ export class Race {
     const yaw = k.yaw + k.driftDir * 0.12;
     if (snap || this._cy == null) this._cy = yaw;
     this._cy += angDiff(this._cy, yaw) * (1 - Math.exp(-dt * 7));
-    const want = new V3(k.pos.x - Math.sin(this._cy) * back * pB, k.y + up * pU, k.pos.z - Math.cos(this._cy) * back * pB);
-    const look = new V3(k.pos.x + Math.sin(this._cy) * 5 * pA, k.y + 1.35 * s, k.pos.z + Math.cos(this._cy) * 6 * pA);
+    const want = (this._wantV ||= new V3()).set(k.pos.x - Math.sin(this._cy) * back * pB, k.y + up * pU, k.pos.z - Math.cos(this._cy) * back * pB);
+    const look = (this._lookV ||= new V3()).set(k.pos.x + Math.sin(this._cy) * 5 * pA, k.y + 1.35 * s, k.pos.z + Math.cos(this._cy) * 6 * pA);
     if (snap) { this.camPos.copy(want); this.camLook.copy(look); }
     this.camPos.lerp(want, 1 - Math.exp(-dt * 10)); this.camPos.y = Math.max(this.camPos.y, want.y - 1.5);
     this.camLook.lerp(look, 1 - Math.exp(-dt * 14));

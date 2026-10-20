@@ -1,3 +1,4 @@
+import { mergeStatic } from './merge.js';
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS, RACES_PER_CUP } from './data.js';
 import { POWER } from './powerups.js';
@@ -35,8 +36,14 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const PRL = [2, 1.75, 1.5, 1.25, 1, 0.85]; let prLv = 0, prGood = 0, prWarned = false;
 function prBase() { const q = save.settings.quality; return q === 'alta' ? 0 : q === 'baja' ? (isTouch ? 5 : 4) : (isTouch ? 2 : 0); }
 prLv = prBase(); if (params.get('q') === 'low') prLv = 4;
+renderer.debug.checkShaderErrors = params.has('debug'); // v13: comprobar errores de shader bloquea el primer uso de cada programa
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio, PRL[prLv])); const sh = prLv <= 2 && !params.has('noshadows'); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; try { app.race && app.race.scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); } catch (e) {} } resize(); }
+// v13: apagar/encender sombras recompila TODOS los materiales (tirón de cientos de ms). Durante una carrera solo se
+// permite apagarlas una vez; volver a encenderlas espera a la siguiente carrera (sin ir y venir en mitad de la partida).
+let shadowLock = false;
+function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio, PRL[prLv])); let sh = prLv <= 2 && !params.has('noshadows'); const racing = app.state === 'race' && app.race;
+  if (racing && sh && !renderer.shadowMap.enabled && shadowLock) sh = false; if (racing && !sh && renderer.shadowMap.enabled) shadowLock = true;
+  if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; try { app.race && app.race.scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); } catch (e) {} } resize(); }
 function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera, podCam]) if (c) { c.aspect = a; c.zoom = a < 1 ? Math.max(0.55, a / 1.05) : 1; c.updateProjectionMatrix(); } checkRotate(); }
 addEventListener('resize', () => resize()); addEventListener('orientationchange', () => setTimeout(resize, 120));
 
@@ -151,7 +158,7 @@ function startEndless(match) {
     app.race = new EndlessRace(app, { seed: match.seed, roster: match.roster, me: match.me, quality: { hi: qualityHi }, simBots: match.simBots, ghost: ghostLoad() });
     app.buildMs = performance.now() - t0;
     if (match.online) online.attach(app.race);
-    resize(); $('loading').style.display = 'none';
+    shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
     show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = (isTouch ? 'Toca <b>DERRAPE</b>' : 'Pulsa <b>Espacio</b>') + ' al «¡YA!» para salir con turbo · ¡huye de la nata!';
     app.ui.toast(match.online ? (match.humans > 1 ? `¡Online! ${match.humans} pilotos de verdad` : '¡Online!') : 'Partida contra bots', '#ffffff');
     Audio.init(); Audio.playSong(app.cup.music, match.seed % 97); Audio.engineStart();
@@ -217,7 +224,7 @@ function startRace() {
   $('loading').style.display = 'flex'; $('loading').textContent = 'Preparando ' + app.cup.track + '…';
   setTimeout(() => {
     app.race = new Race(app, { cup: app.cup, reverse: app.raceNo % 2 === 1, playerChar: app.playerChar, rivals: app.rivals, grid, cupIndex: CUPS.indexOf(app.cup), quality: { hi: qualityHi } });
-    resize(); $('loading').style.display = 'none';
+    try { app.race.mergedMeshes = mergeStatic(app.race); } catch (e) {} shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
     show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>DERRAPE</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
     app.ui.toast(app.cup.name + ' · Carrera ' + (app.raceNo + 1) + '/' + RACES_PER_CUP + (app.raceNo % 2 ? ' (vuelta)' : ''), '#ffffff');
     Audio.init(); Audio.playSong(app.cup.music, CUPS.indexOf(app.cup) * 7 + app.raceNo + 1); Audio.engineStart();

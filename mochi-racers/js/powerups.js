@@ -54,6 +54,7 @@ const sprite = (color, s, op = 0.8) => { const sp = new THREE.Sprite(new THREE.S
 const windowTex = () => mat('winTex', () => canvasTex(64, 128, (x, w, h) => { x.fillStyle = '#4a3a8a'; x.fillRect(0, 0, w, h); for (let j = 0; j < 8; j++) for (let i = 0; i < 3; i++) { x.fillStyle = R() < 0.75 ? ['#ffe9a0', '#ffd0f0', '#a0f0ff'][(i + j) % 3] : '#2a1a5a'; x.fillRect(6 + i * 20, 6 + j * 15, 12, 9); } }));
 
 // --- Tiburón con ciudad dentro ---
+const boomMats = {}; function boomMat(kind) { return boomMats[kind] || (boomMats[kind] = new THREE.MeshBasicMaterial({ color: kind === 'topo' ? '#ffcf8a' : kind === 'bola' ? '#ffb3e0' : '#bfefff', transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })); }
 function makeShark() {
   const g = new THREE.Group();
   const glass = mat('sharkGlass', () => toon('#7fd8ff', { opacity: 0.34, rim: 1.2, emissive: '#3fa8ff', ei: 0.25, nocache: true }));
@@ -262,6 +263,20 @@ export class PowerFX {
     // pools para proyectiles
     this.pool = { piano: [], fish: [], tea: [] };
   }
+  // v13: precalentado. Antes cada potenciador compilaba sus shaders y subía sus texturas la PRIMERA vez que salía
+  // (tirones de 300-600 ms). Ahora se monta una copia de cada efecto delante de la cámara y se compila al cargar la carrera.
+  prewarm(renderer, camera) {
+    const RC = this.race, g = new THREE.Group(); let made = [];
+    for (const f of [makeShark, makeStarAura, makeGlider, makeTimeAura, makePiano, () => makeFish(0), makeTeapot, () => makeBubble('#ff8fd8'), () => makeBubble('#c8a8ff', true), makeMound, makeCircusBall, makeDolphin, () => this.ringFor()]) { try { const o = f(); if (o) { if (o.parent) o.parent.remove(o); made.push(o); g.add(o); } } catch (e) { /* un efecto que falle no debe romper la carrera */ } }
+    for (const kind of ['topo', 'bola', 'delfin']) g.add(new THREE.Mesh(geo('boomR', () => new THREE.RingGeometry(0.75, 1, 40)), boomMat(kind)));
+    camera.updateMatrixWorld(); const fw = new V3(0, 0, -12).applyQuaternion(camera.quaternion); g.position.copy(camera.position).add(fw); g.scale.setScalar(0.3);
+    g.traverse(o => { o.frustumCulled = false; o.visible = true; }); RC.scene.add(g); g.updateMatrixWorld(true);
+    // también lo que está escondido en la escena (escudos de los karts, chispas, avisos...) se dibuja una vez
+    const hidden = []; RC.scene.traverse(o => { if (!o.visible) { hidden.push([o, o.frustumCulled]); o.visible = true; o.frustumCulled = false; } });
+    try { renderer.compile(RC.scene, camera); renderer.render(RC.scene, camera); /* en el lienzo real, tapado por la pantalla de carga */ g.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { for (const k of ['map', 'gradientMap', 'alphaMap']) if (m[k] && m[k].isTexture) renderer.initTexture(m[k]); }); }); } catch (e) {}
+    for (const [o, fc] of hidden) { o.visible = false; o.frustumCulled = fc; }
+    RC.scene.remove(g);
+  }
   get T() { return this.race.track; }
   // ---------- estado por kart ----------
   immune(k) { return k.sharkT > 0 || k.starT > 0 || k.flyT > 0 || k.gumT > 0 || k.morphT > 0; }
@@ -417,7 +432,7 @@ export class PowerFX {
     const RC = this.race, t = RC.time, T = this.T;
     if (M.timeBub) M.timeBub.uniforms.uT.value = t;
     // ondas del final explosivo de las transformaciones
-    for (const b of this.booms) { if (!b.mesh) { b.mesh = new THREE.Mesh(geo('boomR', () => new THREE.RingGeometry(0.75, 1, 40)), new THREE.MeshBasicMaterial({ color: b.kind === 'topo' ? '#ffcf8a' : b.kind === 'bola' ? '#ffb3e0' : '#bfefff', transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })); b.mesh.rotation.x = -Math.PI / 2; b.mesh.position.copy(b.pos).add(new V3(0, 0.4, 0)); RC.scene.add(b.mesh); }
+    for (const b of this.booms) { if (!b.mesh) { b.mesh = new THREE.Mesh(geo('boomR', () => new THREE.RingGeometry(0.75, 1, 40)), boomMat(b.kind).clone()); b.mesh.rotation.x = -Math.PI / 2; b.mesh.position.copy(b.pos).add(new V3(0, 0.4, 0)); RC.scene.add(b.mesh); }
       b.t += dt; const u = b.t / 0.7; b.mesh.scale.setScalar(1 + u * 11); b.mesh.material.opacity = 0.8 * (1 - u); if (u >= 1) { RC.scene.remove(b.mesh); b.mesh.material.dispose(); b.dead = true; } }
     this.booms = this.booms.filter(b => !b.dead);
     // efectos pegados a cada kart

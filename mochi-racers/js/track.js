@@ -2,7 +2,7 @@ import { addDream } from './dreamdeco.js';
 import * as THREE from 'three';
 import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
 import { addDeco } from './deco.js';
-import { makeCritter, animCritter } from './critters.js';
+import { makeCritter, animCritter, CRITTER_COUNT } from './critters.js';
 
 const V3 = THREE.Vector3;
 let seed = 1; let OPEN = false; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -176,6 +176,7 @@ function buildVisuals(T, Q) {
     const rights = fake.map(f => f.right); T.pads.push(Object.assign(makePadAlong(group, pts, rights, pts.length >> 1, 0, 2.2, 2), { sc: true }));
   }
   // features
+  const obsQ = [];
   for (const f of T.feats) {
     const i = T.idxOf(f.t), s = S[i], yaw = Math.atan2(s.fl.x, s.fl.z);
     if (f.type === 'boxes') for (let k = 0; k < 4; k++) {
@@ -184,9 +185,20 @@ function buildVisuals(T, Q) {
     }
     if (f.type === 'boost') T.pads.push(Object.assign(makePadAlong(group, T.ptsRing(i, 4), T.rightsRing(i, 4), 4, f.off || 0, 2.6, 3), { idx: i }));
     if (f.type === 'ramp') T.ramps.push(makeRampAlong(T, i, T.cup.look ? 5 : 3, T.cup.look ? 3.2 : 1.5));
-    if (f.type === 'obstacle') for (let k = 0; k < 2; k++) { const crit = f.kind === 'gumdrop' || f.kind === 'critter'; // v10: las gomas pasan a ser personajes surrealistas
-      T.obstacles.push(makeObstacle(T, crit ? 'critter' : f.kind, OPEN ? Math.min(N - 1, i + k * 9) : (i + k * 9) % N, crit ? (T.critN = (T.critN || 0) + 1) - 1 : k)); }
+    if (f.type === 'obstacle') obsQ.push([f, i]);
   }
+  // v13: obstáculos colocados con coherencia: separación mínima entre ellos, nunca en curvas cerradas ni en la zona de
+  // una rampa (entrada, rampa y aterrizaje), y cada uno patrulla solo medio carril (lado alterno) => siempre hay hueco.
+  { const taken = [], MIN = 28; const dist = (a, b) => { const d = Math.abs(a - b); return OPEN ? d : Math.min(d, N - d); };
+    const okAt = j => { if (OPEN && (j < 30 || j > N - 20)) return false; if (Math.abs(S[j].curv) > 0.32) return false;
+      for (const r of T.ramps) { const d = (j - r.i0 + N) % N; if (d < r.len + 22 || d > N - 14) return false; }
+      for (const t of taken) if (dist(t, j) < MIN) return false; return true; };
+    let side = 1;
+    for (const [f, i] of obsQ) for (let k = 0; k < 2; k++) {
+      const crit = f.kind === 'gumdrop' || f.kind === 'critter'; let j = -1;
+      for (let tr = 0; tr < N / 6; tr++) { const c = OPEN ? i + k * 34 + tr : (i + k * 34 + tr) % N; if (c >= N) break; if (okAt(c)) { j = c; break; } }
+      if (j < 0) continue; taken.push(j);
+      const o = makeObstacle(T, crit ? 'critter' : f.kind, j, crit ? (T.critN = (T.critN || 0) + 1) - 1 : k); o.side = side; side = -side; T.obstacles.push(o); } }
   // start arch
   { const s = S[0]; const yaw = Math.atan2(s.fl.x, s.fl.z); const a = new THREE.Group(); a.position.copy(s.p); a.rotation.y = yaw; group.add(a);
     for (const sd of [-1, 1]) { const p = mesh(new THREE.CylinderGeometry(0.8, 1, 9, 12), toon(cup.curbA), a, [sd * (s.w + 2), 4.5, 0]); outline(p, '#5a3a6e', 1.05); mesh(new THREE.SphereGeometry(1.3, 14, 10), toon(cup.curbB), a, [sd * (s.w + 2), 9.3, 0]); }
@@ -238,29 +250,74 @@ function makePadAlong(group, pts, rights, c, lat, halfW, halfLen) {
   const cp = pts[c], cr = rights[c];
   return { pos: new V3(cp.x + cr.x * lat, cp.y, cp.z + cr.z * lat), r: Math.max(halfW, 2.6), mesh: m, dir: front.clone().sub(back).normalize(), back, front };
 }
-// ramp wedge built from samples i..i+len: rises along race direction
+// v13: rampas premium. Superficie con textura propia por copa (franjas, chevrones brillantes), costados con paneles,
+// labio luminoso, bombillas en los bordes (1 InstancedMesh por rampa) y dos "postes" surrealistas según la copa.
+const RAMP_STYLE = {
+  gominola: ['#ff7fb6', '#ffffff', '#ffe066', 'lolly'], girasol: ['#ffbf2a', '#fff6d0', '#ff7a3a', 'flower'], helada: ['#7fc8ff', '#ffffff', '#ff8fc0', 'crystal'],
+  galaxia: ['#7a5cff', '#7ff5ff', '#ff8fe0', 'planet'], tormenta: ['#2a1f5a', '#5ff5ff', '#ff5fd2', 'tesla'], cielo: ['#7fd8ff', '#ffffff', '#ffb3e0', 'cloud'], sueno: ['#8b5cc2', '#ffe2b8', '#ffb36b', 'clock'] };
+const rampTexCache = new Map();
+function rampTexture(st) {
+  const key = st.join(); if (rampTexCache.has(key)) return rampTexCache.get(key);
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 256; const x = cv.getContext('2d');
+  const gr = x.createLinearGradient(0, 0, 128, 0); gr.addColorStop(0, st[0]); gr.addColorStop(0.5, st[1]); gr.addColorStop(1, st[0]); x.fillStyle = gr; x.fillRect(0, 0, 128, 256);
+  x.fillStyle = 'rgba(255,255,255,0.18)'; for (let i = 0; i < 8; i++) x.fillRect(0, i * 32, 128, 10);
+  x.fillStyle = st[2]; x.strokeStyle = '#ffffff'; x.lineWidth = 5;
+  for (const y0 of [30, 158]) { x.beginPath(); x.moveTo(64, y0); x.lineTo(112, y0 + 54); x.lineTo(84, y0 + 54); x.lineTo(64, y0 + 30); x.lineTo(44, y0 + 54); x.lineTo(16, y0 + 54); x.closePath(); x.fill(); x.stroke(); }
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, 8, 256); x.fillRect(120, 0, 8, 256);
+  x.fillStyle = 'rgba(58,32,80,0.55)'; for (let i = 0; i < 16; i++) { x.fillRect(2, i * 16, 4, 8); x.fillRect(122, i * 16 + 8, 4, 8); }
+  const t = new THREE.CanvasTexture(cv); t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; rampTexCache.set(key, t); return t;
+}
+const RG = {}; const rgeo = (n, f) => RG[n] || (RG[n] = f());
+function rampPost(kind, st, parent, pos, h) {
+  const g = new THREE.Group(); g.position.copy(pos); parent.add(g); const sc = Math.max(1, h / 1.5);
+  g.scale.setScalar(sc);
+  if (kind === 'lolly') { mesh(rgeo('pst', () => new THREE.CylinderGeometry(0.12, 0.12, 3, 6)), toon('#ffffff'), g, [0, 1.5, 0]); const c = mesh(rgeo('lol', () => new THREE.TorusGeometry(0.6, 0.3, 10, 22)), toon(st[0], { rim: 0.6 }), g, [0, 3.4, 0]); outline(c, '#7a3a6e', 1.05); mesh(rgeo('lolc', () => new THREE.SphereGeometry(0.4, 12, 8)), toon(st[2], { emissive: st[2], ei: 0.3 }), g, [0, 3.4, 0], null, [1, 1, 0.5]); }
+  else if (kind === 'flower') { mesh(rgeo('pst', () => new THREE.CylinderGeometry(0.12, 0.12, 3, 6)), toon('#5fbf4a'), g, [0, 1.5, 0]); const fc = mesh(rgeo('fc', () => new THREE.SphereGeometry(0.45, 12, 8)), toon('#7a4a1a'), g, [0, 3.3, 0], null, [1, 1, 0.5]); for (let i = 0; i < 8; i++) mesh(rgeo('pet', () => new THREE.SphereGeometry(0.3, 8, 6)), toon(st[0], { rim: 0.5 }), fc, [Math.cos(i * 0.785) * 0.85, Math.sin(i * 0.785) * 0.85, 0], [0, 0, i * 0.785], [1.4, 0.6, 0.4]); }
+  else if (kind === 'crystal') { for (let i = 0; i < 3; i++) { const c = mesh(rgeo('cry', () => new THREE.OctahedronGeometry(0.6, 0)), toon(i ? '#bfe6ff' : st[2], { opacity: 0.85, rim: 0.9, emissive: '#7fc8ff', ei: 0.25 }), g, [(i - 1) * 0.5, 1.2 + i * 0.6, 0], [0, i, 0.3 * (i - 1)], [0.7, 1.8 - i * 0.3, 0.7]); } }
+  else if (kind === 'planet') { mesh(rgeo('pst', () => new THREE.CylinderGeometry(0.12, 0.12, 3, 6)), toon('#ffffff', { emissive: st[1], ei: 0.5 }), g, [0, 1.5, 0]); const pl = mesh(rgeo('pla', () => new THREE.SphereGeometry(0.7, 16, 10)), toon(st[2], { rim: 0.8 }), g, [0, 3.6, 0]); mesh(rgeo('ring', () => new THREE.TorusGeometry(1.1, 0.08, 6, 26)), toon(st[1], { emissive: st[1], ei: 0.6 }), pl, [0, 0, 0], [1.2, 0, 0.3]); }
+  else if (kind === 'tesla') { mesh(rgeo('tes', () => new THREE.CylinderGeometry(0.2, 0.45, 3, 8)), toon('#3b3266'), g, [0, 1.5, 0]); for (const y of [1, 1.8, 2.6]) mesh(rgeo('tr', () => new THREE.TorusGeometry(0.45, 0.07, 6, 18)), toon(st[1], { emissive: st[1], ei: 0.8 }), g, [0, y, 0], [Math.PI / 2, 0, 0], [1 - y * 0.15, 1 - y * 0.15, 1]); mesh(rgeo('tb', () => new THREE.SphereGeometry(0.4, 12, 8)), new THREE.MeshBasicMaterial({ color: st[2] }), g, [0, 3.3, 0]); }
+  else if (kind === 'cloud') { for (const [x, y, s2] of [[0, 2.6, 0.8], [-0.6, 2.3, 0.55], [0.6, 2.35, 0.6], [0, 3.1, 0.5]]) mesh(rgeo('cl', () => new THREE.SphereGeometry(1, 12, 8)), toon('#ffffff', { rim: 0.8 }), g, [x, y, 0], null, s2); mesh(rgeo('bal', () => new THREE.SphereGeometry(0.45, 12, 8)), toon(st[2], { rim: 0.6 }), g, [0.2, 4.2, 0], null, [1, 1.2, 1]); mesh(rgeo('pst', () => new THREE.CylinderGeometry(0.12, 0.12, 3, 6)), toon('#ffffff'), g, [0.2, 3.4, 0], null, [0.15, 0.4, 0.15]); }
+  else { mesh(rgeo('pst', () => new THREE.CylinderGeometry(0.12, 0.12, 3, 6)), toon('#5a3a6e'), g, [0, 1.5, 0]); const ck = mesh(rgeo('clk', () => new THREE.CylinderGeometry(0.8, 0.8, 0.2, 20)), toon(st[1], { rim: 0.5 }), g, [0, 3.4, 0], [Math.PI / 2, 0, 0.3], [1, 1, 1.4]); outline(ck, '#5a3a6e', 1.06); mesh(rgeo('drip', () => new THREE.SphereGeometry(0.25, 8, 6)), toon(st[1]), g, [0.3, 2.5, 0], null, [0.8, 1.8, 0.8]); mesh(rgeo('hand', () => new THREE.BoxGeometry(0.08, 0.55, 0.05)), toon('#3a2050'), ck, [0, 0.15, 0.2], [Math.PI / 2, 0, 0]); }
+  return g;
+}
 function makeRampAlong(T, i, len = 3, h = 1.5) {
-  const { S, N } = T; const pos = [], col = [], idx = []; const cA = C(T.cup.curbA), cW = C('#ffffff');
-  const P = k => S[(i + k) % N];
-  const vtx = (p, c) => { pos.push(p.x, p.y, p.z); col.push(c.r, c.g, c.b); return pos.length / 3 - 1; };
-  const top = [], bot = [];
-  for (let k = 0; k <= len; k++) { const s = P(k), y = h * k / len, w = s.w - 0.4; const c = k % 2 ? cA : cW;
-    top.push([vtx(off(s, -w, y + 0.05), c), vtx(off(s, w, y + 0.05), c)]); bot.push([vtx(off(s, -w, 0.02), cA), vtx(off(s, w, 0.02), cA)]); }
-  for (let k = 0; k < len; k++) { const [a, b] = top[k], [c2, d] = top[k + 1]; idx.push(a, b, c2, b, d, c2);
-    for (const sd of [0, 1]) { const t0 = top[k][sd], t1 = top[k + 1][sd], b0 = bot[k][sd], b1 = bot[k + 1][sd]; idx.push(b0, t0, b1, t0, t1, b1); } }
-  const [ta, tb] = top[len], [ba, bb] = bot[len]; idx.push(ba, bb, ta, bb, tb, ta);
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
-  const m = new THREE.Mesh(g, toon('#ffffff', { vc: true, side: THREE.DoubleSide, rim: 0.2 })); T.group.add(m);
-  // glowing chevrons on top
+  const { S, N } = T; const st = RAMP_STYLE[T.cup.id] || RAMP_STYLE.gominola;
+  const P = k => S[(i + k) % N]; const ins = 0.4;
+  const top = [], tuv = [], tidx = [], side = [], scol = [], sidx = [];
+  const cA = C(st[0]).multiplyScalar(0.75), cB = C(st[1]).lerp(C(st[0]), 0.4);
+  for (let k = 0; k <= len; k++) { const s = P(k), y = h * k / len, w = s.w - ins;
+    for (const sd of [-1, 1]) { const q = off(s, sd * w, y + 0.06); top.push(q.x, q.y, q.z); tuv.push(sd < 0 ? 0 : 1, k * 0.5); } }
+  for (let k = 0; k < len; k++) { const a = k * 2; tidx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(top, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(tuv, 2)); tg.setIndex(tidx); tg.computeVertexNormals();
+  const topM = new THREE.Mesh(tg, new THREE.MeshToonMaterial({ map: rampTexture(st), gradientMap: toon('#ffffff').gradientMap, emissive: C(st[1]), emissiveIntensity: 0.08, side: THREE.DoubleSide })); T.group.add(topM);
+  // costados y frontal (vertex colors, franjas)
+  const sv = (q, c) => { side.push(q.x, q.y, q.z); scol.push(c.r, c.g, c.b); return side.length / 3 - 1; };
+  for (const sd of [-1, 1]) for (let k = 0; k < len; k++) { const s0 = P(k), s1 = P(k + 1), w0 = s0.w - ins, w1 = s1.w - ins, y0 = h * k / len, y1 = h * (k + 1) / len, c = k % 2 ? cA : cB;
+    const a = sv(off(s0, sd * w0, 0.02), c), b = sv(off(s0, sd * w0, y0 + 0.06), c), d = sv(off(s1, sd * w1, 0.02), c), e = sv(off(s1, sd * w1, y1 + 0.06), c); sidx.push(a, b, d, b, e, d); }
+  { const s1 = P(len), w = s1.w - ins; const a = sv(off(s1, -w, 0.02), cA), b = sv(off(s1, w, 0.02), cA), c = sv(off(s1, -w, h + 0.06), cB), d = sv(off(s1, w, h + 0.06), cB); sidx.push(a, b, c, b, d, c);
+    if (h > 2) { // pilares bajo el labio de las rampas grandes
+      for (const sd of [-0.7, 0, 0.7]) { const q = off(s1, sd * w, 0); mesh(rgeo('rpil', () => new THREE.CylinderGeometry(0.3, 0.4, 1, 8)), toon(st[1]), T.group, [q.x, q.y + h / 2, q.z], null, [1, h, 1]); } } }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(side, 3)); sg.setAttribute('color', new THREE.Float32BufferAttribute(scol, 3)); sg.setIndex(sidx); sg.computeVertexNormals();
+  const m = new THREE.Mesh(sg, toon('#ffffff', { vc: true, side: THREE.DoubleSide, rim: 0.25 })); T.group.add(m);
+  // labio luminoso
+  { const s1 = P(len), w = s1.w - ins, q = off(s1, 0, h + 0.12), yaw = Math.atan2(s1.fl.x, s1.fl.z);
+    const lip = mesh(rgeo('lip', () => new THREE.CylinderGeometry(0.16, 0.16, 1, 10)), new THREE.MeshBasicMaterial({ color: st[2] }), T.group, [q.x, q.y, q.z], [0, yaw, Math.PI / 2], [1, w * 2, 1]); lip.rotation.order = 'YXZ'; lip.rotation.set(0, yaw, Math.PI / 2); }
+  // bombillas en los bordes
+  { const nb = (len + 1) * 2 * 2, im = new THREE.InstancedMesh(rgeo('bulb', () => new THREE.SphereGeometry(0.17, 8, 6)), new THREE.MeshBasicMaterial({ color: '#ffffff' }), nb); const M4 = new THREE.Matrix4(); let n = 0; const ca = C(st[2]), cb = C('#fffbe0');
+    for (let k = 0; k <= len * 2; k++) { const kk = k / 2, s = P(Math.min(len, Math.floor(kk))), y = h * kk / len, w = s.w - ins + 0.05;
+      for (const sd of [-1, 1]) { if (n >= nb) break; const q = off(s, sd * w, y + 0.22); M4.makeTranslation(q.x, q.y, q.z); im.setMatrixAt(n, M4); im.setColorAt(n, k % 2 ? ca : cb); n++; } }
+    im.count = n; im.instanceMatrix.needsUpdate = true; T.group.add(im); }
+  // postes surrealistas a ambos lados del labio
+  { const s1 = P(len), yaw = Math.atan2(s1.fl.x, s1.fl.z); for (const sd of [-1, 1]) { const q = off(s1, sd * (s1.w + 0.9), 0); const g = rampPost(st[3], st, T.group, q, h); g.rotation.y = yaw; } }
   const s0 = P(0), s1 = P(len);
-  return { idx: (i + len) % N, i0: i, lowY: s0.p.y + 0.05, highY: s1.p.y + h + 0.05, lowP: s0.p.clone(), highP: s1.p.clone(), mesh: m };
+  return { idx: (i + len) % N, i0: i, len, halfW: Math.max(P(0).w, P(len).w), lowY: s0.p.y + 0.05, highY: s1.p.y + h + 0.05, lowP: s0.p.clone(), highP: s1.p.clone(), mesh: m, top: topM };
 }
 
 // ---------------- obstacles ----------------
 function makeObstacle(T, kind, i, k) {
   const s = T.S[i]; const g = new THREE.Group(); T.group.add(g);
   const o = { kind, idx: i, g, r: 1.6, ph: k * 2.1 + i * 0.01, active: true };
-  if (kind === 'critter') { o.n = k % 6; const c = makeCritter(o.n, g); o.u = c.u; o.r = c.r; o.hover = c.hover; o.ph = k * 1.7 + i * 0.013; }
+  if (kind === 'critter') { o.n = (k + ({ cielo: 6, sueno: 3 }[T.cup.id] || 0) + (T.cup.open ? 5 : 0)) % CRITTER_COUNT; const c = makeCritter(o.n, g); o.u = c.u; o.r = c.r; o.hover = c.hover; o.ph = k * 1.7 + i * 0.013; }
   else if (kind === 'gumdrop') {
     const col = ['#ff8fc0', '#7ee3c4', '#b9a2f7'][k % 3];
     const b = mesh(new THREE.LatheGeometry([[0.01, 0], [1.4, 0.05], [1.5, 0.5], [1.2, 1.4], [0.6, 2.0], [0.01, 2.2]].map(([r, y]) => new THREE.Vector2(r, y)), 20), toon(col, { opacity: 0.85, rim: 0.6 }), g); outline(b, '#7a3a6e', 1.05);
@@ -298,11 +355,11 @@ function makeObstacle(T, kind, i, k) {
       return;
     }
     if (kind === 'critter') { // paseo lento de lado a lado, mirando hacia donde camina
-      const sw = Math.sin(t * 0.5 + o.ph), lat = sw * (s.w - 2) * 0.75; const p = off(s, lat, 0); g.position.copy(p);
+      const sw = Math.sin(t * 0.5 + o.ph), lat = (o.side || 1) * (s.w * 0.52 + sw * (s.w * 0.5 - 2.2)); const p = off(s, lat, 0); g.position.copy(p);
       const yaw = Math.atan2(s.fl.x, s.fl.z), dir = Math.cos(t * 0.5 + o.ph); g.rotation.y = yaw + (Math.abs(dir) < 0.15 ? Math.PI : dir > 0 ? Math.PI / 2 : -Math.PI / 2) * 0 + (dir > 0 ? Math.PI / 2 : -Math.PI / 2);
       animCritter(o.n, o.u, t, o.ph); return; }
     const sw = Math.sin(t * (kind === 'snowball' ? 0.55 : 0.8) + o.ph);
-    const lat = sw * (s.w - 1.5);
+    const lat = (o.side || 1) * (s.w * 0.52 + sw * (s.w * 0.5 - 2.4)); // v13: medio carril
     const p = off(s, lat, 0); g.position.copy(p);
     const yaw = Math.atan2(s.fl.x, s.fl.z);
     if (kind === 'gumdrop') { g.position.y += Math.abs(Math.sin(t * 3 + o.ph)) * 2.2; const sq = 1 + Math.sin(t * 6 + o.ph) * 0.12; g.scale.set(1 / sq, sq, 1 / sq); g.rotation.y = yaw + Math.PI / 2 * Math.sign(Math.cos(t * 0.8 + o.ph)); }
