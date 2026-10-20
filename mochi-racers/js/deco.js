@@ -59,7 +59,12 @@ class Chunks {
 
 // --- piezas
 const SPH = new THREE.SphereGeometry(1, 12, 8), SPHl = new THREE.SphereGeometry(1, 7, 5), CYL = new THREE.CylinderGeometry(1, 1, 1, 10), CONE = new THREE.ConeGeometry(1, 1, 10), BOX = new THREE.BoxGeometry(1, 1, 1);
-const bodyGeo = () => { const g = new THREE.SphereGeometry(1, 13, 9); g.scale(1, 0.86, 1); g.translate(0, 0.86, 0); return g; };
+// v12: cuerpo con degradado (vientre claro, base más oscura) para dar volumen
+const bodyGeo = () => { const g = new THREE.SphereGeometry(1, 16, 11); g.scale(1, 0.86, 1); g.translate(0, 0.86, 0); const p = g.attributes.position, c = [];
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 1.72, z = p.getZ(i); const k = 0.78 + y * 0.26 + Math.max(0, z) * 0.06; c.push(Math.min(1, k), Math.min(1, k * 0.98), Math.min(1, k)); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); return g; };
+// v12: pompones de espumillón en las manos (siguen al saludo de los bracitos)
+const pomGeo = () => mergeVC([-1, 1].flatMap(s => [0, 1, 2, 3, 4, 5].map(k => ({ g: SPHl, m: M(s * 1.15 + Math.cos(k * 1.05) * 0.18, 0.66 + Math.sin(k * 1.05) * 0.18, 0.22 + (k % 2) * 0.1, 0.21), c: ['#ffe066', '#ff8fd8', '#7ff5ff', '#ffffff', '#b98aff', '#9dff7a'][(k + (s > 0 ? 3 : 0)) % 6] }))));
 const faceGeo = () => mergeVC([
   ...[-1, 1].flatMap(s => [{ g: SPHl, m: M(s * 0.36, 1.0, 0.83, 0.14, 0.18, 0.09), c: '#2e1a36' }, { g: SPHl, m: M(s * 0.36 - 0.04, 1.07, 0.9, 0.055), c: '#ffffff' }, { g: SPHl, m: M(s * 0.6, 0.8, 0.72, 0.16, 0.08, 0.06), c: '#ff9ab8' }]),
   { g: SPHl, m: M(0, 0.8, 0.95, 0.07, 0.04, 0.03), c: '#5a2a40' }]);
@@ -122,7 +127,7 @@ export function addDeco(T, Q, { off, rnd }) {
   // altura del terreno a una distancia d del eje (talud de la pista → suelo)
   const gy = (s, d) => { if (space) return s.p.y - 1.2; const a = s.wall + 2, b = s.wall + 6 + s.p.y * 2.5; const t = Math.max(0, Math.min(1, (d - a) / (b - a))); return s.p.y * (1 - t) + -0.6 * t; };
   const faceYaw = (s, sd) => Math.atan2(-s.right.x * sd, -s.right.z * sd);
-  const fanParts = (hatT, anim = {}) => [{ geo: bodyGeo(), mat: animMat('#ffffff', { rim: 0.45 }, anim) }, { geo: faceGeo(), mat: animMat('#ffffff', { vc: true, rim: 0 }, anim), tint: false, detail: true },
+  const fanParts = (hatT, anim = {}) => [{ geo: bodyGeo(), mat: animMat('#ffffff', { rim: 0.45, vc: true }, anim) }, { geo: pomGeo(), mat: animMat('#ffffff', { vc: true, rim: 0.5, emissive: '#ffffff', ei: 0.12 }, { ...anim, wave: 1 }), tint: false, detail: true }, { geo: faceGeo(), mat: animMat('#ffffff', { vc: true, rim: 0 }, anim), tint: false, detail: true },
     { geo: armsGeo(), mat: animMat('#ffffff', { rim: 0.3 }, { ...anim, wave: 1 }), detail: true }, { geo: hatGeo(hatT), mat: animMat('#ffffff', { vc: true, rim: 0.2 }, anim), tint: false, detail: true }];
   const fans = [], stands = [], stageL = [], dancers = [], balloons = [], flags = [], poles = [], crit = [], mascots = [], plats = [];
   const used = []; const farFrom = (p, r) => used.every(([q, rr]) => (q.x - p.x) ** 2 + (q.z - p.z) ** 2 > (r + rr) ** 2);

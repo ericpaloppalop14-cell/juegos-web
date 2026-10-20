@@ -101,6 +101,9 @@ export const Audio = {
       case 'firework': T(300 + Math.random() * 300, t, 0.5, 'sine', 0.05, null, 1500); this.hit(t + 0.45, 0.5, 0.2, 2500); for (let i = 0; i < 5; i++) T(2000 + Math.random() * 2500, t + 0.5 + i * 0.05, 0.08, 'sine', 0.04); break;
       case 'cheer': this.hit(t, 0.7, 0.08, 1800); for (let i = 0; i < 4; i++) T(700 + Math.random() * 500, t + i * 0.06, 0.12, 'triangle', 0.05, null, 1100); break;
       case 'click': T(1000, t, 0.05, 'triangle', 0.1); break;
+      case 'dig': this.hit(t, 0.35, 0.18, 500); T(110, t, 0.35, 'triangle', 0.18, null, 70); break;
+      case 'boom': this.hit(t, 0.6, 0.3, 900); T(90, t, 0.5, 'sine', 0.35, null, 35); T(700, t + 0.02, 0.2, 'triangle', 0.12, null, 1400); break;
+      case 'splash': this.hit(t, 0.4, 0.16, 2600); T(500, t, 0.18, 'sine', 0.1, null, 200); break;
       case 'stall': T(120, t, 0.5, 'sawtooth', 0.15, null, 60); break;
     }
   },

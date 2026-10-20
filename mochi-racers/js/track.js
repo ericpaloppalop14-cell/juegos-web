@@ -83,30 +83,55 @@ export function buildTrack(cup, reverse, quality) {
 
 // ======================================================================
 function ribbon(S, N, fnL, fnR, colorFn, closed = true, yOff = 0) {
-  const pos = [], cols = [], idx = []; if (OPEN) closed = false;
+  const pos = [], cols = [], idx = [], us = []; if (OPEN) closed = false;
   const n = closed ? N + 1 : N;
   for (let k = 0; k < n; k++) {
     const i = k % N, s = S[i];
     const l = fnL(s, i), r = fnR(s, i);
-    pos.push(l.x, l.y + yOff, l.z, r.x, r.y + yOff, r.z);
+    pos.push(l.x, l.y + yOff, l.z, r.x, r.y + yOff, r.z); us.push(0, 1);
     const c = colorFn(i, k); cols.push(c[0].r, c[0].g, c[0].b, c[1].r, c[1].g, c[1].b);
     if (k < n - 1) { const a = k * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
   }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.setAttribute('aU', new THREE.Float32BufferAttribute(us, 1)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
 const off = (s, d, dy = 0) => new V3(s.p.x + s.right.x * d, s.p.y + dy, s.p.z + s.right.z * d);
+
+// v12 remaster: asfalto de caramelo con grano, azúcar brillante, manchas suaves y oclusión en los bordes (todo en GPU, 0 texturas)
+const HASH = 'float h12(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }\n float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h12(i), h12(i + vec2(1, 0)), f.x), mix(h12(i + vec2(0, 1)), h12(i + vec2(1, 1)), f.x), f.y); }';
+function surfMat(kind, extra = {}) {
+  const m = toon(extra.color || '#ffffff', { vc: kind !== 'ground', rim: 0, side: kind === 'ground' ? THREE.FrontSide : THREE.DoubleSide, nocache: true });
+  const c2 = new THREE.Color(extra.c2 || '#ffffff');
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uC2 = { value: c2 };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + (kind === 'ground' ? '' : 'attribute float aU; varying float vU;') + '\nvarying vec3 vWP;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;' + (kind === 'ground' ? '' : ' vU = aU;'));
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uC2; varying vec3 vWP;' + (kind === 'ground' ? '' : ' varying float vU;') + '\n' + HASH)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + (kind === 'ground'
+        ? ` { float pa = vn(vWP.xz * 0.045) * 0.65 + vn(vWP.xz * 0.21) * 0.35; diffuseColor.rgb = mix(diffuseColor.rgb, uC2, smoothstep(0.42, 0.78, pa) * 0.55);
+            diffuseColor.rgb *= 0.93 + vn(vWP.xz * 1.7) * 0.12;
+            vec2 cl = floor(vWP.xz * 0.9); float fl = step(0.965, h12(cl)); vec2 fc = fract(vWP.xz * 0.9) - 0.5; float dd = length(fc);
+            diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(1.0, 0.82, 0.92), vec3(1.0, 0.97, 0.75), h12(cl + 7.0)), fl * smoothstep(0.2, 0.12, dd)); }`
+        : ` { float e = abs(vU * 2.0 - 1.0); diffuseColor.rgb *= 1.0 - smoothstep(0.72, 1.0, e) * 0.15;
+            diffuseColor.rgb *= 0.955 + vn(vWP.xz * 0.06) * 0.06 + (h12(floor(vWP.xz * 4.0)) - 0.5) * 0.05;
+            float sp = step(0.988, h12(floor(vWP.xz * 7.0))); diffuseColor.rgb += sp * 0.22; }`))
+      .replace('#include <opaque_fragment>', '{ float shn = pow(max(0.0, 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)))), 5.0); outgoingLight += vec3(1.0, 0.96, 1.0) * shn * ' + (kind === 'ground' ? '0.0' : '0.12') + '; }\n#include <opaque_fragment>');
+  };
+  m.customProgramCacheKey = () => 'surf-' + kind;
+  return m;
+}
 
 function buildVisuals(T, Q) {
   const { S, N, cup, group } = T; const space = cup.theme === 'space';
   const road = C(cup.road), roadB = C(cup.road).lerp(C('#c090c0'), 0.07), cA = C(cup.curbA), cB = C(cup.curbB);
   const vmat = toon('#ffffff', { vc: true, rim: 0, side: THREE.DoubleSide });
   // road with soft lane stripes
-  group.add(new THREE.Mesh(ribbon(S, N, s => off(s, -s.w), s => off(s, s.w), i => { const c = (i >> 3) % 2 ? road : roadB; return [c, c]; }, true, 0.05), vmat));
+  const rmat = surfMat('road');
+  group.add(new THREE.Mesh(ribbon(S, N, s => off(s, -s.w), s => off(s, s.w), i => { const c = (i >> 3) % 2 ? road : roadB; return [c, c]; }, true, 0.05), rmat));
   // centre dashes
   const dash = C(cup.curbB).lerp(road, 0.5);
   group.add(new THREE.Mesh(ribbon(S, N, s => off(s, -0.25), s => off(s, 0.25), i => { const c = (i >> 2) % 3 === 0 ? dash : road; return [c, c]; }, true, 0.07), vmat));
   // curbs
-  for (const sd of [-1, 1]) group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * s.w, 0), s => off(s, sd * (s.w + 1.4), 0.25), i => { const c = (i >> 1) % 2 ? cA : cB; return [c, c]; }, true, 0.06), vmat));
+  for (const sd of [-1, 1]) group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * s.w, 0), s => off(s, sd * (s.w + 1.4), 0.25), i => { const c = (i >> 1) % 2 ? cA : cB; return [c, c]; }, true, 0.06), rmat));
   // shoulders (offroad) + embankment skirts
   const g1 = C(cup.ground || '#2a1858'), g2 = C(cup.ground2 || cup.ground || '#3a2a6a');
   if (!space) {
@@ -116,7 +141,7 @@ function buildVisuals(T, Q) {
     }
     // ground plane
     let gR = 1100, gcx = 0, gcz = 0; if (T.open) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const s of S) { x0 = Math.min(x0, s.p.x); x1 = Math.max(x1, s.p.x); z0 = Math.min(z0, s.p.z); z1 = Math.max(z1, s.p.z); } gcx = (x0 + x1) / 2; gcz = (z0 + z1) / 2; gR = Math.hypot(x1 - x0, z1 - z0) / 2 + 900; }
-    const gp = new THREE.Mesh(new THREE.CircleGeometry(gR, 64), toon(cup.ground, { rim: 0 })); gp.rotation.x = -Math.PI / 2; gp.position.set(gcx, -0.62, gcz); group.add(gp);
+    const gp = new THREE.Mesh(new THREE.CircleGeometry(gR, 64), surfMat('ground', { color: cup.ground, c2: cup.ground2 || cup.ground })); gp.rotation.x = -Math.PI / 2; gp.position.set(gcx, -0.62, gcz); group.add(gp);
     // ground blotches (flower/sprinkle patches) for texture
     const bl = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 10), toon(cup.ground2, { rim: 0, opacity: 0.6 }), (Q.hi ? 160 : 70) * (T.open ? 3 : 1));
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));

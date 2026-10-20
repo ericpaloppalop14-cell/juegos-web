@@ -61,6 +61,7 @@ export class Race {
     const d = new THREE.DirectionalLight('#fff4e8', c.theme === 'storm' || (c.theme === 'space' && c.look !== 'sky') ? 1.35 : 2.0); d.position.set(80, 160, 60); sc.add(d);
     // v2: sombras reales finas que siguen al jugador (solo si el render va en calidad alta)
     d.castShadow = true; d.shadow.mapSize.set(1024, 1024); d.shadow.bias = -0.0006; d.shadow.normalBias = 0.04; d.shadow.radius = 2.5; { const sc2 = d.shadow.camera; sc2.left = sc2.bottom = -34; sc2.right = sc2.top = 34; sc2.near = 10; sc2.far = 260; } sc.add(d.target); this.sun = d;
+    { const fill = new THREE.DirectionalLight(c.theme === 'storm' || c.theme === 'space' ? '#b8a8ff' : '#cfe4ff', 0.45); fill.position.set(-90, 50, -70); sc.add(fill); } // v12: luz de relleno fría a contraluz
     this.track.group.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.material && o.material.vertexColors) o.receiveShadow = true; });
     if ((c.theme === 'space' && c.look !== 'sky') || c.theme === 'storm') {
       const n = 1400, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = R() * 6.28, b = Math.acos(R() * 2 - 1) * (c.theme === 'storm' ? 0.45 : 1); p[i * 3] = Math.sin(b) * Math.cos(a) * 1100; p[i * 3 + 1] = Math.cos(b) * 1100 * (c.theme === 'storm' ? 1 : 1); p[i * 3 + 2] = Math.sin(b) * Math.sin(a) * 1100; }
