@@ -1,5 +1,7 @@
-const C = 'mracers-online-v1';
-const FILES = ['./', './index.html', './manifest.json', './fredoka.woff2', './lib/three.module.min.js', './js/main.js', './js/data.js', './js/gfx.js', './js/track.js', './js/race.js', './js/audio.js', './js/surreal.js', './js/deco.js', './js/endless.js', './js/online.js', './js/net.js', './lib/trystero.min.js', './turn-config.js', './icons/icon-192.png', './icons/icon-512.png'];
-self.addEventListener('install', e => e.waitUntil(caches.open(C).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
-self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C && k.startsWith('mracers-online-')).map(k => caches.delete(k)))).then(() => self.clients.claim())));
-self.addEventListener('fetch', e => { if (e.request.method !== 'GET') return; e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(r => r || fetch(e.request).then(res => { const cp = res.clone(); caches.open(C).then(c => c.put(e.request, cp)); return res; }))); });
+// Desregistra el service worker antiguo del prototipo y borra sus cachés.
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', e => e.waitUntil((async () => {
+  for (const k of await caches.keys()) if (k.includes('online')) await caches.delete(k);
+  await self.registration.unregister();
+  for (const c of await self.clients.matchAll({type:'window'})) c.navigate(c.url);
+})()));
