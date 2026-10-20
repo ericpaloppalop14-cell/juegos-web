@@ -3340,89 +3340,164 @@ window.__mochi = { get selChar() { return selChar; }, get trialIdx() { return tr
 };
 // keep title "best" fresh
 const _setScreen = setScreen;
-// ===== Mochi · MODO ONLINE (5 carriles, salas con código PeerJS, fantasmas sin colisión) =====
+// ===== Mochi · MODO ONLINE v2 (sala pública con matchmaking + bots, sala privada con código, ranking mundial) =====
 // Se carga después de game.js y usa su ámbito global (state, mochi, rows, dist, LH, proj, drawMochi...).
 (() => {
-const NABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', NPRE = 'mochi-online-v1-', NMAX = 6, GOAL = 1400;
+const NABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', NPRE = 'mochi-online-v1-', NPUB = 'mochi-pub-v2-', PUBSLOTS = 6, NMAX = 6, PUBMAX = 5, GOAL = 1400, PUBWAIT = 15000;
+const RANK_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a15a4bb90b324f', RANK_NAME = 'mochi-ranking-mundial-v1';
 const nCode = () => Array.from({ length: 4 }, () => NABC[(Math.random() * NABC.length) | 0]).join('');
 const GCOL = ['#ff6fae', '#5fb8ff', '#ffb43a', '#7ad67a', '#b07cff', '#ff7a5c'];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const rnd = (a, b) => a + Math.random() * (b - a);
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t2 = Math.imul(a ^ a >>> 15, 1 | a); t2 = t2 + Math.imul(t2 ^ t2 >>> 7, 61 | t2) ^ t2; return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296; }; }
 class Net {
-  constructor() { this.peer = null; this.conns = new Map(); this.players = []; this.isHost = false; this.myId = null; this.nextId = 1; this.h = {}; this.alive = true; }
+  constructor() { this.peer = null; this.conns = new Map(); this.players = []; this.isHost = false; this.myId = null; this.nextId = 1; this.h = {}; this.alive = true; this.max = NMAX; }
   on(e, f) { this.h[e] = f; } emit(e, ...a) { if (this.h[e]) this.h[e](...a); }
   _peer(id) { return new Promise((res, rej) => { if (typeof window.Peer !== 'function') return rej(new Error('broker')); let done = false; const opts = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } };
     const p = id ? new window.Peer(id, opts) : new window.Peer(opts); const to = setTimeout(() => { if (!done) { done = true; try { p.destroy(); } catch (e) { } rej(new Error('broker')); } }, 10000);
     p.on('open', () => { if (done) return; done = true; clearTimeout(to); res(p); });
-    p.on('error', e => { if (!done) { done = true; clearTimeout(to); try { p.destroy(); } catch (x) { } rej(new Error(e.type === 'unavailable-id' ? 'taken' : 'broker')); } else if (e.type === 'peer-unavailable' && this._jr) { this._jr(new Error('nosala')); this._jr = null; } }); }); }
+    p.on('error', e => { if (!done) { done = true; clearTimeout(to); try { p.destroy(); } catch (x) { } rej(new Error(e.type === 'unavailable-id' ? 'taken' : 'broker')); } else if (e.type === 'peer-unavailable' && this._jr) { const j = this._jr; this._jr = null; j(new Error('nosala')); } }); }); }
+  _hostSetup(info) { this.isHost = true; this.myId = 'h'; this.players = [{ id: 'h', ...info }]; this.peer.on('connection', c => this._hc(c)); this.peer.on('disconnected', () => { try { this.peer.reconnect(); } catch (e) { } }); }
   async create(info) { for (let k = 0; k < 4 && !this.peer; k++) { const code = nCode(); try { this.peer = await this._peer(NPRE + code); this.code = code; } catch (e) { if (e.message !== 'taken') throw e; } } if (!this.peer) throw new Error('broker');
-    this.isHost = true; this.myId = 'h'; this.players = [{ id: 'h', ...info }]; this.peer.on('connection', c => this._hc(c)); this.peer.on('disconnected', () => { try { this.peer.reconnect(); } catch (e) { } }); return this.code; }
-  _hc(c) { c.on('data', d => { if (d.t === 'hello') { if (this.players.length >= NMAX || this.started) { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); return; } const id = 'p' + (this.nextId++); c.pid = id; this.conns.set(id, c);
-      this.players.push({ id, name: String(d.name || 'Invitado').slice(0, 12), ch: d.ch | 0 }); c.send({ t: 'welcome', id }); this.lobby(); return; } if (!c.pid) return; d.from = c.pid; this.emit('msg', d); });
+    this._hostSetup(info); return this.code; }
+  async hostId(fullId, info) { if (this.peer) { try { this.peer.destroy(); } catch (e) { } this.peer = null; } this.peer = await this._peer(fullId); this._hostSetup(info); }
+  realCount() { return this.players.filter(p => !p.bot).length; }
+  _hc(c) { c.on('data', d => { if (d.t === 'hello') { if (this.started || this.realCount() >= this.max) { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); return; } const id = 'p' + (this.nextId++); c.pid = id; this.conns.set(id, c);
+      // un jugador real ocupa el sitio de un bot si la sala está completa
+      if (this.players.length >= this.max) { const bi = this.players.map(p => !!p.bot).lastIndexOf(true); if (bi >= 0) this.players.splice(bi, 1); }
+      this.players.push({ id, name: String(d.name || 'Invitado').slice(0, 12), ch: d.ch | 0, uid: String(d.uid || '').slice(0, 24) }); c.send({ t: 'welcome', id }); this.lobby(); this.emit('joined', id); return; } if (!c.pid) return; d.from = c.pid; this.emit('msg', d); });
     c.on('close', () => this._lost(c.pid)); c.on('error', () => this._lost(c.pid)); }
   _lost(id) { if (!id || !this.conns.has(id)) return; this.conns.delete(id); if (!this.started) this.players = this.players.filter(p => p.id !== id); this.lobby(); this.emit('left', id); }
-  lobby() { this.send({ t: 'lobby', players: this.players }); this.emit('lobby', this.players); }
-  async join(code, info) { code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); if (code.length !== 4) throw new Error('codigo'); this.peer = await this._peer(null); this.code = code;
-    return new Promise((res, rej) => { this._jr = rej; const c = this.peer.connect(NPRE + code, { reliable: true, serialization: 'json' }); this.host = c; const to = setTimeout(() => { if (this._jr) { this._jr = null; rej(new Error('nosala')); } }, 12000);
-      c.on('open', () => c.send({ t: 'hello', ...info })); c.on('data', d => { if (d.t === 'welcome') { clearTimeout(to); this._jr = null; this.myId = d.id; res(d.id); return; } if (d.t === 'full') { clearTimeout(to); this._jr = null; rej(new Error('llena')); return; }
-        if (d.t === 'lobby') { this.players = d.players; this.emit('lobby', d.players); return; } this.emit('msg', d); }); c.on('close', () => { if (this.alive) this.emit('hostgone'); }); c.on('error', () => { }); }); }
+  lobby(extra) { const m = { t: 'lobby', players: this.players, ...(extra || this.lobbyExtra || {}) }; this.send(m); this.emit('lobby', this.players, m); }
+  async join(code, info) { code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); if (code.length !== 4) throw new Error('codigo'); this.code = code; return this.joinId(NPRE + code, info); }
+  async joinId(fullId, info) { if (!this.peer) this.peer = await this._peer(null);
+    return new Promise((res, rej) => { this._jr = rej; const c = this.peer.connect(fullId, { reliable: true, serialization: 'json' }); const to = setTimeout(() => { if (this._jr) { this._jr = null; try { c.close(); } catch (e) { } rej(new Error('nosala')); } }, 9000);
+      c.on('open', () => c.send({ t: 'hello', ...info })); c.on('data', d => { if (d.t === 'welcome') { clearTimeout(to); this._jr = null; this.host = c; this.joined = true; this.myId = d.id; res(d.id); return; } if (d.t === 'full') { clearTimeout(to); this._jr = null; rej(new Error('llena')); return; }
+        if (c !== this.host) return; if (d.t === 'lobby') { this.players = d.players; this.emit('lobby', d.players, d); return; } this.emit('msg', d); }); c.on('close', () => { if (this.alive && c === this.host) this.emit('hostgone'); }); c.on('error', () => { }); }); }
   send(d) { if (this.isHost) { for (const c of this.conns.values()) if (c.open) try { c.send(d); } catch (e) { } } else if (this.host && this.host.open) try { this.host.send(d); } catch (e) { } }
   close() { this.alive = false; setTimeout(() => { try { this.peer && this.peer.destroy(); } catch (e) { } }, 150); }
 }
+// ---------- bots que parecen jugadores (solo los simula el anfitrión de una sala pública) ----------
+const BOTN = ['lucia_08', 'Pablo G', 'xXDaniXx', 'Martiii', 'sofi.r', 'Kenji', 'elcapo77', 'noaaa', 'Hugo', 'Valen☆', 'mateo_pro', 'carla', 'Iker2012', 'Ana M', 'TheRealJuan', 'Nerea', 'zoe', 'Leo_xd', 'minnie', 'Alexx', 'Rubén', 'Gabi_09', 'Mochilover', 'Yuki', 'pepe', 'aitana.x', 'Marcos', 'Irene', 'NicoGamer', 'Sara_33', 'tomás', 'Bruno', 'lolaa', 'Dario', 'kawaii_ari', 'Emma', 'joel10', 'Paula', 'Óscar', 'Mia', 'Thiago', 'nahia', 'Unai', 'Chloe', 'Max', 'luuna'];
+function makeBot(taken, i) { let n; let k = 0; do { n = BOTN[(Math.random() * BOTN.length) | 0]; } while (taken.includes(n) && k++ < 50);
+  if (Math.random() < 0.25) n += (Math.random() * 99 | 0);
+  const free = CH.map((c, j) => j).filter(j => { try { return !isPrem(j); } catch (e) { return j < 3; } }), all = CH.map((c, j) => j);
+  const skill = Math.min(0.97, Math.max(0.15, rnd(0.25, 0.85) + rnd(-0.15, 0.15))); // nivel medio de internet: unos mejores, otros peores
+  const pool = Math.random() < 0.2 || !free.length ? all : free, ch = pool[(Math.random() * pool.length) | 0] | 0;
+  return { id: 'b' + i + '_' + ((Math.random() * 1e4) | 0), name: n.slice(0, 12), ch, bot: 1, skill }; }
+function botPlan(b) { // decide si termina y, si no, dónde falla (los fallos se concentran donde sube la dificultad)
+  const pFin = 0.08 + 0.55 * Math.pow(b.skill, 1.6);
+  b.dieAt = Math.random() < pFin ? Infinity : GOAL * Math.min(0.97, Math.pow(Math.random(), 1 / (0.7 + 2.2 * b.skill)) * 0.95 + 0.04);
+  b.tl = 0; b.nextMove = rnd(0.4, 1.6); b.react = rnd(0.25, 0.9) * (1.3 - b.skill); b.cT = rnd(0.8, 2.5); }
 // ---------- UI ----------
 const css = document.createElement('style'); css.textContent = `
 #onlineBtn{font-size:17px;padding:9px 20px;color:#fff;background:linear-gradient(180deg,#7fd0ff,#5b8cff);box-shadow:0 4px 0 #3b62c8;margin-top:8px}
-#onl,#onres{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(80,40,110,.35);font-family:inherit}
-#onl.on,#onres.on{display:flex}
-.onc{pointer-events:auto;width:min(92vw,380px);background:rgba(255,255,255,.95);border-radius:26px;padding:18px 18px 16px;color:#8b5cc2;text-align:center;box-shadow:0 8px 0 rgba(180,120,200,.45);font-weight:700}
+#onl,#onres,#onrk{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(80,40,110,.35);font-family:inherit}
+#onrk{z-index:61}#onl.on,#onres.on,#onrk.on{display:flex}
+.onc{pointer-events:auto;width:min(92vw,380px);max-height:92vh;overflow:auto;background:rgba(255,255,255,.95);border-radius:26px;padding:18px 18px 16px;color:#8b5cc2;text-align:center;box-shadow:0 8px 0 rgba(180,120,200,.45);font-weight:700;box-sizing:border-box}
 .onc h2{margin:0 0 8px;font-size:28px;color:#ff6fae}.onc input{font-family:inherit;font-weight:700;font-size:18px;color:#8b5cc2;border:3px solid #e9cdf3;border-radius:16px;padding:8px 12px;width:100%;text-align:center;margin:4px 0;outline:none;box-sizing:border-box}
 .onc .pbtn{margin:6px auto;justify-content:center;font-size:18px;padding:9px 22px}.onc .row{display:flex;gap:8px;align-items:center}.onc .row input{flex:1}
-.onc .go{background:linear-gradient(180deg,#ff8cc0,#ff5fa2);color:#fff;box-shadow:0 4px 0 #c43c7d}
+.onc .go{background:linear-gradient(180deg,#ff8cc0,#ff5fa2);color:#fff;box-shadow:0 4px 0 #c43c7d}.onc .blue{background:linear-gradient(180deg,#7fd0ff,#5b8cff);color:#fff;box-shadow:0 4px 0 #3b62c8}
+.onc .big{display:flex;flex-direction:column;width:100%;font-size:20px;padding:10px 14px}.onc .big small{font-size:12px;font-weight:600;opacity:.9;white-space:normal}
 #onCode{font-size:44px;letter-spacing:8px;color:#ff6fae;margin:2px 0}#onMsg{min-height:20px;font-size:14px;color:#c0679a}
-.onp{display:flex;align-items:center;gap:8px;padding:5px 10px;margin:4px 0;border-radius:14px;background:#f8eefc;font-size:16px;text-align:left}.onp i{width:14px;height:14px;border-radius:50%;display:inline-block}.onp b{margin-left:auto;font-size:14px}
+.onp{display:flex;align-items:center;gap:8px;padding:5px 10px;margin:4px 0;border-radius:14px;background:#f8eefc;font-size:16px;text-align:left}.onp i{width:14px;height:14px;border-radius:50%;display:inline-block;flex:none}.onp b{margin-left:auto;font-size:14px;white-space:nowrap}
+.onp.me{background:#ffe3f0;box-shadow:inset 0 0 0 2px #ff9cc8}.onp.slot{opacity:.45;font-style:italic}
+.rktabs{display:flex;gap:6px;justify-content:center;margin:4px 0 6px}.rktabs button{font-family:inherit;font-weight:700;font-size:15px;border:0;border-radius:14px;padding:6px 12px;background:#f3e3fa;color:#8b5cc2}.rktabs button.sel{background:#ff6fae;color:#fff}
+#rkList{max-height:46vh;overflow:auto}#rkSrc{font-size:12px;color:#b07cc8;margin:4px 0}
 #onHud{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 60px);z-index:30;pointer-events:none;font-weight:700;font-size:13px;color:#fff;text-shadow:0 1px 3px rgba(120,50,130,.9);display:none;min-width:120px}
 #onHud.on{display:block}#onHud .r{display:flex;gap:5px;align-items:center;margin:2px 0;justify-content:flex-end}#onHud i{width:10px;height:10px;border-radius:50%;display:inline-block}
 #onBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 52px);width:min(60vw,260px);height:10px;border-radius:6px;background:rgba(255,255,255,.45);z-index:30;display:none;overflow:visible}
 #onBar.on{display:block}#onBar u{position:absolute;top:-3px;width:16px;height:16px;border-radius:50%;margin-left:-8px;border:2px solid #fff;box-sizing:border-box}#onBar s{position:absolute;right:-6px;top:-8px;font-size:18px;text-decoration:none}`;
 document.head.appendChild(css);
 const div = document.createElement('div'); div.innerHTML = `
-<div id="onl"><div class="onc"><h2>🌐 Online</h2><div id="onA"><input id="onName" maxlength="12" placeholder="Tu nombre"><button class="pbtn go" id="onCreate">✨ Crear sala</button><div class="row"><input id="onJoinCode" maxlength="4" placeholder="CÓDIGO" style="text-transform:uppercase"><button class="pbtn" id="onJoin">Unirse</button></div></div>
-<div id="onB" style="display:none"><div style="font-size:13px">Código de la sala</div><div id="onCode">----</div><div id="onList"></div><button class="pbtn go" id="onStart">▶ ¡Empezar carrera!</button><div id="onWait" style="font-size:14px">Esperando a que el anfitrión empiece…</div></div>
+<div id="onl"><div class="onc"><h2>🌐 Online</h2>
+<div id="on0"><input id="onName" maxlength="12" placeholder="Tu nombre de jugador"><button class="pbtn go big" id="onPub">🌍 Sala pública<small>Sin código · te emparejamos al momento</small></button><button class="pbtn blue big" id="onPriv">🔒 Sala privada<small>Con código para jugar con amigos (desde 2)</small></button><button class="pbtn" id="onRk">🏆 Ranking mundial</button></div>
+<div id="onA" style="display:none"><div style="font-size:15px;margin-bottom:4px">🔒 Sala privada</div><button class="pbtn go" id="onCreate">✨ Crear sala</button><div class="row"><input id="onJoinCode" maxlength="4" placeholder="CÓDIGO" style="text-transform:uppercase"><button class="pbtn" id="onJoin">Unirse</button></div></div>
+<div id="onB" style="display:none"><div id="onCodeL" style="font-size:13px">Código de la sala</div><div id="onCode">----</div><div id="onList"></div><button class="pbtn go" id="onStart">▶ ¡Empezar carrera!</button><div id="onWait" style="font-size:14px">Esperando a que el anfitrión empiece…</div></div>
 <div id="onMsg"></div><button class="pbtn" id="onBack">← Volver</button></div></div>
-<div id="onres"><div class="onc"><h2 id="onResT">Clasificación</h2><div id="onResL"></div><div id="onResW" style="font-size:14px"></div><button class="pbtn go" id="onAgain" style="display:none">↻ Otra carrera</button><button class="pbtn" id="onMenu">Menú</button></div></div>
+<div id="onres"><div class="onc"><h2 id="onResT">Clasificación</h2><div id="onResL"></div><div id="onResP" style="font-size:15px;color:#ff6fae"></div><div id="onResW" style="font-size:14px"></div><button class="pbtn go" id="onAgain" style="display:none">↻ Otra carrera</button><button class="pbtn" id="onRk2">🏆 Ranking mundial</button><button class="pbtn" id="onMenu">Menú</button></div></div>
+<div id="onrk"><div class="onc"><h2>🏆 Ranking mundial</h2><div class="rktabs"><button id="rkW" class="sel">🥇 Victorias</button><button id="rkP">⭐ Puntos</button></div><div id="rkSrc"></div><div id="rkList"></div><div id="rkMe" style="font-size:14px;margin-top:6px"></div><button class="pbtn" id="rkClose">← Volver</button></div></div>
 <div id="onHud"></div><div id="onBar"><s>🏁</s></div>`;
 document.body.appendChild(div);
 const $ = id => document.getElementById(id);
 const mb = document.createElement('button'); mb.className = 'pbtn'; mb.id = 'onlineBtn'; mb.textContent = '🌐 Online'; $('modeRow').after(mb);
 const stop = f => e => { e.preventDefault(); e.stopPropagation(); try { Snd.init(); Snd.ui(); } catch (x) { } f(e); };
-['onl', 'onres'].forEach(id => ['pointerdown', 'touchstart', 'keydown'].forEach(ev => $(id).addEventListener(ev, e => e.stopPropagation())));
+['onl', 'onres', 'onrk'].forEach(id => ['pointerdown', 'touchstart', 'keydown'].forEach(ev => $(id).addEventListener(ev, e => e.stopPropagation())));
 const tap = (id, f) => $(id).addEventListener('click', stop(f));
 mb.addEventListener('pointerdown', stop(() => { if (state === 'menu') openLobby(); }));
 
-const O = window.ONL = { active: false, goal: GOAL, seed: 1, peers: {}, done: false, res: null };
-let net = null, myName = '', sendT = 0, startAt = 0, finT = 0;
+const O = window.ONL = { active: false, goal: GOAL, seed: 1, peers: {}, done: false, res: null, mode: '' };
+let net = null, myName = '', sendT = 0, startAt = 0, finT = 0, pubTimer = null, botTimer = null, botQueue = [], step = 0;
 const myId = () => net ? net.myId : 'h';
+const uid = (() => { let u = store.get('mochi_uid', ''); if (!u) { u = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); store.set('mochi_uid', u); } return u; })();
 function msg(t) { $('onMsg').textContent = t || ''; }
-function openLobby() { state = 'onlobby'; setScreen(null); $('onl').classList.add('on'); $('onA').style.display = ''; $('onB').style.display = 'none'; msg(''); $('onName').value = store.get('mochi_onname', '') || ''; }
+function show(s) { step = s; $('on0').style.display = s === 0 ? '' : 'none'; $('onA').style.display = s === 1 ? '' : 'none'; $('onB').style.display = s === 2 ? '' : 'none'; }
+function openLobby() { state = 'onlobby'; setScreen(null); $('onl').classList.add('on'); show(0); msg(''); $('onName').value = store.get('mochi_onname', '') || ''; }
 function closeAll() { $('onl').classList.remove('on'); $('onres').classList.remove('on'); $('onHud').classList.remove('on'); $('onBar').classList.remove('on'); }
-function leave() { if (net) net.close(); net = null; O.active = false; closeAll(); LH = 1; resize(); goMenu(); }
-function info() { myName = ($('onName').value || '').trim().slice(0, 12) || 'Mochi'; store.set('mochi_onname', myName); return { name: myName, ch: selChar }; }
-function showList(pl) { $('onList').innerHTML = pl.map((p, i) => `<div class="onp"><i style="background:${GCOL[i % 6]}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.id === 'h' ? '👑' : ''}</b></div>`).join(''); }
+function clearTimers() { clearInterval(pubTimer); pubTimer = null; clearInterval(botTimer); botTimer = null; botQueue.forEach(clearTimeout); botQueue = []; }
+function disconnect() { clearTimers(); if (net) net.close(); net = null; }
+function leave() { disconnect(); O.active = false; closeAll(); LH = 1; resize(); goMenu(); }
+function info() { myName = ($('onName').value || '').trim().slice(0, 12) || ('Mochi' + ((Math.random() * 900 + 100) | 0)); $('onName').value = myName; store.set('mochi_onname', myName); return { name: myName, ch: selChar, uid }; }
+function showList(pl, m) { const max = O.mode === 'pub' ? PUBMAX : 0; let h = pl.map((p, i) => `<div class="onp${p.id === myId() ? ' me' : ''}"><i style="background:${GCOL[i % 6]}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.id === 'h' && O.mode !== 'pub' ? '👑' : ''}</b></div>`).join('');
+  for (let i = pl.length; i < max; i++) h += `<div class="onp slot"><i style="background:#ddd"></i>Buscando jugador…</div>`; $('onList').innerHTML = h;
+  if (O.mode === 'pub' && m && m.eta != null) $('onWait').textContent = m.eta > 0 ? `La carrera empieza en ${Math.ceil(m.eta / 1000)} s…` : '¡Empezamos!'; }
 function wire() {
-  net.on('lobby', pl => { showList(pl); $('onStart').style.display = net.isHost ? '' : 'none'; $('onWait').style.display = net.isHost ? 'none' : ''; });
+  net.on('lobby', (pl, m) => { showList(pl, m); const pub = O.mode === 'pub'; $('onStart').style.display = net.isHost && !pub ? '' : 'none'; $('onWait').style.display = net.isHost && !pub ? 'none' : ''; if (!pub) $('onWait').textContent = 'Esperando a que el anfitrión empiece…'; });
   net.on('msg', d => onMsg(d)); net.on('left', id => { if (O.peers[id]) { O.peers[id].dead = 1; O.peers[id].gone = 1; checkEnd(); } });
-  net.on('hostgone', () => { if (O.active && !O.done) { msg(''); } toastLocal('El anfitrión se ha ido'); if (!O.active) leave(); else { O.hostGone = 1; for (const k in O.peers) if (k !== myId()) O.peers[k].dead = 1; } });
+  net.on('hostgone', () => { toastLocal('El anfitrión se ha ido'); if (!O.active) { if (O.mode === 'pub' && step === 2) { msg('La sala se ha cerrado, buscando otra…'); disconnect(); setTimeout(publicMatch, 400); } else leave(); } else { O.hostGone = 1; for (const k in O.peers) if (k !== myId()) O.peers[k].dead = 1; if (O.done) showRes(); } });
 }
 function toastLocal(t) { try { showHint(t, 2); } catch (e) { } }
-tap('onCreate', async () => { msg('Creando sala…'); try { net = new Net(); wire(); const code = await net.create(info()); $('onCode').textContent = code; $('onA').style.display = 'none'; $('onB').style.display = ''; msg(''); net.lobby(); } catch (e) { msg('No se pudo crear la sala. Revisa tu conexión.'); net = null; } });
-tap('onJoin', async () => { msg('Conectando…'); try { net = new Net(); wire(); await net.join($('onJoinCode').value, info()); $('onCode').textContent = net.code; $('onA').style.display = 'none'; $('onB').style.display = ''; msg(''); } catch (e) { msg(e.message === 'llena' ? 'La sala está llena o ya ha empezado.' : e.message === 'codigo' ? 'Escribe un código de 4 letras.' : 'No se encontró esa sala.'); net = null; } });
-tap('onStart', () => { if (!net || !net.isHost) return; if (net.players.length < 2) { msg('Necesitas al menos 2 jugadores.'); return; } net.started = true; const d = { t: 'start', seed: (Math.random() * 1e9) | 0, players: net.players }; net.send(d); begin(d); });
-tap('onBack', () => leave()); tap('onMenu', () => leave());
-tap('onAgain', () => { if (!net || !net.isHost) return; net.players = net.players.filter(p => p.id === 'h' || net.conns.has(p.id)); if (net.players.length < 2) { $('onResW').textContent = 'No quedan rivales conectados.'; return; } const d = { t: 'start', seed: (Math.random() * 1e9) | 0, players: net.players }; net.send(d); begin(d); });
+tap('onPub', () => publicMatch());
+tap('onPriv', () => { info(); O.mode = 'priv'; show(1); msg(''); });
+tap('onRk', () => openRank()); tap('onRk2', () => openRank()); tap('rkClose', () => $('onrk').classList.remove('on'));
+tap('onCreate', async () => { msg('Creando sala…'); try { O.mode = 'priv'; net = new Net(); wire(); const code = await net.create(info()); $('onCode').textContent = code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg('Comparte el código. Con 2 jugadores ya podéis empezar.'); net.lobby(); } catch (e) { msg('No se pudo crear la sala. Revisa tu conexión.'); net = null; } });
+tap('onJoin', async () => { msg('Conectando…'); try { O.mode = 'priv'; net = new Net(); wire(); await net.join($('onJoinCode').value, info()); $('onCode').textContent = net.code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg(''); } catch (e) { msg(e.message === 'llena' ? 'La sala está llena o ya ha empezado.' : e.message === 'codigo' ? 'Escribe un código de 4 letras.' : 'No se encontró esa sala.'); disconnect(); } });
+tap('onStart', () => { if (!net || !net.isHost) return; if (net.players.length < 2) { msg('Necesitas al menos 2 jugadores.'); return; } startRace(); });
+tap('onBack', () => { if (step === 0) leave(); else { disconnect(); O.mode = ''; show(0); msg(''); } });
+tap('onMenu', () => leave());
+tap('onAgain', () => { if (O.mode === 'pub') { disconnect(); O.active = false; closeAll(); LH = 1; resize(); state = 'onlobby'; $('onl').classList.add('on'); publicMatch(); return; }
+  if (!net || !net.isHost) return; net.players = net.players.filter(p => p.id === 'h' || net.conns.has(p.id)); if (net.players.length < 2) { $('onResW').textContent = 'No quedan rivales conectados.'; return; } startRace(); });
+// ---------- sala pública: matchmaking automático por huecos fijos ----------
+async function publicMatch() {
+  O.mode = 'pub'; const me = info(); show(2); $('onCode').style.display = 'none'; $('onCodeL').style.display = 'none'; $('onList').innerHTML = ''; $('onStart').style.display = 'none'; $('onWait').style.display = ''; $('onWait').textContent = ''; msg('🔎 Buscando sala pública…');
+  const my = net = new Net(); wire(); my.max = PUBMAX; let free = -1;
+  try {
+    for (let tries = 0; tries < 2 && net === my; tries++) {
+      for (let s = 0; s < PUBSLOTS && net === my; s++) {
+        try { await my.joinId(NPUB + s, me); if (net !== my) return; msg('¡Sala encontrada! Esperando rivales…'); return; }
+        catch (e) { if (e.message === 'broker') throw e; if (e.message === 'nosala' && free < 0) free = s; }
+      }
+      if (net !== my) return; if (free < 0) free = (Math.random() * PUBSLOTS) | 0;
+      try { await my.hostId(NPUB + free, me); hostPublic(); return; } catch (e) { if (e.message !== 'taken') throw e; free = -1; my.peer = null; }
+    }
+    throw new Error('broker');
+  } catch (e) { if (net === my) { msg('No se pudo conectar. Revisa tu conexión e inténtalo otra vez.'); disconnect(); } }
+}
+function hostPublic() {
+  msg('Esperando rivales…'); const t0 = performance.now(); let bi = 0;
+  // los bots se van "conectando" con pequeños retrasos, como jugadores reales
+  const nB = PUBMAX - 1; for (let k = 0; k < nB; k++) { const at = rnd(1200, PUBWAIT - 1500) * (0.35 + 0.65 * (k + 1) / nB); botQueue.push(setTimeout(() => { if (!net || net.started || net.players.length >= PUBMAX) return; net.players.push(makeBot(net.players.map(p => p.name), bi++)); net.lobby(); }, at)); }
+  net.on('joined', () => { if (net.realCount() >= PUBMAX) net.lobbyExtra = { eta: 2500 }; });
+  pubTimer = setInterval(() => { if (!net || net.started) return; let eta = Math.max(0, PUBWAIT - (performance.now() - t0)); if (net.realCount() >= PUBMAX) eta = Math.min(eta, 2500);
+    net.lobbyExtra = { eta }; net.lobby();
+    if (eta <= 0) { while (net.players.length < PUBMAX) net.players.push(makeBot(net.players.map(p => p.name), bi++)); clearTimers(); startRace(); } }, 500);
+}
+function startRace() { net.started = true; const d = { t: 'start', seed: (Math.random() * 1e9) | 0, mode: O.mode, players: net.players.map(p => ({ id: p.id, name: p.name, ch: p.ch, uid: p.uid, bot: p.bot ? 1 : 0 })) }; net.send(d); begin(d);
+  if (net.players.some(p => p.bot)) { const bots = net.players.filter(p => p.bot); bots.forEach(botPlan); let last = performance.now();
+    botTimer = setInterval(() => { const now = performance.now(), dt = Math.min(0.5, (now - last) / 1000); last = now; if (!O.active && !O.done) return; if (now - startAt < 4000) return; let ch = false;
+      for (const b of bots) { const p = O.peers[b.id]; if (!p || p.dead || p.fin) continue; ch = true; b.tl += dt;
+        const sp = Math.min(31, 12.5 + 14.5 * Math.min(O.dAt(p.d), 1)); p.d = Math.min(GOAL, p.d + sp * dt * rnd(0.97, 1.02));
+        b.nextMove -= dt; if (b.nextMove <= 0) { b.nextMove = rnd(0.5, 2.2) + b.react; b.lane = Math.max(-2, Math.min(2, Math.round(p.x) + (Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.85 ? 1 : 2))); }
+        if (b.lane != null) p.x += (b.lane - p.x) * Math.min(1, dt * rnd(5, 9));
+        b.cT -= dt; if (b.cT <= 0) { b.cT = rnd(0.7, 2.6); p.c = (Math.random() * 3) | 0; }
+        if (p.d >= b.dieAt) { p.dead = 1; p.d = b.dieAt; }
+        else if (p.d >= GOAL) { p.fin = 1; p.d = GOAL; p.ft = b.tl + rnd(0, 0.6) * (1.1 - b.skill); } }
+      if (ch || !O.final) { net && net.send({ t: 'all', ps: Object.values(O.peers).map(p => ({ id: p.id, d: p.d, x: p.x, c: p.c, dead: p.dead, fin: p.fin, ft: p.ft })) }); checkEnd(); if (O.done) showRes(); } }, 100); }
+}
 // ---------- carrera ----------
 function begin(d) {
-  O.seed = d.seed; O.rng = mulberry(d.seed); O.done = false; O.res = null; O.hostGone = 0; O.peers = {};
-  d.players.forEach((p, i) => O.peers[p.id] = { id: p.id, name: p.name, ch: p.ch | 0, col: GCOL[i % 6], d: 0, x: 0, c: 0, dead: 0, fin: 0, ft: 0 });
+  O.seed = d.seed; O.rng = mulberry(d.seed); O.done = false; O.res = null; O.hostGone = 0; O.final = 0; O.sent = 0; O.peers = {}; if (d.mode) O.mode = d.mode;
+  d.players.forEach((p, i) => O.peers[p.id] = { id: p.id, name: p.name, ch: p.ch | 0, uid: p.uid || '', bot: !!p.bot, col: GCOL[i % 6], d: 0, x: 0, c: 0, dead: 0, fin: 0, ft: 0 });
   closeAll(); $('onHud').classList.add('on'); $('onBar').classList.add('on');
   $('onBar').querySelectorAll('u').forEach(u => u.remove()); for (const k in O.peers) { const u = document.createElement('u'); u.style.background = O.peers[k].col; u.id = 'ob_' + k; $('onBar').appendChild(u); }
   O.active = true; LH = 2; resize();
@@ -3447,17 +3522,46 @@ function onMsg(d) {
   if (d.t === 'end') { for (const q of d.ps) if (O.peers[q.id] && q.id !== myId()) Object.assign(O.peers[q.id], q); O.final = 1; showRes(); }
 }
 function ranking() { return Object.values(O.peers).sort((a, b) => (b.fin - a.fin) || (a.fin ? a.ft - b.ft : b.d - a.d)); }
-function checkEnd() { if (!net || !net.isHost || !O.active) return; const ps = Object.values(O.peers); if (ps.every(p => p.dead || p.fin)) { if (!O.final) { O.final = 1; net.send({ t: 'end', ps }); } showRes(); } }
+function checkEnd() { if (!net || !net.isHost || !O.active) return; const ps = Object.values(O.peers); if (ps.every(p => p.dead || p.fin)) { if (!O.final) { O.final = 1; net.send({ t: 'end', ps }); clearInterval(botTimer); botTimer = null; } showRes(); } }
 O.myEnd = () => { const me = O.peers[myId()]; if (me && !me.fin) { me.dead = 1; me.d = dist; } O.done = true; push(true); $('onHud').classList.remove('on'); setTimeout(showRes, 600); if (O.hostGone) { O.final = 1; } };
+const PTS = [10, 7, 5, 3, 2, 1];
+function racePoints(pos, p) { return (PTS[pos] || 1) + Math.floor(Math.min(p.d, GOAL) / 100) + (p.fin ? 5 : 0); }
 function showRes() { if (!O.done) return; const r = ranking(), meI = r.findIndex(p => p.id === myId());
   $('onres').classList.add('on'); const fin = O.final || O.hostGone;
   $('onResT').textContent = fin ? (meI === 0 ? '🏆 ¡Has ganado!' : `Has quedado ${meI + 1}º`) : 'Clasificación';
-  $('onResL').innerHTML = r.map((p, i) => `<div class="onp"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</span><i style="background:${p.col}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.fin ? '🏁 ' + p.ft.toFixed(1) + ' s' : Math.round(p.d) + ' m' + (p.dead ? '' : ' …')}</b></div>`).join('');
+  $('onResL').innerHTML = r.map((p, i) => `<div class="onp${p.id === myId() ? ' me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</span><i style="background:${p.col}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.fin ? '🏁 ' + p.ft.toFixed(1) + ' s' : Math.round(p.d) + ' m' + (p.dead ? '' : ' …')}</b></div>`).join('');
   $('onResW').textContent = fin ? '' : 'Esperando a que terminen los demás…';
-  $('onAgain').style.display = fin && net && net.isHost ? '' : 'none'; }
+  if (fin && !O.sent && meI >= 0) { O.sent = 1; const pts = racePoints(meI, r[meI]); $('onResP').textContent = `+${pts} puntos${meI === 0 ? ' · +1 victoria' : ''} para el ranking mundial`; Rank.add(meI === 0 ? 1 : 0, pts); } else if (!fin) $('onResP').textContent = '';
+  $('onAgain').style.display = fin && (O.mode === 'pub' || (net && net.isHost)) ? '' : 'none'; $('onAgain').textContent = O.mode === 'pub' ? '🔎 Buscar otra carrera' : '↻ Otra carrera'; }
 function hud() { if ((O._h = (O._h || 0) + 1) % 6) return; const r = ranking();
   $('onHud').innerHTML = r.map((p, i) => `<div class="r">${i + 1}. ${esc(p.name)}${p.id === myId() ? ' ★' : ''} ${p.fin ? '🏁' : p.dead ? '💥' : Math.round(p.d) + 'm'} <i style="background:${p.col}"></i></div>`).join('');
   for (const p of r) { const u = $('ob_' + p.id); if (u) u.style.left = Math.min(100, p.d / GOAL * 100) + '%'; } }
+// ---------- ranking mundial (solo jugadores reales; los bots nunca envían nada) ----------
+const Rank = {
+  me() { return Object.assign({ w: 0, p: 0, g: 0 }, JSON.parse(store.get('mochi_rank_me', '{}') || '{}')); },
+  async fetchAll() { const r = await fetch(RANK_URL, { cache: 'no-store' }); if (!r.ok) throw new Error('rank'); const j = await r.json(); return (j && j.data && j.data.p) || {}; },
+  clean(all) { const arr = Object.entries(all).filter(([k, v]) => v && typeof v.w === 'number' && typeof v.p === 'number').sort((a, b) => b[1].p - a[1].p || b[1].w - a[1].w).slice(0, 300); return Object.fromEntries(arr); },
+  async sync() { const me = this.me(); if (!me.g) return this.fetchAll(); const all = await this.fetchAll(); const cur = all[uid] || { w: 0, p: 0, g: 0 };
+    all[uid] = { n: (myName || store.get('mochi_onname', '') || 'Mochi').slice(0, 12), w: Math.max(cur.w, me.w), p: Math.max(cur.p, me.p), g: Math.max(cur.g || 0, me.g), t: Date.now() };
+    const data = { v: 1, p: this.clean(all) }; const r = await fetch(RANK_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: RANK_NAME, data }) }); if (!r.ok) throw new Error('rank'); store.set('mochi_rank_dirty', '0'); return data.p; },
+  async safeSync() { // varios jugadores terminan a la vez: escalonar, comprobar y reintentar para no pisarse
+    for (let k = 0; k < 4; k++) { await new Promise(r => setTimeout(r, 300 + Math.random() * (k ? 2500 : 3500))); try { await this.sync(); const me = this.me(), all = await this.fetchAll(), e = all[uid]; if (e && e.g >= me.g && e.p >= me.p) return all; } catch (e) { } }
+    throw new Error('rank'); },
+  add(w, p) { const me = this.me(); me.w += w; me.p += p; me.g += 1; store.set('mochi_rank_me', JSON.stringify(me)); store.set('mochi_rank_dirty', '1'); this.pending = this.safeSync().catch(() => { }); }
+};
+let rkTab = 'w';
+tap('rkW', () => { rkTab = 'w'; renderRank(); }); tap('rkP', () => { rkTab = 'p'; renderRank(); });
+let rkData = null, rkOnline = false;
+async function openRank() { $('onrk').classList.add('on'); $('rkSrc').textContent = 'Cargando ranking mundial…'; $('rkList').innerHTML = ''; $('rkMe').textContent = '';
+  try { if (Rank.pending) await Rank.pending; rkData = await (store.get('mochi_rank_dirty', '0') === '1' ? Rank.sync() : Rank.fetchAll()); rkOnline = true; } catch (e) { rkOnline = false; rkData = null; } renderRank(); }
+function renderRank() { $('rkW').classList.toggle('sel', rkTab === 'w'); $('rkP').classList.toggle('sel', rkTab === 'p'); const me = Rank.me();
+  let rows = rkData ? Object.entries(rkData).map(([k, v]) => ({ k, n: v.n || '???', w: v.w | 0, p: v.p | 0, g: v.g | 0 })) : [];
+  if (!rkOnline) { rows = me.g ? [{ k: uid, n: store.get('mochi_onname', '') || 'Tú', ...me }] : []; }
+  rows.sort((a, b) => rkTab === 'w' ? (b.w - a.w || b.p - a.p) : (b.p - a.p || b.w - a.w));
+  $('rkSrc').textContent = rkOnline ? `🌍 Mundial · ${rows.length} jugadores` : '📱 Sin conexión: mostrando solo tu marcador local (se subirá cuando vuelva la conexión)';
+  $('rkList').innerHTML = rows.slice(0, 100).map((r, i) => `<div class="onp${r.k === uid ? ' me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</span>${esc(r.n)}${r.k === uid ? ' (tú)' : ''}<b>${rkTab === 'w' ? r.w + ' 🏆' : r.p + ' ⭐'}</b></div>`).join('') || '<div style="font-size:14px">Aún no hay nadie. ¡Juega una carrera online y sé el primero!</div>';
+  const pos = rows.findIndex(r => r.k === uid); $('rkMe').textContent = `Tú: ${me.w} victorias · ${me.p} puntos · ${me.g} carreras${pos >= 0 && rkOnline ? ' · puesto ' + (pos + 1) + 'º' : ''}`; }
+if (store.get('mochi_rank_dirty', '0') === '1') setTimeout(() => { Rank.pending = Rank.safeSync().catch(() => { }); }, 3000);
 // ---------- dibujo: fantasmas semitransparentes + meta ----------
 O.items = (items, g) => {
   const zf = GOAL - dist; if (zf > -2 && zf < FAR) items.push({ z: zf + 0.02, d: () => drawFinish(g, zf) });
@@ -3465,7 +3569,7 @@ O.items = (items, g) => {
 };
 function drawGhost(g, p, z) {
   const pp = proj(p.x, Math.max(z, -2.5)), size = laneW * 0.8 * pp.s; if (size < 3) return;
-  const T2 = t + p.id.length * 1.7, hop = Math.abs(Math.sin(T2 * 9)) * (p.dead ? 0 : 1);
+  const T2 = t + p.id.length * 1.7 + (p.id.charCodeAt(1) || 0) * 0.3, hop = Math.abs(Math.sin(T2 * 9)) * (p.dead ? 0 : 1);
   try { drawMochi(g, pp.x, pp.y - hop * size * 0.16, size, { ch: p.ch, rgb: PAL[p.c] ? PAL[p.c].rgb : [255, 150, 200], sx: p.dead ? 1.4 : 1, sy: p.dead ? 0.5 : 1, rot: 0, earL: -0.5, earR: 0.5, earBend: 0.55, foot: Math.sin(T2 * 9), arm: Math.sin(T2 * 9), blink: 0, look: -1, lookX: 0, mouth: null, dead: !!p.dead, happy: 0, alpha: 0.45, solid: true }); } catch (e) { }
   g.globalAlpha = 1; const fs = Math.max(10, Math.round(size * 0.24)); g.font = `700 ${fs}px ${I18N.FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   const ty = pp.y - size * 1.25; g.lineWidth = Math.max(3, fs * 0.3); g.strokeStyle = p.col; g.globalAlpha = 0.9; g.strokeText(p.name, pp.x, ty); g.fillStyle = '#fff'; g.fillText(p.name, pp.x, ty); g.globalAlpha = 1;
@@ -3477,6 +3581,6 @@ function drawFinish(g, z) { const RH = LH + 0.55, n = 10, z2 = z + 0.8;
   g.beginPath(); g.moveTo(l.x, l.y); g.lineTo(l.x, l.y - h); g.moveTo(r.x, r.y); g.lineTo(r.x, r.y - h); g.stroke();
   g.fillStyle = '#ff6fae'; g.fillRect(l.x, l.y - h, r.x - l.x, h * 0.22); g.fillStyle = '#fff'; g.font = `700 ${Math.max(10, Math.round(h * 0.17))}px ${I18N.FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('META', (l.x + r.x) / 2, l.y - h * 0.89);
 }
-window.__onl = { O, get net() { return net; }, get state() { return state; }, get LH() { return LH; }, get freezeT() { return freezeT; }, setGod(v) { godMode = v; }, setDist(v) { dist = v; }, getDist() { return dist; }, kill() { godMode = false; invulnT = 0; die('block'); }, rowsSig() { return rows.slice().sort((a, b) => a.z - b.z).slice(0, 4).map(r => r.cells.map(c => c.t + (c.c ?? '')).join('') + '@' + Math.round(r.z + dist)).join(' '); } };
+window.__onl = { O, Rank, uid, get net() { return net; }, get state() { return state; }, get LH() { return LH; }, get freezeT() { return freezeT; }, setGod(v) { godMode = v; }, setDist(v) { dist = v; }, getDist() { return dist; }, kill() { godMode = false; invulnT = 0; die('block'); }, rowsSig() { return rows.slice().sort((a, b) => a.z - b.z).slice(0, 4).map(r => r.cells.map(c => c.t + (c.c ?? '')).join('') + '@' + Math.round(r.z + dist)).join(' '); } };
 })();
 })();
