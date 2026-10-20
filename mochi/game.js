@@ -3296,7 +3296,8 @@ function render() {
 let last = performance.now(), fpsAcc = 0, fpsN = 0, fps = 60;
 function frame(now) {
   let dt = (now - last) / 1000; last = now;
-  if (dt > 0.05) dt = 0.05; if (dt < 0) dt = 0;
+  const dtCap = window.ONL && ONL.active ? 0.25 : 0.05; // online: un móvil lento no debe ir más despacio que los demás
+  if (dt > dtCap) dt = dtCap; if (dt < 0) dt = 0;
   fpsAcc += dt; fpsN++; if (fpsAcc > 1) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
   if (state !== 'paused') {
     // fixed substeps for stable physics
@@ -3499,22 +3500,29 @@ function hostPublic(t0) {
     if (eta <= 0) { while (net.players.length < PUBMAX) net.players.push(makeBot(net.players.map(p => p.name), bi++)); clearTimers(); O.tWait = performance.now() - t0; startRace(); } };
   pubTimer = setInterval(tick, 250); tick();
 }
+let bots = [], botLastStep = 0;
 function startRace() { net.started = true; const d = { t: 'start', seed: (Math.random() * 1e9) | 0, mode: O.mode, players: net.players.map(p => ({ id: p.id, name: p.name, ch: p.ch, uid: p.uid, bot: p.bot ? 1 : 0 })) }; net.send(d); begin(d);
-  if (net.players.some(p => p.bot)) { const bots = net.players.filter(p => p.bot); bots.forEach(botPlan); let last = performance.now();
-    botTimer = setInterval(() => { const now = performance.now(), dt = Math.min(0.5, (now - last) / 1000); last = now; if (!O.active && !O.done) return; if (now - startAt < 4000) return; let ch = false;
-      for (const b of bots) { const p = O.peers[b.id]; if (!p || p.dead || p.fin) continue; ch = true; b.tl += dt;
-        const sp = Math.min(31, 12.5 + 14.5 * Math.min(O.dAt(p.d), 1)); p.d = Math.min(GOAL, p.d + sp * dt * rnd(0.97, 1.02));
-        b.nextMove -= dt; if (b.nextMove <= 0) { b.nextMove = rnd(0.5, 2.2) + b.react; b.lane = Math.max(-2, Math.min(2, Math.round(p.x) + (Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.85 ? 1 : 2))); }
-        if (b.lane != null) p.x += (b.lane - p.x) * Math.min(1, dt * rnd(5, 9));
-        b.cT -= dt; if (b.cT <= 0) { b.cT = rnd(0.7, 2.6); p.c = (Math.random() * 3) | 0; }
-        if (p.d >= b.dieAt) { p.dead = 1; p.d = b.dieAt; }
-        else if (p.d >= GOAL) { p.fin = 1; p.d = GOAL; p.ft = b.tl + rnd(0, 0.6) * (1.1 - b.skill); } }
-      if (ch || !O.final) { net && net.send({ t: 'all', ps: Object.values(O.peers).map(p => ({ id: p.id, d: p.d, x: p.x, c: p.c, dead: p.dead, fin: p.fin, ft: p.ft })) }); checkEnd(); if (O.done) showRes(); } }, 100); }
+  bots = net.players.filter(p => p.bot); bots.forEach(botPlan); botLastStep = 0;
+  if (bots.length) { let last = performance.now();
+    // respaldo cuando el anfitrión ya no está jugando (ha caído o terminado): los bots siguen con el reloj real
+    botTimer = setInterval(() => { const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now; if (!O.active && !O.done) return; const me = O.peers[myId()]; if (now - startAt < 4000 || (state === 'play' && me && !me.dead && !me.fin)) return; botStep(dt, true); }, 16); }
 }
+const ease = k => k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
+// los bots avanzan con el MISMO reloj de juego que el anfitrión (paso a paso por fotograma) -> misma velocidad que un jugador real
+function botStep(dt, wall) { if (!wall) botLastStep = performance.now(); let ch = false;
+  for (const b of bots) { const p = O.peers[b.id]; if (!p || p.dead || p.fin) continue; ch = true; b.tl += dt;
+    const sp = Math.min(31, 12.5 + 14.5 * Math.min(O.dAt(p.d), 1)); b.sk = (b.sk || 1) + (rnd(0.985, 1.015) - (b.sk || 1)) * Math.min(1, dt * 0.5); p.v = sp * b.sk; p.d = Math.min(GOAL, p.d + p.v * dt);
+    b.nextMove -= dt; if (b.nextMove <= 0) { b.nextMove = rnd(0.5, 2.2) + b.react; const to = Math.max(-2, Math.min(2, Math.round(b.lane ?? p.x) + (Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.85 ? 1 : 2))); b.mv = { from: p.x, to, k: 0, dur: rnd(0.16, 0.3) * Math.abs(to - p.x || 1) }; b.lane = to; }
+    if (b.mv) { b.mv.k += dt / b.mv.dur; p.x = b.mv.from + (b.mv.to - b.mv.from) * ease(b.mv.k); if (b.mv.k >= 1) b.mv = null; }
+    b.cT -= dt; if (b.cT <= 0) { b.cT = rnd(0.7, 2.6); p.c = (Math.random() * 3) | 0; }
+    if (p.d >= b.dieAt) { p.dead = 1; p.d = b.dieAt; p.v = 0; }
+    else if (p.d >= GOAL) { p.fin = 1; p.d = GOAL; p.ft = b.tl + rnd(0, 0.6) * (1.1 - b.skill); } }
+  if (wall) { sendT -= dt; if (sendT <= 0) { sendT = SEND; push(); } if (O.done) showRes(); }
+  else if (!ch && bots.length) checkEnd(); }
 // ---------- carrera ----------
 function begin(d) {
   O.seed = d.seed; O.rng = mulberry(d.seed); O.done = false; O.res = null; O.hostGone = 0; O.final = 0; O.sent = 0; O.peers = {}; if (d.mode) O.mode = d.mode;
-  d.players.forEach((p, i) => O.peers[p.id] = { id: p.id, name: p.name, ch: p.ch | 0, uid: p.uid || '', bot: !!p.bot, col: GCOL[i % 6], d: 0, x: 0, c: 0, dead: 0, fin: 0, ft: 0 });
+  d.players.forEach((p, i) => O.peers[p.id] = { id: p.id, name: p.name, ch: p.ch | 0, uid: p.uid || '', bot: !!p.bot, col: GCOL[i % 6], d: 0, x: 0, c: 0, dead: 0, fin: 0, ft: 0, v: 0, buf: [], rd: 0, rx: 0, rgb: null, rv: 0 });
   closeAll(); $('onHud').classList.add('on'); $('onBar').classList.add('on');
   $('onBar').querySelectorAll('u').forEach(u => u.remove()); for (const k in O.peers) { const u = document.createElement('u'); u.style.background = O.peers[k].col; u.id = 'ob_' + k; $('onBar').appendChild(u); }
   O.active = true; LH = 2; resize();
@@ -3525,19 +3533,47 @@ O.dAt = w => Math.min(0.9, 0.08 + 0.82 * w / GOAL);
 O.spawn = f => { const r0 = Math.random, dc = dCur, sp = speed; Math.random = O.rng; try { dCur = O.dAt(dist + spawnZ); speed = Math.min(31, 12.5 + 14.5 * Math.min(dCur, 1)); f(); } finally { Math.random = r0; dCur = dc; speed = sp; } };
 O.tick = dt => {
   const me = O.peers[myId()]; if (!me) return;
-  me.d = dist; me.x = mochi.x; me.c = mochi.color; finT += dt;
+  if (dt > 0) me.v += ((dist - me.d) / dt - me.v) * Math.min(1, dt * 20); me.d = dist; me.x = mochi.x; me.c = mochi.color; finT += dt;
+  if (net && net.isHost && bots.length) botStep(dt);
   if (!me.fin && dist >= GOAL) { me.fin = 1; me.ft = finT; me.d = GOAL; Snd.record(); for (let k = 0; k < 30; k++) burst(W / 2, H * 0.35, PAL[k % 3].lrgb, 1, { min: 80, max: 300, g: 300, type: 'confetti', life: 1.2, rmin: 3, rmax: 6 }); state = 'over'; overT = 0; push(true); O.myEnd(); return; }
-  sendT -= dt; if (sendT <= 0) { sendT = 0.1; push(); }
+  sendT -= dt; if (sendT <= 0) { sendT = SEND; push(); }
   hud();
 };
-function push(force) { const me = O.peers[myId()]; if (!me || !net) return; const st = { t: 'st', id: me.id, d: Math.round(me.d * 10) / 10, x: Math.round(me.x * 100) / 100, c: me.c, dead: me.dead, fin: me.fin, ft: me.ft };
-  if (net.isHost) { net.send({ t: 'all', ps: Object.values(O.peers).map(p => ({ id: p.id, d: p.d, x: p.x, c: p.c, dead: p.dead, fin: p.fin, ft: p.ft })) }); checkEnd(); } else net.send(st); }
+const SEND = 1 / 15, DELAY = 130; // 15 paquetes/s; se dibuja ~130 ms en el pasado para poder interpolar
+const r2 = v => Math.round(v * 100) / 100;
+const snap = p => ({ id: p.id, d: r2(p.d), x: r2(p.x), c: p.c, v: r2(p.v || 0), dead: p.dead, fin: p.fin, ft: p.ft });
+function push(force) { const me = O.peers[myId()]; if (!me || !net) return; const ts = performance.now();
+  if (net.isHost) { net.send({ t: 'all', ts, ps: Object.values(O.peers).map(snap) }); checkEnd(); } else net.send({ t: 'st', ts, ...snap(me) }); }
+// reloj: offset = mínimo (llegada - envío) visto; así el jitter no descoloca las marcas de tiempo
+const clk = {};
+function feed(src, ts, q) { const p = O.peers[q.id]; if (!p) return; const now = performance.now(); let o = clk[src]; const s0 = now - (ts || now);
+  o = clk[src] = o == null ? s0 : Math.min(o + 0.5, s0); const lt = (ts || now) + o; // tiempo local equivalente
+  const last = p.buf[p.buf.length - 1]; if (last && lt <= last.t) return; // paquete viejo o duplicado
+  p.buf.push({ t: lt, d: q.d, x: q.x, v: q.v || 0 }); if (p.buf.length > 30) p.buf.shift();
+  p.d = q.d; p.x = q.x; p.c = q.c; p.v = q.v || 0; p.dead = q.dead; p.fin = q.fin; p.ft = q.ft; }
 function onMsg(d) {
   if (d.t === 'start') { begin(d); return; }
-  if (d.t === 'st' && net.isHost) { const p = O.peers[d.from]; if (p) Object.assign(p, { d: d.d, x: d.x, c: d.c, dead: d.dead, fin: d.fin, ft: d.ft }); checkEnd(); return; }
-  if (d.t === 'all') { for (const q of d.ps) if (q.id !== myId() && O.peers[q.id]) Object.assign(O.peers[q.id], q); if (O.done) showRes(); return; }
-  if (d.t === 'end') { for (const q of d.ps) if (O.peers[q.id] && q.id !== myId()) Object.assign(O.peers[q.id], q); O.final = 1; showRes(); }
+  if (d.t === 'st' && net.isHost) { if (O.peers[d.from]) { d.id = d.from; feed(d.from, d.ts, d); } checkEnd(); return; }
+  if (d.t === 'all') { for (const q of d.ps) if (q.id !== myId()) feed('h', d.ts, q); if (O.done) showRes(); return; }
+  if (d.t === 'end') { for (const q of d.ps) if (O.peers[q.id] && q.id !== myId()) Object.assign(O.peers[q.id], { d: q.d, x: q.x, c: q.c, dead: q.dead, fin: q.fin, ft: q.ft }); O.final = 1; showRes(); }
 }
+// posición a dibujar: interpolación en el buffer + extrapolación por velocidad + corrección suave
+let rLast = 0;
+function smoothAll() { const now = performance.now(), dt = Math.min(0.1, rLast ? (now - rLast) / 1000 : 0); rLast = now; const rt = now - DELAY;
+  for (const k in O.peers) { if (k === myId()) continue; const p = O.peers[k]; let td, tx;
+    if (p.bot && net && net.isHost) { td = p.d; tx = p.x; } // bots locales: ya van suaves por fotograma
+    else { const B = p.buf; if (!B.length) { td = p.d; tx = p.x; } else {
+      let i = B.length - 1; while (i > 0 && B[i - 1].t > rt) i--;
+      if (rt >= B[B.length - 1].t) { const L = B[B.length - 1], ex = Math.min(0.6, (rt - L.t) / 1000); td = L.d + (p.dead || p.fin ? 0 : L.v * ex); tx = L.x; }
+      else if (i === 0 && rt < B[0].t) { td = B[0].d; tx = B[0].x; }
+      else { const A = B[i - 1], C = B[i], k2 = (rt - A.t) / Math.max(1, C.t - A.t); td = A.d + (C.d - A.d) * k2; tx = A.x + (C.x - A.x) * k2; } } }
+    if (p.fin) td = Math.min(td, GOAL);
+    if (!p.rs) { p.rs = 1; p.rd = td; p.rx = tx; p.rv = p.v || 0; }
+    // avanza con su velocidad y corrige el error poco a poco (salta solo si el error es enorme)
+    const err = td - p.rd; if (Math.abs(err) > 40) p.rd = td; else { p.rv += ((p.dead ? 0 : p.v || 0) - p.rv) * Math.min(1, dt * 6); p.rd += p.rv * dt + err * Math.min(1, dt * 5); }
+    if (p.dead && Math.abs(err) < 0.3) p.rd = td;
+    p.rx += (tx - p.rx) * Math.min(1, dt * 14);
+    const tc = PAL[p.c] ? PAL[p.c].rgb : [255, 150, 200]; if (!p.rgb) p.rgb = tc.slice(); for (let j = 0; j < 3; j++) p.rgb[j] += (tc[j] - p.rgb[j]) * Math.min(1, dt * 9); } }
 function ranking() { return Object.values(O.peers).sort((a, b) => (b.fin - a.fin) || (a.fin ? a.ft - b.ft : b.d - a.d)); }
 function checkEnd() { if (!net || !net.isHost || !O.active) return; const ps = Object.values(O.peers); if (ps.every(p => p.dead || p.fin)) { if (!O.final) { O.final = 1; net.send({ t: 'end', ps }); clearInterval(botTimer); botTimer = null; } showRes(); } }
 O.myEnd = () => { const me = O.peers[myId()]; if (me && !me.fin) { me.dead = 1; me.d = dist; } O.done = true; push(true); $('onHud').classList.remove('on'); setTimeout(showRes, 600); if (O.hostGone) { O.final = 1; } };
@@ -3582,12 +3618,12 @@ if (store.get('mochi_rank_dirty', '0') === '1') setTimeout(() => { Rank.pending 
 // ---------- dibujo: fantasmas semitransparentes + meta ----------
 O.items = (items, g) => {
   const zf = GOAL - dist; if (zf > -2 && zf < FAR) items.push({ z: zf + 0.02, d: () => drawFinish(g, zf) });
-  for (const k in O.peers) { if (k === myId()) continue; const p = O.peers[k], z = p.d - dist; if (z < -2.6 || z > FAR) continue; items.push({ z: z - 0.001, d: () => drawGhost(g, p, z) }); }
+  smoothAll(); for (const k in O.peers) { if (k === myId()) continue; const p = O.peers[k], z = p.rd - dist; if (z < -2.6 || z > FAR) continue; items.push({ z: z - 0.001, d: () => drawGhost(g, p, z) }); }
 };
 function drawGhost(g, p, z) {
-  const pp = proj(p.x, Math.max(z, -2.5)), size = laneW * 0.8 * pp.s; if (size < 3) return;
+  const pp = proj(p.rx, Math.max(z, -2.5)), size = laneW * 0.8 * pp.s; if (size < 3) return;
   const T2 = t + p.id.length * 1.7 + (p.id.charCodeAt(1) || 0) * 0.3, hop = Math.abs(Math.sin(T2 * 9)) * (p.dead ? 0 : 1);
-  try { drawMochi(g, pp.x, pp.y - hop * size * 0.16, size, { ch: p.ch, rgb: PAL[p.c] ? PAL[p.c].rgb : [255, 150, 200], sx: p.dead ? 1.4 : 1, sy: p.dead ? 0.5 : 1, rot: 0, earL: -0.5, earR: 0.5, earBend: 0.55, foot: Math.sin(T2 * 9), arm: Math.sin(T2 * 9), blink: 0, look: -1, lookX: 0, mouth: null, dead: !!p.dead, happy: 0, alpha: 0.45, solid: true }); } catch (e) { }
+  try { drawMochi(g, pp.x, pp.y - hop * size * 0.16, size, { ch: p.ch, rgb: p.rgb || [255, 150, 200], sx: p.dead ? 1.4 : 1, sy: p.dead ? 0.5 : 1, rot: 0, earL: -0.5, earR: 0.5, earBend: 0.55, foot: Math.sin(T2 * 9), arm: Math.sin(T2 * 9), blink: 0, look: -1, lookX: 0, mouth: null, dead: !!p.dead, happy: 0, alpha: 0.45, solid: true }); } catch (e) { }
   g.globalAlpha = 1; const fs = Math.max(10, Math.round(size * 0.24)); g.font = `700 ${fs}px ${I18N.FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   const ty = pp.y - size * 1.25; g.lineWidth = Math.max(3, fs * 0.3); g.strokeStyle = p.col; g.globalAlpha = 0.9; g.strokeText(p.name, pp.x, ty); g.fillStyle = '#fff'; g.fillText(p.name, pp.x, ty); g.globalAlpha = 1;
 }
