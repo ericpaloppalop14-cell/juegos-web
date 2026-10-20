@@ -9,6 +9,7 @@ import { Audio } from './audio.js';
 import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
 import { Online, soloMatch, MAX_PLAYERS } from './online.js';
 import { createCupCarousel } from './cupsel.js';
+import { buildPodium } from './podium.js';
 
 const $ = id => document.getElementById(id);
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
@@ -243,35 +244,20 @@ function showResults(order) {
 }
 btn('rNext', () => { if (app.match) { if (app.race) { app.race.dispose(); app.race = null; } online.stopRace(); if (app.mode === 'online') openLobby(); else startEndless(soloMatch(meInfo())); return; } if (app.raceNo >= RACES_PER_CUP - 1) showPodium(); else { app.raceNo++; startRace(); } });
 
-// ---------------- podium ----------------
-const podScene = new THREE.Scene(); const podCam = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.5, 900);
-let podData = null;
+// ---------------- podium (v11) ----------------
+const podCam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 900);
+let podData = null, podBand = [0.3, 0.85], podBandT = 0;
+function podMeasure() { const h = innerHeight, hd = $('podHead').getBoundingClientRect(), rw = $('podBtns').getBoundingClientRect(); podBand = [Math.min(0.6, (hd.bottom + 6) / h), Math.max(0.5, (rw.top - 6) / h)]; }
 function showPodium() {
   if (app.race) { app.race.dispose(); app.race = null; }
   const ranking = Object.entries(app.points).sort((a, b) => b[1] - a[1]).map(([id, p]) => ({ ch: CHARS.find(c => c.id === id), p }));
   const myPlace = ranking.findIndex(r => r.ch === app.playerChar);
-  podScene.clear();
   const cup = app.cup;
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(500, 24, 12), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, uniforms: { top: { value: new THREE.Color(cup.sky[0]) }, bot: { value: new THREE.Color(cup.sky[1]) } },
-    vertexShader: 'varying vec3 vp; void main(){vp=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}', fragmentShader: 'uniform vec3 top; uniform vec3 bot; varying vec3 vp; void main(){ float h=clamp(normalize(vp).y*1.8+0.3,0.0,1.0); gl_FragColor=vec4(mix(bot,top,h),1.0);}' }));
-  podScene.add(sky); podScene.add(new THREE.HemisphereLight('#ffffff', '#ffd6ea', 1.3)); const d = new THREE.DirectionalLight('#fff', 1.4); d.position.set(10, 30, 20); podScene.add(d);
-  mesh(new THREE.CircleGeometry(80, 40), toon(cup.ground || '#3a2a66', { rim: 0 }), podScene, [0, 0, 0], [-Math.PI / 2, 0, 0]);
-  const H = [3.2, 2.2, 1.5], X = [0, -4.6, 4.6], cols = ['#ffd84a', '#dfe6f0', '#e8a46a'];
-  const pk = [];
-  for (let i = 0; i < 3; i++) {
-    const b = mesh(new THREE.BoxGeometry(4.2, H[i], 4), toon(i === 0 ? cup.color : '#fff4fa'), podScene, [X[i], H[i] / 2, 0]); outline(b, '#7a4a8a', 1.02);
-    const num = document.createElement('canvas'); num.width = num.height = 128; const x = num.getContext('2d'); x.fillStyle = cols[i]; x.beginPath(); x.arc(64, 64, 56, 0, 7); x.fill(); x.lineWidth = 8; x.strokeStyle = '#fff'; x.stroke(); x.fillStyle = '#6a4b8a'; x.font = '700 72px Fredoka'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(i + 1), 64, 70);
-    const t = new THREE.CanvasTexture(num); t.colorSpace = THREE.SRGBColorSpace; mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: t, transparent: true }), podScene, [X[i], H[i] * 0.55, 2.02]);
-    const r = ranking[i]; const k = makeKart(r.ch, i); k.position.set(X[i], H[i], 0); k.scale.setScalar(0.95); podScene.add(k); pk.push(k);
-  }
   const tier = myPlace <= 2 ? myPlace : -1;
-  const trophy = makeTrophy(cup.trophy, Math.max(0, tier)); trophy.position.set(8.6, 0, 2.2); trophy.scale.setScalar(1.25); podScene.add(trophy);
-  // confetti
-  const conf = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.25, 0.4), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), 220); const cd = [];
-  for (let i = 0; i < 220; i++) { cd.push({ p: new THREE.Vector3((Math.random() - 0.5) * 24, 6 + Math.random() * 16, (Math.random() - 0.5) * 12), v: 1.5 + Math.random() * 2, r: Math.random() * 6 }); conf.setColorAt(i, new THREE.Color(['#ff8fc0', '#ffe066', '#7ff5ff', '#b9a2f7', '#7ee3c4'][i % 5])); }
-  podScene.add(conf);
-  podData = { t: 0, pk, trophy, conf, cd };
-  podCam.position.set(1.5, 6.5, 18); podCam.lookAt(1.5, 2.6, 0);
+  podData = { p: buildPodium(cup, ranking, myPlace, tier) };
+  podCam.aspect = innerWidth / innerHeight;
+  $('podium').classList.toggle('win', tier === 0); $('podium').classList.toggle('lose', tier < 0);
+  $('podBadge').textContent = tier === 0 ? '¡VICTORIA!' : tier > 0 ? '¡AL PODIO!' : '¡BUENA CARRERA!';
   show('podium');
   if (tier >= 0) {
     const prev = save.trophies[cup.id]; const newUnlocks = [];
@@ -279,14 +265,15 @@ function showPodium() {
     if (prev == null || tier < prev) save.trophies[cup.id] = tier; persist();
     CUPS.filter(cupUnlocked).forEach(c => { if (!beforeC.includes(c.id)) newUnlocks.push('🏁 ' + c.name); });
     CHARS.filter(charUnlocked).forEach(c => { if (!beforeCh.includes(c.id)) newUnlocks.push('⭐ ' + c.name); });
-    $('podTitle').innerHTML = `¡${cup.name}!<small>${TIER[tier]} · ${myPlace + 1}º con ${ranking[myPlace].p} puntos</small>`;
+    $('podTitle').textContent = `¡${cup.name}!`; $('podPlace').textContent = `${TIER[tier]} · ${myPlace + 1}º con ${ranking[myPlace].p} puntos`;
     $('podSub').textContent = newUnlocks.length ? '¡Desbloqueado: ' + newUnlocks.join(' · ') + '!' : '¡Copa guardada en tu vitrina!';
-    Audio.sfxPlay('fanfare');
+    Audio.sfxPlay(tier === 0 ? 'victory' : 'fanfare');
   } else {
-    $('podTitle').innerHTML = `${cup.name}<small>Has quedado ${myPlace + 1}º con ${ranking[myPlace].p} puntos</small>`;
-    $('podSub').textContent = '¡Sube al podio (top 3) para ganar la copa!';
+    $('podTitle').textContent = cup.name; $('podPlace').textContent = `Has quedado ${myPlace + 1}º con ${ranking[myPlace].p} puntos`;
+    $('podSub').textContent = '¡Sube al podio (top 3) para ganar la copa!'; Audio.sfxPlay('finish');
   }
   app.lastPodium = { ranking: ranking.map(r => r.ch.id), myPlace, tier };
+  requestAnimationFrame(podMeasure); podBandT = 0;
 }
 btn('pOk', () => { podData = null; openCups(); });
 btn('pRetry', () => { podData = null; startCup(app.cup); });
@@ -477,14 +464,9 @@ function frame(now) {
     return;
   }
   if (app.state === 'podium' && podData) {
-    podData.t += dt; podData.pk.forEach((k, i) => { k.rotation.y = Math.sin(t * 0.8 + i) * 0.5; k.userData.tilt.position.y = Math.abs(Math.sin(t * 4 + i)) * 0.4; animKart(k, t, 0); });
-    podData.trophy.rotation.y = t * 0.9;
-    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
-    podData.cd.forEach((c, i) => { c.p.y -= c.v * dt; if (c.p.y < 0) c.p.y = 20; c.r += dt * 4; q.setFromEuler(new THREE.Euler(c.r, c.r * 0.7, 0)); m4.compose(new THREE.Vector3(c.p.x + Math.sin(t + i) * 0.5, c.p.y, c.p.z), q, new THREE.Vector3(1, 1, 1)); podData.conf.setMatrixAt(i, m4); });
-    podData.conf.instanceMatrix.needsUpdate = true;
-    if (innerWidth < innerHeight) { podCam.position.set(1.5 + Math.sin(t * 0.25) * 1.2, 7.5, 27); podCam.lookAt(1.5, 3.2, 0); } // v6: vertical, podio entero
-    else { podCam.position.x = 1.5 + Math.sin(t * 0.25) * 3; podCam.lookAt(1.5, 2.4, 0); }
-    renderer.render(podScene, podCam); return;
+    const P = podData.p; podBandT -= dt; if (podBandT <= 0) { podMeasure(); podBandT = 0.5; }
+    P.update(Math.min(dt, 0.05), { boomSfx: P.win ? () => Audio.sfxPlay('firework') : null });
+    P.fit(podCam, podBand[0], podBand[1], t); renderer.render(P.scene, podCam); return;
   }
   if (app.state === 'results' && app.race) { acc += dt; let n = 0; while (acc >= STEP && n < 4) { app.race.update(STEP); acc -= STEP; n++; } renderer.render(app.race.scene, app.race.camera); return; }
   if (app.state === 'cups' && carousel) { carousel.update(dt, t); renderer.render(carousel.scene, carousel.cam); return; }
@@ -532,6 +514,10 @@ window.__kart = {
   pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },
   give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, force(item) { app.race.forceItem = item; }, fx(item, who) { const R = app.race; const k = who == null ? R.player : R.karts[who]; return R.fx.use(k, item); }, use() { app.race.useItem(app.race.player); },
   forceFinish() { const R = app.race; for (const k of R.karts) { if (!k.finished) { k.finished = true; k.finishTime = R.raceT + k.place; } } },
+  testPodium(place = 0, cupId = 'gominola', charId = 'mochi') { // modo de pruebas: fuerza el resultado de la copa
+    app.playerChar = CHARS.find(c => c.id === charId); app.cup = CUPS.find(c => c.id === cupId); app.match = null; app.points = {};
+    const others = CHARS.filter(c => c !== app.playerChar).slice(0, CONFIG.racers - 1); const all = others.slice(); all.splice(Math.min(place, all.length), 0, app.playerChar);
+    all.forEach((c, i) => app.points[c.id] = 40 - i * 4); showPodium(); },
   openChars, openCups, showPodium, pickOrient, openOrient, openModes, openLobby, startEndless, soloMatch, meInfo, get match() { return app.match; },
   trackShape(id, rev) { const T = buildTrack(CUPS.find(c => c.id === id), rev, { hi: false }); return { S: T.S.map(s => [s.p.x, s.p.z, s.w, s.wall, s.p.y]), sc: T.shortcuts.map(c => c.pts.map(p => [p.x, p.z])), feats: T.feats.map(f => [f.type, T.idxOf(f.t)]), L: T.L }; }, get quality() { return qualityHi ? 'alta' : 'baja'; },
 };
