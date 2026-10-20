@@ -6,6 +6,7 @@ import { buildTrack } from './track.js';
 import { Audio } from './audio.js';
 import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
 import { Online, soloMatch, MAX_PLAYERS } from './online.js';
+import { createCupCarousel } from './cupsel.js';
 
 const $ = id => document.getElementById(id);
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
@@ -169,28 +170,32 @@ btn('rMenu', () => { if (app.race) { app.race.dispose(); app.race = null; } onli
 let uSel = 0;
 const trophySVG = (col, dim) => `<svg viewBox="0 0 64 64"><path d="M18 8h28v10c0 10-6 18-14 18S18 28 18 18z" fill="${col}" stroke="#5a3a6e" stroke-width="2.5"/><path d="M18 12H9c0 9 5 14 11 14M46 12h9c0 9-5 14-11 14" fill="none" stroke="${col}" stroke-width="4"/><rect x="28" y="36" width="8" height="10" fill="${col}" stroke="#5a3a6e" stroke-width="2"/><rect x="18" y="46" width="28" height="9" rx="3" fill="#fff4fa" stroke="#5a3a6e" stroke-width="2.5"/>${dim ? '' : '<path d="M32 14l2.4 5 5.4.6-4 3.7 1.1 5.3-4.9-2.7-4.9 2.7 1.1-5.3-4-3.7 5.4-.6z" fill="#fff" opacity=".9"/>'}</svg>`;
 const TIER = ['🥇 Oro', '🥈 Plata', '🥉 Bronce'];
+let carousel = null, cupBusy = false;
+function cupInfo() { const c = CUPS[uSel], un = cupUnlocked(c), tr = save.trophies[c.id];
+  $('cupName').textContent = c.name; $('cupName').style.setProperty('--cc', un ? c.color : '#b8a8d0');
+  $('cupTrack').innerHTML = '🏁 ' + c.track + ' · ' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
+  [...$('cupGrid').children].forEach((d, i) => d.classList.toggle('sel', i === uSel));
+  $('uGo').classList.toggle('locked', !un); $('uGo').innerHTML = un ? '<span>¡A correr!</span>' : '<span>🔒 Bloqueada</span>';
+  $('cupPanel').classList.remove('swap'); void $('cupPanel').offsetWidth; $('cupPanel').classList.add('swap');
+}
+function setCup(i) { if (i === uSel || cupBusy) return; uSel = i; carousel.select(i); cupInfo(); }
 function openCups() {
   if (app.match) { online.stopRace(); online.close(); } app.match = null; app.mode = null;
-  show('cups'); const L = $('cupList'); L.innerHTML = '';
+  if (!carousel) carousel = createCupCarousel(renderer, CUPS);
+  cupBusy = false; show('cups');
   if (!cupUnlocked(CUPS[uSel])) uSel = 0;
-  CUPS.forEach((c, i) => {
-    const un = cupUnlocked(c), tr = save.trophies[c.id];
-    const d = document.createElement('div'); d.className = 'cup' + (i === uSel ? ' sel' : '') + (un ? '' : ' lock');
-    d.innerHTML = `${trophySVG(un ? c.trophy : '#cbbbd8', !un)}<h3 style="color:${un ? c.color : '#a090b0'};-webkit-text-stroke:.5px #6a4b8a">${c.name}</h3><div class="tr">${c.track}</div>` +
-      (un ? `<div class="res">${tr != null ? TIER[tr] : '<span style="color:#b9a2d0">Sin copa</span>'}</div>` : `<div class="lk">🔒 ${c.unlock.text}</div>`);
-    d.onclick = () => { Audio.init(); Audio.sfxPlay('click'); if (!un) { app.ui.toast('🔒 ' + c.unlock.text); return; } uSel = i; openCups(); };
-    L.appendChild(d);
-  });
-  const c = CUPS[uSel];
-  requestAnimationFrame(() => { const sel = L.children[uSel]; if (sel) L.scrollTo({ left: sel.offsetLeft - (L.clientWidth - sel.offsetWidth) / 2, behavior: 'instant' }); }); // v6: copa elegida centrada
-  $('uInfo').textContent = `${c.name}: ${RACES_PER_CUP} carreras (ida y vuelta) · ${CONFIG.laps} vueltas · gana quien sume más puntos`;
-  // 3D trophy preview next to the kart
-  stage.clear(); menuKarts.length = 0;
-  previewKart = makeKart(app.playerChar || CHARS[0], 0); previewKart.position.set(-2.4, 0.8, 0); previewKart.rotation.y = 0.5; stage.add(previewKart);
-  trophyPreview = makeTrophy(c.trophy, save.trophies[c.id] ?? 0); trophyPreview.position.set(2.6, 0.8, 0); trophyPreview.scale.setScalar(1.3); stage.add(trophyPreview);
+  const G = $('cupGrid'); G.innerHTML = '';
+  CUPS.forEach((c, i) => { const un = cupUnlocked(c), tr = save.trophies[c.id];
+    const d = document.createElement('button'); d.className = 'ccard' + (un ? '' : ' lock'); d.style.setProperty('--cc', c.color); d.style.animationDelay = (i * 0.05) + 's';
+    d.innerHTML = `<div class="cic">${trophySVG(un ? c.trophy : '#8f80ad', !un)}${un ? '' : '<b class="lki">🔒</b>'}${un && tr != null ? `<b class="md">${['🥇', '🥈', '🥉'][tr]}</b>` : ''}</div><div class="cn">${c.name.replace('Copa ', '')}</div>`;
+    d.addEventListener('click', () => { Audio.init(); Audio.sfxPlay('click'); setCup(i); }); G.appendChild(d); });
+  carousel.setState(uSel, c => ({ unlocked: cupUnlocked(c), tier: save.trophies[c.id] }));
+  cupInfo();
+  stage.clear(); menuKarts.length = 0; previewKart = null; trophyPreview = null;
 }
-btn('uBack', () => openChars());
-btn('uGo', () => startCup(CUPS[uSel]));
+btn('uBack', () => { if (!cupBusy) openChars(); });
+btn('uGo', () => { const c = CUPS[uSel]; if (cupBusy) return; if (!cupUnlocked(c)) { app.ui.toast('🔒 ' + c.unlock.text); return; }
+  cupBusy = true; Audio.sfxPlay('boost'); $('cups').classList.add('going'); carousel.choose(() => { $('cups').classList.remove('going'); startCup(c); }); });
 
 // ---------------- cup flow ----------------
 function startCup(cup) {
@@ -479,6 +484,7 @@ function frame(now) {
     renderer.render(podScene, podCam); return;
   }
   if (app.state === 'results' && app.race) { acc += dt; let n = 0; while (acc >= STEP && n < 4) { app.race.update(STEP); acc -= STEP; n++; } renderer.render(app.race.scene, app.race.camera); return; }
+  if (app.state === 'cups' && carousel) { carousel.update(dt, t); renderer.render(carousel.scene, carousel.cam); return; }
   // menus
   if (app.state === 'title' || (app.state === 'settings' && setReturn === 'title')) {
     menuKarts.forEach((m, i) => { const a = m.a + t * 0.35; m.k.position.set(Math.cos(a) * 4.2, 0.8 + Math.abs(Math.sin(t * 3 + i)) * 0.15, Math.sin(a) * 4.2); m.k.rotation.y = -a; animKart(m.k, t, 20); });
