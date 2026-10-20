@@ -3343,7 +3343,7 @@ const _setScreen = setScreen;
 // ===== Mochi · MODO ONLINE v2 (sala pública con matchmaking + bots, sala privada con código, ranking mundial) =====
 // Se carga después de game.js y usa su ámbito global (state, mochi, rows, dist, LH, proj, drawMochi...).
 (() => {
-const NABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', NPRE = 'mochi-online-v1-', NPUB = 'mochi-pub-v2-', PUBSLOTS = 6, NMAX = 6, PUBMAX = 5, GOAL = 1400, PUBWAIT = 15000;
+const NABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', NPRE = 'mochi-online-v1-', NPUB = 'mochi-pub-v2-', PUBSLOTS = 6, NMAX = 6, PUBMAX = 5, GOAL = 1400, PUBWAIT = 5500;
 const RANK_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a15a4bb90b324f', RANK_NAME = 'mochi-ranking-mundial-v1';
 const nCode = () => Array.from({ length: 4 }, () => NABC[(Math.random() * NABC.length) | 0]).join('');
 const GCOL = ['#ff6fae', '#5fb8ff', '#ffb43a', '#7ad67a', '#b07cff', '#ff7a5c'];
@@ -3353,14 +3353,15 @@ function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t2 = M
 class Net {
   constructor() { this.peer = null; this.conns = new Map(); this.players = []; this.isHost = false; this.myId = null; this.nextId = 1; this.h = {}; this.alive = true; this.max = NMAX; }
   on(e, f) { this.h[e] = f; } emit(e, ...a) { if (this.h[e]) this.h[e](...a); }
-  _peer(id) { return new Promise((res, rej) => { if (typeof window.Peer !== 'function') return rej(new Error('broker')); let done = false; const opts = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } };
-    const p = id ? new window.Peer(id, opts) : new window.Peer(opts); const to = setTimeout(() => { if (!done) { done = true; try { p.destroy(); } catch (e) { } rej(new Error('broker')); } }, 10000);
+  _peer(id, ms = 10000) { return new Promise((res, rej) => { if (typeof window.Peer !== 'function') return rej(new Error('broker')); let done = false; const opts = { debug: 0, config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }] } };
+    const p = id ? new window.Peer(id, opts) : new window.Peer(opts); const to = setTimeout(() => { if (!done) { done = true; try { p.destroy(); } catch (e) { } rej(new Error('broker')); } }, ms);
     p.on('open', () => { if (done) return; done = true; clearTimeout(to); res(p); });
     p.on('error', e => { if (!done) { done = true; clearTimeout(to); try { p.destroy(); } catch (x) { } rej(new Error(e.type === 'unavailable-id' ? 'taken' : 'broker')); } else if (e.type === 'peer-unavailable' && this._jr) { const j = this._jr; this._jr = null; j(new Error('nosala')); } }); }); }
-  _hostSetup(info) { this.isHost = true; this.myId = 'h'; this.players = [{ id: 'h', ...info }]; this.peer.on('connection', c => this._hc(c)); this.peer.on('disconnected', () => { try { this.peer.reconnect(); } catch (e) { } }); }
+  _hostSetup(info) { this.isHost = true; this.myId = 'h'; this.players = [{ id: 'h', ...info }]; if (!this.peer) return; this.peer.on('connection', c => this._hc(c)); this.peer.on('disconnected', () => { try { this.peer.reconnect(); } catch (e) { } }); }
   async create(info) { for (let k = 0; k < 4 && !this.peer; k++) { const code = nCode(); try { this.peer = await this._peer(NPRE + code); this.code = code; } catch (e) { if (e.message !== 'taken') throw e; } } if (!this.peer) throw new Error('broker');
     this._hostSetup(info); return this.code; }
-  async hostId(fullId, info) { if (this.peer) { try { this.peer.destroy(); } catch (e) { } this.peer = null; } this.peer = await this._peer(fullId); this._hostSetup(info); }
+  async hostId(fullId, info) { if (this.peer) { try { this.peer.destroy(); } catch (e) { } this.peer = null; } this.peer = await this._peer(fullId, 2500); this._hostSetup(info); }
+  offline(info) { this._hostSetup(info); this.offlineMode = true; }
   realCount() { return this.players.filter(p => !p.bot).length; }
   _hc(c) { c.on('data', d => { if (d.t === 'hello') { if (this.started || this.realCount() >= this.max) { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); return; } const id = 'p' + (this.nextId++); c.pid = id; this.conns.set(id, c);
       // un jugador real ocupa el sitio de un bot si la sala está completa
@@ -3370,6 +3371,17 @@ class Net {
   _lost(id) { if (!id || !this.conns.has(id)) return; this.conns.delete(id); if (!this.started) this.players = this.players.filter(p => p.id !== id); this.lobby(); this.emit('left', id); }
   lobby(extra) { const m = { t: 'lobby', players: this.players, ...(extra || this.lobbyExtra || {}) }; this.send(m); this.emit('lobby', this.players, m); }
   async join(code, info) { code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); if (code.length !== 4) throw new Error('codigo'); this.code = code; return this.joinId(NPRE + code, info); }
+  // prueba todos los huecos públicos A LA VEZ; el primero que acepta gana, el resto se cierran
+  joinAny(ids, info, ms) { return new Promise((res, rej) => { let done = false, left = ids.length; const cs = [];
+    const fail = () => { if (!done && --left <= 0) { done = true; clearTimeout(to); rej(new Error('nosala')); } };
+    const to = setTimeout(() => { if (done) return; done = true; cs.forEach(c => { try { c.close(); } catch (e) { } }); rej(new Error('nosala')); }, ms);
+    for (const id of ids) { let c; try { c = this.peer.connect(id, { reliable: true, serialization: 'json' }); } catch (e) { fail(); continue; } cs.push(c); let f = false; const ff = () => { if (!f) { f = true; fail(); } };
+      c.on('open', () => { if (done) { try { c.close(); } catch (e) { } return; } c.send({ t: 'hello', ...info }); });
+      c.on('data', d => { if (c === this.host) { if (d.t === 'lobby') { this.players = d.players; this.emit('lobby', d.players, d); } else this.emit('msg', d); return; }
+        if (d.t === 'welcome' && !done) { done = true; clearTimeout(to); this.host = c; this.joined = true; this.myId = d.id; cs.forEach(o => { if (o !== c) try { o.close(); } catch (e) { } }); res(d.id); }
+        else if (d.t === 'full') ff(); });
+      c.on('close', () => { if (c === this.host) { if (this.alive) this.emit('hostgone'); } else ff(); }); c.on('error', ff); }
+    if (!ids.length) fail(); }); }
   async joinId(fullId, info) { if (!this.peer) this.peer = await this._peer(null);
     return new Promise((res, rej) => { this._jr = rej; const c = this.peer.connect(fullId, { reliable: true, serialization: 'json' }); const to = setTimeout(() => { if (this._jr) { this._jr = null; try { c.close(); } catch (e) { } rej(new Error('nosala')); } }, 9000);
       c.on('open', () => c.send({ t: 'hello', ...info })); c.on('data', d => { if (d.t === 'welcome') { clearTimeout(to); this._jr = null; this.host = c; this.joined = true; this.myId = d.id; res(d.id); return; } if (d.t === 'full') { clearTimeout(to); this._jr = null; rej(new Error('llena')); return; }
@@ -3459,28 +3471,33 @@ tap('onAgain', () => { if (O.mode === 'pub') { disconnect(); O.active = false; c
   if (!net || !net.isHost) return; net.players = net.players.filter(p => p.id === 'h' || net.conns.has(p.id)); if (net.players.length < 2) { $('onResW').textContent = 'No quedan rivales conectados.'; return; } startRace(); });
 // ---------- sala pública: matchmaking automático por huecos fijos ----------
 async function publicMatch() {
-  O.mode = 'pub'; const me = info(); show(2); $('onCode').style.display = 'none'; $('onCodeL').style.display = 'none'; $('onList').innerHTML = ''; $('onStart').style.display = 'none'; $('onWait').style.display = ''; $('onWait').textContent = ''; msg('🔎 Buscando sala pública…');
-  const my = net = new Net(); wire(); my.max = PUBMAX; let free = -1;
-  try {
-    for (let tries = 0; tries < 2 && net === my; tries++) {
-      for (let s = 0; s < PUBSLOTS && net === my; s++) {
-        try { await my.joinId(NPUB + s, me); if (net !== my) return; msg('¡Sala encontrada! Esperando rivales…'); return; }
-        catch (e) { if (e.message === 'broker') throw e; if (e.message === 'nosala' && free < 0) free = s; }
-      }
-      if (net !== my) return; if (free < 0) free = (Math.random() * PUBSLOTS) | 0;
-      try { await my.hostId(NPUB + free, me); hostPublic(); return; } catch (e) { if (e.message !== 'taken') throw e; free = -1; my.peer = null; }
-    }
-    throw new Error('broker');
-  } catch (e) { if (net === my) { msg('No se pudo conectar. Revisa tu conexión e inténtalo otra vez.'); disconnect(); } }
+  O.mode = 'pub'; const me = info(), t0 = performance.now(); show(2); $('onCode').style.display = 'none'; $('onCodeL').style.display = 'none'; $('onStart').style.display = 'none'; $('onWait').style.display = ''; $('onWait').textContent = '';
+  showList([{ id: 'h', ...me }], null); msg('🔎 Conectando…');
+  const my = net = new Net(); wire(); my.max = PUBMAX; my.myId = 'h';
+  const ok = () => net === my;
+  // 1) conectar con el servidor PeerJS (máx 2 s; en móvil suele ser lo más lento)
+  try { my.peer = await my._peer(null, 2000); } catch (e) { if (ok()) { my.peer = null; my.offline(me); hostPublic(t0); } return; }
+  if (!ok()) return; msg('🔎 Buscando sala pública…');
+  // 2) probar los 6 huecos en paralelo (máx 1,2 s)
+  try { await my.joinAny(Array.from({ length: PUBSLOTS }, (_, s) => NPUB + s), me, 1200); if (ok()) msg('¡Sala encontrada!'); return; } catch (e) { }
+  if (!ok()) return;
+  // 3) crear sala en un hueco al azar (máx ~2 s); si falla, carrera con bots sin red
+  const old = my.peer; my.peer = null; try { old.destroy(); } catch (e) { }
+  // hueco más bajo libre; si otro jugador lo acaba de coger a la vez, nos unimos a él
+  for (let sl = 0; sl < PUBSLOTS && performance.now() - t0 < 4000; sl++) { if (!ok()) return;
+    try { await my.hostId(NPUB + sl, me); if (ok()) hostPublic(t0); return; }
+    catch (e) { try { if (my.peer) my.peer.destroy(); } catch (x) { } my.peer = null; if (e.message !== 'taken') break;
+      try { my.peer = await my._peer(null, 1500); await my.joinAny([NPUB + sl], me, 900); if (ok()) msg('¡Sala encontrada!'); return; } catch (x) { try { if (my.peer) my.peer.destroy(); } catch (y) { } my.peer = null; } } }
+  if (!ok()) return; my.isHost = false; my.offline(me); hostPublic(t0);
 }
-function hostPublic() {
-  msg('Esperando rivales…'); const t0 = performance.now(); let bi = 0;
-  // los bots se van "conectando" con pequeños retrasos, como jugadores reales
-  const nB = PUBMAX - 1; for (let k = 0; k < nB; k++) { const at = rnd(1200, PUBWAIT - 1500) * (0.35 + 0.65 * (k + 1) / nB); botQueue.push(setTimeout(() => { if (!net || net.started || net.players.length >= PUBMAX) return; net.players.push(makeBot(net.players.map(p => p.name), bi++)); net.lobby(); }, at)); }
-  net.on('joined', () => { if (net.realCount() >= PUBMAX) net.lobbyExtra = { eta: 2500 }; });
-  pubTimer = setInterval(() => { if (!net || net.started) return; let eta = Math.max(0, PUBWAIT - (performance.now() - t0)); if (net.realCount() >= PUBMAX) eta = Math.min(eta, 2500);
+function hostPublic(t0) {
+  msg(net.offlineMode ? '' : 'Esperando rivales…'); let bi = 0; const end = t0 + PUBWAIT;
+  // los bots se van "conectando" con pequeños retrasos, como jugadores reales, antes de la salida
+  const nB = PUBMAX - 1, now0 = performance.now(), span = Math.max(600, end - now0 - 700); for (let k = 0; k < nB; k++) { const at = span * (k + rnd(0.15, 0.9)) / nB; botQueue.push(setTimeout(() => { if (!net || net.started || net.players.length >= PUBMAX) return; net.players.push(makeBot(net.players.map(p => p.name), bi++)); net.lobbyExtra = { eta: end - performance.now() }; net.lobby(); }, at)); }
+  const tick = () => { if (!net || net.started) return; let eta = Math.max(0, end - performance.now()); if (net.realCount() >= PUBMAX) eta = Math.min(eta, 1500);
     net.lobbyExtra = { eta }; net.lobby();
-    if (eta <= 0) { while (net.players.length < PUBMAX) net.players.push(makeBot(net.players.map(p => p.name), bi++)); clearTimers(); startRace(); } }, 500);
+    if (eta <= 0) { while (net.players.length < PUBMAX) net.players.push(makeBot(net.players.map(p => p.name), bi++)); clearTimers(); O.tWait = performance.now() - t0; startRace(); } };
+  pubTimer = setInterval(tick, 250); tick();
 }
 function startRace() { net.started = true; const d = { t: 'start', seed: (Math.random() * 1e9) | 0, mode: O.mode, players: net.players.map(p => ({ id: p.id, name: p.name, ch: p.ch, uid: p.uid, bot: p.bot ? 1 : 0 })) }; net.send(d); begin(d);
   if (net.players.some(p => p.bot)) { const bots = net.players.filter(p => p.bot); bots.forEach(botPlan); let last = performance.now();
