@@ -41,7 +41,7 @@ export const SELF_POWERS = ['tiburon', 'estrella', 'aladelta', 'portal', 'chicle
 export const MORPH = { topo: { t: 10, v: 1.38 }, bola: { t: 8, v: 1.18 }, delfin: { t: 8, v: 1.42 } };
 
 // ---------------- geometría y materiales compartidos ----------------
-const G = {}; const geo = (n, f) => G[n] || (G[n] = f());
+const G = {}; const geo = (n, f) => { if (!G[n]) { G[n] = f(); G[n]._shared = true; } return G[n]; };
 const M = {}; const mat = (n, f) => M[n] || (M[n] = f());
 const sph = s => geo('ps' + s, () => new THREE.SphereGeometry(1, s, Math.max(6, s * 0.7 | 0)));
 const box = () => geo('pbox', () => new THREE.BoxGeometry(1, 1, 1));

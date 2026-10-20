@@ -254,7 +254,7 @@ function makePadAlong(group, pts, rights, c, lat, halfW, halfLen) {
 // labio luminoso, bombillas en los bordes (1 InstancedMesh por rampa) y dos "postes" surrealistas según la copa.
 const RAMP_STYLE = {
   gominola: ['#ff7fb6', '#ffffff', '#ffe066', 'lolly'], girasol: ['#ffbf2a', '#fff6d0', '#ff7a3a', 'flower'], helada: ['#7fc8ff', '#ffffff', '#ff8fc0', 'crystal'],
-  galaxia: ['#7a5cff', '#7ff5ff', '#ff8fe0', 'planet'], tormenta: ['#2a1f5a', '#5ff5ff', '#ff5fd2', 'tesla'], cielo: ['#7fd8ff', '#ffffff', '#ffb3e0', 'cloud'], sueno: ['#8b5cc2', '#ffe2b8', '#ffb36b', 'clock'] };
+  galaxia: ['#7a5cff', '#7ff5ff', '#ff8fe0', 'planet'], tormenta: ['#2a1f5a', '#5ff5ff', '#ff5fd2', 'tesla'], cielo: ['#7fd8ff', '#ffffff', '#ffb3e0', 'cloud'], sueno: ['#8b5cc2', '#ffe2b8', '#ffb36b', 'clock'], ballena: ['#2f8fd8', '#dff8ff', '#ffd36b', 'cloud'], biblioteca: ['#c0392b', '#fffaf0', '#ffd24a', 'clock'] };
 const rampTexCache = new Map();
 function rampTexture(st) {
   const key = st.join(); if (rampTexCache.has(key)) return rampTexCache.get(key);
@@ -267,7 +267,7 @@ function rampTexture(st) {
   x.fillStyle = 'rgba(58,32,80,0.55)'; for (let i = 0; i < 16; i++) { x.fillRect(2, i * 16, 4, 8); x.fillRect(122, i * 16 + 8, 4, 8); }
   const t = new THREE.CanvasTexture(cv); t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; rampTexCache.set(key, t); return t;
 }
-const RG = {}; const rgeo = (n, f) => RG[n] || (RG[n] = f());
+const RG = {}; const rgeo = (n, f) => { if (!RG[n]) { RG[n] = f(); RG[n]._shared = true; } return RG[n]; };
 function rampPost(kind, st, parent, pos, h) {
   const g = new THREE.Group(); g.position.copy(pos); parent.add(g); const sc = Math.max(1, h / 1.5);
   g.scale.setScalar(sc);
@@ -317,7 +317,7 @@ function makeRampAlong(T, i, len = 3, h = 1.5) {
 function makeObstacle(T, kind, i, k) {
   const s = T.S[i]; const g = new THREE.Group(); T.group.add(g);
   const o = { kind, idx: i, g, r: 1.6, ph: k * 2.1 + i * 0.01, active: true };
-  if (kind === 'critter') { o.n = (k + ({ cielo: 6, sueno: 3 }[T.cup.id] || 0) + (T.cup.open ? 5 : 0)) % CRITTER_COUNT; const c = makeCritter(o.n, g); o.u = c.u; o.r = c.r; o.hover = c.hover; o.ph = k * 1.7 + i * 0.013; }
+  if (kind === 'critter') { o.n = (k + ({ cielo: 6, sueno: 3, ballena: 1, biblioteca: 7 }[T.cup.id] || 0) + (T.cup.open ? 5 : 0)) % CRITTER_COUNT; const c = makeCritter(o.n, g); o.u = c.u; o.r = c.r; o.hover = c.hover; o.ph = k * 1.7 + i * 0.013; }
   else if (kind === 'gumdrop') {
     const col = ['#ff8fc0', '#7ee3c4', '#b9a2f7'][k % 3];
     const b = mesh(new THREE.LatheGeometry([[0.01, 0], [1.4, 0.05], [1.5, 0.5], [1.2, 1.4], [0.6, 2.0], [0.01, 2.2]].map(([r, y]) => new THREE.Vector2(r, y)), 20), toon(col, { opacity: 0.85, rim: 0.6 }), g); outline(b, '#7a3a6e', 1.05);

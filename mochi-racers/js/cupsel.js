@@ -5,11 +5,13 @@
 // ======================================================================
 import * as THREE from 'three';
 import { makeCharacter, animCharacter } from './gfx.js';
+import { makeTopper } from './wonder.js';
 
 const TAU = Math.PI * 2;
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
 
 export function createCupCarousel(renderer, cups) {
+  const toppers = [];
   const scene = new THREE.Scene();
   const cam = new THREE.PerspectiveCamera(40, 1, 0.3, 200);
   const N = cups.length;
@@ -128,6 +130,7 @@ export function createCupCarousel(renderer, cups) {
     const starB = add(starGeo, star.material, [0, 1.55, -1.0], [0, Math.PI, 0]);
     // banda dorada
     add(new THREE.TorusGeometry(1.0, 0.05, 8, 40), gold, [0, 1.3, 0], [Math.PI / 2, 0, 0]);
+    if (c.topper) { const tp = makeTopper(c.topper); tp.position.set(0, 0.95, 1.1); tp.scale.setScalar(1.15); spin.add(tp); toppers.push(tp); star.visible = false; } // v14: trofeo propio de las copas nuevas
     const lock = makeLock(); lock.position.set(0, 1.5, 1.4); trophy.add(lock);
     // medalla del resultado
     const medal = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 24), new THREE.MeshStandardMaterial({ color: TIERC[0], metalness: 1, roughness: 0.2 })); medal.rotation.x = Math.PI / 2; medal.position.set(0, 0.62, 1.22); root.add(medal);
@@ -152,7 +155,7 @@ export function createCupCarousel(renderer, cups) {
     items.forEach((it, i) => { const inf = getInfo(it.c, i); it.locked = !inf.unlocked;
       for (const p of it.parts) p.visible = true;
       it.spin.children.forEach(m => { if (m.material === it.metal || m.material === lockedMat) m.material = it.locked ? lockedMat : it.metal; });
-      it.star.visible = it.starB.visible = !it.locked; it.lock.visible = it.locked;
+      it.star.visible = it.starB.visible = !it.locked; if (it.c.topper) it.star.visible = false; it.lock.visible = it.locked;
       it.medal.visible = !it.locked && inf.tier != null; if (inf.tier != null) it.medal.material.color.set(TIERC[inf.tier] || TIERC[0]);
       it.ringM.color.set(it.locked ? '#6a5a86' : it.c.color); it.ringM.emissive.set(it.locked ? '#000' : it.c.color);
     });
@@ -205,6 +208,7 @@ export function createCupCarousel(renderer, cups) {
     const near = items[st.sel];
     bgU.time.value = t; bgU.tint.value.lerp(new THREE.Color(near.locked ? '#8a7aa6' : near.c.color), Math.min(1, dt * 4));
     rays.material.color.copy(bgU.tint.value); rays.rotation.z = t * 0.12; rays.material.opacity = 0.2 + Math.sin(t * 1.5) * 0.05 + ct * 0.4;
+    for (const tp of toppers) tp.userData.anim(t);
     items.forEach((it, i) => {
       const sel = i === st.sel; it.root.visible = sel || it.out > 0;
       if (sel) it.out = 0; else it.out = Math.max(0, (it.out || 0) - dt * 4);

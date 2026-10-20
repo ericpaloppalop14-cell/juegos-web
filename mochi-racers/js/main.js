@@ -516,7 +516,7 @@ document.fonts && document.fonts.load('700 20px Fredoka').finally(() => {
 // test hooks
 window.__kart = {
   app, CHARS, CUPS, save, renderer, get pr() { return renderer.getPixelRatio(); },
-  get state() { return app.state; }, get race() { return app.race; }, get fps() { return fps; },
+  get state() { return app.state; }, get pod() { return podData; }, get race() { return app.race; }, get fps() { return fps; },
   setSpeed(n) { app.speed = n; }, setAutopilot(v) { app.autopilot = v; },
   pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },
   give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, force(item) { app.race.forceItem = item; }, fx(item, who) { const R = app.race; const k = who == null ? R.player : R.karts[who]; return R.fx.use(k, item); }, use() { app.race.useItem(app.race.player); },

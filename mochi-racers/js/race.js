@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+const DAYLOOK = ['sky', 'ocean', 'book']; // v14: mapas flotantes con luz de día
 import { CONFIG, ITEMS, ITEM_KEYS, ITEM_W } from './data.js';
 import { makeKart, animKart, makeProjectile, makeSeta, toon, mesh } from './gfx.js';
 import { buildTrack } from './track.js';
@@ -57,18 +58,18 @@ export class Race {
       fragmentShader: 'uniform vec3 top; uniform vec3 bot; uniform float flash; varying vec3 vp; void main(){ float h = clamp(normalize(vp).y*1.6+0.25,0.0,1.0); vec3 c = mix(bot, top, h); gl_FragColor = vec4(c + flash*vec3(0.6,0.6,0.8), 1.0);} ' }));
     sky.renderOrder = -10; sc.add(sky); this.sky = sky;
     sc.fog = new THREE.Fog(c.fog, this.quality.hi ? 180 : 130, this.quality.hi ? 750 : 520);
-    sc.add(new THREE.HemisphereLight((c.theme === 'space' && c.look !== 'sky') || c.theme === 'storm' ? '#c9b8ff' : '#ffffff', (c.theme === 'space' && c.look !== 'sky') || c.theme === 'storm' ? '#4a3080' : '#ffd6ea', c.theme === 'storm' ? 1.25 : 0.95));
-    const d = new THREE.DirectionalLight('#fff4e8', c.theme === 'storm' || (c.theme === 'space' && c.look !== 'sky') ? 1.35 : 2.0); d.position.set(80, 160, 60); sc.add(d);
+    sc.add(new THREE.HemisphereLight((c.theme === 'space' && !DAYLOOK.includes(c.look)) || c.theme === 'storm' ? '#c9b8ff' : '#ffffff', (c.theme === 'space' && !DAYLOOK.includes(c.look)) || c.theme === 'storm' ? '#4a3080' : '#ffd6ea', c.theme === 'storm' ? 1.25 : 0.95));
+    const d = new THREE.DirectionalLight('#fff4e8', c.theme === 'storm' || (c.theme === 'space' && !DAYLOOK.includes(c.look)) ? 1.35 : 2.0); d.position.set(80, 160, 60); sc.add(d);
     // v2: sombras reales finas que siguen al jugador (solo si el render va en calidad alta)
     d.castShadow = true; d.shadow.mapSize.set(1024, 1024); d.shadow.bias = -0.0006; d.shadow.normalBias = 0.04; d.shadow.radius = 2.5; { const sc2 = d.shadow.camera; sc2.left = sc2.bottom = -34; sc2.right = sc2.top = 34; sc2.near = 10; sc2.far = 260; } sc.add(d.target); this.sun = d;
     { const fill = new THREE.DirectionalLight(c.theme === 'storm' || c.theme === 'space' ? '#b8a8ff' : '#cfe4ff', 0.45); fill.position.set(-90, 50, -70); sc.add(fill); } // v12: luz de relleno fría a contraluz
     this.track.group.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.material && o.material.vertexColors) o.receiveShadow = true; });
-    if ((c.theme === 'space' && c.look !== 'sky') || c.theme === 'storm') {
+    if ((c.theme === 'space' && !DAYLOOK.includes(c.look)) || c.theme === 'storm') {
       const n = 1400, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = R() * 6.28, b = Math.acos(R() * 2 - 1) * (c.theme === 'storm' ? 0.45 : 1); p[i * 3] = Math.sin(b) * Math.cos(a) * 1100; p[i * 3 + 1] = Math.cos(b) * 1100 * (c.theme === 'storm' ? 1 : 1); p[i * 3 + 2] = Math.sin(b) * Math.sin(a) * 1100; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
       sc.add(new THREE.Points(g, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, fog: false })));
     }
-    if (!(c.theme === 'space' && c.look !== 'sky') && c.theme !== 'storm') { // soft clouds
+    if (!(c.theme === 'space' && !DAYLOOK.includes(c.look)) && c.theme !== 'storm') { // soft clouds
       const cl = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), toon('#ffffff', { rim: 0.3, opacity: 0.92 }), 60); const m = new THREE.Matrix4();
       for (let i = 0; i < 20; i++) { const a = R() * 6.28, r = 500 + R() * 300, y = 120 + R() * 120; for (let j = 0; j < 3; j++) { m.compose(new V3(Math.cos(a) * r + j * 25, y + (j === 1 ? 12 : 0), Math.sin(a) * r), new THREE.Quaternion(), new V3(30, 18, 24)); cl.setMatrixAt(i * 3 + j, m); } }
       cl.material.fog = false; sc.add(cl);

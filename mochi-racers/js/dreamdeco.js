@@ -5,8 +5,10 @@
 // ======================================================================
 import * as THREE from 'three';
 import { toon } from './gfx.js';
+import { addWonder } from './wonder.js';
 const V3 = THREE.Vector3;
 export function addDream(T, Q, rnd) {
+  if (cup_isWonder(T.cup.look)) return addWonder(T, Q, rnd); // v14: Océano Volador y Biblioteca Infinita
   const { S, N, cup, group } = T, hi = !!Q.hi, look = cup.look, anim = [];
   const G = new THREE.Group(); group.add(G);
   const sph = new THREE.SphereGeometry(1, 20, 14), cyl = new THREE.CylinderGeometry(1, 1, 1, 24), cone = new THREE.ConeGeometry(1, 1, 18), box = new THREE.BoxGeometry(1, 1, 1), tor = new THREE.TorusGeometry(1, 0.08, 8, 48);
@@ -50,3 +52,5 @@ export function addDream(T, Q, rnd) {
   }
   T.anims.push((t, dt) => { for (const f of anim) f(t, dt); });
 }
+
+function cup_isWonder(l) { return l === 'ocean' || l === 'book'; }

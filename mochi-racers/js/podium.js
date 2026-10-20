@@ -1,5 +1,6 @@
 // v11: pantalla de podio premium (escena, celebración, fuegos artificiales y cámara que se encuadra sola)
 import * as THREE from 'three';
+import { makeTopper } from './wonder.js';
 import { makeCharacter, animCharacter, makeTrophy, glowTex, toon, mesh, outline } from './gfx.js';
 
 const METAL = ['#ffcc33', '#dfe7f2', '#e0915a'], METAL_D = ['#c98a00', '#8d9bb0', '#9a5528'];
@@ -32,6 +33,11 @@ function textSprite(text, bg, fg) {
   const t = canvasTex(256, 112, (x) => { x.font = '700 58px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = bg; rr(x, 30, 6, 196, 76, 38); x.fill(); x.lineWidth = 6; x.strokeStyle = '#ffffff'; x.stroke(); x.beginPath(); x.moveTo(108, 80); x.lineTo(128, 106); x.lineTo(148, 80); x.fill(); x.fillStyle = fg; x.fillText(text, 128, 48); });
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(1.9, 0.83, 1); s.renderOrder = 20; return s;
 }
+
+// v14: los pilotos del podio llevan geometría PROPIA (copia) y no se recortan por cámara. Antes compartían
+// las mallas cacheadas de la carrera (cuerpo, contorno...), que race.dispose() liberaba justo antes de montar
+// el podio: en algunos móviles el cuerpo y su contorno dejaban de dibujarse y solo quedaban ojos, orejas y accesorios.
+function podiumOwn(c) { const seen = new Map(); c.traverse(o => { if (o.isMesh || o.isPoints || o.isLine) { o.frustumCulled = false; if (o.geometry) { if (!seen.has(o.geometry)) seen.set(o.geometry, o.geometry.clone()); o.geometry = seen.get(o.geometry); } } }); }
 
 export function buildPodium(cup, ranking, myPlace, tier) {
   const scene = new THREE.Scene();
@@ -99,20 +105,21 @@ export function buildPodium(cup, ranking, myPlace, tier) {
     b.position.set(X[i], H[i] / 2 + 0.35, 0); scene.add(b); outline(b, '#6a3a7a', 1.015); blocks.push(b);
     // borde dorado arriba
     mesh(new THREE.BoxGeometry(BW + 0.12, 0.16, BD + 0.12), new THREE.MeshPhongMaterial({ color: METAL[i], emissive: METAL_D[i], emissiveIntensity: 0.25, shininess: 140, specular: '#ffffff' }), scene, [X[i], H[i] + 0.35, 0]);
-    const r = ranking[i]; const c = makeCharacter(r.ch); c.userData.seed = i; c.scale.setScalar(CS); c.position.set(X[i], H[i] + 0.43, 0.15); scene.add(c);
+    const r = ranking[i]; const c = makeCharacter(r.ch); podiumOwn(c); c.userData.seed = i; c.scale.setScalar(CS); c.position.set(X[i], H[i] + 0.43, 0.15); scene.add(c);
     const sh = mesh(new THREE.CircleGeometry(0.9, 20), new THREE.MeshBasicMaterial({ color: '#40205a', transparent: true, opacity: 0.28, depthWrite: false }), scene, [X[i], H[i] + 0.44, 0.15], [-Math.PI / 2, 0, 0]);
     chars.push({ c, i, base: H[i] + 0.43, sh });
   }
   // altura real del piloto (para colocar trofeo y etiquetas)
   const charH = 1.62 * CS; // alto del cuerpo (sin orejas)
   // el ganador sostiene una copa dorada en alto
-  const held = makeTrophy(METAL[0], 0); held.scale.setScalar(0.5); scene.add(held);
+  // v14: sin copa pequeña en la mano (se veía como un trofeo duplicado flotando); el trofeo grande ya corona al ganador
   // etiqueta «TÚ» encima del jugador si está en el podio
   let tag = null; if (myPlace >= 1 && myPlace <= 2) { tag = textSprite('TÚ', '#ff5fa8', '#ffffff'); scene.add(tag); }
 
   // --- trofeo grande, centrado y flotando, del metal de tu puesto ---
   const tc = tier >= 0 ? METAL[tier] : (cup.trophy || cup.color);
   const trophy = makeTrophy(tc, Math.max(0, tier)); trophy.scale.setScalar(1.2); scene.add(trophy);
+  const topper = cup.topper ? makeTopper(cup.topper) : null; if (topper) { topper.position.set(0, 1.0, 1.1); topper.scale.setScalar(1.1); trophy.add(topper); } // v14: trofeo propio
   const TY = H[0] + 0.43 + charH + 1.7;
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(tc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.85 })); halo.scale.setScalar(6.5); scene.add(halo);
   const sparks = []; for (let i = 0; i < 10; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(s); sparks.push(s); }
@@ -141,7 +148,7 @@ export function buildPodium(cup, ranking, myPlace, tier) {
   return {
     scene, win,
     update(dt, opts = {}) {
-      T += dt; const t = T; skyU.t.value = t;
+      T += dt; const t = T; if (topper) topper.userData.anim(t); skyU.t.value = t;
       // celebración
       for (const ch of chars) { const { c, i } = ch; let y = ch.base, expr = '', ry = 0, rx = 0;
         if (i === 0) { // salta, levanta la copa y baila; cada 4 s un salto mortal
@@ -157,7 +164,7 @@ export function buildPodium(cup, ranking, myPlace, tier) {
         if (i === 1 && expr === 'happy') for (const a of c.userData.arms) a.p.rotation.z = a.s * (1.15 + Math.sin(t * 18) * 0.45); // palmas
         ch.sh.scale.setScalar(Math.max(0.4, 1 - (y - ch.base) * 0.35));
       }
-      const w = chars[0].c; const lift = 0.55 + Math.abs(Math.sin(t * 4.2)) * 0.25; held.position.set(w.position.x, w.position.y + charH * lift * Math.cos(w.rotation.x), w.position.z + 1.35 * Math.cos(w.rotation.x)); held.rotation.set(w.rotation.x, t * 2.5, Math.sin(t * 4.2) * 0.12);
+
       if (tag) { const p = chars[myPlace].c.position; tag.position.set(p.x, p.y + charH + 1.25, p.z); }
       // trofeo grande
       trophy.position.set(0, TY + Math.sin(t * 1.6) * 0.18, -1.6); trophy.rotation.y = t * 0.9;

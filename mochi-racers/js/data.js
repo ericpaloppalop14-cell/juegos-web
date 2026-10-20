@@ -107,5 +107,18 @@ CUPS.push(
     pts: [[0, 0, 30, 19], [110, 20, 22, 18], [200, -20, 34, 17], [220, -110, 48, 17], [150, -170, 30, 17], [60, -140, 18, 17], [10, -200, 34, 17], [-70, -250, 52, 17], [-170, -220, 40, 18], [-230, -140, 26, 18], [-180, -70, 44, 17], [-210, 10, 30, 18], [-130, 60, 20, 18], [-60, 40, 26, 19]],
     feats: floatyFeats() },
 );
+// v14: dos copas nuevas, surrealistas con su propia lógica (decorado en wonder.js)
+CUPS.push(
+  { id: 'ballena', name: 'Copa Ballena', color: '#3fb6e8', trophy: '#36b3e0', topper: 'whale', track: 'Océano Volador', unlock: null, look: 'ocean',
+    theme: 'space', sky: ['#1f7fd0', '#ffd9b8'], fog: '#9fd8f0', ground: null, road: '#e8fbff', curbA: '#3fb6e8', curbB: '#ffd36b',
+    grip: 0.95, grav: 1, music: { bpm: 112, root: 62, scale: 'dorian' },
+    pts: [[0, 0, 24, 19], [130, 15, 30, 18], [230, -30, 40, 17], [260, -130, 52, 17], [190, -200, 60, 17], [80, -180, 54, 17], [30, -240, 44, 17], [-80, -260, 38, 18], [-190, -210, 48, 17], [-250, -110, 56, 17], [-210, -20, 44, 18], [-120, 30, 32, 19]],
+    feats: floatyFeats() },
+  { id: 'biblioteca', name: 'Copa Biblioteca', color: '#c86fff', trophy: '#b46cf0', topper: 'book', track: 'Biblioteca Infinita', unlock: null, look: 'book',
+    theme: 'space', sky: ['#4a2f8e', '#ffcf9a'], fog: '#e8c8e8', ground: null, road: '#fff3dc', curbA: '#c0392b', curbB: '#ffd24a',
+    grip: 0.95, grav: 1, music: { bpm: 124, root: 60, scale: 'major' },
+    pts: [[0, 0, 10, 19], [150, 0, 14, 18], [230, 60, 22, 17], [200, 160, 34, 17], [100, 180, 40, 17], [40, 250, 30, 17], [-60, 280, 22, 18], [-170, 230, 30, 17], [-240, 130, 42, 17], [-180, 40, 28, 18], [-90, -10, 16, 19]],
+    feats: floatyFeats() },
+);
 // Cada copa: 2 carreras (ida y vuelta, el mismo circuito en sentido contrario)
 export const RACES_PER_CUP = 2;

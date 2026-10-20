@@ -48,7 +48,7 @@ export function mesh(geo, mat, parent, pos, rot, scl) {
   if (parent) parent.add(m); return m;
 }
 const G = {}; // shared geometries
-function geo(name, f) { return G[name] || (G[name] = f()); }
+function geo(name, f) { if (!G[name]) { G[name] = f(); G[name]._shared = true; } return G[name]; } // v14: compartida, nunca se libera al acabar la carrera
 const sph = (s = 16) => geo('sph' + s, () => new THREE.SphereGeometry(1, s, Math.max(8, s * 0.75 | 0)));
 const cyl = (s = 16) => geo('cyl' + s, () => new THREE.CylinderGeometry(1, 1, 1, s));
 const cone = (s = 12) => geo('cone' + s, () => new THREE.ConeGeometry(1, 1, s));
