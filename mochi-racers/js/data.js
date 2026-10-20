@@ -66,7 +66,7 @@ export const CUPS = [
     grip: 1, grav: 1, music: { bpm: 132, root: 60, scale: 'major' },
     pts: [[0, 0, 0, 20], [140, 0, 0, 20], [220, -40, 2, 18], [260, -120, 6, 17], [225, -195, 8, 17], [155, -205, 8, 16], [120, -150, 6, 16], [150, -90, 4, 17], [100, -55, 2, 17], [40, -100, 4, 17], [-40, -95, 8, 17], [-110, -145, 12, 17], [-190, -125, 10, 18], [-225, -50, 6, 18], [-185, 20, 3, 19], [-100, 40, 0, 20]],
     feats: [
-      { t: 0.07, type: 'boxes' }, { t: 0.3, type: 'boxes' }, { t: 0.6, type: 'boxes' }, { t: 0.86, type: 'boxes' }, { t: 0.12, type: 'boost', off: 0 }, { t: 0.48, type: 'boost', off: -3 }, { t: 0.8, type: 'boost', off: 3 }, { t: 0.18, type: 'ramp' }, { t: 0.66, type: 'ramp' }, { t: 0.93, type: 'ramp' }, { t: 0.29, type: 'shortcut', t2: 0.445, label: 'Atajo de regaliz' }, { t: 0.53, type: 'obstacle', kind: 'gumdrop' }, { t: 0.76, type: 'obstacle', kind: 'gumdrop' } ] },
+      { t: 0.07, type: 'boxes' }, { t: 0.3, type: 'boxes' }, { t: 0.6, type: 'boxes' }, { t: 0.86, type: 'boxes' }, { t: 0.12, type: 'boost', off: 0 }, { t: 0.48, type: 'boost', off: -3 }, { t: 0.8, type: 'boost', off: 3 }, { t: 0.18, type: 'ramp' }, { t: 0.66, type: 'ramp' }, { t: 0.93, type: 'ramp' }, { t: 0.29, type: 'shortcut', t2: 0.445, label: 'Atajo de regaliz' }, { t: 0.39, type: 'obstacle', kind: 'gumdrop' }, { t: 0.53, type: 'obstacle', kind: 'gumdrop' }, { t: 0.76, type: 'obstacle', kind: 'gumdrop' } ] },
   { id: 'girasol', name: 'Copa Girasol', color: '#ffd24a', trophy: '#ffc928', track: 'Campos de Girasol', unlock: null,
     theme: 'sunflower', sky: ['#8fd3ff', '#fff3c4'], fog: '#fff5d6', ground: '#a6e07c', ground2: '#ffe680', road: '#f3dcb0', curbA: '#ffbf2a', curbB: '#ffffff',
     grip: 1, grav: 1, music: { bpm: 120, root: 62, scale: 'major' },
@@ -94,7 +94,7 @@ export const CUPS = [
 ];
 
 // v7: dos circuitos surrealistas surrealistas: gravedad normal, rampas enormes y piruetas en el aire (solo visual)
-const floatyFeats = () => [0.05, 0.3, 0.55, 0.8].map(t => ({ t, type: 'boxes' })).concat([0.12, 0.42, 0.68, 0.9].map((t, i) => ({ t, type: 'boost', off: [0, 3, -3, 0][i] })), [0.18, 0.36, 0.5, 0.62, 0.75, 0.95].map(t => ({ t, type: 'ramp' })));
+const floatyFeats = () => [0.05, 0.3, 0.55, 0.8].map(t => ({ t, type: 'boxes' })).concat([0.12, 0.42, 0.68, 0.9].map((t, i) => ({ t, type: 'boost', off: [0, 3, -3, 0][i] })), [0.18, 0.36, 0.5, 0.62, 0.75, 0.95].map(t => ({ t, type: 'ramp' })), [0.25, 0.43, 0.86].map(t => ({ t, type: 'obstacle', kind: 'critter' })));
 CUPS.push(
   { id: 'cielo', name: 'Copa Cielo', color: '#7fd8ff', trophy: '#5fcfff', track: 'Archipiélago de Gominola', unlock: null, look: 'sky',
     theme: 'space', sky: ['#5fb8ff', '#ffd0f0'], fog: '#e8d6ff', ground: null, road: '#fff0fa', curbA: '#7fd8ff', curbB: '#ffb3e0',

@@ -2,6 +2,7 @@ import { addDream } from './dreamdeco.js';
 import * as THREE from 'three';
 import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
 import { addDeco } from './deco.js';
+import { makeCritter, animCritter } from './critters.js';
 
 const V3 = THREE.Vector3;
 let seed = 1; let OPEN = false; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -158,7 +159,8 @@ function buildVisuals(T, Q) {
     }
     if (f.type === 'boost') T.pads.push(Object.assign(makePadAlong(group, T.ptsRing(i, 4), T.rightsRing(i, 4), 4, f.off || 0, 2.6, 3), { idx: i }));
     if (f.type === 'ramp') T.ramps.push(makeRampAlong(T, i, T.cup.look ? 5 : 3, T.cup.look ? 3.2 : 1.5));
-    if (f.type === 'obstacle') for (let k = 0; k < (f.kind === 'lightning' ? 2 : 2); k++) T.obstacles.push(makeObstacle(T, f.kind, (i + k * 9) % N, k));
+    if (f.type === 'obstacle') for (let k = 0; k < 2; k++) { const crit = f.kind === 'gumdrop' || f.kind === 'critter'; // v10: las gomas pasan a ser personajes surrealistas
+      T.obstacles.push(makeObstacle(T, crit ? 'critter' : f.kind, OPEN ? Math.min(N - 1, i + k * 9) : (i + k * 9) % N, crit ? (T.critN = (T.critN || 0) + 1) - 1 : k)); }
   }
   // start arch
   { const s = S[0]; const yaw = Math.atan2(s.fl.x, s.fl.z); const a = new THREE.Group(); a.position.copy(s.p); a.rotation.y = yaw; group.add(a);
@@ -172,6 +174,7 @@ function buildVisuals(T, Q) {
     const lt = document.createElement('canvas'); lt.width = 256; lt.height = 32; const y = lt.getContext('2d'); for (let i = 0; i < 16; i++) for (let j = 0; j < 2; j++) { y.fillStyle = (i + j) % 2 ? '#fff' : '#3a2050'; y.fillRect(i * 16, j * 16, 16, 16); }
     const lx = new THREE.CanvasTexture(lt); mesh(new THREE.PlaneGeometry(s.w * 2, 2), new THREE.MeshBasicMaterial({ map: lx }), a, [0, 0.09, 0], [-Math.PI / 2, 0, 0]);
   }
+  addLanterns(T);
   scenery(T, Q);
 }
 
@@ -232,7 +235,8 @@ function makeRampAlong(T, i, len = 3, h = 1.5) {
 function makeObstacle(T, kind, i, k) {
   const s = T.S[i]; const g = new THREE.Group(); T.group.add(g);
   const o = { kind, idx: i, g, r: 1.6, ph: k * 2.1 + i * 0.01, active: true };
-  if (kind === 'gumdrop') {
+  if (kind === 'critter') { o.n = k % 6; const c = makeCritter(o.n, g); o.u = c.u; o.r = c.r; o.hover = c.hover; o.ph = k * 1.7 + i * 0.013; }
+  else if (kind === 'gumdrop') {
     const col = ['#ff8fc0', '#7ee3c4', '#b9a2f7'][k % 3];
     const b = mesh(new THREE.LatheGeometry([[0.01, 0], [1.4, 0.05], [1.5, 0.5], [1.2, 1.4], [0.6, 2.0], [0.01, 2.2]].map(([r, y]) => new THREE.Vector2(r, y)), 20), toon(col, { opacity: 0.85, rim: 0.6 }), g); outline(b, '#7a3a6e', 1.05);
     for (const sd of [-1, 1]) mesh(new THREE.SphereGeometry(0.16, 8, 6), toon('#2a1838', { rim: 0 }), g, [sd * 0.45, 1.3, 1.15]);
@@ -268,6 +272,10 @@ function makeObstacle(T, kind, i, k) {
       const strike = ph > o.period - 0.3; o.bolt.visible = strike; o.active = strike; o.strikeNow = strike;
       return;
     }
+    if (kind === 'critter') { // paseo lento de lado a lado, mirando hacia donde camina
+      const sw = Math.sin(t * 0.5 + o.ph), lat = sw * (s.w - 2) * 0.75; const p = off(s, lat, 0); g.position.copy(p);
+      const yaw = Math.atan2(s.fl.x, s.fl.z), dir = Math.cos(t * 0.5 + o.ph); g.rotation.y = yaw + (Math.abs(dir) < 0.15 ? Math.PI : dir > 0 ? Math.PI / 2 : -Math.PI / 2) * 0 + (dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+      animCritter(o.n, o.u, t, o.ph); return; }
     const sw = Math.sin(t * (kind === 'snowball' ? 0.55 : 0.8) + o.ph);
     const lat = sw * (s.w - 1.5);
     const p = off(s, lat, 0); g.position.copy(p);
@@ -417,4 +425,22 @@ function stands(T, Q) {
   }
   T.cheer = 0;
   T.anims.push((t, dt) => { const ex = 1 + T.cheer * 2; groups.forEach(fans => fans.forEach((f, k) => { f.position.y = (f.userData.y0 ??= f.position.y) + Math.abs(Math.sin(t * (4 + ex) + k * 1.3)) * 0.5 * ex; f.rotation.z = Math.sin(t * 3 + k) * 0.15 * ex; })); T.cheer = Math.max(0, T.cheer - dt * 0.3); });
+}
+
+// v10: farolillos de caramelo a los lados de la pista (instanciados: 3 draw calls para todos)
+function addLanterns(T) {
+  const { S, N, cup } = T; const every = Math.max(6, Math.round(34 / T.STEP)); const spots = [];
+  for (let i = 3; i < N - 3; i += every) { if (T.inShortcut(S[i].p.x, S[i].p.z) != null) continue; for (const sd of [-1, 1]) spots.push([i, sd]); }
+  if (!spots.length) return;
+  const n = spots.length, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new V3(), ps = new V3();
+  const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.22, 5, 8), toon('#ffffff', { rim: 0.4 }), n);
+  const cap = new THREE.InstancedMesh(new THREE.ConeGeometry(0.9, 0.7, 10), toon(cup.curbA, { rim: 0.6 }), n);
+  const bulb = new THREE.InstancedMesh(new THREE.SphereGeometry(0.55, 12, 8), new THREE.MeshBasicMaterial({ color: '#fff3c4' }), n);
+  const ring = new THREE.InstancedMesh(new THREE.TorusGeometry(0.22, 0.07, 6, 14), toon(cup.curbB, { rim: 0.3 }), n);
+  spots.forEach(([i, sd], j) => { const s = S[i], d = sd * (s.wall + 1.4); const x = s.p.x + s.right.x * d, z = s.p.z + s.right.z * d, y = s.p.y;
+    m4.compose(ps.set(x, y + 2.5, z), q, sc.set(1, 1, 1)); pole.setMatrixAt(j, m4);
+    m4.compose(ps.set(x, y + 5.45, z), q, sc.set(1, 1, 1)); bulb.setMatrixAt(j, m4);
+    m4.compose(ps.set(x, y + 6.1, z), q, sc.set(1, 1, 1)); cap.setMatrixAt(j, m4);
+    m4.compose(ps.set(x, y + 1.2, z), new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2), sc.set(1.6, 1.6, 1.6)); ring.setMatrixAt(j, m4); });
+  for (const im of [pole, cap, bulb, ring]) { im.instanceMatrix.needsUpdate = true; T.group.add(im); }
 }

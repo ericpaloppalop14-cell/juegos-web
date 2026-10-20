@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { CUPS, CHARS } from './data.js';
 import { Race } from './race.js';
+import { SELF_POWERS } from './powerups.js';
 import { makeKart, toon, mesh } from './gfx.js';
 import { Audio } from './audio.js';
 
@@ -133,6 +134,7 @@ export class EndlessRace extends Race {
   rollItem(k) {
     if (this.forceItem && k.isPlayer) { const f = this.forceItem; this.forceItem = null; return f; }
     const f = (k.place - 1) / Math.max(1, this.karts.length - 1), R = Math.random();
+    if (R < 0.38) return SELF_POWERS[Math.floor(Math.random() * SELF_POWERS.length)]; // v10: potenciadores propios
     if (R < 0.2 + f * 0.25) return 'turbo'; if (R < 0.42 + f * 0.25) return f > 0.4 ? 'seta' : 'escudo'; if (R < 0.75) return 'escudo'; return f > 0.2 ? 'iman' : 'turbo';
   }
   // IA humana: la misma IA base + reacción con retardo, temblor, despistes
@@ -227,6 +229,7 @@ export class EndlessRace extends Race {
       const a = K[i], b = K[j]; if (a.out || b.out || (a.remote && b.remote)) continue;
       const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, dy = Math.abs(b.y - a.y); const r = 1.45 * (a.megaS + b.megaS), d2 = dx * dx + dz * dz;
       if (d2 > r * r || dy > 2.5 * Math.max(a.megaS, b.megaS)) continue;
+      if (!a.remote && !b.remote && this.fx.collide(a, b)) continue;
       if (!a.remote && !b.remote) { if (a.megaT > 0 && b.megaT <= 0) { this.squash(b, a); continue; } if (b.megaT > 0 && a.megaT <= 0) { this.squash(a, b); continue; } }
       const d = Math.sqrt(d2) || 0.01, nx = dx / d, nz = dz / d, over = r - d;
       let wa = a.weight * a.megaS, wb = b.weight * b.megaS, ta = wb / (wa + wb), tb = wa / (wa + wb);

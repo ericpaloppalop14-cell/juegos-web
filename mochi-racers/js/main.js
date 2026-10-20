@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS, RACES_PER_CUP } from './data.js';
+import { POWER } from './powerups.js';
+Object.assign(ITEMS, POWER); // v10: iconos y nombres de los potenciadores surrealistas
 import { makeKart, animKart, makeTrophy, toon, mesh, outline, makeSeta } from './gfx.js';
 import { Race } from './race.js';
 import { buildTrack } from './track.js';
@@ -401,7 +403,7 @@ function drawEndlessHUD(dt) {
   $('flash').style.opacity = Math.min(1, R.kick * 0.9 + (P.boostT > 0 ? 0.12 : 0));
   drawFx(R, P);
   const hi = $('hItem');
-  if (P.rollT > 0) { const k = ['turbo', 'seta', 'escudo', 'iman']; hi.textContent = ITEMS[k[Math.floor(R.time * 14) % k.length]].icon; hi.classList.add('roll'); $('hItemName').textContent = ''; }
+  if (P.rollT > 0) { const k = ['turbo', 'seta', 'escudo', 'iman', 'tiburon', 'estrella', 'aladelta', 'portal', 'chicle']; hi.textContent = ITEMS[k[Math.floor(R.time * 14) % k.length]].icon; hi.classList.add('roll'); $('hItemName').textContent = ''; }
   else { hi.classList.remove('roll'); hi.textContent = P.item ? ITEMS[P.item].icon : ''; $('hItemName').textContent = P.item ? ITEMS[P.item].name : ''; }
   $('bI').textContent = P.item && P.rollT <= 0 ? ITEMS[P.item].icon : '·';
   $('blind').style.opacity = 0;
@@ -528,7 +530,7 @@ window.__kart = {
   get state() { return app.state; }, get race() { return app.race; }, get fps() { return fps; },
   setSpeed(n) { app.speed = n; }, setAutopilot(v) { app.autopilot = v; },
   pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },
-  give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, use() { app.race.useItem(app.race.player); },
+  give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, force(item) { app.race.forceItem = item; }, fx(item, who) { const R = app.race; const k = who == null ? R.player : R.karts[who]; return R.fx.use(k, item); }, use() { app.race.useItem(app.race.player); },
   forceFinish() { const R = app.race; for (const k of R.karts) { if (!k.finished) { k.finished = true; k.finishTime = R.raceT + k.place; } } },
   openChars, openCups, showPodium, pickOrient, openOrient, openModes, openLobby, startEndless, soloMatch, meInfo, get match() { return app.match; },
   trackShape(id, rev) { const T = buildTrack(CUPS.find(c => c.id === id), rev, { hi: false }); return { S: T.S.map(s => [s.p.x, s.p.z, s.w, s.wall, s.p.y]), sc: T.shortcuts.map(c => c.pts.map(p => [p.x, p.z])), feats: T.feats.map(f => [f.type, T.idxOf(f.t)]), L: T.L }; }, get quality() { return qualityHi ? 'alta' : 'baja'; },

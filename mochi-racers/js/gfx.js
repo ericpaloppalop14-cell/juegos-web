@@ -465,12 +465,34 @@ export function starShape(r1 = 1, r2 = 0.45, n = 5) {
   for (let i = 0; i <= n * 2; i++) { const a = i / (n * 2) * Math.PI * 2 + Math.PI / 2, r = i % 2 ? r2 : r1; i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
   return s;
 }
+// v10: cajita premium sólida — cubo redondeado, caras con degradado arcoíris brillante, «?» en relieve y estrella dorada flotando encima
+function roundedBox(size, r, seg) {
+  const g = new THREE.BoxGeometry(size, size, size, seg, seg, seg), p = g.attributes.position, h = size / 2 - r, v = new THREE.Vector3(), c = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); c.set(Math.max(-h, Math.min(h, v.x)), Math.max(-h, Math.min(h, v.y)), Math.max(-h, Math.min(h, v.z))); v.sub(c).normalize().multiplyScalar(r).add(c); p.setXYZ(i, v.x, v.y, v.z); }
+  g.computeVertexNormals(); return g;
+}
+let boxTex;
+function itemBoxTex() {
+  if (boxTex) return boxTex;
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d');
+  const gr = x.createLinearGradient(0, 0, 256, 256); gr.addColorStop(0, '#ff6fc0'); gr.addColorStop(0.35, '#ffb36b'); gr.addColorStop(0.65, '#7ff5ff'); gr.addColorStop(1, '#b98cff');
+  x.fillStyle = gr; x.fillRect(0, 0, 256, 256);
+  const sh = x.createLinearGradient(0, 0, 0, 256); sh.addColorStop(0, 'rgba(255,255,255,.55)'); sh.addColorStop(0.45, 'rgba(255,255,255,.08)'); sh.addColorStop(1, 'rgba(80,20,120,.25)'); x.fillStyle = sh; x.fillRect(0, 0, 256, 256);
+  x.lineWidth = 18; x.strokeStyle = '#ffffff'; x.beginPath(); x.roundRect(14, 14, 228, 228, 36); x.stroke();
+  x.lineWidth = 4; x.strokeStyle = 'rgba(255,220,120,.95)'; x.beginPath(); x.roundRect(30, 30, 196, 196, 26); x.stroke();
+  x.font = '700 150px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = 'rgba(90,30,120,.55)'; x.fillText('?', 134, 142); x.fillStyle = '#ffffff'; x.fillText('?', 128, 134);
+  x.fillStyle = 'rgba(255,255,255,.85)'; x.beginPath(); x.ellipse(70, 60, 34, 14, -0.6, 0, 7); x.fill();
+  boxTex = new THREE.CanvasTexture(cv); boxTex.colorSpace = THREE.SRGBColorSpace; boxTex.anisotropy = 4; return boxTex;
+}
 export function makeItemBox() {
   const g = new THREE.Group();
-  const cube = mesh(geo('rbox', () => new THREE.BoxGeometry(1.6, 1.6, 1.6, 2, 2, 2)), toon('#ffffff', { opacity: 0.55, rim: 0.9, emissive: '#ffb0e0', ei: 0.35, nocache: true }), g);
-  cube.renderOrder = 3; g.userData.cube = cube;
-  const star = mesh(geo('star', () => new THREE.ExtrudeGeometry(starShape(0.55, 0.24), { depth: 0.18, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 1 })), toon('#ffe066', { emissive: '#ffcc33', ei: 0.5 }), g, [0, 0, -0.09]);
+  const cube = mesh(geo('rboxR', () => roundedBox(1.7, 0.28, 4)), toon('#ffffff', { rim: 0.7, emissive: '#ffb0e0', ei: 0.12, nocache: true }), g);
+  cube.material.map = itemBoxTex(); cube.material.needsUpdate = true; outline(cube, '#ffffff', 1.06);
+  g.userData.cube = cube;
+  const star = mesh(geo('star', () => new THREE.ExtrudeGeometry(starShape(0.55, 0.24), { depth: 0.18, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 1 })), toon('#ffe066', { emissive: '#ffcc33', ei: 0.5, rim: 0.9 }), g, [0, 1.55, -0.09], null, 0.62);
   g.userData.star = star;
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#fff0a0'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 })); glow.scale.setScalar(4.2); g.add(glow);
   return g;
 }
 export function makeProjectile(type) {

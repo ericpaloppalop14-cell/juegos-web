@@ -5,6 +5,7 @@ import { buildTrack } from './track.js';
 import { addSurreal } from './surreal.js';
 const DL = [0, 0.5, 1.0, 1.6]; const dlvl = t => t > DL[3] ? 3 : t > DL[2] ? 2 : t > DL[1] ? 1 : 0;
 import { Audio } from './audio.js';
+import { PowerFX, POWER, POWER_W } from './powerups.js';
 
 const V3 = THREE.Vector3;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -40,6 +41,7 @@ export class Race {
     this.camera = new THREE.PerspectiveCamera(68, 16 / 9, 0.5, 1600);
     this.camPos = new V3(); this.camLook = new V3();
     this.setupParticles();
+    this.fx = new PowerFX(this); // v10: potenciadores surrealistas
     this.lightningFlash = 0;
     this.items = { roll: 0 };
     this.input = { steer: 0, throttle: 1, brake: false, drift: false, driftEdge: false, itemEdge: false };
@@ -114,15 +116,16 @@ export class Race {
     const running = this.state === 'race' || this.state === 'finish';
     for (const o of T.obstacles) o.update(this.time, dt);
     if (this.player) this.surreal.update(this.time, dt, this);
-    for (const b of T.boxes) { if (b.t > 0) b.t -= dt; const vis = b.t <= 0; b.mesh.visible = vis; if (vis) { b.mesh.rotation.y = this.time * 1.4 + b.ph; b.mesh.rotation.x = Math.sin(this.time + b.ph) * 0.3; b.mesh.position.y = b.pos.y + Math.sin(this.time * 2.5 + b.ph) * 0.3; b.mesh.userData.cube.material.emissive.setHSL((this.time * 0.25 + b.ph * 0.2) % 1, 0.9, 0.55); } }
+    for (const b of T.boxes) { if (b.t > 0) b.t -= dt; const vis = b.t <= 0; b.mesh.visible = vis; if (vis) { b.mesh.rotation.y = this.time * 1.4 + b.ph; b.mesh.rotation.x = Math.sin(this.time + b.ph) * 0.3; b.mesh.position.y = b.pos.y + Math.sin(this.time * 2.5 + b.ph) * 0.3; b.mesh.userData.cube.material.emissive.setHSL((this.time * 0.25 + b.ph * 0.2) % 1, 0.9, 0.55); const st = b.mesh.userData.star; if (st) { st.rotation.set(-b.mesh.rotation.x, this.time * 3, 0); } } }
     for (const p of T.pads) p.mesh.material.map.offset.y = -this.time * 1.2 % 1;
     if (running) {
       for (const k of this.karts) {
-        const inp = k.isPlayer && !k.finished && !this.app.autopilot ? this.input : this.aiInput(k, dt);
+        const inp = this.fx.input(k, k.isPlayer && !k.finished && !this.app.autopilot ? this.input : this.aiInput(k, dt), dt);
         this.stepKart(k, inp, dt);
       }
       this.collideKarts();
       this.updateProjectiles(dt);
+      this.fx.update(dt);
       this.rank();
     } else for (const k of this.karts) this.placeKartMesh(k, dt);
     // finish handling
@@ -136,7 +139,7 @@ export class Race {
     this.lightningFlash = Math.max(0, this.lightningFlash - dt * 3); this.sky.material.uniforms.flash.value = this.lightningFlash * 0.6;
     this.kick = Math.max(0, this.kick - dt * 2.2);
     if (this.fireworks && this.state === 'finish') { this.fwT -= dt; if (this.fwT <= 0) { this.fwT = 0.3 + R() * 0.3; const p = this.player.pos, a = R() * 6.28, c = new V3(p.x + Math.cos(a) * (10 + R() * 14), this.player.y + 14 + R() * 10, p.z + Math.sin(a) * (10 + R() * 14)); const col = ['#ff5fd2', '#ffe066', '#7ff5ff', '#9dff7a', '#ff8f5f'][Math.floor(R() * 5)]; for (let i = 0; i < 28; i++) { const v = new V3(R() - 0.5, R() - 0.5, R() - 0.5).normalize().multiplyScalar(9 + R() * 3); this.emit(c, col, 1.1, 1.1, v); } Audio.sfxPlay('firework'); } }
-    this.placeCamera(false, dt);
+    { const pl = this.player, fh = pl ? (pl.flyH || 0) : 0; if (fh) pl.y += fh; this.placeCamera(false, dt); if (fh) pl.y -= fh; }
     if (this.sun && this.player) { const p = this.player.pos; this.sun.target.position.set(p.x, this.player.y, p.z); this.sun.position.set(p.x + 60, this.player.y + 120, p.z + 45); }
     if (this.player) Audio.engineSet(Math.abs(this.player.fs), this.player.boostT > 0 || this.player.megaT > 0);
   }
@@ -209,6 +212,7 @@ export class Race {
           case 'escudo': use = true; break;
           case 'iman': use = dA < 70 && dA > 5; break;
           case 'nube': use = k.place > 1; break;
+          default: use = this.fx.aiWants(k, k.item, dA, dB);
         }
         if (use) inp.itemEdge = true;
       }
@@ -242,6 +246,7 @@ export class Race {
     if (k.boostT > 0) vmax *= 1.38;
     if (k.megaT > 0) vmax *= 1.2;
     if (k.magT > 0) vmax *= 1.25;
+    if (k.fxV && k.fxV !== 1) vmax *= k.fxV; // v10: efecto temporal de potenciador
     if (k.squashT > 0) vmax *= 0.5;
     if (k.blindT > 0 && !k.isPlayer) vmax *= 0.85;
     const ctrl = k.spinT <= 0 && k.squashT <= 0.0;
@@ -326,9 +331,9 @@ export class Race {
     for (const b of T.boxes) { if (b.t > 0) continue; const dx = b.pos.x - k.pos.x, dz = b.pos.z - k.pos.z; const r = 2.2 * k.megaS; if (dx * dx + dz * dz < r * r && Math.abs(b.pos.y - k.y - 1) < 3.5) { b.t = 2.2; if (k.isPlayer) Audio.sfxPlay('box'); for (let i = 0; i < 8; i++) this.emit(b.pos.clone(), ['#ff8fc0', '#ffe066', '#7ff5ff'][i % 3], 0.7, 0.5); if (!k.item && k.rollT <= 0) k.rollT = k.isPlayer ? 1.2 : 0.6; } }
     // obstacles
     for (const o of T.obstacles) { if (!o.active) continue; const p = o.g.position; const dx = p.x - k.pos.x, dz = p.z - k.pos.z; const yy = o.kind === 'bee' ? Math.abs(p.y - k.y - 1.5) < 2.5 : o.kind === 'lightning' ? true : Math.abs(p.y - k.y) < 3;
-      if (yy && dx * dx + dz * dz < (o.r + 1.1 * k.megaS) ** 2) { if (k.megaT > 0 && o.kind !== 'lightning') continue; if (o.kind === 'lightning') { this.hitKart(k, 'rayo'); } else { this.hitKart(k, 'obst'); const d = Math.hypot(dx, dz) || 1; k.vx -= dx / d * 10; k.vz -= dz / d * 10; } } }
+      if (yy && dx * dx + dz * dz < (o.r + 1.1 * k.megaS) ** 2) { if ((k.megaT > 0 && o.kind !== 'lightning') || this.fx.immune(k)) continue; if (o.kind === 'lightning') { this.hitKart(k, 'rayo'); } else { this.hitKart(k, 'obst'); const d = Math.hypot(dx, dz) || 1; k.vx -= dx / d * 10; k.vz -= dz / d * 10; } } }
     // hazards (puddles)
-    for (const h of this.hazards) { if (h.dead) continue; const dx = h.pos.x - k.pos.x, dz = h.pos.z - k.pos.z; if (!k.air && dx * dx + dz * dz < (2.2 * k.megaS) ** 2 && !(h.owner === k && h.age < 0.8)) { h.dead = true; this.scene.remove(h.mesh); if (k.megaT <= 0) this.hitKart(k, 'charco', h.owner); } }
+    for (const h of this.hazards) { if (h.dead) continue; const dx = h.pos.x - k.pos.x, dz = h.pos.z - k.pos.z; if (!k.air && !this.fx.immune(k) && dx * dx + dz * dz < (2.2 * k.megaS) ** 2 && !(h.owner === k && h.age < 0.8)) { h.dead = true; this.scene.remove(h.mesh); if (k.megaT <= 0) this.hitKart(k, 'charco', h.owner); } }
     // boost flame particles
     if ((k.boostT > 0 || k.megaT > 0) && R() < 0.8) this.emit(k.pos.clone().add(new V3(-nfX * 1.6 * k.megaS, 0.7, -nfZ * 1.6 * k.megaS)), k.megaT > 0 ? '#ff8fc0' : ['#ffd84a', '#ff8fc0', '#7ff5ff'][Math.floor(R() * 3)], 0.8, 0.3, new V3(-nfX * 8, 1, -nfZ * 8));
     if (k.isPlayer) {
@@ -379,6 +384,7 @@ export class Race {
     const expr = k.squashT > 0 || k.spinT > 0 ? 'squash' : k.exprT > 0 ? k.expr : '';
     const fl = u.flame; fl.visible = k.boostT > 0 || k.megaT > 0;
     if (fl.visible) { const f = 0.8 + R() * 0.4 + (k.isPlayer ? this.kick * 0.5 : 0); fl.scale.set(f, f, f * (1 + Math.min(0.6, k.boostT * 0.4))); }
+    this.fx.place(k);
     animKart(m, this.time, Math.abs(k.fs), expr);
     // squash stars
     if (k.squashT > 0 && R() < 0.3) this.emit(k.pos.clone().add(new V3((R() - 0.5) * 2, 1.2, (R() - 0.5) * 2)), '#ffe066', 0.5, 0.5);
@@ -390,6 +396,7 @@ export class Race {
       const a = K[i], b = K[j]; const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, dy = Math.abs(b.y - a.y);
       const r = 1.45 * (a.megaS + b.megaS); const d2 = dx * dx + dz * dz;
       if (d2 > r * r || dy > 2.5 * Math.max(a.megaS, b.megaS)) continue;
+      if (this.fx.collide(a, b)) continue;
       const d = Math.sqrt(d2) || 0.01, nx = dx / d, nz = dz / d, over = r - d;
       if (a.megaT > 0 && b.megaT <= 0) { this.squash(b, a); continue; }
       if (b.megaT > 0 && a.megaT <= 0) { this.squash(a, b); continue; }
@@ -400,7 +407,7 @@ export class Race {
     }
   }
   squash(v, by) {
-    if (v.squashT > 0 || v.invT > 0) return;
+    if (v.squashT > 0 || v.invT > 0 || this.fx.immune(v)) return;
     if (v.shieldT > 0) { v.shieldT = 0; Audio.sfxPlay('pop'); v.invT = 0.6; return; }
     v.squashT = 2.0; v.vx *= 0.3; v.vz *= 0.3; v.driftDir = 0; v.lastHitBy = by;
     Audio.sfxPlay('squash');
@@ -409,7 +416,7 @@ export class Race {
     if (by.isPlayer) { this.msg('¡CHAF! ¡Chafado ' + v.ch.name + '!', by, '#ffd84a'); this.stats.squashes = (this.stats.squashes || 0) + 1; }
   }
   hitKart(k, why, by) {
-    if (k.invT > 0 || k.spinT > 0) return false;
+    if (k.invT > 0 || k.spinT > 0 || this.fx.immune(k)) return false;
     if (k.megaT > 0) return false;
     if (k.shieldT > 0) { k.shieldT = 0; k.invT = 0.6; Audio.sfxPlay('pop'); if (k.isPlayer) this.msg('¡El escudo te ha salvado!', k, '#7ff5ff'); return false; }
     k.spinT = why === 'charco' ? 1.0 : 1.15; k.driftDir = 0; k.boostT = 0; k.lastHitBy = by;
@@ -426,9 +433,13 @@ export class Race {
   rollItem(k) {
     if (this.forceItem && k.isPlayer) { const f = this.forceItem; this.forceItem = null; return f; }
     const f = (k.place - 1) / (this.karts.length - 1);
-    const w = ITEM_KEYS.map(key => { const [a, b, c] = ITEM_W[key]; return f < 0.5 ? lerp(a, b, f * 2) : lerp(b, c, (f - 0.5) * 2); });
+    const KEYS = ITEM_KEYS.concat(Object.keys(POWER)); // v10: los clásicos pesan menos, los surrealistas mandan
+    const w = KEYS.map(key => { const [a, b, c] = POWER_W[key] || ITEM_W[key].map(x => x * 0.45); return f < 0.5 ? lerp(a, b, f * 2) : lerp(b, c, (f - 0.5) * 2); });
+    // no repetir tiburones/pianos en masa: si ya hay uno activo, peso casi nulo
+    if (this.karts.some(o => o.sharkT > 0)) w[KEYS.indexOf('tiburon')] *= 0.1;
+    if (this.fx.projs.some(p => p.type === 'piano')) w[KEYS.indexOf('piano')] *= 0.1;
     let tot = w.reduce((a, b) => a + b, 0), r = R() * tot;
-    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return ITEM_KEYS[i]; }
+    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return KEYS[i]; }
     return 'turbo';
   }
   useItem(k) {
@@ -450,6 +461,7 @@ export class Race {
         this.projs.push(p); if (k.isPlayer || k.pos.distanceTo(this.player.pos) < 60) Audio.sfxPlay(it === 'osito' ? 'throw' : 'missile');
         if (it === 'misil' && p.target && p.target.isPlayer) this.msg('¡Cuidado! ¡Misil de caramelo!', p.target, '#ff6f9a');
         break; }
+      default: this.fx.use(k, it); break;
       case 'charco': { const m = makeProjectile('charco'); const pos = k.pos.clone().add(new V3(-fX * 3.5 * k.megaS, 0, -fZ * 3.5 * k.megaS)); const i = T.nearest(pos.x, pos.z, k.idx, 20, 5); pos.y = T.frame(pos.x, pos.z, i).y; m.position.copy(pos); this.scene.add(m); this.hazards.push({ mesh: m, pos, owner: k, age: 0, life: 28 }); if (k.isPlayer) Audio.sfxPlay('throw'); break; }
     }
   }
