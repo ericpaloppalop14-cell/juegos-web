@@ -1,14 +1,15 @@
+import { addDream } from './dreamdeco.js';
 import * as THREE from 'three';
 import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
 import { addDeco } from './deco.js';
 
 const V3 = THREE.Vector3;
-let seed = 1; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+let seed = 1; let OPEN = false; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const C = c => new THREE.Color(c);
 
 export { ribbon };
 export function buildTrack(cup, reverse, quality) {
-  seed = 7 + cup.id.length * 13 + (reverse ? 5 : 0);
+  seed = cup.seed || (7 + cup.id.length * 13 + (reverse ? 5 : 0)); OPEN = !!cup.open; // online: pista abierta (sin fin)
   let P = cup.pts.map(p => p.slice());
   if (reverse) P = [P[0], ...P.slice(1).reverse()];
   const remap = t => reverse ? (1 - t) % 1 : t;
@@ -18,7 +19,7 @@ export function buildTrack(cup, reverse, quality) {
     if (f.off != null && reverse) g.off = -f.off;
     return g;
   });
-  const curve = new THREE.CatmullRomCurve3(P.map(p => new V3(p[0], p[2], p[1])), true, 'centripetal');
+  const curve = new THREE.CatmullRomCurve3(P.map(p => new V3(p[0], p[2], p[1])), !OPEN, 'centripetal');
   const L = curve.getLength(), STEP = 2, N = Math.round(L / STEP);
   const S = []; const nP = P.length;
   for (let i = 0; i < N; i++) {
@@ -31,7 +32,7 @@ export function buildTrack(cup, reverse, quality) {
   }
   // curvature (for AI)
   for (let i = 0; i < N; i++) { const a = S[(i + N - 4) % N].fl, b = S[(i + 4) % N].fl; S[i].curv = Math.atan2(a.x * b.z - a.z * b.x, a.x * b.x + a.z * b.z); }
-  const T = { cup, reverse, curve, L, N, STEP, S, feats, group: new THREE.Group(), boxes: [], pads: [], ramps: [], shortcuts: [], obstacles: [], grav: cup.grav, grip: cup.grip, theme: cup.theme };
+  const T = { open: OPEN, cup, reverse, curve, L, N, STEP, S, feats, group: new THREE.Group(), boxes: [], pads: [], ramps: [], shortcuts: [], obstacles: [], grav: cup.grav, grip: cup.grip, theme: cup.theme };
   const idxOf = t => ((Math.round(t * N) % N) + N) % N;
   T.idxOf = idxOf;
 
@@ -81,7 +82,7 @@ export function buildTrack(cup, reverse, quality) {
 
 // ======================================================================
 function ribbon(S, N, fnL, fnR, colorFn, closed = true, yOff = 0) {
-  const pos = [], cols = [], idx = [];
+  const pos = [], cols = [], idx = []; if (OPEN) closed = false;
   const n = closed ? N + 1 : N;
   for (let k = 0; k < n; k++) {
     const i = k % N, s = S[i];
@@ -113,11 +114,12 @@ function buildVisuals(T, Q) {
       group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * (s.wall + 2)), s => { const q = off(s, sd * (s.wall + 6 + s.p.y * 2.5)); q.y = -0.6; return q; }, i => [g1, g1.clone().lerp(g2, 0.5)], true), vmat));
     }
     // ground plane
-    const gp = new THREE.Mesh(new THREE.CircleGeometry(1100, 48), toon(cup.ground, { rim: 0 })); gp.rotation.x = -Math.PI / 2; gp.position.y = -0.62; group.add(gp);
+    let gR = 1100, gcx = 0, gcz = 0; if (T.open) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const s of S) { x0 = Math.min(x0, s.p.x); x1 = Math.max(x1, s.p.x); z0 = Math.min(z0, s.p.z); z1 = Math.max(z1, s.p.z); } gcx = (x0 + x1) / 2; gcz = (z0 + z1) / 2; gR = Math.hypot(x1 - x0, z1 - z0) / 2 + 900; }
+    const gp = new THREE.Mesh(new THREE.CircleGeometry(gR, 64), toon(cup.ground, { rim: 0 })); gp.rotation.x = -Math.PI / 2; gp.position.set(gcx, -0.62, gcz); group.add(gp);
     // ground blotches (flower/sprinkle patches) for texture
-    const bl = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 10), toon(cup.ground2, { rim: 0, opacity: 0.6 }), Q.hi ? 160 : 70);
+    const bl = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 10), toon(cup.ground2, { rim: 0, opacity: 0.6 }), (Q.hi ? 160 : 70) * (T.open ? 3 : 1));
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-    for (let i = 0; i < bl.count; i++) { const r = 20 + rnd() * 600, a = rnd() * 6.28; m4.compose(new V3(Math.cos(a) * r, -0.58, Math.sin(a) * r), q, new V3(5 + rnd() * 20, 5 + rnd() * 20, 1)); bl.setMatrixAt(i, m4); }
+    for (let i = 0; i < bl.count; i++) { const r = 20 + rnd() * (T.open ? 120 : 600), a = rnd() * 6.28, bs = T.open ? S[Math.floor(rnd() * N)].p : { x: 0, z: 0 }; m4.compose(new V3(bs.x + Math.cos(a) * r, -0.58, bs.z + Math.sin(a) * r), q, new V3(5 + rnd() * 20, 5 + rnd() * 20, 1)); bl.setMatrixAt(i, m4); }
     group.add(bl);
   } else {
     // floating road underside + glowing rails
@@ -155,7 +157,7 @@ function buildVisuals(T, Q) {
       T.boxes.push({ mesh: b, pos: p, idx: i, lat, t: 0, ph: k * 0.7 });
     }
     if (f.type === 'boost') T.pads.push(Object.assign(makePadAlong(group, T.ptsRing(i, 4), T.rightsRing(i, 4), 4, f.off || 0, 2.6, 3), { idx: i }));
-    if (f.type === 'ramp') T.ramps.push(makeRampAlong(T, i, 3, 1.5));
+    if (f.type === 'ramp') T.ramps.push(makeRampAlong(T, i, T.cup.look ? 5 : 3, T.cup.look ? 3.2 : 1.5));
     if (f.type === 'obstacle') for (let k = 0; k < (f.kind === 'lightning' ? 2 : 2); k++) T.obstacles.push(makeObstacle(T, f.kind, (i + k * 9) % N, k));
   }
   // start arch
@@ -296,6 +298,7 @@ function placeOut(T, minD, maxD) {
 }
 // prop = array of parts {geo, mat, m(matrix local), color?:'inst'}
 function instProps(T, parts, count, minD, maxD, palette, scaleR = [0.8, 1.4], extra) {
+  if (T.open) count = Math.round(count * 3);
   const ims = parts.map(pt => { const im = new THREE.InstancedMesh(pt.geo, pt.mat, count); T.group.add(im); return im; });
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(); let n = 0;
   for (let i = 0; i < count; i++) {
@@ -314,6 +317,7 @@ const W = () => toon('#ffffff', { rim: 0.35 });
 function scenery(T, Q) {
   edgeProps(T, Q); stands(T, Q);
   if (!/nodeco/.test(location.search)) try { T.deco = addDeco(T, Q, { off, rnd }); } catch (e) { console.warn('deco', e); } // v2: decoración extra (solo visual)
+  if (T.cup.look) try { addDream(T, Q, rnd); } catch (e) { console.warn('dream', e); } // v7: mapas surrealistas
   const k = Q.hi ? 1 : 0.55; const n = x => Math.round(x * k);
   const sphG = new THREE.SphereGeometry(1, 14, 10), cylG = new THREE.CylinderGeometry(1, 1, 1, 12), coneG = new THREE.ConeGeometry(1, 1, 12);
   const th = T.theme;

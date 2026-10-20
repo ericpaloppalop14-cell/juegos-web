@@ -55,17 +55,17 @@ export class Race {
       fragmentShader: 'uniform vec3 top; uniform vec3 bot; uniform float flash; varying vec3 vp; void main(){ float h = clamp(normalize(vp).y*1.6+0.25,0.0,1.0); vec3 c = mix(bot, top, h); gl_FragColor = vec4(c + flash*vec3(0.6,0.6,0.8), 1.0);} ' }));
     sky.renderOrder = -10; sc.add(sky); this.sky = sky;
     sc.fog = new THREE.Fog(c.fog, this.quality.hi ? 180 : 130, this.quality.hi ? 750 : 520);
-    sc.add(new THREE.HemisphereLight(c.theme === 'space' || c.theme === 'storm' ? '#c9b8ff' : '#ffffff', c.theme === 'space' || c.theme === 'storm' ? '#4a3080' : '#ffd6ea', c.theme === 'storm' ? 1.25 : 0.95));
-    const d = new THREE.DirectionalLight('#fff4e8', c.theme === 'storm' || c.theme === 'space' ? 1.35 : 2.0); d.position.set(80, 160, 60); sc.add(d);
+    sc.add(new THREE.HemisphereLight((c.theme === 'space' && c.look !== 'sky') || c.theme === 'storm' ? '#c9b8ff' : '#ffffff', (c.theme === 'space' && c.look !== 'sky') || c.theme === 'storm' ? '#4a3080' : '#ffd6ea', c.theme === 'storm' ? 1.25 : 0.95));
+    const d = new THREE.DirectionalLight('#fff4e8', c.theme === 'storm' || (c.theme === 'space' && c.look !== 'sky') ? 1.35 : 2.0); d.position.set(80, 160, 60); sc.add(d);
     // v2: sombras reales finas que siguen al jugador (solo si el render va en calidad alta)
     d.castShadow = true; d.shadow.mapSize.set(1024, 1024); d.shadow.bias = -0.0006; d.shadow.normalBias = 0.04; d.shadow.radius = 2.5; { const sc2 = d.shadow.camera; sc2.left = sc2.bottom = -34; sc2.right = sc2.top = 34; sc2.near = 10; sc2.far = 260; } sc.add(d.target); this.sun = d;
     this.track.group.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.material && o.material.vertexColors) o.receiveShadow = true; });
-    if (c.theme === 'space' || c.theme === 'storm') {
+    if ((c.theme === 'space' && c.look !== 'sky') || c.theme === 'storm') {
       const n = 1400, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = R() * 6.28, b = Math.acos(R() * 2 - 1) * (c.theme === 'storm' ? 0.45 : 1); p[i * 3] = Math.sin(b) * Math.cos(a) * 1100; p[i * 3 + 1] = Math.cos(b) * 1100 * (c.theme === 'storm' ? 1 : 1); p[i * 3 + 2] = Math.sin(b) * Math.sin(a) * 1100; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
       sc.add(new THREE.Points(g, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, fog: false })));
     }
-    if (c.theme !== 'space' && c.theme !== 'storm') { // soft clouds
+    if (!(c.theme === 'space' && c.look !== 'sky') && c.theme !== 'storm') { // soft clouds
       const cl = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), toon('#ffffff', { rim: 0.3, opacity: 0.92 }), 60); const m = new THREE.Matrix4();
       for (let i = 0; i < 20; i++) { const a = R() * 6.28, r = 500 + R() * 300, y = 120 + R() * 120; for (let j = 0; j < 3; j++) { m.compose(new V3(Math.cos(a) * r + j * 25, y + (j === 1 ? 12 : 0), Math.sin(a) * r), new THREE.Quaternion(), new V3(30, 18, 24)); cl.setMatrixAt(i * 3 + j, m); } }
       cl.material.fog = false; sc.add(cl);
@@ -307,7 +307,7 @@ export class Race {
     }
     // height
     const gy = inSC != null ? Math.max(inSC, f2.y) : f2.y;
-    for (const r of T.ramps) { if (!k.air && this.crossed(k, r.idx) && k.fs > 8) { k.vy = 6.5 + k.fs * 0.16; k.air = true; k.hop = false; k.airT = 0; k.trick = false; if (k.isPlayer) Audio.sfxPlay('jump'); } }
+    for (const r of T.ramps) { if (!k.air && this.crossed(k, r.idx) && k.fs > 8) { k.vy = (6.5 + k.fs * 0.16) * (T.cup.look ? 1.9 : 1); k.air = true; k.hop = false; k.airT = 0; k.trick = false; k.flip = T.cup.look ? (r.idx % 2 ? 1 : 2) : 0; k.flipDur = 2 * k.vy / (30 * T.grav); if (k.isPlayer) Audio.sfxPlay('jump'); } }
     if (k.air) {
       k.airT += dt; k.vy -= 30 * T.grav * dt; k.y += k.vy * dt;
       if (inp.driftEdge && !k.trick && !k.hop && k.airT > 0.08 && ctrl) { k.trick = true; k.trickT = 0; if (k.isPlayer) Audio.sfxPlay('trick'); }
@@ -367,6 +367,8 @@ export class Race {
     if (k.spinT > 0) ry += (1.1 - k.spinT) * 14;
     if (k.trick) { const p = Math.min(1, k.trickT / 0.45); rz += p * Math.PI * 2 * (k.ch.id.length % 2 ? 1 : -1); }
     if (k.air && !k.trick) rx = -clamp(k.vy * 0.02, -0.3, 0.3);
+    if (!k.air) k.flip = 0; // v7: piruetas solo visuales en los mapas surrealistas
+    if (k.flip && k.air) { const p = clamp((k.airT - 0.1) / Math.max(0.3, k.flipDur - 0.25), 0, 1), e = p * p * (3 - 2 * p); if (k.flip === 1) rx = -e * Math.PI * 2; else rz += e * Math.PI * 2 * (k.ch.id.length % 2 ? 1 : -1); }
     tilt.rotation.set(rx, ry, rz);
     const sq = k.squashT > 0 ? 0.28 : 1;
     tilt.scale.set(1 / Math.sqrt(sq) * (k.squashT > 0 ? 0.9 : 1), lerp(tilt.scale.y, sq, 1 - Math.exp(-dt * 18)), 1 / Math.sqrt(sq) * (k.squashT > 0 ? 0.9 : 1));
@@ -513,7 +515,7 @@ export class Race {
       cam.position.lerp(new V3(k.pos.x + Math.sin(k.yaw + Math.PI * 0.75 + a) * r, k.y + 5, k.pos.z + Math.cos(k.yaw + Math.PI * 0.75 + a) * r), 1 - Math.exp(-dt * 3));
       cam.lookAt(k.pos.x, k.y + 1.6, k.pos.z); return;
     }
-    const s = k.megaS, sf = clamp(k.fs / 45, 0, 1.4), back = 6.5 * (1 + (s - 1) * 0.9) + (k.boostT > 0 ? 0.9 : 0) + sf * 0.6 + this.kick * 0.8, up = 2.85 * (1 + (s - 1) * 0.85);
+    const s = k.megaS, sf = clamp(k.fs / 45, 0, 1.4), back = 6.5 * (1 + (s - 1) * 0.9) + (k.boostT > 0 ? 0.9 : 0) + sf * 0.6 + this.kick * 0.8 + (k.flip && k.air ? 3.5 : 0), up = 2.85 * (1 + (s - 1) * 0.85) + (k.flip && k.air ? 2.2 : 0);
     const pv = cam.aspect < 1, pB = pv ? 1.12 : 1, pU = pv ? 2.3 : 1, pA = pv ? 1.2 : 1; // v5: cámara vertical más alta y mirando más lejos (horizontal intacta)
     const yaw = k.yaw + k.driftDir * 0.12;
     if (snap || this._cy == null) this._cy = yaw;

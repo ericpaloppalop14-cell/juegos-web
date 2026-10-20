@@ -92,5 +92,20 @@ export const CUPS = [
     feats: [
       { t: 0.05, type: 'boxes' }, { t: 0.27, type: 'boxes' }, { t: 0.5, type: 'boxes' }, { t: 0.79, type: 'boxes' }, { t: 0.1, type: 'boost', off: 0 }, { t: 0.21, type: 'boost', off: 0 }, { t: 0.55, type: 'boost', off: 3 }, { t: 0.93, type: 'boost', off: -3 }, { t: 0.07, type: 'ramp' }, { t: 0.46, type: 'ramp' }, { t: 0.82, type: 'ramp' }, { t: 0.295, type: 'shortcut', t2: 0.37, label: 'Atajo de neón' }, { t: 0.18, type: 'obstacle', kind: 'lightning' }, { t: 0.4, type: 'obstacle', kind: 'lightning' }, { t: 0.62, type: 'obstacle', kind: 'lightning' }, { t: 0.88, type: 'obstacle', kind: 'lightning' } ] },
 ];
+
+// v7: dos circuitos surrealistas surrealistas: gravedad normal, rampas enormes y piruetas en el aire (solo visual)
+const floatyFeats = () => [0.05, 0.3, 0.55, 0.8].map(t => ({ t, type: 'boxes' })).concat([0.12, 0.42, 0.68, 0.9].map((t, i) => ({ t, type: 'boost', off: [0, 3, -3, 0][i] })), [0.18, 0.36, 0.5, 0.62, 0.75, 0.95].map(t => ({ t, type: 'ramp' })));
+CUPS.push(
+  { id: 'cielo', name: 'Copa Cielo', color: '#7fd8ff', trophy: '#5fcfff', track: 'Archipiélago de Gominola', unlock: null, look: 'sky',
+    theme: 'space', sky: ['#5fb8ff', '#ffd0f0'], fog: '#e8d6ff', ground: null, road: '#fff0fa', curbA: '#7fd8ff', curbB: '#ffb3e0',
+    grip: 0.95, grav: 1, music: { bpm: 118, root: 64, scale: 'major' },
+    pts: [[0, 0, 20, 19], [120, -10, 26, 18], [210, -60, 36, 17], [230, -150, 48, 17], [170, -215, 58, 17], [90, -190, 64, 17], [70, -120, 70, 17], [120, -80, 74, 17], [170, -110, 76, 17], [150, -170, 74, 16], [40, -250, 62, 17], [-80, -250, 50, 18], [-180, -190, 40, 18], [-230, -100, 32, 18], [-200, -20, 26, 18], [-110, 20, 22, 19]],
+    feats: floatyFeats() },
+  { id: 'sueno', name: 'Copa Sueño', color: '#ffb36b', trophy: '#ffa94d', track: 'Sueño de Relojes Derretidos', unlock: null, look: 'dream',
+    theme: 'space', sky: ['#2c1a5a', '#ff9f7a'], fog: '#7a4a8a', ground: null, road: '#ffe2b8', curbA: '#ffb36b', curbB: '#8b5cc2',
+    grip: 0.9, grav: 1, music: { bpm: 104, root: 55, scale: 'dorian' },
+    pts: [[0, 0, 30, 19], [110, 20, 22, 18], [200, -20, 34, 17], [220, -110, 48, 17], [150, -170, 30, 17], [60, -140, 18, 17], [10, -200, 34, 17], [-70, -250, 52, 17], [-170, -220, 40, 18], [-230, -140, 26, 18], [-180, -70, 44, 17], [-210, 10, 30, 18], [-130, 60, 20, 18], [-60, 40, 26, 19]],
+    feats: floatyFeats() },
+);
 // Cada copa: 2 carreras (ida y vuelta, el mismo circuito en sentido contrario)
 export const RACES_PER_CUP = 2;

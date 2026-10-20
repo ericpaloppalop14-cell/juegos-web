@@ -4,6 +4,8 @@ import { makeKart, animKart, makeTrophy, toon, mesh, outline, makeSeta } from '.
 import { Race } from './race.js';
 import { buildTrack } from './track.js';
 import { Audio } from './audio.js';
+import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
+import { Online, soloMatch, MAX_PLAYERS } from './online.js';
 
 const $ = id => document.getElementById(id);
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
@@ -104,13 +106,71 @@ function renderChars() {
 btn('cPrev', () => { cSel = (cSel + CHARS.length - 1) % CHARS.length; renderChars(); });
 btn('cNext', () => { cSel = (cSel + 1) % CHARS.length; renderChars(); });
 btn('cBack', () => { show('title'); setTitleStage(); });
-btn('cGo', () => { const ch = CHARS[cSel]; if (!charUnlocked(ch)) return; save.char = ch.id; persist(); app.playerChar = ch; openCups(); });
+btn('cGo', () => { const ch = CHARS[cSel]; if (!charUnlocked(ch)) return; save.char = ch.id; persist(); app.playerChar = ch; if (params.get('sala')) openModes(); else openCups(); });
+
+// ---------------- ONLINE: modos, sala de espera y partida sin fin ----------------
+const online = new Online(); app.online = online;
+const GKEY = 'mracers_online_ghost_v1';
+const ghostLoad = () => { try { return JSON.parse(localStorage.getItem(GKEY) || 'null'); } catch (e) { return null; } };
+if (!save.nick) save.nick = ['Piloto', 'Mochi', 'Gominola', 'Nube'][Math.floor(Math.random() * 4)] + Math.floor(10 + Math.random() * 89);
+function openModes() {
+  show('modes'); $('mName').value = save.nick; const g = ghostLoad(), sd = daySeed();
+  const cup = makeEndlessCup(sd);
+  $('mDay').textContent = '🗺️ Pista del día: ' + cup.name;
+  $('mRec').textContent = g && g.seed === sd ? '👻 Tu récord de hoy: ' + Math.round(g.dist) + ' m (te sale como fantasma)' : '👻 Aún no tienes récord hoy';
+  stage.clear(); menuKarts.length = 0; previewKart = makeKart(app.playerChar || CHARS[0], 0); previewKart.position.y = 0.8; previewKart.scale.setScalar(1.2); stage.add(previewKart);
+}
+$('mName').addEventListener('input', () => { save.nick = $('mName').value.replace(/[<>]/g, '').slice(0, 14) || 'Piloto'; persist(); });
+const meInfo = () => ({ name: (save.nick || 'Piloto').slice(0, 14), ch: (app.playerChar || CHARS[0]).id });
+btn('mSolo', () => { app.mode = 'solo'; startEndless(soloMatch(meInfo())); });
+btn('mOnline', () => { app.mode = 'online'; openLobby(); });
+btn('mBack', () => openCups());
+btn('uOla', () => openModes());
+function openLobby() {
+  show('lobby'); $('lList').innerHTML = ''; $('lInfo').textContent = 'Conectando…';
+  online.wait(meInfo(), {
+    onUpdate: ({ list, host, left, peers }) => {
+      $('lList').innerHTML = list.map(p => { const c = CHARS.find(c => c.id === p.ch) || CHARS[0]; return `<div class="lp${p.me ? ' me' : ''}"><b style="background:${c.color}"></b>${esc(p.name)}${p.me ? ' (tú)' : ''}</div>`; }).join('') + '<div class="lp ghost">+ ' + (MAX_PLAYERS - list.length) + ' más…</div>';
+      $('lInfo').textContent = list.length > 1 ? `${list.length} pilotos · empezamos en ${Math.ceil(left)} s` : `Buscando pilotos… ${Math.ceil(left)} s (si no llega nadie, juegas contra bots)`;
+    },
+    onStart: m => startEndless(m),
+  }).catch(e => { console.warn(e); app.ui.toast('Sin conexión: juegas contra bots'); startEndless(soloMatch(meInfo())); });
+}
+btn('lCancel', () => { online.close(); openModes(); });
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function startEndless(match) {
+  if (app.race) { app.race.dispose(); app.race = null; }
+  app.match = match; app.cup = makeEndlessCup(match.seed);
+  $('loading').style.display = 'flex'; $('loading').textContent = 'Generando la ' + app.cup.name + '…';
+  setTimeout(() => {
+    const t0 = performance.now();
+    app.race = new EndlessRace(app, { seed: match.seed, roster: match.roster, me: match.me, quality: { hi: qualityHi }, simBots: match.simBots, ghost: ghostLoad() });
+    app.buildMs = performance.now() - t0;
+    if (match.online) online.attach(app.race);
+    resize(); $('loading').style.display = 'none';
+    show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = (isTouch ? 'Toca <b>DERRAPE</b>' : 'Pulsa <b>Espacio</b>') + ' al «¡YA!» para salir con turbo · ¡huye de la nata!';
+    app.ui.toast(match.online ? (match.humans > 1 ? `¡Online! ${match.humans} pilotos de verdad` : '¡Online!') : 'Partida contra bots', '#ffffff');
+    Audio.init(); Audio.playSong(app.cup.music, match.seed % 97); Audio.engineStart();
+  }, 30);
+}
+function showEndResults(order, stats) {
+  show('results'); Audio.stopSong();
+  const me = order.find(o => o.isPlayer), g = ghostLoad(); let rec = false;
+  if (me && (!g || g.seed !== stats.seed || me.dist > g.dist)) { rec = true; try { localStorage.setItem(GKEY, JSON.stringify({ seed: stats.seed, dist: me.dist, ch: me.ch.id, path: stats.ghost })); } catch (e) {} }
+  $('rTitle').textContent = (me && me.place === 1 ? '¡Has llegado más lejos que nadie!' : `Has quedado ${me ? me.place : '-'}º`) + (rec ? ' · ¡Nuevo récord!' : '');
+  let h = '<tr><td></td><td>Piloto</td><td class="n">Distancia</td><td class="n"></td></tr>';
+  order.forEach((o, i) => { h += `<tr class="${o.isPlayer ? 'me' : ''}"><td>${i + 1}º</td><td><span class="dot" style="background:${o.ch.color}"></span>${esc(o.name)}${o.isPlayer ? ' (tú)' : ''}</td><td class="n">${Math.round(o.dist).toLocaleString('es-ES')} m</td><td class="n">${o.out ? '🍦 ' + fmtS(o.time) : '🏁'}</td></tr>`; });
+  $('rTable').innerHTML = h; $('rNext').textContent = app.mode === 'online' ? '🌐 Otra online' : '🔁 Otra partida'; $('rMenu').style.display = '';
+}
+const fmtS = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+btn('rMenu', () => { if (app.race) { app.race.dispose(); app.race = null; } online.stopRace(); online.close(); openModes(); });
 
 // ---------------- cups ----------------
 let uSel = 0;
 const trophySVG = (col, dim) => `<svg viewBox="0 0 64 64"><path d="M18 8h28v10c0 10-6 18-14 18S18 28 18 18z" fill="${col}" stroke="#5a3a6e" stroke-width="2.5"/><path d="M18 12H9c0 9 5 14 11 14M46 12h9c0 9-5 14-11 14" fill="none" stroke="${col}" stroke-width="4"/><rect x="28" y="36" width="8" height="10" fill="${col}" stroke="#5a3a6e" stroke-width="2"/><rect x="18" y="46" width="28" height="9" rx="3" fill="#fff4fa" stroke="#5a3a6e" stroke-width="2.5"/>${dim ? '' : '<path d="M32 14l2.4 5 5.4.6-4 3.7 1.1 5.3-4.9-2.7-4.9 2.7 1.1-5.3-4-3.7 5.4-.6z" fill="#fff" opacity=".9"/>'}</svg>`;
 const TIER = ['🥇 Oro', '🥈 Plata', '🥉 Bronce'];
 function openCups() {
+  if (app.match) { online.stopRace(); online.close(); } app.match = null; app.mode = null;
   show('cups'); const L = $('cupList'); L.innerHTML = '';
   if (!cupUnlocked(CUPS[uSel])) uSel = 0;
   CUPS.forEach((c, i) => {
@@ -156,6 +216,7 @@ function startRace() {
   }, 30);
 }
 app.onRaceEnd = (order, stats) => {
+  if (app.race && app.race.endless) { app.lastResults = order; app.lastStats = stats; setTimeout(() => showEndResults(order, stats), 400); return; }
   app.lastOrder = order.map(o => o.ch);
   order.forEach((o, i) => { o.pts = CONFIG.points[i]; app.points[o.ch.id] += o.pts; });
   app.lastStats = stats; app.lastResults = order;
@@ -172,7 +233,7 @@ function showResults(order) {
   $('rTable').innerHTML = h;
   $('rNext').textContent = last ? '🏆 Ver podio' : 'Siguiente carrera ›';
 }
-btn('rNext', () => { if (app.raceNo >= RACES_PER_CUP - 1) showPodium(); else { app.raceNo++; startRace(); } });
+btn('rNext', () => { if (app.match) { if (app.race) { app.race.dispose(); app.race = null; } online.stopRace(); if (app.mode === 'online') openLobby(); else startEndless(soloMatch(meInfo())); return; } if (app.raceNo >= RACES_PER_CUP - 1) showPodium(); else { app.raceNo++; startRace(); } });
 
 // ---------------- podium ----------------
 const podScene = new THREE.Scene(); const podCam = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.5, 900);
@@ -244,12 +305,12 @@ function applySettings() {
 btn('sOk', () => { if (setReturn === 'pause') show('pause'); else if (setReturn === 'title') { show('title'); } else show(setReturn); });
 
 // ---------------- pause ----------------
-function pause() { if (!app.race || app.state !== 'race') return; show('pause'); Audio.stopSong(); Audio.engineSet(0); }
+function pause() { if (!app.race || app.state !== 'race') return; show('pause'); $('paRe').style.display = app.mode === 'online' ? 'none' : ''; $('paNote').style.display = app.mode === 'online' ? '' : 'none'; Audio.stopSong(); Audio.engineSet(0); }
 $('pauseB').addEventListener('pointerdown', e => { e.stopPropagation(); Audio.init(); pause(); });
-btn('paGo', () => { show(null); Audio.playSong(app.cup.music, CUPS.indexOf(app.cup) * 7 + app.raceNo + 1); });
-btn('paRe', () => startRace());
+btn('paGo', () => { show(null); Audio.playSong(app.cup.music, app.match ? app.match.seed % 97 : CUPS.indexOf(app.cup) * 7 + app.raceNo + 1); });
+btn('paRe', () => { if (app.match && app.mode !== 'online') startEndless(soloMatch(meInfo())); else if (!app.match) startRace(); });
 btn('paSet', () => openSettings('pause'));
-btn('paQuit', () => { if (app.race) { app.race.dispose(); app.race = null; } Audio.stopSong(); openCups(); });
+btn('paQuit', () => { if (app.race) { app.race.dispose(); app.race = null; } Audio.stopSong(); if (app.match) { online.stopRace(); online.close(); openModes(); } else openCups(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
 // ---------------- input ----------------
@@ -322,7 +383,41 @@ function buildMinimap() {
   miniPts = T.S.filter((_, i) => i % 3 === 0).map(s => mm(s.p.x, s.p.z));
 }
 const mm = (x, z) => [miniBox.ox + (x - miniBox.x0) * miniBox.sc, miniBox.oz + (z - miniBox.z0) * miniBox.sc];
+function drawEndlessHUD(dt) {
+  const R = app.race, P = R.player;
+  $('hPos').innerHTML = `${P.place}<small>º/${R.karts.length}</small>`; $('hPos').classList.toggle('p1', P.place === 1);
+  $('hLap').firstChild.textContent = `${Math.max(0, Math.round(P.best)).toLocaleString('es-ES')} m`;
+  $('hTime').textContent = R.state === 'race' || R.state === 'finish' ? '⏱ ' + fmtS(Math.max(0, MATCH_T - R.raceT)) : '⏱ 1:00';
+  $('hPips').innerHTML = '';
+  const kmh = Math.max(0, Math.round(P.fs * 3.2)); $('hKmh').textContent = kmh; $('hBar').style.width = Math.min(100, kmh / 2.2) + '%';
+  const lv = P.driftDir ? (P.driftT > 1.6 ? 3 : P.driftT > 1.0 ? 2 : P.driftT > 0.5 ? 1 : 0) : 0, fr = P.driftDir ? Math.min(1, P.driftT / 1.6) : 0, rg = $('dRing'); rg.style.strokeDashoffset = 283 * (1 - fr); rg.style.stroke = ['#ffffff', '#7fd8ff', '#ffb36b', '#ff7fe0'][lv];
+  const bd = $('bD'); for (let i = 1; i <= 3; i++) bd.classList.toggle('l' + i, lv === i);
+  $('flash').style.opacity = Math.min(1, R.kick * 0.9 + (P.boostT > 0 ? 0.12 : 0));
+  drawFx(R, P);
+  const hi = $('hItem');
+  if (P.rollT > 0) { const k = ['turbo', 'seta', 'escudo', 'iman']; hi.textContent = ITEMS[k[Math.floor(R.time * 14) % k.length]].icon; hi.classList.add('roll'); $('hItemName').textContent = ''; }
+  else { hi.classList.remove('roll'); hi.textContent = P.item ? ITEMS[P.item].icon : ''; $('hItemName').textContent = P.item ? ITEMS[P.item].name : ''; }
+  $('bI').textContent = P.item && P.rollT <= 0 ? ITEMS[P.item].icon : '·';
+  $('blind').style.opacity = 0;
+  const gap = R.waveGap, w = $('wrong');
+  if (R.spectating) { w.style.display = 'block'; w.textContent = '👀 Mirando a ' + R.spectating.name; w.classList.add('spec'); }
+  else if (gap < 40 && R.state === 'race') { w.style.display = 'block'; w.classList.remove('spec'); w.textContent = `🍦 ¡La ola a ${Math.max(0, Math.round(gap))} m!`; }
+  else w.style.display = 'none';
+  $('waveV').style.opacity = R.state === 'race' && !P.out ? Math.max(0, Math.min(0.85, (45 - gap) / 40)) : 0;
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0; }
+  // marcador: clasificación por distancia + la ola
+  const c = $('mini').getContext('2d'); c.clearRect(0, 0, 260, 260);
+  c.fillStyle = 'rgba(255,255,255,.78)'; c.beginPath(); c.roundRect(2, 2, 256, 256, 30); c.fill();
+  const K = R.karts.slice().sort((a, b) => a.place - b.place); c.textBaseline = 'middle';
+  K.forEach((k, i) => { const y = 26 + i * 34; c.fillStyle = k.isPlayer ? 'rgba(255,143,192,.35)' : 'transparent'; if (k.isPlayer) { c.beginPath(); c.roundRect(8, y - 16, 244, 32, 14); c.fill(); }
+    c.fillStyle = k.ch.color; c.beginPath(); c.arc(26, y, 10, 0, 7); c.fill(); c.lineWidth = 3; c.strokeStyle = '#ffffff'; c.stroke();
+    c.font = '700 22px Fredoka, sans-serif'; c.fillStyle = k.out ? '#b9a2c8' : '#6a4b8a'; c.textAlign = 'left'; let nm = (k.out ? '🍦' : '') + (k.isPlayer ? 'Tú' : k.name); while (c.measureText(nm).width > 128 && nm.length > 3) nm = nm.slice(0, -1);
+    c.fillText(nm, 44, y + 1); c.textAlign = 'right'; c.fillText(Math.max(0, Math.round(k.best)) + ' m', 248, y + 1); });
+  const gy = 236; c.fillStyle = '#ff8fc0'; c.beginPath(); c.roundRect(10, gy - 12, 240, 24, 12); c.fill(); c.fillStyle = '#ffffff'; c.font = '700 18px Fredoka, sans-serif'; c.textAlign = 'center';
+  c.fillText(P.out ? '🍦 Te ha pillado la ola' : `🍦 ola a ${Math.max(0, Math.round(gap < 900 ? gap : P.best - R.wave.d))} m`, 130, gy + 1);
+}
 function drawHUD(dt) {
+  if (app.race.endless) return drawEndlessHUD(dt);
   const R = app.race, P = R.player;
   $('hPos').innerHTML = `${P.place}<small>º/${R.karts.length}</small>`;
   $('hLap').firstChild.textContent = `Vuelta ${Math.min(CONFIG.laps, Math.max(1, P.lap + 1))}/${CONFIG.laps}`;
@@ -365,6 +460,7 @@ function frame(now) {
       if (lowFpsT >= 3 && prLv < PRL.length - 1) { lowFpsT = 0; prGood = 0; prLv++; applyPR(); if (!prWarned && prLv >= 4) { prWarned = true; app.ui.toast('Calidad ajustada para ir más fluido'); } }
       else if (fps > 57) { if (++prGood >= 6 && prLv > (isTouch ? 1 : 0)) { prGood = 0; prLv--; applyPR(); } } else prGood = 0; } }
   const t = now / 1000;
+  if (app.state === 'pause' && app.race && app.mode === 'online' && app.match) { acc += dt; let n = 0; app.race.input.steer = 0; app.race.input.drift = false; while (acc >= STEP && n < 6) { app.race.update(STEP); acc -= STEP; n++; } if (app.race) renderer.render(app.race.scene, app.race.camera); return; }
   if (app.state === 'race' && app.race) {
     readInput();
     acc += dt * app.speed; let n = 0;
@@ -427,6 +523,6 @@ window.__kart = {
   pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },
   give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, use() { app.race.useItem(app.race.player); },
   forceFinish() { const R = app.race; for (const k of R.karts) { if (!k.finished) { k.finished = true; k.finishTime = R.raceT + k.place; } } },
-  openChars, openCups, showPodium, pickOrient, openOrient,
+  openChars, openCups, showPodium, pickOrient, openOrient, openModes, openLobby, startEndless, soloMatch, meInfo, get match() { return app.match; },
   trackShape(id, rev) { const T = buildTrack(CUPS.find(c => c.id === id), rev, { hi: false }); return { S: T.S.map(s => [s.p.x, s.p.z, s.w, s.wall, s.p.y]), sc: T.shortcuts.map(c => c.pts.map(p => [p.x, p.z])), feats: T.feats.map(f => [f.type, T.idxOf(f.t)]), L: T.L }; }, get quality() { return qualityHi ? 'alta' : 'baja'; },
 };
