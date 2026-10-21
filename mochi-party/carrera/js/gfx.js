@@ -166,7 +166,10 @@ function buildInner(kind, g, ch) {
 }
 export function animCharacter(c, t, k = 1, expr = '') {
   const u = c.userData;
-  if (u.happy) { u.happy.visible = expr === 'happy'; u.xx.visible = expr === 'squash'; for (const e of u.eyes) e.visible = !expr; u.mouth.scale.set(expr === 'happy' ? 0.13 : 0.09, expr === 'happy' ? 0.11 : 0.07, 0.07); u.mouth.visible = expr !== 'squash'; }
+  if (u.happy) { const sad = expr === 'sad'; u.happy.visible = expr === 'happy'; u.xx.visible = expr === 'squash'; for (const e of u.eyes) e.visible = !expr || sad; u.mouth.scale.set(expr === 'happy' ? 0.13 : 0.09, expr === 'happy' ? 0.11 : 0.07, 0.07); u.mouth.visible = expr !== 'squash';
+    // cara triste: boca del revés y un poco más abajo
+    if (u.mouthRZ == null) { u.mouthRZ = u.mouth.rotation.z; u.mouthY = u.mouth.position.y; }
+    u.mouth.rotation.z = sad ? 0 : u.mouthRZ; u.mouth.position.y = sad ? u.mouthY - 0.07 : u.mouthY; }
   for (const [type, m, p] of u.inner.userData.anim) {
     if (type === 'spin') m.rotation.y = t * p;
     else if (type === 'spinz') m.rotation.z = t * p;
@@ -179,7 +182,7 @@ export function animCharacter(c, t, k = 1, expr = '') {
   if (u.spin) u.spin.rotation.z = t * 0.6;
   if (u.spinKey) u.spinKey.rotation.z = t * 3;
   const blink = (t * 0.9 + ((u.seed || 0) % 7) * 0.3) % 3.4 < 0.12;
-  for (const e of u.eyes) e.scale.y = blink ? 0.03 : 0.21;
+  for (const e of u.eyes) e.scale.y = blink ? 0.03 : expr === 'sad' ? 0.13 : 0.21;
   u.ears.rotation.x = Math.sin(t * 6) * 0.08 * k;
 }
 

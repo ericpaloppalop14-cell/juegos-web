@@ -2,8 +2,8 @@
 //  1 Corteza: raíces, topos, tuberías y tesoros · 2 Fósiles: dinos que se mueven, conchas y ámbar
 //  3 Cristales: geodas, murciélagos y setas luminosas · 4 Magma: ríos de lava, salamandras y rocas flotantes
 //  5 Núcleo: esfera dorada y meta épica. Reglas justas: misma velocidad base; turbo por habilidad.
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m8';
-const D = 460, R = 7.5, XM = 5.4, H = D / 5, V0 = 16, BSTEP = 1.1, BMAX = 6.6;
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m9';
+const D = 460, R = 7.5, XM = 5.4, H = D / 5, V0 = 11.5, BSTEP = .8, BMAX = 4.5; // tanda 4: caída más lenta y agujeros enormes
 // medidas ÚNICAS para dibujar y para chocar: lo que ves es lo que choca
 const RR = .45, ZS = 2.6; // radio del mochi (para chocar solo cuenta el 40%: hitbox generosa)
 const LAY = [
@@ -109,6 +109,16 @@ export default {
         for (let k = 0; k < 30; k++) { const s = glowSprite(pick(['#ffe27a', '#ffffff', '#ffb3d9']), rnd(1.5, 4), .65); const o = onWall(g, aa(), yy(), .6); o.add(s); A.push(t => { s.material.opacity = .4 + Math.sin(t * 4 + k) * .3; }); }
         for (let k = 0; k < 6; k++) { const ring = mesh(new THREE.TorusGeometry(R - .3, .18, 6, 40), toon('#fff3b0', { emissive: '#ffd36b', ei: .7 }), g, [0, -H * (k + 1) / 7, 0], [Math.PI / 2, 0, 0]); A.push(t => { ring.scale.setScalar(1 + Math.sin(t * 3 + k) * .03); }); }
       }
+      // tanda 4: escenario más vivo en cada mundo (luciérnagas de colores y un gigante simpático)
+      { const mc = [['#ffe9a0', '#ffffff'], ['#ffd08a', '#fff4e0'], ['#7ee3ff', '#ff9cf0'], ['#ffb040', '#ff6a20'], ['#ffffff', '#ffe27a']][i];
+        const motes = []; for (let k = 0; k < 26; k++) { const sp = glowSprite(pick(mc), rnd(.35, .8), .85); const a0 = aa(), r0 = rnd(3.5, 6.6), y0 = yy(); sp.position.set(Math.cos(a0) * r0, y0, Math.sin(a0) * r0); g.add(sp); motes.push([sp, a0, r0, y0, rnd(.2, .6) * (k % 2 ? 1 : -1)]); }
+        A.push(t => { for (const [sp, a0, r0, y0, w] of motes) { const a = a0 + t * w; sp.position.set(Math.cos(a) * r0, y0 + Math.sin(t * 1.3 + a0) * 1.2, Math.sin(a) * r0); } });
+        if (i === 0) for (let k = 0; k < 3; k++) { const o = onWall(g, aa(), -H * (k + .6) / 3.4, .1); o.scale.setScalar(1.4); const wm = new THREE.Group(); o.add(wm); const segs = []; for (let j = 0; j < 6; j++) segs.push(mesh(new THREE.SphereGeometry(.42 - j * .03, 14, 10), toon(j % 2 ? '#ff9cc8' : '#ffb3d6', { rim: .5 }), wm, [0, 0, j * -.4]));
+          outline(segs[0], '#b0507a', 1.06); eyes(segs[0], .12, .34, 1.4, .16); blush(segs[0], -.05, .36, 1, .26); const ph = rnd(0, 6); A.push(t => { const e = Math.max(0, Math.sin(t * 1.1 + ph)); wm.position.z = -2.2 + e * 2.6; segs.forEach((sg, j) => sg.position.x = Math.sin(t * 4 - j * .7 + ph) * .14); }); }
+        else if (i === 1) for (let k = 0; k < 3; k++) { const sh2 = shell(g, pick(['#ffc9a8', '#f6b8d0'])); sh2.scale.setScalar(2.6); const a0 = aa(), y0 = -H * (k + .5) / 3; sh2.position.set(Math.cos(a0) * 4.6, y0, Math.sin(a0) * 4.6); A.push(t => { sh2.rotation.y = t * .4 + k; sh2.rotation.z = t * .7; }); }
+        else if (i === 2) for (let k = 0; k < 3; k++) { const ch = new THREE.Group(); ch.position.set(0, -H * (k + .5) / 3, 0); g.add(ch); for (let j = 0; j < 10; j++) { const a = j / 10 * 6.283, c = pick(['#b9a2ff', '#7ee3ff', '#ff9cf0']); mesh(new THREE.OctahedronGeometry(.32, 0), toon(c, { emissive: c, ei: .9 }), ch, [Math.cos(a) * 6.3, Math.sin(j * 2) * .4, Math.sin(a) * 6.3], null, [1, 2, 1]); } A.push(t => { ch.rotation.y = t * .25 * (k % 2 ? 1 : -1); }); }
+        else if (i === 3) { const bub = []; for (let k = 0; k < 14; k++) { const b = mesh(new THREE.SphereGeometry(rnd(.2, .45), 12, 8), toon('#ffb030', { emissive: '#ff5a10', ei: .7 }), g); const a0 = aa(); b.position.set(Math.cos(a0) * rnd(5.6, 6.8), yy(), Math.sin(a0) * rnd(5.6, 6.8)); bub.push(b); } A.push((t, dt) => { for (const b of bub) { b.position.y += .05; if (b.position.y > -2) b.position.y = -H + 3; } }); }
+        else for (let k = 0; k < 12; k++) { const st = mesh(new THREE.OctahedronGeometry(.4, 0), toon('#fff3b0', { emissive: '#ffd36b', ei: 1 }), g); const a0 = aa(), y0 = yy(); st.position.set(Math.cos(a0) * 6, y0, Math.sin(a0) * 6); A.push(t => { st.rotation.y = t * 2 + k; st.scale.setScalar(1 + Math.sin(t * 5 + k) * .25); }); } }
     });
     // núcleo final: gran esfera dorada sonriente con anillos y meta épica
     const core = new THREE.Group(); core.position.y = -D - 10; sc.add(core); const cs = mesh(new THREE.SphereGeometry(9, 40, 28), toon('#ffcf5a', { emissive: '#ffb030', ei: .55 }), core); core.add(glowSprite('#fff3b0', 44, .9));
@@ -127,12 +137,12 @@ export default {
     while (y > -D + 14) {
       const li = Math.min(4, Math.floor(-y / H)), inLay = -y - li * H;
       if (inLay < 4 || inLay > H - 4) { y -= 4; continue; }
-      const dif = clamp((-y / D), 0, 1), hr = lerp(2.4, 1.6, dif), gap = lerp(15, 10.5, dif) + rnd(-.5, 1);
+      const dif = clamp((-y / D), 0, 1), hr = lerp(3.3, 2.7, dif), gap = lerp(17, 14, dif) + rnd(-.5, 1);
       // nuevo centro: a una distancia alcanzable desde el anterior y siempre dentro del pozo
-      const lim = XM - hr * .55, maxS = lerp(2.6, 4.4, dif), mnS = n < 2 ? 0 : 1.2; let hx, hz, tries = 0;
+      const lim = XM - hr * .55, maxS = lerp(1.6, 2.8, dif), mnS = n < 2 ? 0 : .8; let hx, hz, tries = 0;
       do { const a = rnd(0, 6.283), d = rnd(mnS, maxS); hx = px + Math.cos(a) * d; hz = pz + Math.sin(a) * d; tries++; } while (Math.hypot(hx, hz) > lim && tries < 40);
       if (Math.hypot(hx, hz) > lim) { const s = lim / Math.hypot(hx, hz); hx *= s; hz *= s; }
-      const spin = li >= 3 && n > 3 && Math.random() < .45 ? rnd(.35, .6) * (Math.random() < .5 ? -1 : 1) : 0;
+      const spin = 0; // sin discos giratorios: siempre da tiempo
       const g = new THREE.Group(); g.position.y = y; sc.add(g);
       const sh = new THREE.Shape(); sh.absarc(0, 0, R + .5, 0, Math.PI * 2, false); const hole = new THREE.Path(); hole.absarc(hx, -hz, hr, 0, Math.PI * 2, true); sh.holes.push(hole);
       const geo = new THREE.ExtrudeGeometry(sh, { depth: .7, bevelEnabled: false, curveSegments: 48 }); geo.rotateX(-Math.PI / 2); geo.translate(0, -.35, 0);
@@ -159,7 +169,7 @@ export default {
     this.O.sort((a, b) => b.y - a.y);
     // obstáculos flotantes entre plataformas, siempre fuera de la ruta directa entre un agujero y el siguiente
     { const rings = this.O.filter(o => o.ring), add = [];
-      for (let i = 1; i < rings.length - 1; i++) { const a = rings[i], b = rings[i + 1], li = a.li, n2 = li === 0 ? 1 : li >= 3 ? 3 : 2;
+      for (let i = 1; i < rings.length - 1; i++) { const a = rings[i], b = rings[i + 1], li = a.li, n2 = li === 0 || i % 2 ? 0 : 1;
         for (let k = 0; k < n2; k++) { const rr = rnd(.8, 1.25); let x, z, ok = false; for (let tr = 0; tr < 30 && !ok; tr++) { const an = rnd(0, 6.283), d = rnd(0, XM - .3); x = Math.cos(an) * d; z = Math.sin(an) * d;
             const vx = b.hx - a.hx, vz = b.hz - a.hz, l2 = vx * vx + vz * vz || 1, tt = clamp(((x - a.hx) * vx + (z - a.hz) * vz) / l2, 0, 1), dd = Math.hypot(x - a.hx - vx * tt, z - a.hz - vz * tt); ok = dd > rr + 1.9 && add.every(o => Math.abs(o.y - (a.y + b.y) / 2) > 2 || Math.hypot(o.x - x, o.z - z) > o.rr + rr + .6); }
           if (!ok) continue; const y = lerp(a.y, b.y, rnd(.4, .6)), g = new THREE.Group(); g.position.set(x, y, z); sc.add(g); const ro = rock(g, li, rr); const ph = rnd(0, 6); this.anim.push(t => { ro.rotation.y = t * .6 + ph; ro.position.y = Math.sin(t * 2 + ph) * .12; ro.userData.warn.material.opacity = .45 + Math.sin(t * 8 + ph) * .3; });
@@ -197,17 +207,19 @@ export default {
         const [hx, hz] = this.hole(next); if (r.y - next.y < 16) { r.tx = hx + r.plan.ox; r.tz = hz + r.plan.oz; }
         for (const o of this.O) if (o.rock && o.y < r.y && o.y > r.y - 7) { const dx = r.tx - o.x, dz = r.tz - o.z, l = Math.hypot(dx, dz) || .01, need = o.rr + 1.1; if (l < need && (r.me || Math.random() < .5 + .5 * r.skill)) { r.tx = o.x + dx / l * need; r.tz = o.z + dz / l * need; } } }
       { const l = Math.hypot(r.tx, r.tz); if (l > XM) { r.tx *= XM / l; r.tz *= XM / l; } }
+      // imán suave: al acercarte a un agujero tu mochi se va colando solo hacia el centro
+      if (r.me && next && r.y - next.y < 7) { const [hx, hz] = this.hole(next), dd = Math.hypot(r.x - hx, r.z - hz); if (dd < next.hr + 3) { const k = Math.min(1, dt * 3.2); r.x += (hx - r.x) * k; r.z += (hz - r.z) * k; } }
       r.vx += ((r.tx - r.x) * 60 - r.vx * 13) * dt; r.vz += ((r.tz - r.z) * 60 - r.vz * 13) * dt; r.x += r.vx * dt; r.z += r.vz * dt;
       { const l = Math.hypot(r.x, r.z); if (l > XM + .3) { r.x *= (XM + .3) / l; r.z *= (XM + .3) / l; } }
       const oy = r.y; r.y -= r.v * dt;
       for (const o of this.O) if (oy > o.y && r.y <= o.y) {
-        if (o.rock) { if (r.inv <= 0 && Math.hypot(r.x - o.x, r.z - o.z) < o.rr + RR * .55) { r.v = 9; r.stun = .3; r.inv = .7; const dx = r.x - o.x, dz = r.z - o.z, l = Math.hypot(dx, dz) || 1; r.vx = dx / l * 9; r.vz = dz / l * 9; r.expr = 'squash'; r.boost = 0; r.bonus *= .7; r.streak = 0; r.hits = (r.hits || 0) + 1; E.burst(new THREE.Vector3(r.x, o.y, r.z), '#ffd0a0', 12, 5, .5, .5, 2); if (r.me) { Audio.sfxPlay('hit'); E.shake = .3; E.ui.toast(pick(['¡Pum! ¡Una roca!', '¡Ay, qué dura!', '¡Esquiva las rocas!']), '#ff9cc8'); } else E.say(r, pick(OUCH)); } continue; }
+        if (o.rock) { if (r.inv <= 0 && Math.hypot(r.x - o.x, r.z - o.z) < o.rr * .8 + RR * .4) { r.v = 9; r.stun = .3; r.inv = .7; const dx = r.x - o.x, dz = r.z - o.z, l = Math.hypot(dx, dz) || 1; r.vx = dx / l * 9; r.vz = dz / l * 9; r.expr = 'squash'; r.boost = 0; r.bonus *= .7; r.streak = 0; r.hits = (r.hits || 0) + 1; E.burst(new THREE.Vector3(r.x, o.y, r.z), '#ffd0a0', 12, 5, .5, .5, 2); if (r.me) { Audio.sfxPlay('hit'); E.shake = .3; E.ui.toast(pick(['¡Pum! ¡Una roca!', '¡Ay, qué dura!', '¡Esquiva las rocas!']), '#ff9cc8'); } else E.say(r, pick(OUCH)); } continue; }
         if (o.boost) { if (Math.hypot(r.x - o.x, r.z - o.z) < 1.3 && !r.got.has(o)) { r.got.add(o); r.boost = 1; r.bonus = Math.min(BMAX, r.bonus + BSTEP * .5); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('boost'); E.ui.toast('¡Gota turbo! 💧', '#7ee3ff'); E.ui.flash(); } } continue; }
         const [hx, hz] = this.hole(o), d = Math.hypot(r.x - hx, r.z - hz);
-        if (d > o.hr - RR * .4 && r.inv <= 0) { // choque: frena, rebota hacia el agujero y te deja un momento de gracia
+        if (d > o.hr + .2 && r.inv <= 0) { // choque: frena, rebota hacia el agujero y te deja un momento de gracia
           r.v = 8; r.stun = .35; r.inv = .7; r.hits = (r.hits || 0) + 1; const k = 1 / Math.max(.01, d); r.vx = (hx - r.x) * k * 7; r.vz = (hz - r.z) * k * 7; r.expr = 'squash'; r.boost = 0; r.bonus *= .6; r.streak = 0;
           E.burst(new THREE.Vector3(r.x, o.y + .5, r.z), '#ffffff', 14, 6, .6, .5, 4); if (r.me) { Audio.sfxPlay('hit'); E.shake = .35; E.ui.toast(pick(['¡Pum! Fuera del agujero', '¡Ay, mi flan!', '¡Choque blandito!']), '#ff9cc8'); } else E.say(r, pick(OUCH)); }
-        else if (d < o.hr * .4) { r.perf++; r.streak++; r.boost = .7; r.bonus = Math.min(BMAX, r.bonus + BSTEP); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('trick'); E.ui.toast(r.streak > 1 ? `¡Perfecto! ⚡ x${r.streak}` : '¡Perfecto! ⚡', '#ffe27a'); E.burst(new THREE.Vector3(r.x, o.y, r.z), '#ffe27a', 16, 6, .6, .6, 0); } }
+        else if (d < o.hr * .45) { r.perf++; r.streak++; r.boost = .7; r.bonus = Math.min(BMAX, r.bonus + BSTEP); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('trick'); E.ui.toast(r.streak > 1 ? `¡Perfecto! ⚡ x${r.streak}` : '¡Perfecto! ⚡', '#ffe27a'); E.burst(new THREE.Vector3(r.x, o.y, r.z), '#ffe27a', 16, 6, .6, .6, 0); } }
         else { if (r.me) Audio.sfxPlay('pop'); }
       }
       r.prog = clamp(-r.y / D, 0, 1); if (-r.y >= D) { E.finish(r); r.y = -D - .5; }
@@ -228,7 +240,7 @@ export default {
     const next = this.O.find(o => o.ring && o.y < me.y - .3);
     for (const o of this.O) { if (!o.g) continue; if (o.boost) o.g.rotation.y = t * 3; o.g.visible = !(o.boost && me.got.has(o)) && o.y < me.y + .8 && o.y > me.y - 90; if (o.ring) { const on = o === next; o.rim.material.emissiveIntensity = on ? 1.3 + Math.sin(t * 10) * .3 : .5; o.gs.material.opacity = on ? .7 : .25; } }
     // marcador de aterrizaje en la próxima plataforma
-    if (next && !me.fin) { const [hx, hz] = this.hole(next), d = Math.hypot(me.x - hx, me.z - hz), ok = d <= next.hr - RR * .4; this.mk.visible = this.beam.visible = true; this.mk.position.set(me.x, next.y + .4, me.z); this.mkM.color.set(d < next.hr * .4 ? '#ffe27a' : ok ? '#5dff9a' : '#ff4f6a'); this.mk.scale.setScalar(1 + Math.sin(t * 8) * .08);
+    if (next && !me.fin) { const [hx, hz] = this.hole(next), d = Math.hypot(me.x - hx, me.z - hz), ok = d <= next.hr + .2; this.mk.visible = this.beam.visible = true; this.mk.position.set(me.x, next.y + .4, me.z); this.mkM.color.set(d < next.hr * .45 ? '#ffe27a' : ok ? '#5dff9a' : '#ff4f6a'); this.mk.scale.setScalar(1 + Math.sin(t * 8) * .08);
       const h = Math.max(.1, me.y - next.y - .6); this.beam.scale.set(1, h, 1); this.beam.position.set(me.x, next.y + .4 + h / 2, me.z); this.beam.material.color.copy(this.mkM.color); } else this.mk.visible = this.beam.visible = false;
     const sp = clamp((me.v - 8) / 16, 0, 1.3); this.lines.material.opacity = .08 + sp * .28;
     this.LP.forEach((p, i) => { p.y += (me.v + 10) * dt; if (p.y > 6) { p.y = rnd(-30, -10); p.a = rnd(0, 6.283); } this.tmp.position.set(Math.cos(p.a) * p.r, me.y + p.y, Math.sin(p.a) * p.r); this.tmp.scale.set(1, .5 + sp * 2.5, 1); this.tmp.updateMatrix(); this.lines.setMatrixAt(i, this.tmp.matrix); }); this.lines.instanceMatrix.needsUpdate = true;

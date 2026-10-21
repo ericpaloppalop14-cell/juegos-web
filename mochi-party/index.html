@@ -115,20 +115,79 @@ tr.me{background:#fff0f8;font-weight:700}
 .chars button.on{outline:none;border-color:#ff86bd;box-shadow:0 0 0 3px #ff86bd,0 4px 0 #e0559a,0 10px 18px rgba(230,80,150,.3);transform:translateY(-3px) scale(1.04)}
 #charWho{background:linear-gradient(#fff,#fff4fa);border:2px solid #fff;border-radius:18px;padding:8px 16px;box-shadow:0 6px 14px rgba(150,80,170,.16);max-width:340px}
 #podio{position:relative;padding:4px;border-radius:26px;background:linear-gradient(rgba(255,255,255,.7),rgba(255,255,255,.35));border:2px solid #fff;box-shadow:0 10px 26px rgba(140,70,160,.18)}
+
+/* ================= tanda 4: escenario 3D, presentación y clasificaciones animadas ================= */
+#bgGrad{position:fixed;inset:0;z-index:7;pointer-events:none;background:radial-gradient(circle at 12% 18%,rgba(255,255,255,.8) 0 3px,transparent 4px),radial-gradient(circle at 86% 30%,rgba(255,255,255,.7) 0 2px,transparent 3px),radial-gradient(circle at 70% 82%,rgba(255,255,255,.7) 0 3px,transparent 4px),radial-gradient(circle at 22% 70%,rgba(255,182,220,.35) 0 60px,transparent 61px),radial-gradient(circle at 90% 90%,rgba(200,170,255,.3) 0 80px,transparent 81px),radial-gradient(120% 70% at 50% 0%,#fff6fb 0%,#ffe3f1 45%,#f3dcff 100%)}
+#menuBg{position:fixed;inset:0;z-index:8;pointer-events:none}
+#st3d{position:fixed;left:0;top:0;z-index:9;pointer-events:none}
+canvas#c{z-index:9}
+.scr,#sChars,#sIntro,#sPodio{background:transparent!important}
+#sChars::before,#sIntro::before,#sPodio::before{display:none}
+.stage3d{width:min(380px,100%);height:230px;flex:none;position:relative;border-radius:28px;cursor:pointer;touch-action:manipulation}
+.stage3d::after{content:'';position:absolute;left:12%;right:12%;bottom:-4px;height:18px;border-radius:50%;background:radial-gradient(rgba(150,60,150,.18),transparent 70%);z-index:-1}
+#menuHero{display:none}body.no3d #menuHero{display:block}body.no3d .stage3d{display:none}body.no3d #podioCv{display:block}
+#menuStage{height:225px;margin-top:-6px}
+#sMenu .ev{animation:evPop .5s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes evPop{from{opacity:0;transform:translateY(16px) scale(.8) rotate(-3deg)}}
+#bTorneo{animation:mIn .55s cubic-bezier(.2,1.3,.4,1) both,pulse 2.2s ease-in-out 1.2s infinite}
+@keyframes pulse{50%{transform:scale(1.035)}}
+.mLogo .l1{animation:lgDrop .7s cubic-bezier(.3,1.6,.5,1) both}.mLogo .l2{animation:lgDrop .7s cubic-bezier(.3,1.6,.5,1) .12s both,mWig 3s ease-in-out 1s infinite}
+@keyframes lgDrop{from{opacity:0;transform:translateY(-60px) scale(1.4) rotate(-8deg)}}
+/* pantallas con barra de botones fija abajo (no se corta ni parpadea, en vertical y en horizontal) */
+#sChars.on,#sIntro.on,#sPodio.on{display:flex;justify-content:flex-start;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px 0}
+.lay{flex:1 1 auto;min-height:0;width:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;align-items:center;gap:10px;padding:2px 4px 10px}
+.colA,.colB{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
+.bar{flex:none;width:calc(100% + 24px);margin:0 -12px;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(rgba(255,240,250,0),rgba(255,240,250,.92) 30%);position:relative;z-index:2;contain:layout paint}
+.bar .btn{min-width:200px}
+#bNext,#bGo{animation:barIn .5s cubic-bezier(.3,1.6,.5,1) .3s both}
+@keyframes barIn{from{opacity:0;transform:translateY(30px)}}
+#sIntro .stage3d{height:240px}
+#iHead{display:flex;align-items:center;gap:10px}#iHead #iIcon{width:64px;height:64px;font-size:38px!important;border-radius:22px}
+#iName{animation:tIn .6s cubic-bezier(.3,1.6,.5,1) both}
+#sPodio .stage3d{height:300px;width:min(520px,100%)}
+#pTitle{animation:tIn .7s cubic-bezier(.3,1.6,.5,1) both,tWob 2.6s ease-in-out 1s infinite}
+@keyframes tIn{from{opacity:0;transform:scale(.3) rotate(-8deg)}}@keyframes tWob{50%{transform:scale(1.05) rotate(-1.5deg)}}
+#podio{display:none}#podioCv{display:none}body.no3d #podio{display:block}
+#sIntro tr,#sPodio tr{animation:rowIn .55s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes rowIn{from{opacity:0;transform:translateX(-46px) scale(.85)}}
+#sPodio tr.me td{animation:meGlow 1.6s ease-in-out 1.5s infinite}
+@keyframes meGlow{50%{background:#ffd3ea}}
+#sPodio td.n b{display:inline-block}#sPodio td.n b.up{animation:numPop .5s cubic-bezier(.3,1.8,.5,1)}
+@keyframes numPop{50%{transform:scale(1.6);color:#ff4f9a}}
+#pQuote{animation:barIn .5s cubic-bezier(.3,1.6,.5,1) .9s both}
+.chars{animation:barIn .5s both}
+#sChars .stage3d{height:220px}
+@media (orientation:landscape) and (max-height:560px){
+  #sMenu.on{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"top main" "hero evs" "hero pj";align-items:start;justify-items:center;column-gap:14px;row-gap:8px;padding-top:calc(8px + env(safe-area-inset-top))}
+  #sMenu>.mTop{grid-area:top}#sMenu>.mHero{grid-area:hero;margin:0}#sMenu>.mMain{grid-area:main;padding-bottom:12px}#sMenu>.mEvs{grid-area:evs}#sMenu>.mPj{grid-area:pj}
+  #sMenu::after{display:none}.mLogo{font-size:34px}.mLogo .l2{font-size:40px}.mSub{display:none}
+  .mMain{flex-direction:row!important;gap:8px!important}.mMain .mBtn{flex:1 1 0;min-width:0;font-size:15px;padding:8px 10px;gap:8px}.mMain .mBtn small{display:none}.mMain .mBtn i{width:34px;height:34px;font-size:19px}
+  #menuStage{height:calc(100dvh - 130px);min-height:180px;width:min(400px,100%)}
+  .lay{flex-direction:row;align-items:stretch}
+  .colA{flex:1 1 50%;min-width:0}.colB{flex:1 1 50%;min-width:0;overflow-y:auto;padding-bottom:6px}
+  #sPodio .stage3d,#sIntro .stage3d{height:calc(100dvh - 140px);min-height:170px}
+  #sChars .lay{flex-direction:row}#sChars .stage3d{height:calc(100dvh - 120px)}
+  .bar{padding-top:6px;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+  .bar .btn{padding:9px 20px;font-size:17px}
+  h2,#sPodio h2,#sIntro h2{font-size:22px!important}
+}
 </style>
+<script type="importmap">{ "imports": { "three": "./carrera/lib/three.module.min.js" } }</script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>{if(r.scope.endsWith("/mochi-party/"))r.unregister()}));if(window.caches)caches.keys().then(k=>k.filter(n=>n.startsWith("mochi-v")).forEach(n=>caches.delete(n)))}</script></head>
 <body>
+<div id="bgGrad"></div>
+<canvas id="menuBg" aria-hidden="true"></canvas>
 <canvas id="c"></canvas>
 <button id="topbtn" aria-label="Salir">✕</button>
 <div class="hint" id="hint" style="opacity:0"></div>
 
 <div class="scr on" id="sMenu">
-  <canvas id="menuBg" aria-hidden="true"></canvas>
   <header class="mTop">
     <h1 class="mLogo"><span class="l1">Mochi</span><span class="l2">Party</span></h1>
     <p class="mSub">6 pruebas locas contra mochis con muy mala uva 💥</p>
   </header>
   <div class="mHero">
+    <div class="stage3d" id="menuStage" data-mode="menu" aria-label="Tu mochi (tócalo)"></div>
     <canvas id="menuHero" aria-label="Tu mochi"></canvas>
     <div class="who mWho" id="menuWho"></div>
   </div>
@@ -144,34 +203,34 @@ tr.me{background:#fff0f8;font-weight:700}
 </div>
 
 <div class="scr" id="sChars">
-  <h2>Elige tu mochi</h2>
-  <div class="chars" id="charGrid"></div>
-  <div class="who" id="charWho"></div>
-  <button class="btn" id="bCharOk">¡Este!</button>
+  <div class="lay">
+    <div class="colA"><h2>Elige tu mochi</h2><div class="stage3d" id="charStage" data-mode="chars"></div></div>
+    <div class="colB"><div class="chars" id="charGrid"></div><div class="who" id="charWho"></div></div>
+  </div>
+  <div class="bar"><button class="btn" id="bCharOk">¡Este!</button></div>
 </div>
 
 <div class="scr" id="sIntro">
-  <div style="font-size:60px" id="iIcon"></div>
-  <h2 id="iName"></h2>
-  <p class="sub" id="iDesc"></p>
-  <div class="quote" id="iQuote"></div>
-  <table id="iRivals"></table>
-  <button class="btn" id="bGo">¡A por ellos!</button>
-  <button class="btn s" id="bIntroBack">Volver</button>
+  <div class="lay">
+    <div class="colA"><div id="iHead"><div style="font-size:60px" id="iIcon"></div><h2 id="iName"></h2></div><div class="stage3d" id="introStage" data-mode="intro"></div></div>
+    <div class="colB"><p class="sub" id="iDesc"></p><div class="quote" id="iQuote"></div><table id="iRivals"></table></div>
+  </div>
+  <div class="bar"><button class="btn" id="bGo">¡A por ellos!</button><button class="btn s" id="bIntroBack">Volver</button></div>
 </div>
 
 <div class="scr" id="sPodio">
-  <h2 id="pTitle"></h2>
-  <div id="podio"><canvas id="podioCv" width="1360" height="840"></canvas></div>
-  <div class="quote" id="pQuote"></div>
-  <table id="pTable"></table>
-  <button class="btn" id="bNext">Siguiente</button>
-  <button class="btn s" id="bPodioMenu">Menú</button>
+  <div class="lay">
+    <div class="colA"><h2 id="pTitle"></h2><div class="stage3d" id="podioStage" data-mode="podio"></div><div id="podio"><canvas id="podioCv" width="1360" height="840"></canvas></div></div>
+    <div class="colB"><div class="quote" id="pQuote"></div><table id="pTable"></table></div>
+  </div>
+  <div class="bar"><button class="btn" id="bNext">Siguiente</button><button class="btn s" id="bPodioMenu">Menú</button></div>
 </div>
 
-<script src="js/rivals.js?v=m8"></script>
-<script src="js/pruebas.js?v=m4"></script>
-<script src="js/torneo.js?v=m8"></script>
-<script src="js/inicio.js?v=m7"></script>
+<script src="js/rivals.js?v=m9"></script>
+<script src="js/pruebas.js?v=m9"></script>
+<script src="js/torneo.js?v=m9"></script>
+<script src="js/inicio.js?v=m9"></script>
+<script type="module" src="js/escena3d.js?v=m9"></script>
+<script>setTimeout(()=>{if(!window.MP3D)document.body.classList.add('no3d')},5000)</script>
 </body>
 </html>

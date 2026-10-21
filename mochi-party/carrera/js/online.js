@@ -4,7 +4,7 @@
 //  Cada cliente simula a su mochi y difunde su estado; el anfitrión simula la IA,
 //  decide el final, los resultados y los puntos del torneo.
 // ======================================================================
-import { run, Audio } from './core3d.js?v=m8';
+import { run, Audio } from './core3d.js?v=m9';
 import { CHARS } from './data.js';
 import { Net, netAvailable } from './net-rivals.js';
 const $ = id => document.getElementById(id);
@@ -83,7 +83,7 @@ function goAll() { clearTimeout(readyTO); if (!E || E.phase !== 'wait') return; 
 async function begin(msg) {
   cur = msg; inGame = true; if (E) { E.stop(); E = null; }
   show('sWait'); $('wTitle').textContent = `${EVS.find(e => e.id === msg.ev).icon} ${EVS.find(e => e.id === msg.ev).name}` + (msg.total > 1 ? ` · ${msg.round + 1}/${msg.total}` : ''); $('wInfo').textContent = 'Esperando a los demás jugadores';
-  const mod = await import(`./ev-${msg.ev}.js?v=m8`);
+  const mod = await import(`./ev-${msg.ev}.js?v=m9`);
   if (cur !== msg) return;
   const racers = msg.racers.map(r => ({ ...r, me: r.id === net.myId }));
   // un jugador que se fue antes de cargar: lo lleva la IA
@@ -99,16 +99,18 @@ function hostEnd(order) {
   net.send(pod); podio(pod);
 }
 function podio(d) {
+  // antes del podio: celebración en la pista (el ganador salta de alegría, los demás se entristecen)
+  if (E && E.celebrate && !E.celeb && !E.stopped) { const E0 = E; E0.celebrate(d.order, () => { if (E === E0) podio(d); }); return; }
   if (E) { E.stop(); E = null; } inGame = false; show('sPodio');
   const ev = EVS.find(e => e.id === d.ev), myPos = d.order.findIndex(o => o.id === net.myId) + 1, last = d.round + 1 >= d.total;
   $('pTitle').textContent = `${ev.icon} ${myPos === 1 ? '¡HAS GANADO!' : myPos ? `¡Has quedado ${myPos}º!` : 'Resultados'}`;
   $('pSub').textContent = ev.name + (d.total > 1 ? ` · prueba ${d.round + 1}/${d.total}` : '');
   const nm = id => { const n = d.names[id] || d.who[id] || { name: id, ch: 'mochi' }; return `<span class="dot" style="background:${chOf(n.ch).color}"></span>${n.human === false || id.startsWith('ia-') ? '🤖 ' : '🎮 '}${esc(n.name)}${id === net.myId ? ' (tú)' : ''}`; };
-  $('pRes').innerHTML = d.order.map((o, i) => `<tr class="${o.id === net.myId ? 'me' : ''}"><td>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</td><td>${nm(o.id)}</td><td class="n">${o.fin ? o.time.toFixed(1) + ' s' : 'no llegó'}</td></tr>`).join('');
+  $('pRes').innerHTML = d.order.map((o, i) => `<tr class="${o.id === net.myId ? 'me' : ''}" style="animation-delay:${.15 + i * .12}s"><td>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</td><td>${nm(o.id)}</td><td class="n">${o.fin ? o.time.toFixed(1) + ' s' : 'no llegó'}</td></tr>`).join('');
   const tot = d.pts ? Object.entries(d.pts).sort((a, b) => b[1] - a[1]) : [];
   $('pTotT').style.display = $('pTot').style.display = tot.length ? '' : 'none';
   $('pTotT').textContent = last && d.pts ? '🏆 Clasificación final del torneo' : 'Clasificación del torneo';
-  $('pTot').innerHTML = tot.map(([id, p], i) => `<tr class="${id === net.myId ? 'me' : ''}"><td>${i + 1}º</td><td>${nm(id)}</td><td class="n">${p} pts</td></tr>`).join('');
+  $('pTot').innerHTML = tot.map(([id, p], i) => `<tr class="${id === net.myId ? 'me' : ''}" style="animation-delay:${.6 + i * .12}s"><td>${i + 1}º</td><td>${nm(id)}</td><td class="n">${p} pts</td></tr>`).join('');
   if (last && d.pts && tot[0]) { const champ = tot[0][0]; $('pTitle').textContent = champ === net.myId ? '🏆 ¡Campeón de Mochi Rivals!' : `🏆 Gana ${(d.who[champ] || d.names[champ] || {}).name}`; }
   const H = net.isHost; $('bNext').style.display = H && !last ? '' : 'none'; $('bRoom').style.display = H ? '' : 'none'; $('pWait').style.display = H ? 'none' : '';
   $('bNext').textContent = `Siguiente prueba (${d.round + 2}/${d.total})`;

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#ffd6ec">
-<title>Mochi Rivals · Online</title>
+<title>Mochi Rivals · Online</title><link rel="icon" href="icons/icon-192.png">
 <style>
 @font-face{font-family:Fredoka;src:url(fredoka.woff2) format('woff2');font-weight:300 700;font-display:block}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
@@ -77,6 +77,18 @@ tr.me{background:#fff0f8;font-weight:700}
 .err{color:#e0407a;font-weight:700;text-align:center;min-height:20px;max-width:340px}
 .wait{font-weight:600;color:#9a78bb;text-align:center}
 .wait:after{content:'…';animation:dots 1.2s infinite}@keyframes dots{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
+
+/* tanda 4: clasificaciones animadas y botón de abajo siempre visible y fijo */
+#sPodio{justify-content:flex-start;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+#sPodio #pTitle{animation:tIn .6s cubic-bezier(.3,1.6,.5,1) both,tWob 2.4s ease-in-out .8s infinite}
+@keyframes tIn{from{opacity:0;transform:scale(.4) rotate(-6deg)}}@keyframes tWob{50%{transform:scale(1.05) rotate(-1.5deg)}}
+#sPodio table{border-collapse:separate;border-spacing:0;border:2px solid #fff;border-radius:18px;box-shadow:0 8px 20px rgba(140,70,160,.18)}
+#sPodio tr{animation:rowIn .5s cubic-bezier(.3,1.5,.5,1) both}
+#sPodio tr.me td{background:linear-gradient(90deg,#ffe0f1,#fff3fa);animation:meGlow 1.6s ease-in-out 1.2s infinite}
+@keyframes rowIn{from{opacity:0;transform:translateX(-40px) scale(.85)}}
+@keyframes meGlow{50%{background:linear-gradient(90deg,#ffd0ea,#ffe9f6)}}
+#sPodio .pBar{position:sticky;bottom:0;margin-top:auto;width:100%;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;padding:12px 0 4px;background:linear-gradient(rgba(255,240,220,0),#fff0dc 35%);z-index:2}
+#sPodio .pBar .btn{min-width:200px}
 </style>
 </head>
 <body>
@@ -124,15 +136,17 @@ tr.me{background:#fff0f8;font-weight:700}
   <table id="pRes"></table>
   <h2 id="pTotT">Clasificación del torneo</h2>
   <table id="pTot"></table>
-  <button class="btn" id="bNext">Siguiente prueba</button>
-  <button class="btn s" id="bRoom">Volver a la sala</button>
-  <div class="wait" id="pWait">Esperando al anfitrión</div>
+  <div class="pBar">
+   <button class="btn" id="bNext">Siguiente prueba</button>
+   <button class="btn s" id="bRoom">Volver a la sala</button>
+   <div class="wait" id="pWait">Esperando al anfitrión</div>
+  </div>
  </div>
  <div class="scr" id="sMsg"><h1 style="font-size:30px" id="mTitle"></h1><p class="sub" id="mText"></p><button class="btn" id="bMsgHome">Volver a Mochi Rivals</button><button class="btn s" id="bMsgOnline">Otra sala</button></div>
 </div>
 
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="lib/peerjs.min.js"></script>
-<script type="module" src="js/online.js?v=m8"></script>
+<script type="module" src="js/online.js?v=m9"></script>
 </body>
 </html>

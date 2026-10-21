@@ -21,15 +21,17 @@ function newSession(mode, evIdx) {
   const skill = {}; rv.forEach(id => skill[id] = +(0.35 + Math.random() * 0.6).toFixed(2));
   S = { mode, pj, rv, skill, idx: evIdx, pts: { me: 0, ...Object.fromEntries(rv.map(id => [id, 0])) }, done: [] }; save();
 }
-function show(id) { document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); $('topbtn').style.display = id ? 'none' : 'block'; if (id) { const X = MR.X(); X.setTransform(1, 0, 0, 1, 0, 0); X.clearRect(0, 0, 9999, 9999); } }
+// escenario 3D (js/escena3d.js): cada pantalla tiene un hueco .stage3d; aquí decimos qué escena pinta
+let stK = 0; function stage(id, d) { const e = $(id); if (!e) return; e.dataset.d = JSON.stringify(d); e.dataset.key = id + (++stK); }
+function show(id) { document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); const mb = $('menuBg'); if (mb) mb.style.display = id === 'sMenu' ? '' : 'none'; document.querySelectorAll('.lay').forEach(l => l.scrollTop = 0); $('topbtn').style.display = id ? 'none' : 'block'; if (id) { const X = MR.X(); X.setTransform(1, 0, 0, 1, 0, 0); X.clearRect(0, 0, 9999, 9999); } }
 function mini(cv, ch, mood) { const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); drawMochi(x, cv.width / 2, cv.height * .58, cv.width * .3, { ch, mood }); }
 const nm = id => id === 'me' ? 'Tú' : CH(id).name, chOf = id => CH(id === 'me' ? S.pj : id);
 
 // ---------- menú ----------
 function menu() {
-  show('sMenu'); const ch = CH(pj); $('menuWho').innerHTML = `${ch.name}<small>${ch.pers}</small>`;
+  show('sMenu'); stage('menuStage', { pj }); const ch = CH(pj); $('menuWho').innerHTML = `${ch.name}<small>${ch.pers}</small>`;
   const L = $('evList'); L.innerHTML = '';
-  EV.forEach((e, i) => { const b = document.createElement('button'); b.className = 'ev'; b.innerHTML = `<b>${e.icon}</b>${e.name}<small>Prueba suelta</small>`; b.onclick = () => { newSession('suelta', i); intro(); }; L.appendChild(b); });
+  EV.forEach((e, i) => { const b = document.createElement('button'); b.className = 'ev'; b.style.animationDelay = (.25 + i * .07) + 's'; b.innerHTML = `<b>${e.icon}</b>${e.name}<small>Prueba suelta</small>`; b.onclick = () => { newSession('suelta', i); intro(); }; L.appendChild(b); });
 }
 (function anim() { if ($('sChars').classList.contains('on')) document.querySelectorAll('#charGrid canvas').forEach(c => mini(c, CH(c.dataset.id))); requestAnimationFrame(anim); })();
 $('bTorneo').onclick = () => { newSession('torneo', 0); intro(); };
@@ -38,16 +40,17 @@ $('bOnline').onclick = () => { location.href = 'carrera/online.html?pj=' + ((S &
 function chars() {
   show('sChars'); const G = $('charGrid'); G.innerHTML = '';
   CHARS.forEach(c => { const b = document.createElement('button'); b.className = c.id === pj ? 'on' : ''; b.innerHTML = `<canvas width="116" height="116" data-id="${c.id}"></canvas>`; b.onclick = () => { pj = c.id; localStorage.setItem('mr_pj', pj); chars(); }; G.appendChild(b); });
+  if (!G.dataset.pj || G.dataset.pj !== pj) { G.dataset.pj = pj; stage('charStage', { pj }); }
   const c = CH(pj); $('charWho').innerHTML = `${c.name}<small>${c.pers} · «${c.lines[0]}»</small>`;
 }
 $('bCharOk').onclick = () => menu();
 
 // ---------- presentación de la prueba ----------
 function intro() {
-  const e = EV[S.idx]; show('sIntro');
+  const e = EV[S.idx]; show('sIntro'); stage('introStage', { pj: S.pj, rv: S.rv });
   $('iIcon').textContent = e.icon; $('iName').textContent = (S.mode === 'torneo' ? `Prueba ${S.idx + 1}/${EV.length} · ` : '') + e.name; $('iDesc').textContent = e.desc;
   const r = CH(pick(S.rv)); $('iQuote').innerHTML = `<b>${r.name}:</b> «${pick(r.lines)}»`;
-  $('iRivals').innerHTML = '<tr><td>Rivales</td><td>Personalidad</td>' + (S.mode === 'torneo' ? '<td class="n">Pts</td>' : '') + '</tr>' + S.rv.map(id => `<tr><td><span class="dot" style="background:${CH(id).color}"></span>${CH(id).name}</td><td>${CH(id).pers}</td>${S.mode === 'torneo' ? `<td class="n">${S.pts[id]}</td>` : ''}</tr>`).join('');
+  $('iRivals').innerHTML = '<tr><td>Rivales</td><td>Personalidad</td>' + (S.mode === 'torneo' ? '<td class="n">Pts</td>' : '') + '</tr>' + S.rv.map((id, i) => `<tr style="animation-delay:${.35 + i * .1}s"><td><span class="dot" style="background:${CH(id).color}"></span>${CH(id).name}</td><td>${CH(id).pers}</td>${S.mode === 'torneo' ? `<td class="n">${S.pts[id]}</td>` : ''}</tr>`).join('');
 }
 $('bIntroBack').onclick = () => menu();
 $('bGo').onclick = () => play();
@@ -74,13 +77,13 @@ function podio(res) {
   S.done.push({ ev: e.id, res }); save();
   const meP = res.findIndex(r => r.id === 'me') + 1;
   $('pTitle').textContent = e.icon + ' ' + e.name + (meP === 1 ? ' · ¡GANAS!' : ` · ${meP}º`);
-  drawPodio(res.slice(0, 3).map(r => r.id));
+  drawPodio(res.slice(0, 3).map(r => r.id)); stage('podioStage', { ids: res.map(r => chOf(r.id).id), meIdx: res.findIndex(r => r.id === 'me') });
   const w = res[0].id === 'me' ? CH(res[1].id) : CH(res[0].id);
   $('pQuote').innerHTML = res[0].id === 'me' ? `<b>${w.name}:</b> «${pick(['¡Ha sido suerte!', 'La próxima no te escapas.', 'Vale, vale… bien jugado.', '¡Exijo la revancha!'])}»` : `<b>${w.name}:</b> «${pick(w.lines)}»`;
   const last = S.mode !== 'torneo' || S.idx >= EV.length - 1;
   let h = '<tr><td></td><td>Mochi</td><td class="n">Tiempo</td>' + (S.mode === 'torneo' ? '<td class="n">+Pts</td><td class="n">Total</td>' : '') + '</tr>';
-  res.forEach((r, i) => { h += `<tr class="${r.id === 'me' ? 'me' : ''}"><td>${i + 1}º</td><td><span class="dot" style="background:${chOf(r.id).color}"></span>${nm(r.id)}</td><td class="n">${r.time.toFixed(1)} s${r.fin === false ? '*' : ''}</td>${S.mode === 'torneo' ? `<td class="n">+${PTS[i]}</td><td class="n">${S.pts[r.id]}</td>` : ''}</tr>`; });
-  $('pTable').innerHTML = h;
+  res.forEach((r, i) => { h += `<tr class="${r.id === 'me' ? 'me' : ''}" style="animation-delay:${.4 + i * .13}s"><td>${i + 1}º</td><td><span class="dot" style="background:${chOf(r.id).color}"></span>${nm(r.id)}</td><td class="n">${r.time.toFixed(1)} s${r.fin === false ? '*' : ''}</td>${S.mode === 'torneo' ? `<td class="n">+${PTS[i]}</td><td class="n"><b data-from="${S.pts[r.id] - PTS[i]}" data-to="${S.pts[r.id]}">${S.pts[r.id] - PTS[i]}</b></td>` : ''}</tr>`; });
+  $('pTable').innerHTML = h; countUp();
   $('bNext').textContent = S.mode === 'torneo' ? (last ? '🏆 Ver clasificación final' : `Siguiente prueba (${S.idx + 2}/${EV.length})`) : 'Repetir';
   $('bNext').onclick = () => { if (S.mode !== 'torneo') { intro(); return; } if (last) final(); else { S.idx++; save(); intro(); } };
 }
@@ -88,14 +91,18 @@ function final() {
   show('sPodio'); const order = Object.entries(S.pts).sort((a, b) => b[1] - a[1]).map(([id, p]) => ({ id, p }));
   const meP = order.findIndex(o => o.id === 'me') + 1;
   $('pTitle').textContent = meP === 1 ? '🏆 ¡Campeón de Mochi Party!' : `Torneo terminado · ${meP}º`;
-  drawPodio(order.slice(0, 3).map(o => o.id));
+  drawPodio(order.slice(0, 3).map(o => o.id)); stage('podioStage', { ids: order.map(o => chOf(o.id).id), meIdx: meP - 1 });
   const w = CH(order[0].id === 'me' ? S.rv[0] : order[0].id); $('pQuote').innerHTML = `<b>${w.name}:</b> «${meP === 1 ? 'Te has ganado el trofeo de gelatina. Por esta vez.' : pick(w.lines)}»`;
-  $('pTable').innerHTML = '<tr><td></td><td>Mochi</td><td class="n">Puntos</td></tr>' + order.map((o, i) => `<tr class="${o.id === 'me' ? 'me' : ''}"><td>${i + 1}º</td><td><span class="dot" style="background:${chOf(o.id).color}"></span>${nm(o.id)}</td><td class="n">${o.p}</td></tr>`).join('');
+  $('pTable').innerHTML = '<tr><td></td><td>Mochi</td><td class="n">Puntos</td></tr>' + order.map((o, i) => `<tr class="${o.id === 'me' ? 'me' : ''}" style="animation-delay:${.4 + i * .13}s"><td>${i + 1}º</td><td><span class="dot" style="background:${chOf(o.id).color}"></span>${nm(o.id)}</td><td class="n"><b data-from="0" data-to="${o.p}">0</b></td></tr>`).join(''); countUp();
   $('bNext').textContent = 'Nuevo torneo'; $('bNext').onclick = () => { newSession('torneo', 0); intro(); };
   S.mode = 'fin'; save();
 }
 $('bPodioMenu').onclick = () => menu();
-function drawPodio(ids) {
+// puntos que suben contando, con un saltito al final
+function countUp() { const els = [...document.querySelectorAll('#pTable b[data-to]')], t0 = performance.now() + 900;
+  const tick = now => { let busy = false; for (const b of els) { const a = +b.dataset.from, z = +b.dataset.to, k = Math.min(1, Math.max(0, (now - t0) / 1100)); const v = Math.round(a + (z - a) * (1 - Math.pow(1 - k, 3))); if (b.textContent !== String(v)) b.textContent = v; if (k < 1) busy = true; else if (!b.dataset.done && z !== a) { b.dataset.done = 1; b.classList.add('up'); } } if (busy) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick); }
+function drawPodio(ids) { if (window.MP3D) return;
   const cv = $('podioCv'), x = cv.getContext('2d'); let fr = 0;
   const draw = () => { if (!$('sPodio').classList.contains('on') || fr++ > 900) return;
     x.setTransform(2, 0, 0, 2, 0, 0); x.clearRect(0, 0, 680, 420); const t = performance.now() / 1000;

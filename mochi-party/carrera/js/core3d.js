@@ -5,7 +5,7 @@
 // ======================================================================
 import * as THREE from 'three';
 import { CHARS } from './data.js';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js?v=m9';
 import { Audio } from './audio.js';
 
 const $ = id => document.getElementById(id);
@@ -56,7 +56,7 @@ function makeRunner(ch, idx, scale = 1) {
   const g = new THREE.Group(); const pivot = new THREE.Group(); g.add(pivot);
   const c = makeCharacter(ch); c.userData.seed = idx; pivot.add(c); pivot.scale.setScalar(scale);
   const sh = new THREE.Mesh(new THREE.CircleGeometry(1, 20), shadowMat()); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; sh.scale.setScalar(1.1 * scale); g.add(sh);
-  g.userData = { pivot, char: c, shadow: sh };
+  g.userData = { pivot, char: c, shadow: sh, sc: scale };
   return g;
 }
 function nameSprite(text, color, me) {
@@ -93,6 +93,65 @@ addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp
 //  Marco común: cuenta atrás, simulación a paso fijo, cámara, HUD, meta y vuelta al torneo
 // ======================================================================
 function seeded(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+// ---------------- celebración final (todas las pruebas) ----------------
+// El ganador salta, gira y lanza confeti; los demás ponen cara triste y se desinflan. La cámara enfoca
+// primero al ganador y, si no eres tú, después a ti. Al acabar llama a cb().
+function celebOverlay() {
+  let d = $('celeb'); if (d) return d;
+  const st = document.createElement('style'); st.textContent = `#celeb{position:absolute;left:0;right:0;top:calc(10px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;opacity:0;transform:translateY(-30px) scale(.8);transition:all .45s cubic-bezier(.3,1.6,.5,1);z-index:6}
+#celeb.on{opacity:1;transform:none}
+#celeb .cT{font:700 34px Fredoka;color:#fff;-webkit-text-stroke:2px #e0609f;text-shadow:0 4px 0 #e0609f,0 0 22px rgba(255,140,220,.8);text-align:center;padding:0 10px;line-height:1.05;animation:cWob 1.2s ease-in-out infinite}
+#celeb .cT.lose{font-size:26px;-webkit-text-stroke-color:#7a6ac0;text-shadow:0 4px 0 #7a6ac0}
+@keyframes cWob{50%{transform:rotate(-2deg) scale(1.05)}}
+#celeb .cRow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:96vw}
+#celeb .cRow div{font:700 13px Fredoka;color:#fff;background:linear-gradient(rgba(120,70,160,.75),rgba(95,50,135,.75));border:1.5px solid #fff;border-radius:12px;padding:3px 9px;opacity:0;transform:translateY(14px) scale(.6);animation:cIn .4s cubic-bezier(.3,1.6,.5,1) forwards}
+#celeb .cRow div.w{background:linear-gradient(#ffe27a,#ffb030);color:#7a3a00;border-color:#fff}
+#celeb .cRow div.me{box-shadow:0 0 0 3px #ff6fae}
+@keyframes cIn{to{opacity:1;transform:none}}`; document.head.appendChild(st);
+  d = document.createElement('div'); d.id = 'celeb'; $('hud').appendChild(d); return d;
+}
+function celebrate(E, res, cb) {
+  if (E.celeb) return; const racers = E.racers, byId = id => racers.find(r => r.id === id);
+  const win = byId(res[0].id) || racers[0], me = E.me, nm = r => r.me ? 'Tú' : (r.name || r.ch.name);
+  E.celeb = { t: 0, win, me, cb, dur: win === me ? 3.4 : 4.6, done: false, fw: 0 };
+  for (const r of racers) { r.expr = r === win ? 'happy' : 'sad'; r.stun = 0; }
+  ['ctl', 'hint', 'say', 'banner', 'toast', 'perf', 'hTop', 'hBoard', 'exitB'].forEach(id => { const e = $(id); if (e) e.style.visibility = 'hidden'; });
+  const o = celebOverlay(); const mePos = res.findIndex(x => x.id === me.id) + 1;
+  o.innerHTML = `<div class="cT${win === me ? '' : ' lose'}">${win === me ? '🏆 ¡HAS GANADO! 🎉' : `🏆 ¡Gana ${nm(win)}!`}</div><div class="cRow">${res.map((x, i) => { const r = byId(x.id); return r ? `<div class="${i === 0 ? 'w' : ''} ${r.me ? 'me' : ''}" style="animation-delay:${.25 + i * .12}s">${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'} ${nm(r)}${i === 0 ? ' 😄' : ' 😢'}</div>` : ''; }).join('')}</div>`;
+  requestAnimationFrame(() => o.classList.add('on'));
+  if (win === me) { Audio.sfxPlay('cheer'); } else { Audio.sfxPlay('pop'); setTimeout(() => Audio.sfxPlay('cheer'), 300); }
+  if (mePos > 1) setTimeout(() => { if (E.celeb && !E.stopped) o.querySelector('.cT').textContent = mePos ? `😢 Has quedado ${mePos}º… ¡a la próxima!` : '😢 ¡A la próxima!'; }, 2300);
+}
+const _wp = new THREE.Vector3(), _cp = new THREE.Vector3();
+function celebFrame(E, dt) {
+  const C = E.celeb; if (!C) return; C.t += dt; const t = C.t, now = performance.now() / 1000;
+  for (const r of E.racers) { const o = r.obj, u = o.userData, p = u.pivot, s = u.sc || 1; if (!p) continue;
+    o.visible = true; p.rotation.set(0, 0, 0); if (!(E.EV.celeb && E.EV.celeb.keepRot)) { o.rotation.x = 0; o.rotation.z = 0; }
+    if (r === C.win) { // alegría: saltos grandes con giro, estirón en el aire y aplastado al caer
+      const ph = (t * 1.9) % 1, hop = Math.sin(ph * Math.PI); p.position.y = hop * 1.3 * s; p.rotation.y = (ph < .5 ? ph * 2 : 1) * Math.PI * 2 * (Math.floor(t * 1.9) % 2 ? 1 : 0);
+      const sq = ph > .92 || ph < .06 ? .22 : 0; p.scale.set(s * (1 + sq), s * (1 - sq + hop * .12), s * (1 + sq));
+      p.rotation.z = Math.sin(t * 9) * .12;
+      C.fw -= dt; if (C.fw <= 0) { C.fw = .35; o.getWorldPosition(_wp); E.burst(_wp.clone().add(new THREE.Vector3(rnd(-1.6, 1.6) * s, (2 + rnd(0, 1.5)) * s, rnd(-1.2, 1.2) * s)), pick(['#ffe27a', '#ff9cc8', '#7ee3c4', '#b9a2f7', '#8fd0ff']), 18, 5 * s, .9, .55 * s, -2); }
+    } else { // derrota: se desinfla, cabeza gacha y balanceo lento
+      const k = Math.min(1, t / .6); p.position.y = 0; p.rotation.x = .42 * k; p.rotation.z = Math.sin(now * 1.6 + r.k) * .1 * k; p.rotation.y = Math.sin(now * .7 + r.k) * .3;
+      p.scale.set(s * (1 + .1 * k), s * (1 - .16 * k + Math.sin(now * 2.2 + r.k) * .02), s * (1 + .1 * k));
+      if (Math.random() < dt * 1.5) { o.getWorldPosition(_wp); E.burst(_wp.clone().add(new THREE.Vector3(0, 2.2 * s, 0)), '#8fd0ff', 2, .6 * s, .7, .22 * s, -6); }
+    }
+  }
+  if (t > .1 && t < .2) { C.win.obj.getWorldPosition(_wp); confetti(E.scene, _wp.clone().add(new THREE.Vector3(0, 2.5 * (C.win.obj.userData.sc || 1), 0)), 70); }
+  // cámara: vuelta alrededor del ganador; luego (si has perdido) plano de tu mochi triste
+  const focus = (C.win !== C.me && t > 2.3) ? C.me : C.win, s = focus.obj.userData.sc || 1;
+  focus.obj.getWorldPosition(_wp); const CF = E.EV.celeb || {}, U = CF.keepRot ? new THREE.Vector3(0, 1, 0).applyQuaternion(focus.obj.quaternion) : new THREE.Vector3(0, 1, 0);
+  // la cámara sale del lado desde el que ya mirabas (así nada se interpone) y gira un poco alrededor
+  if (C.cut !== focus) { C.cut = focus; C.ct = t; const d = camera.position.clone().sub(_wp); d.y = 0; if (d.lengthSq() < .01 || Math.abs(camera.position.y - _wp.y) > 3 * Math.hypot(d.x, d.z)) d.set(0, 0, 1); if (CF.dir) d.set(...CF.dir); C.dir = d.normalize(); C.cam = _wp.clone().addScaledVector(C.dir, 5 * s + 3).add(new THREE.Vector3(0, 2 * s + .6, 0)); }
+  const a = Math.sin((t - C.ct) * .6) * .55, dist = 4.6 * s + 2.4, cs = Math.cos(a), sn = Math.sin(a);
+  _cp.set(_wp.x + (C.dir.x * cs - C.dir.z * sn) * dist, _wp.y, _wp.z + (C.dir.x * sn + C.dir.z * cs) * dist).addScaledVector(U, 1.5 * s + .45);
+  C.cam.lerp(_cp, Math.min(1, dt * 4)); camera.position.copy(C.cam);
+  // que nadie tape la foto: fuera etiquetas y fuera los mochis que queden entre la cámara y el protagonista
+  { const df = C.cam.distanceTo(_wp); for (const r of E.racers) { if (r.tag) r.tag.visible = false; if (r !== focus) { r.obj.getWorldPosition(_cp); if (C.cam.distanceTo(_cp) < df - .3) r.obj.visible = false; } } }
+  camera.up.copy(U); camera.fov = lerp(camera.fov, 55, Math.min(1, dt * 4)); camera.updateProjectionMatrix(); camera.lookAt(_wp.clone().addScaledVector(U, .9 * s));
+  if (t >= C.dur && !C.done) { C.done = true; const o = $('celeb'); if (o) o.classList.remove('on'); C.cb && C.cb(); }
+}
 // opts (modo online): { racers:[{id,ch,name,human,me,skill}], seed, net:{isHost, send(d)}, onEnd(order), wait:true }
 function run(EV, opts = {}) {
   const ON = !!opts.net;
@@ -109,7 +168,7 @@ function run(EV, opts = {}) {
   parts.forEach(s => s.parent && s.parent.remove(s)); parts.length = 0;
   const scene = new THREE.Scene();
   camera.fov = 70; camera.far = 900; camera.updateProjectionMatrix();
-  const E = { scene, racers, me, t: 0, phase: opts.wait ? 'wait' : 'count', cnt: 3.4, fins: [], shake: 0, ui, AUTO, input, online: ON, burst: (p, c, n, s, l, z, g) => burst(scene, p, c, n, s, l, z, g), say: (r, s) => { if (Math.random() < .6) ui.say(r, s); } };
+  const E = { EV, scene, racers, me, t: 0, phase: opts.wait ? 'wait' : 'count', cnt: 3.4, fins: [], shake: 0, ui, AUTO, input, online: ON, burst: (p, c, n, s, l, z, g) => burst(scene, p, c, n, s, l, z, g), say: (r, s) => { if (Math.random() < .6) ui.say(r, s); } };
   const nm = r => r.me ? 'Tú' : (r.name || r.ch.name);
   E.finish = r => { if (r.fin) return; r.fin = true; r.time = E.t; E.fins.push(r); if (r.me) { Audio.sfxPlay('finish'); setTimeout(() => Audio.sfxPlay('cheer'), 400); E.meDone = E.t; ui.banner(E.fins.length === 1 ? '¡HAS GANADO! 🏆' : `¡Meta! ${E.fins.length}º`); confetti(scene, r.obj.position.clone().add(new THREE.Vector3(0, 3, 0)), 60); } else if (r.human) ui.toast(`🏁 ${nm(r)} llega ${E.fins.length}º`, '#ffe27a'); };
   // escenario idéntico en todos los clientes: Math.random con semilla durante la construcción
@@ -136,6 +195,7 @@ function run(EV, opts = {}) {
     setTimeout(() => { location.href = '../index.html?vuelta=' + EV.id + (AUTO ? '&auto' : ''); }, Q.has('stay') ? 1e9 : 400);
   }
   E.end = end;
+  E.celebrate = (res, cb) => { if (E.celeb || E.stopped) { cb && cb(); return; } E.phase = 'celebra'; celebrate(E, res, cb); };
   E.stop = () => { EV.dispose && EV.dispose(); E.stopped = true; E.phase = 'done'; cancelAnimationFrame(raf); Audio.stopSong(); parts.length = 0; scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(m => { if (!confM.includes(m)) m.dispose(); }); }); renderer.renderLists.dispose(); };
   function frame(now) {
     let dt = Math.min(0.1, (now - last) / 1000) * TS; last = now; acc += dt;
@@ -143,14 +203,16 @@ function run(EV, opts = {}) {
     while (acc >= STEP && n < 8 * TS) { acc -= STEP; n++; step(STEP); }
     if (n >= 8 * TS) acc = 0;
     EV.render(E, dt);
+    if (E.celeb) celebFrame(E, dt / TS);
     if (ON) for (const r of racers) if (r.remote) { const p = r.obj.position; if (!r._p) r._p = p.clone(); else { r._p.lerp(p, Math.min(1, dt * 14)); p.copy(r._p); } } else r._p = null;
     if (E.shake > 0) { E.shake -= dt; camera.position.x += rnd(-.15, .15) * E.shake * 4; camera.position.y += rnd(-.15, .15) * E.shake * 4; }
     updParts(dt);
     for (const r of racers) animCharacter(r.obj.userData.char, now / 1000 + r.k, 1, r.expr || '');
+    if (E.celeb) E.shake = 0;
     renderer.render(scene, camera);
     if (EV.id !== 'anillos' && PR > 1.25) { const ft = (now - (E._fpsT0 || now)); E._fpsN = (E._fpsN || 0) + 1; if (!E._fpsT0) E._fpsT0 = now; else if (ft > 1500) { const fps = E._fpsN * 1000 / ft; E._fpsN = 0; E._fpsT0 = now; if (fps < 48 && E.t > 1) { PR = Math.max(1.25, PR - .5); renderer.setPixelRatio(PR); resize(); } } }
     hud(dt);
-    if (E.phase !== 'done' || (ON && !E.stopped)) raf = requestAnimationFrame(frame);
+    if (E.phase !== 'done' || (ON && !E.stopped) || (E.celeb && !E.stopped)) raf = requestAnimationFrame(frame);
   }
   function step(dt) {
     if (E.phase === 'wait') { input.taps.length = 0; input.ups.length = 0; input.side.length = 0; input.swipe = input.swipeUp = false; EV.idle && EV.idle(E, dt); return; }
@@ -163,7 +225,7 @@ function run(EV, opts = {}) {
         if (opts.net.isHost) { const hum = racers.filter(r => r.human && !r.left); const allHum = hum.every(r => r.fin); if (E.allHumAt == null && allHum) E.allHumAt = E.t;
           if ((E.allHumAt != null && E.t - E.allHumAt > 2.6) || E.fins.length === racers.length || E.t > EV.maxT) { E.phase = 'done'; end(); } }
         else if (E.t > EV.maxT + 8) { E.phase = 'watch'; }
-      } else if ((E.meDone != null && E.t - E.meDone > 2.6) || E.fins.length === racers.length || E.t > EV.maxT) { E.phase = 'done'; end(); }
+      } else if ((E.meDone != null && E.t - E.meDone > 1.6) || E.fins.length === racers.length || E.t > EV.maxT) { const res = order(); E.phase = 'celebra'; celebrate(E, res, () => { E.phase = 'done'; end(); }); }
     }
   }
   function hud(dt) {

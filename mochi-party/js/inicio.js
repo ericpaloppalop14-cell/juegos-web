@@ -160,7 +160,7 @@ function drawHero(t, dt) {
 let last = performance.now(), wasOn = false;
 function frame(now) {
   const on = M.classList.contains('on');
-  if (on) { if (!wasOn) size(); const t = now / 1000, dt = Math.min(.05, (now - last) / 1000); drawBg(t); drawHero(t, dt); }
+  if (on) { if (!wasOn) size(); const t = now / 1000, dt = Math.min(.05, (now - last) / 1000); drawBg(t); if (hero.offsetParent) drawHero(t, dt); }
   wasOn = on; last = now; requestAnimationFrame(frame);
 }
 size(); requestAnimationFrame(frame);

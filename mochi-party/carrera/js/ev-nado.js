@@ -1,6 +1,6 @@
 // 🫧 NADO EN GELATINA (3D): piscina translúcida de gelatina con medusas, montañas de flan y arcoíris
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m8';
-const L = 160, LW = 2, VM = 8.6, V0 = 6.5, BSTEP = .3, BMAX = 1.8, ACT = .9, Z0 = 26;
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m9';
+const L = 240, LW = 2, VM = 13, V0 = 9.5, BSTEP = .35, BMAX = 2.2, ACT = .8, Z0 = 26; // tanda 4: más rápido y trepidante
 // posiciones FIJAS: medusa ARRIBA flota en el aire (bucea), medusa ABAJO está en el fondo (salta). Nunca a medias.
 const YUP = 1.25, YDN = -1.35, WARN = 2.2;
 function signTex(dive) { const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d'); const c = dive ? '#5b8cff' : '#ff5fa8';
@@ -12,7 +12,7 @@ function checker() { const cv = document.createElement('canvas'); cv.width = 256
 function tiles() { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'); x.fillStyle = '#ffe6f2'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#ffb3d6'; x.lineWidth = 4; for (let i = 0; i <= 128; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 128); x.moveTo(0, i); x.lineTo(128, i); x.stroke(); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(7, 90); t.colorSpace = THREE.SRGBColorSpace; return t; }
 export default {
   id: 'nado', name: 'Nado en Gelatina', icon: '🫧', maxT: 70, music: { bpm: 124, root: 65, scale: 'pentatonic' }, netKeys: ['z', 'v', 'act', 'ak', 'stun', 'lane', 'perf', 'streak', 'bonus'], seed: 47, tagY: 1.7, tagS: .55, buttons: true,
-  how: 'Medusa ROSA en el aire 🔽 = 🫧 BUCEA. Medusa AZUL en el fondo 🔼 = ⬆ SALTA. Si pulsas antes, tu mochi lo hace solo en el momento justo. ¡Pulsar justo a tiempo = Perfecto y turbo!',
+  how: '¡Más rápido que nunca! Pasa por los AROS ARCOÍRIS 🌈 y las corrientes para ir a toda pastilla y coge burbujas ⭐. Medusa ROSA en el aire 🔽 = 🫧 BUCEA. Medusa AZUL en el fondo 🔼 = ⬆ SALTA. Si pulsas antes, tu mochi lo hace solo en el momento justo. ¡Pulsar justo a tiempo = Perfecto y turbo!',
   dispose() { const d = document.getElementById('perf'); if (d) d.remove(); const L0 = document.getElementById('bL'), R0 = document.getElementById('bR'), M0 = document.getElementById('bM'); L0.innerHTML = '⬅'; R0.innerHTML = '➡'; M0.style.display = ''; L0.style.cssText = R0.style.cssText = ''; },
   init(E) {
     E.REACT = new URLSearchParams(location.search).has('react');
@@ -45,7 +45,7 @@ export default {
     this.J = []; const mk = up => ({ dm: new THREE.MeshPhongMaterial({ color: up ? '#ff9cd0' : '#5fd0ff', transparent: true, opacity: .92, emissive: up ? '#ff4fa0' : '#1fa0ff', emissiveIntensity: up ? .4 : .85, shininess: 110 }), tm: new THREE.MeshToonMaterial({ color: up ? '#ffd6ec' : '#d4ecff', transparent: true, opacity: .85 }), ol: up ? '#c0306f' : '#2f5fc0', sign: new THREE.SpriteMaterial({ map: signTex(up), depthTest: false, transparent: true, fog: false }), mark: new THREE.MeshBasicMaterial({ color: up ? '#ff5fa8' : '#5b8cff', transparent: true, opacity: .5, depthWrite: false }) });
     const MAT = { true: mk(true), false: mk(false) }; const domeG = new THREE.SphereGeometry(.55, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), tenG = new THREE.CylinderGeometry(.045, .02, .9, 6), eyeG = new THREE.SphereGeometry(.075, 10, 8), hiG = new THREE.SphereGeometry(.028, 6, 4), markG = new THREE.RingGeometry(.55, .82, 28);
     // curva de dificultad: filas separadas y con huecos al principio, más juntas y llenas al final (siempre > 1 s de reacción)
-    for (let z = Z0; z < L - 8;) { const d = clamp((z - Z0) / (L - Z0 - 8), 0, 1), empty = lerp(.5, .15, d);
+    for (let z = Z0; z < L - 8;) { const d = clamp((z - Z0) / (L - Z0 - 8), 0, 1), empty = lerp(.5, .25, d);
       for (let l = 0; l < 6; l++) { if (Math.random() < empty) continue; const up = Math.random() < .5, M = MAT[up], g = new THREE.Group(); sc.add(g); g.position.set(laneX(l), up ? YUP : YDN, -z);
         const body = new THREE.Group(); g.add(body); const dd = mesh(domeG, M.dm, body); outline(dd, M.ol, 1.06);
         for (const s2 of [-1, 1]) { const e = mesh(eyeG, toon('#2a1838', { rim: 0 }), body, [s2 * .19, .24, .46]); mesh(hiG, toon('#ffffff', { rim: 0 }), e, [.025, .03, .06]); mesh(new THREE.CircleGeometry(.07, 10), toon('#ff8fb8', { rim: 0 }), body, [s2 * .3, .13, .5]); }
@@ -54,7 +54,19 @@ export default {
         const sg2 = new THREE.Sprite(M.sign); sg2.scale.setScalar(.95); sg2.position.y = up ? 1.05 : 2.75; sg2.renderOrder = 8; g.add(sg2);
         const mkr = mesh(markG, M.mark, sc, [laneX(l), .09, -z], [-Math.PI / 2, 0, 0]); mkr.renderOrder = 3;
         this.J.push({ z, lane: l, ph: rnd(0, 6), g, body, tn, up, sign: sg2, mkr }); }
-      z += lerp(16, 10, d) + rnd(-.8, .8); }
+      z += lerp(19, 14, d) + rnd(-.8, .8); }
+    // tanda 4: AROS ARCOÍRIS (turbo), CORRIENTES (cintas que empujan) y BURBUJAS ⭐ en todas las calles (justo para todos)
+    const jz = this.J.map(j => j.z).sort((a, b) => a - b), freeZ = z => jz.every(q => Math.abs(q - z) > 3.2);
+    this.RG = []; const rgM = ['#ff7f9f', '#ffb36b', '#ffe27a', '#7ee3c4', '#8fd0ff', '#c9b2ff'].map(c => toon(c, { emissive: c, ei: .6, rim: 0 }));
+    for (let z = Z0 + 6; z < L - 10; z += 13) { if (!freeZ(z)) { z -= 9; continue; } for (let l = 0; l < 6; l++) { if ((l + Math.round(z)) % 3 === 0) continue; const g = new THREE.Group(); g.position.set(laneX(l), .25, -z); sc.add(g);
+        for (let k = 0; k < 3; k++) mesh(new THREE.TorusGeometry(.78 - k * .13, .07, 6, 26), rgM[(k + l) % 6], g); g.add(glowSprite('#fff3b0', 2.2, .5)); this.RG.push({ z, lane: l, g, got: new Set() }); } }
+    this.CU = []; const cuTex = (() => { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const x = cv.getContext('2d'); x.fillStyle = 'rgba(255,255,255,0)'; x.fillRect(0, 0, 64, 256); x.fillStyle = 'rgba(255,255,255,.85)'; for (let y = 0; y < 256; y += 64) { x.beginPath(); x.moveTo(8, y + 40); x.lineTo(32, y + 10); x.lineTo(56, y + 40); x.lineTo(46, y + 40); x.lineTo(32, y + 24); x.lineTo(18, y + 40); x.fill(); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 4); return t; })(); this.cuTex = cuTex;
+    for (let z = Z0 + 30; z < L - 20; z += 46) { const len = 9; for (let l = 0; l < 6; l++) { const m = mesh(new THREE.PlaneGeometry(LW * .8, len), new THREE.MeshBasicMaterial({ map: cuTex, color: '#7ee3ff', transparent: true, opacity: .8, depthWrite: false }), sc, [laneX(l), .07, -z - len / 2], [-Math.PI / 2, 0, 0]); m.renderOrder = 3; } this.CU.push({ z0: z, z1: z + len }); }
+    this.BB = []; for (let z = Z0 + 3; z < L - 6; z += 7) { if (!freeZ(z)) continue; for (let l = 0; l < 6; l++) { if (Math.random() < .55) continue; const g = new THREE.Group(); g.position.set(laneX(l), .55, -z); sc.add(g); const b = mesh(new THREE.SphereGeometry(.22, 14, 10), new THREE.MeshPhongMaterial({ color: '#bff4ff', transparent: true, opacity: .6, shininess: 120, specular: '#fff' }), g); mesh(new THREE.OctahedronGeometry(.1, 0), toon('#ffe27a', { emissive: '#ffd36b', ei: .9 }), b); this.BB.push({ z, lane: l, g, taken: false }); } }
+    // fondo: patitos de goma gigantes y delfines de gominola que saltan
+    this.FX = []; for (let i = 0; i < 8; i++) { const s = i % 2 ? 1 : -1, d = new THREE.Group(); d.position.set(s * rnd(12, 20), 0, -i * 30 - rnd(10, 25)); sc.add(d); const duck = mesh(new THREE.SphereGeometry(1.6, 18, 12), toon('#ffe27a', { rim: .5 }), d, [0, .8, 0], null, [1.2, .9, 1]); outline(duck, '#c99a10', 1.04); const hd = mesh(new THREE.SphereGeometry(1, 16, 12), toon('#ffe27a', { rim: .5 }), d, [0, 2.4, .9]); outline(hd, '#c99a10', 1.05); mesh(new THREE.ConeGeometry(.45, .9, 10), toon('#ff9a3a'), hd, [0, -.1, 1.1], [Math.PI / 2, 0, 0]); for (const k of [-1, 1]) mesh(new THREE.SphereGeometry(.14, 8, 6), toon('#2a1838', { rim: 0 }), hd, [k * .4, .3, .82]); d.rotation.y = s > 0 ? -.6 : .6; const ph = rnd(0, 6); this.FX.push(t => { d.position.y = Math.sin(t * 1.5 + ph) * .3; d.rotation.z = Math.sin(t * 1.2 + ph) * .1; }); }
+    for (let i = 0; i < 6; i++) { const s = i % 2 ? -1 : 1, x = s * rnd(9, 14), z0 = -i * 38 - 20, dl = new THREE.Group(); sc.add(dl); const bd = mesh(new THREE.CapsuleGeometry(.5, 1.6, 6, 12), toon(pick(['#8fd0ff', '#c9b2ff', '#ff9cc8']), { rim: .5 }), dl, [0, 0, 0], [Math.PI / 2, 0, 0]); outline(bd, '#5a3a8e', 1.05); mesh(new THREE.ConeGeometry(.3, .6, 6), bd.material, dl, [0, .55, .1]); for (const k of [-1, 1]) mesh(new THREE.SphereGeometry(.08, 8, 6), toon('#2a1838', { rim: 0 }), dl, [k * .25, .2, .95]); const ph = rnd(0, 3);
+      this.FX.push(t => { const c = ((t * .45 + ph) % 3) / 3, k = Math.min(1, c * 2.2); dl.visible = c < .46; dl.position.set(x, -1 + Math.sin(k * Math.PI) * 4.5, z0 + (k - .5) * 9); dl.rotation.x = -Math.cos(k * Math.PI) * 1.1; }); }
     // nadadores
     E.racers.forEach((r, k) => { r.lane = E.online ? [2, 3, 1, 4, 0, 5][k] : r.me ? 2 : [0, 1, 3, 4, 5][k - 1]; r.obj = makeRunner(r.ch, k, .6); r.obj.userData.shadow.visible = false; r.obj.rotation.y = Math.PI; sc.add(r.obj); r.z = 0; r.v = 0; r.act = null; r.ak = 0; r.actT = 9; r.stun = 0; r.boost = 0; r.roll = 0; r.perf = 0; r.streak = 0; r.bonus = 0; });
     { const L0 = document.getElementById('bL'), R0 = document.getElementById('bR'); document.getElementById('bM').style.display = 'none'; const st = 'width:120px;height:120px;font-size:20px;line-height:1.1;background:rgba(155,130,240,.6)'; L0.innerHTML = '🫧<br><small style="font-size:15px">Bucear</small>'; R0.innerHTML = '⬆<br><small style="font-size:15px">Saltar</small>'; L0.style.cssText = st; R0.style.cssText = st.replace('155,130,240', '255,134,189'); }
@@ -89,10 +101,13 @@ export default {
         if (tt < r.plan.f && !r.plan.done) { r.plan.done = true; this.act(E, r, r.plan.a, next); }
       }
       const oz = r.z; r.z += r.v * dt;
+      for (const c of this.CU) if (r.z > c.z0 && r.z < c.z1 && r.stun <= 0) { r.v = Math.min(VM + 2, r.v + 10 * dt); if (r.me && !r.inCu) { r.inCu = true; Audio.sfxPlay('boost'); E.ui.toast('🌊 ¡Corriente! ¡Wiii!', '#7ee3ff'); } } else if (r.me && c.z1 < r.z && r.z < c.z1 + 2) r.inCu = false;
+      for (const g of this.RG) if (g.lane === r.lane && oz < g.z && r.z >= g.z && !g.got.has(r.id) && (r.me || Math.random() < .55 + .4 * r.skill)) { g.got.add(r.id); r.boost = Math.max(r.boost, 1.1); r.v = Math.min(VM + 1.5, r.v + 2.5); r.bonus = Math.min(BMAX, r.bonus + BSTEP * .5); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('trick'); E.ui.toast(pick(['🌈 ¡Aro turbo!', '🌈 ¡Zas! ¡Turbo!', '🌈 ¡Arcoíris a tope!']), '#ffe27a'); E.ui.flash(); E.burst(new THREE.Vector3(laneX(r.lane), .5, -g.z), '#ffe27a', 16, 5, .5, .5, 0); } }
+      for (const b of this.BB) if (!b.taken && b.lane === r.lane && oz < b.z && r.z >= b.z && (r.me || Math.random() < .5)) { b.taken = true; b.g.visible = false; r.bonus = Math.min(BMAX, r.bonus + BSTEP * .4); if (r.me) { r.bub = (r.bub || 0) + 1; Audio.sfxPlay('got'); E.burst(new THREE.Vector3(laneX(r.lane), .6, -b.z), '#bff4ff', 10, 4, .4, .4, 0); } }
       for (const j of this.J) if (j.lane === r.lane && oz < j.z && r.z >= j.z) {
         const ok = r.act === (j.up ? 'd' : 'j');
-        if (!ok) { r.hits = (r.hits || 0) + 1; r.v *= .3; r.stun = .5; r.expr = 'squash'; r.bonus *= .5; r.streak = 0; r.act = null; E.burst(new THREE.Vector3(laneX(r.lane), .6, -j.z), '#c9b2ff', 14, 4, .6, .5); if (r.me) { Audio.sfxPlay('hit'); E.shake = .3; E.ui.toast(j.up ? '¡Bzzz! ¡Tenías que bucear! 🫧' : '¡Bzzz! ¡Tenías que saltar! ⬆', '#c9b2ff'); } else E.say(r, pick(['¡Me ha picado!', '¡Cosquillas eléctricas!', ...OUCH])); }
-        else if (r.actT > .12 && r.actT < .34) { r.perf++; r.streak++; r.boost = .8; r.bonus = Math.min(BMAX, r.bonus + BSTEP); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('trick'); E.ui.toast(r.streak > 1 ? `¡Perfecto! ⚡ x${r.streak}` : '¡Perfecto! ⚡', '#ffe27a'); } }
+        if (!ok) { r.hits = (r.hits || 0) + 1; r.v *= .55; r.stun = .35; r.expr = 'squash'; r.bonus *= .5; r.streak = 0; r.act = null; E.burst(new THREE.Vector3(laneX(r.lane), .6, -j.z), '#c9b2ff', 14, 4, .6, .5); if (r.me) { Audio.sfxPlay('hit'); E.shake = .3; E.ui.toast(j.up ? '¡Bzzz! ¡Tenías que bucear! 🫧' : '¡Bzzz! ¡Tenías que saltar! ⬆', '#c9b2ff'); } else E.say(r, pick(['¡Me ha picado!', '¡Cosquillas eléctricas!', ...OUCH])); }
+        else if (r.actT > .08 && r.actT < .42) { r.perf++; r.streak++; r.boost = .8; r.bonus = Math.min(BMAX, r.bonus + BSTEP); r.expr = 'happy'; if (r.me) { Audio.sfxPlay('trick'); E.ui.toast(r.streak > 1 ? `¡Perfecto! ⚡ x${r.streak}` : '¡Perfecto! ⚡', '#ffe27a'); } }
         else r.streak = 0;
         r.actT = 9;
       }
@@ -111,7 +126,12 @@ export default {
     for (const r of E.racers) { const o = r.obj; r.roll = lerp(r.roll, 0, Math.min(1, dt * 5)); const k = r.act ? clamp(r.ak / ACT, 0, 1) : 0, y = r.act === 'd' ? -.28 - Math.sin(k * Math.PI) * 1.1 : r.act === 'j' ? -.28 + Math.sin(k * Math.PI) * 1.6 : -.28 + Math.sin(t * 6 + r.k) * .05; r.roll = Math.sin(t * 7 + r.k) * .3;
       o.position.set(laneX(r.lane), lerp(o.position.y, y, Math.min(1, dt * 14)), -r.z); o.userData.pivot.rotation.set(r.act === 'j' ? -.55 - k * 6.283 : -.55, 0, r.roll * .35 + (r.stun > 0 ? Math.sin(t * 30) * .3 : 0));
       if (r.act === 'd' && Math.random() < .5) E.burst(new THREE.Vector3(laneX(r.lane) + rnd(-.3, .3), .1, -r.z), '#ffffff', 1, 1.5, .35, .25, -3); }
-    this.pd.innerHTML = `⚡ Perfectos: ${me.perf}<br>🔥 Racha: x${me.streak}<br>🚀 +${Math.round(me.bonus / V0 * 100)}% vel.`;
+    for (const f of this.FX) f(t); this.cuTex.offset.y = t * 2.5;
+    for (const g of this.RG) { const dz = g.z - me.z; g.g.visible = dz > -4 && dz < 70 && !g.got.has(me.id); if (g.g.visible) { g.g.rotation.z = t * 2 + g.lane; g.g.scale.setScalar(1 + Math.sin(t * 6 + g.lane) * .06); } }
+    for (const b of this.BB) if (!b.taken) { const dz = b.z - me.z; b.g.visible = dz > -4 && dz < 60; b.g.position.y = .55 + Math.sin(t * 3 + b.z) * .12; }
+    if (me.boost > 0 && Math.random() < .7) E.burst(new THREE.Vector3(laneX(me.lane) + rnd(-.5, .5), .3, -me.z + .8), pick(['#ffe27a', '#ff9cc8', '#7ee3c4']), 1, 2, .4, .4, 0);
+    this.pd.innerHTML = `⚡ Perfectos: ${me.perf}<br>🔥 Racha: x${me.streak}<br>⭐ Burbujas: ${me.bub || 0}<br>🚀 +${Math.round(me.bonus / V0 * 100)}% vel.`;
+    camera.fov = lerp(camera.fov, 70 + clamp(me.v - V0, 0, 4) * 2 + (me.boost > 0 ? 7 : 0), Math.min(1, dt * 4)); camera.updateProjectionMatrix();
     this.camZ = lerp(this.camZ, -me.z + 8.5, Math.min(1, dt * 8));
     camera.position.set(laneX(me.lane) * .4, 4.6, this.camZ); camera.lookAt(laneX(me.lane) * .3, -.3, -me.z - 5); this.sky.position.copy(camera.position);
   }
