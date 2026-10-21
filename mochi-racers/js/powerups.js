@@ -22,7 +22,8 @@ export const POWER = {
   piano:    { name: 'Piano del Cielo',       icon: '🎹', hint: 'Cae un piano encima del líder: ¡CHAF!' },
   peces:    { name: 'Banco de Peces Voladores', icon: '🐟', hint: 'Tres peces voladores persiguen a los de delante' },
   tetera:   { name: 'Tetera Tornado',        icon: '🫖', hint: 'Un remolino de té con tacitas voladoras recorre la pista y hace girar a todos' },
-  portal:   { name: 'Puerta Espejo',         icon: '🌀', hint: 'Cruzas un espejo y apareces 70 m más adelante' },
+  cohete:   { name: 'Cohete Purpurina',      icon: '🚀', hint: 'Turbo brutal: un cohete de juguete sale disparado y te arrastra dejando una estela de purpurina' },
+  alfombra: { name: 'Alfombra Arcoíris',     icon: '🌈', hint: 'Una alfombra arcoíris se desenrolla delante y la surfeas a toda velocidad' },
   chicle:   { name: 'Globo de Chicle',       icon: '🎈', hint: 'Botas como una pelota por encima de todo' },
   antigrav: { name: 'Burbuja Antigravedad',  icon: '🪐', hint: 'Los que tienes cerca salen flotando en burbujas' },
   // v12: potenciadores de VELOCIDAD con transformación (los manejas tú) y final explosivo
@@ -33,11 +34,11 @@ export const POWER = {
 // pesos por posición: [delante, mitad, detrás]
 export const POWER_W = {
   tiburon: [0, 0.3, 2.2], estrella: [0, 0.8, 2.0], aladelta: [0.2, 1.2, 1.8], reloj: [0, 1.0, 1.6], piano: [0, 0.8, 1.6],
-  peces: [0.4, 1.6, 1.4], tetera: [2.0, 1.6, 0.6], portal: [0.8, 1.4, 1.2], chicle: [1.6, 1.4, 0.8], antigrav: [1.4, 1.2, 0.6],
+  peces: [0.4, 1.6, 1.4], tetera: [2.0, 1.6, 0.6], cohete: [0.6, 1.4, 1.5], alfombra: [0.6, 1.3, 1.4], chicle: [1.6, 1.4, 0.8], antigrav: [1.4, 1.2, 0.6],
   topo: [0.2, 1.2, 1.7], bola: [0.3, 1.2, 1.6], delfin: [0.2, 1.2, 1.7],
 };
 // solo afectan a quien los usa (justos en el online P2P)
-export const SELF_POWERS = ['tiburon', 'estrella', 'aladelta', 'portal', 'chicle', 'topo', 'bola', 'delfin'];
+export const SELF_POWERS = ['tiburon', 'estrella', 'aladelta', 'cohete', 'alfombra', 'chicle', 'topo', 'bola', 'delfin'];
 export const MORPH = { topo: { t: 10, v: 1.38 }, bola: { t: 8, v: 1.18 }, delfin: { t: 8, v: 1.42 } };
 
 // ---------------- geometría y materiales compartidos ----------------
@@ -183,6 +184,40 @@ function makeTeapot() {
   g.userData = { pot, tw, orbit, cups }; g.scale.setScalar(1.35);
   return g;
 }
+// --- v15: Cohete Purpurina (sustituye a la Puerta Espejo: nada de teletransporte) ---
+const CONF = ['#ff6fb0', '#ffd84a', '#7ff5ff', '#9dff7a', '#b98cff', '#ffffff', '#ff9f5a'];
+function makeRocket() {
+  const g = new THREE.Group(), r = new THREE.Group(); g.add(r);
+  const bodyM = mat('rkBody', () => toon('#4fc8ff', { rim: 0.9, emissive: '#2f8fff', ei: 0.2 })), wM = mat('rkWhite', () => toon('#fff4fb', { rim: 0.6 })), yM = mat('rkYel', () => toon('#ffd84a', { emissive: '#ffb000', ei: 0.3, rim: 0.7 })), glassM = mat('rkGlass', () => toon('#7ff5ff', { emissive: '#3fd8ff', ei: 0.35, rim: 1 }));
+  const b = mesh(cyl(16), bodyM, r, [0, 0, 0], [Math.PI / 2, 0, 0], [0.55, 3.0, 0.55]); outline(b, '#5a3a6e', 1.05);
+  mesh(cone(16), wM, r, [0, 0, 2.05], [Math.PI / 2, 0, 0], [0.55, 1.1, 0.55]);
+  mesh(sph(12), glassM, r, [0, 0.42, 0.7], null, [0.3, 0.22, 0.34]);
+  for (let i = 0; i < 3; i++) mesh(cyl(16), i % 2 ? wM : yM, r, [0, 0, -0.9 + i * 0.75], [Math.PI / 2, 0, 0], [0.57, 0.14, 0.57]);
+  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; mesh(box(), yM, r, [Math.cos(a) * 0.75, Math.sin(a) * 0.75, -1.2], [0, 0, a], [0.5, 0.08, 0.9]); }
+  const fl = new THREE.Group(); fl.position.z = -1.6; r.add(fl);
+  mesh(cone(10), mat('rkFlame', () => add('#ffd84a', 0.9)), fl, [0, 0, -0.7], [-Math.PI / 2, 0, 0], [0.45, 1.4, 0.45]);
+  mesh(cone(10), mat('rkFlame2', () => add('#ff6fb0', 0.8)), fl, [0, 0, -1.2], [-Math.PI / 2, 0, 0], [0.3, 2.0, 0.3]);
+  const glow = sprite('#ffd84a', 2.4, 0.55); glow.position.z = -2.4; r.add(glow);
+  // carita sonriente
+  for (const s of [-1, 1]) mesh(sph(6), mat('rkEye', () => toon('#1a1030', { rim: 0 })), r, [s * 0.2, 0.25, 1.4], null, [0.07, 0.09, 0.05]);
+  g.userData = { r, fl }; return g;
+}
+// --- v15: Alfombra Arcoíris: alfombra voladora con flecos que se desenrolla delante y la surfeas
+function makeCarpet() {
+  const g = new THREE.Group();
+  const tex = mat('carpetTex', () => canvasTex(64, 256, (x, w, h) => { const c = ['#ff6f8a', '#ffb36b', '#ffe066', '#9dff7a', '#7ff5ff', '#b98cff']; for (let i = 0; i < 6; i++) { x.fillStyle = c[i]; x.fillRect(i * w / 6, 0, w / 6 + 1, h); } x.fillStyle = 'rgba(255,255,255,.55)'; for (let j = 0; j < 16; j++) { x.beginPath(); x.arc(w / 2, j * 16 + 8, 4, 0, 7); x.fill(); } }));
+  const cm = mat('carpetM', () => new THREE.MeshToonMaterial({ map: tex, side: THREE.DoubleSide }));
+  const sheet = new THREE.Group(); g.add(sheet);
+  const pg = geo('carpetG', () => { const gg = new THREE.PlaneGeometry(4.4, 1, 6, 20); gg.rotateX(-Math.PI / 2); gg.translate(0, 0, 0.5); return gg; });
+  const pl = mesh(pg, cm, sheet, [0, 0.15, 0]);
+  const roll = mesh(cyl(14), cm, g, [0, 0.5, 0], [0, 0, Math.PI / 2], [0.45, 4.5, 0.45]);
+  const fr = mat('fringe', () => toon('#ffd84a', { emissive: '#ffb000', ei: 0.3 }));
+  for (const s of [-1, 1]) for (let i = 0; i < 5; i++) mesh(sph(6), fr, sheet, [s * 2.25, 0.15, -1.5 + i * 0.75], null, 0.13);
+  const sp = [];
+  for (let i = 0; i < 6; i++) { const t = sprite(CONF[i], 1.1, 0.7); g.add(t); sp.push(t); }
+  g.userData = { sheet, pl, roll, sp }; return g;
+}
+
 // --- Portal espejo ---
 function makePortal() {
   const g = new THREE.Group();
@@ -260,6 +295,9 @@ function makeDolphin() {
 export class PowerFX {
   constructor(race) {
     this.race = race; this.projs = []; this.portals = [makePortal(), makePortal()]; this.portals.forEach(p => race.scene.add(p)); this.pI = 0; this.booms = [];
+    // v15: confeti de verdad (papelitos opacos de colores que giran y caen), reciclado para no crear nada en carrera
+    const cg = geo('confG', () => new THREE.PlaneGeometry(0.32, 0.2)); this.conf = []; this.cI = 0;
+    for (let i = 0; i < 90; i++) { const m = new THREE.Mesh(cg, mat('conf' + (i % 7), () => new THREE.MeshBasicMaterial({ color: CONF[i % 7], side: THREE.DoubleSide }))); m.visible = false; m.userData = { v: new V3(), w: new V3(), life: 0 }; race.scene.add(m); this.conf.push(m); }
     // pools para proyectiles
     this.pool = { piano: [], fish: [], tea: [] };
   }
@@ -267,7 +305,7 @@ export class PowerFX {
   // (tirones de 300-600 ms). Ahora se monta una copia de cada efecto delante de la cámara y se compila al cargar la carrera.
   prewarm(renderer, camera) {
     const RC = this.race, g = new THREE.Group(); let made = [];
-    for (const f of [makeShark, makeStarAura, makeGlider, makeTimeAura, makePiano, () => makeFish(0), makeTeapot, () => makeBubble('#ff8fd8'), () => makeBubble('#c8a8ff', true), makeMound, makeCircusBall, makeDolphin, () => this.ringFor()]) { try { const o = f(); if (o) { if (o.parent) o.parent.remove(o); made.push(o); g.add(o); } } catch (e) { /* un efecto que falle no debe romper la carrera */ } }
+    for (const f of [makeShark, makeStarAura, makeGlider, makeTimeAura, makePiano, () => makeFish(0), makeTeapot, () => makeBubble('#ff8fd8'), () => makeBubble('#c8a8ff', true), makeMound, makeCircusBall, makeDolphin, makeRocket, makeCarpet, () => this.ringFor()]) { try { const o = f(); if (o) { if (o.parent) o.parent.remove(o); made.push(o); g.add(o); } } catch (e) { /* un efecto que falle no debe romper la carrera */ } }
     for (const kind of ['topo', 'bola', 'delfin']) g.add(new THREE.Mesh(geo('boomR', () => new THREE.RingGeometry(0.75, 1, 40)), boomMat(kind)));
     camera.updateMatrixWorld(); const fw = new V3(0, 0, -12).applyQuaternion(camera.quaternion); g.position.copy(camera.position).add(fw); g.scale.setScalar(0.3);
     g.traverse(o => { o.frustumCulled = false; o.visible = true; }); RC.scene.add(g); g.updateMatrixWorld(true);
@@ -277,9 +315,10 @@ export class PowerFX {
     for (const [o, fc] of hidden) { o.visible = false; o.frustumCulled = fc; }
     RC.scene.remove(g);
   }
+  confetti(pos, vel) { const m = this.conf[this.cI = (this.cI + 1) % this.conf.length], u = m.userData; m.position.copy(pos); u.v.copy(vel); u.w.set(R() * 12, R() * 12, R() * 12); u.life = 1.1 + R() * 0.6; m.visible = true; m.scale.setScalar(0.8 + R() * 0.8); }
   get T() { return this.race.track; }
   // ---------- estado por kart ----------
-  immune(k) { return k.sharkT > 0 || k.starT > 0 || k.flyT > 0 || k.gumT > 0 || k.morphT > 0; }
+  immune(k) { return k.sharkT > 0 || k.starT > 0 || k.flyT > 0 || k.gumT > 0 || k.morphT > 0 || k.rocketT > 0; }
   attach(k, key, make) { const u = k.mesh.userData; if (!u['fx_' + key]) { const m = make(); m.visible = false; k.mesh.add(m); u['fx_' + key] = m; } return u['fx_' + key]; }
   // multiplicador de velocidad, piloto automático, flotar...
   input(k, inp, dt) {
@@ -289,6 +328,10 @@ export class PowerFX {
     if (k.starT > 0) { k.starT -= dt; v = Math.max(v, 1.22); }
     if (k.flyT > 0) { k.flyT -= dt; v = Math.max(v, 1.6); k.boostT = Math.max(k.boostT, 0.2); }
     if (k.gumT > 0) { k.gumT -= dt; v = Math.max(v, 1.22); if (!k.air && k.gumT > 0.3) { k.vy = 11; k.air = true; k.hop = true; if (k.isPlayer) Audio.sfxPlay('drift'); } }
+    // v15: Cohete Purpurina: 3,2 s de turbo muy fuerte (solo multiplica la velocidad máxima; el volante es el de siempre)
+    if (k.rocketT > 0) { k.rocketT -= dt; k.rocketAge = (k.rocketAge || 0) + dt; v = Math.max(v, k.rocketAge < 0.35 ? 1.4 : 1.85); k.boostT = Math.max(k.boostT, 0.25); if (k.rocketT <= 0 && k.isPlayer) this.race.msg('¡Fiuuu!', k, '#ff8fd8'); }
+    // v15: Alfombra Arcoíris: 4,5 s surfeando más rápido
+    if (k.carpetT > 0) { k.carpetT -= dt; k.carpetAge = (k.carpetAge || 0) + dt; v = Math.max(v, 1.55); k.boostT = Math.max(k.boostT, 0.15); }
     if (k.slowT > 0) { k.slowT -= dt; if (!this.immune(k)) v *= 0.58; }
     if (k.floatT > 0) { k.floatT -= dt; if (this.immune(k)) k.floatT = 0; else { k.vy = Math.max(k.vy, 2.2 + Math.sin(this.race.time * 3) * 0.6); k.air = true; k.hop = true; const f = Math.exp(-dt * 1.1); k.vx *= f; k.vz *= f; inp = { ...inp, steer: inp.steer * 0.3 }; } }
     if (k.morphT > 0) { k.morphT -= dt; k.morphAge = (k.morphAge || 0) + dt; const M = MORPH[k.morph];
@@ -345,7 +388,8 @@ export class PowerFX {
       case 'peces': { const tgs = ahead.slice(-3).reverse(); for (let i = 0; i < 3; i++) { const tg = tgs[i] || null; const m = this.take('fish', () => makeFish(i)); m.position.copy(k.pos).add(new V3((i - 1) * 1.5, 2, 0)); this.projs.push({ type: 'fish', mesh: m, owner: k, target: tg, t: 0, life: 4.5, dir: new V3(Math.sin(k.yaw), 0, Math.cos(k.yaw)), idx: k.idx, ph: i }); }
         if (P) RC.msg('¡Peces voladores!', k, '#ff9f5a'); if (near) Audio.sfxPlay('throw'); break; }
       case 'tetera': { const m = this.take('tea', makeTeapot); m.position.copy(k.pos); this.projs.push({ type: 'tea', mesh: m, owner: k, t: 0, life: 7, idx: k.idx, lat: 0, speed: Math.max(20, k.fs) + 18 }); if (P) RC.msg('¡Tetera tornado!', k, '#9fe8ff'); if (near) Audio.sfxPlay('throw'); break; }
-      case 'portal': this.portal(k); break;
+      case 'cohete': k.rocketT = 3.2; k.rocketAge = 0; k.carpetT = 0; if (P) { RC.msg('¡COHETE PURPURINA!', k, '#ff8fd8'); RC.shakeT = 0.25; } for (let i = 0; i < 22; i++) RC.emit(k.pos.clone().add(new V3(0, 1, 0)), CONF[i % 7], 0.8, 0.7, new V3((R() - 0.5) * 10, 3 + R() * 8, (R() - 0.5) * 10)); if (near) Audio.sfxPlay('boost'); break;
+      case 'alfombra': k.carpetT = 4.5; k.carpetAge = 0; k.rocketT = 0; if (P) RC.msg('¡ALFOMBRA ARCOÍRIS!', k, '#9dff7a'); if (near) Audio.sfxPlay('grow'); break;
       case 'topo': case 'bola': case 'delfin': this.morph(k, it, P, near); break;
       case 'chicle': k.gumT = 4.5; if (P) RC.msg('¡Globo de chicle!', k, '#ff8fd8'); if (near) Audio.sfxPlay('grow'); break;
       case 'antigrav': { let n = 0; for (const o of RC.karts) { if (o === k || o.remote || o.finished || this.immune(o)) continue; if (o.pos.distanceTo(k.pos) > 55) continue; if (o.shieldT > 0) { o.shieldT = 0; continue; } o.floatT = 2.2; n++; if (o.isPlayer) RC.msg('¡Sin gravedad!', o, '#c8a8ff'); }
@@ -402,7 +446,7 @@ export class PowerFX {
     switch (it) {
       case 'tiburon': return k.place > 2 || R() < 0.01;
       case 'estrella': return dA < 35 || dB < 15 || R() < 0.01;
-      case 'aladelta': case 'portal': case 'chicle': return R() < 0.03 || k.place > 3;
+      case 'aladelta': case 'cohete': case 'alfombra': case 'chicle': return R() < 0.03 || k.place > 3;
       case 'reloj': case 'piano': return k.place > 1;
       case 'peces': case 'tetera': return dA < 70 && k.place > 1;
       case 'antigrav': return (dA < 30 || dB < 25);
@@ -445,9 +489,21 @@ export class PowerFX {
           q.ring.rotation.y = -t * 0.5; q.sand.rotation.y = t * 0.7; q.glasses.forEach((h, i) => { const a = t * 0.6 + i * 2.094; h.position.set(Math.cos(a) * 3.1, 2.3 + Math.sin(t * 0.9 + i) * 0.35, Math.sin(a) * 3.1); h.rotation.set(0, -a, Math.sin(t * 0.5 + i) * 0.4); });
           if (R() < 0.12) RC.emit(k.pos.clone().add(new V3((R() - 0.5) * 3, 3 + R(), (R() - 0.5) * 3)), '#ffd28a', 0.35, 0.9, new V3(0, -2, 0)); } }
       if (k.morphT > 0 || u.fx_mound || u.fx_ball || u.fx_dolph) this.morphFX(k, t, dt);
+      if (k.rocketT > 0 || u.fx_rocket) { const m = this.attach(k, 'rocket', makeRocket); m.visible = k.rocketT > 0; if (m.visible) { const q = m.userData, a = k.rocketAge, e = Math.min(1, k.rocketT / 0.3);
+          // animación: el cohete sale disparado por delante y vuelve a engancharse bajo el kart; luego vibra de pura velocidad
+          const out = a < 0.7 ? Math.sin(a / 0.7 * Math.PI) * 14 : 0; q.r.position.set(0, 1.6 + Math.sin(t * 40) * 0.06 + out * 0.12, -0.6 + out); q.r.rotation.z = a * 8; m.scale.setScalar(1.7 * e * Math.min(1, a / 0.15 + 0.3));
+          q.fl.scale.set(1, 1, 1 + Math.sin(t * 50) * 0.3);
+          for (let i = 0; i < 3; i++) this.confetti(k.pos.clone().add(new V3(-Math.sin(k.yaw) * 3.5 + (R() - 0.5) * 1.4, 2.2 + R() * 1.2, -Math.cos(k.yaw) * 3.5 + (R() - 0.5) * 1.4)), new V3(k.vx * 0.55 + (R() - 0.5) * 5, 2 + R() * 4, k.vz * 0.55 + (R() - 0.5) * 5)); } }
+      if (k.carpetT > 0 || u.fx_carpet) { const m = this.attach(k, 'carpet', makeCarpet); m.visible = k.carpetT > 0; if (m.visible) { const q = m.userData, a = k.carpetAge, un = Math.min(1, a / 0.5), e = Math.min(1, k.carpetT / 0.3);
+          // se desenrolla hacia delante (el rollo rueda y la alfombra se alarga) y ondea
+          q.sheet.scale.set(1, 1, 0.05 + un * 16); q.sheet.position.z = -5; q.roll.position.z = -5 + un * 16; q.roll.visible = un < 1; q.roll.rotation.x = a * 20; m.scale.set(e, 1, 1);
+          q.sheet.rotation.x = Math.sin(t * 9) * 0.04; m.position.y = -0.1;
+          q.sp.forEach((s, i) => { const z = ((t * 18 + i * 1.6) % 9) - 6; s.position.set(Math.sin(t * 6 + i) * 1.3, 0.5 + Math.abs(Math.sin(t * 8 + i)) * 0.6, z); });
+          if (R() < 0.6) this.confetti(k.pos.clone().add(new V3(-Math.sin(k.yaw) * 3 + (R() - 0.5) * 3, 0.6, -Math.cos(k.yaw) * 3 + (R() - 0.5) * 3)), new V3(k.vx * 0.6, 3 + R() * 2, k.vz * 0.6)); } }
       if (k.gumT > 0 || u.fx_gum) { const m = this.attach(k, 'gum', () => makeBubble('#ff8fd8')); m.visible = k.gumT > 0; if (m.visible) { const s = 1 + Math.sin(t * 8) * 0.06 + (k.air ? 0 : -0.15); m.scale.set(s * 1.05, s * 0.95, s); } }
       if (k.floatT > 0 || u.fx_float) { const m = this.attach(k, 'float', () => makeBubble('#c8a8ff', true)); m.visible = k.floatT > 0; if (m.visible) { m.rotation.y = t * 1.5; m.children[2] && (m.children[2].rotation.z = t * 2); } }
     }
+    for (const m of this.conf) if (m.visible) { const u = m.userData; u.life -= dt; u.v.y -= 9 * dt; u.v.multiplyScalar(Math.exp(-dt * 1.5)); m.position.addScaledVector(u.v, dt); m.rotation.x += u.w.x * dt; m.rotation.y += u.w.y * dt; m.rotation.z += u.w.z * dt; if (u.life <= 0) m.visible = false; }
     for (const p of this.portals) if (p.visible) { p.userData.t -= dt; p.userData.disc.rotation.z = -t * 6; const s = p.userData.t > 0.9 ? (1.2 - p.userData.t) / 0.3 : Math.min(1, p.userData.t / 0.4); p.scale.setScalar(Math.max(0.01, s)); if (p.userData.t <= 0) p.visible = false; }
     // proyectiles
     for (const p of this.projs) {
@@ -488,5 +544,6 @@ export class PowerFX {
     if (u0.tilt) u0.tilt.visible = !(mo === 'topo' || mo === 'delfin'); if (u0.shadow) u0.shadow.visible = mo !== 'topo';
     if (mo === 'bola') { const r = this.ballR(k) * 2 - 0.1; k.mesh.position.y += r; u0.tilt.rotation.z += Math.sin(this.race.time * 5) * 0.12; u0.shadow.position.y -= r / k.megaS; }
     if (mo === 'delfin') { const h = this.dolphH(k); k.mesh.position.y += h; u0.shadow.position.y -= h / k.megaS; }
+    if (k.carpetT > 0) { const h = 0.35 + Math.sin(this.race.time * 6) * 0.12; k.mesh.position.y += h; }
     if (k.flyH > 0.01) { k.mesh.position.y += k.flyH; k.mesh.rotation.z = Math.sin(this.race.time * 2) * 0.1; const u = k.mesh.userData; u.shadow.position.y -= k.flyH / k.megaS; } }
 }

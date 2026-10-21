@@ -397,7 +397,7 @@ function drawEndlessHUD(dt) {
   $('flash').style.opacity = Math.min(1, R.kick * 0.9 + (P.boostT > 0 ? 0.12 : 0));
   drawFx(R, P);
   const hi = $('hItem');
-  if (P.rollT > 0) { const k = ['turbo', 'seta', 'escudo', 'iman', 'tiburon', 'estrella', 'aladelta', 'portal', 'chicle']; hi.textContent = ITEMS[k[Math.floor(R.time * 14) % k.length]].icon; hi.classList.add('roll'); $('hItemName').textContent = ''; }
+  if (P.rollT > 0) { const k = ['turbo', 'seta', 'escudo', 'iman', 'tiburon', 'estrella', 'aladelta', 'cohete', 'alfombra', 'chicle']; hi.textContent = ITEMS[k[Math.floor(R.time * 14) % k.length]].icon; hi.classList.add('roll'); $('hItemName').textContent = ''; }
   else { hi.classList.remove('roll'); hi.textContent = P.item ? ITEMS[P.item].icon : ''; $('hItemName').textContent = P.item ? ITEMS[P.item].name : ''; }
   $('bI').textContent = P.item && P.rollT <= 0 ? ITEMS[P.item].icon : '·';
   $('blind').style.opacity = 0;

@@ -388,7 +388,7 @@ export class Race {
     if (k.y > surf + 2.5) return -Infinity;
     if (!crossedTop) return u > -0.05 && u < 1 ? surf : -Infinity; // subiendo: se apoya en la rampa, nunca la atraviesa
     const v = Math.max(Math.abs(k.fs), 14);
-    k.y = Math.max(k.y, r.highY); k.vy = (6.5 + v * 0.16) * (T.cup.look ? 1.9 : 1); k.air = true; k.hop = false; k.airT = 0; k.trick = false;
+    k.y = Math.max(k.y, r.highY); k.vy = Math.min(5.8 + v * 0.12, 11) * (T.cup.look ? 1.5 : 1); k.air = true; k.hop = false; k.airT = 0; k.trick = false; // v15: salto moderado (antes 6,5 + v·0,16 y ×1,9 en las copas del cielo)
     k.flip = T.cup.look ? (r.idx % 2 ? 1 : 2) : 0; k.flipDur = 2 * k.vy / (30 * T.grav); k.lastRamp = r; k.rampCD = 0.6; k.rampJumps = (k.rampJumps || 0) + 1;
     if (k.isPlayer) Audio.sfxPlay('jump');
     return -Infinity;
