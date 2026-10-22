@@ -161,7 +161,7 @@ const doneOf = (EV, r) => !!(r.fin || r.done === true || (EV.doneSt && r.st === 
 function winDur(EV, t) { if (EV.limite) return EV.limite; if (EV.mode === 'puntos') return 10; return clamp(Math.round(t * .35), 8, 15); }
 function limiteEl() {
   let d = $('limite'); if (d) return d;
-  const st = document.createElement('style'); st.textContent = `#limite{position:absolute;left:50%;top:calc(64px + env(safe-area-inset-top));transform:translateX(-50%) scale(.6);opacity:0;pointer-events:none;z-index:7;font:700 30px Fredoka,sans-serif;color:#fff;-webkit-text-stroke:2px #9b5fd0;text-shadow:0 4px 0 #9b5fd0,0 0 18px rgba(200,150,255,.9);white-space:nowrap;transition:opacity .3s,transform .35s cubic-bezier(.3,1.6,.5,1)}
+  const st = document.createElement('style'); st.textContent = `#limite{position:absolute;left:50%;top:calc(96px + env(safe-area-inset-top));transform:translateX(-50%) scale(.6);opacity:0;pointer-events:none;z-index:7;font:700 30px Fredoka,sans-serif;color:#fff;-webkit-text-stroke:2px #9b5fd0;text-shadow:0 4px 0 #9b5fd0,0 0 18px rgba(200,150,255,.9);white-space:nowrap;transition:opacity .3s,transform .35s cubic-bezier(.3,1.6,.5,1)}
 #limite.on{opacity:1;transform:translateX(-50%) scale(1)}
 #limite.urg{color:#ffe27a;-webkit-text-stroke-color:#e0405f;text-shadow:0 4px 0 #e0405f,0 0 22px rgba(255,90,120,.9);animation:limP .5s ease-in-out infinite}
 @keyframes limP{50%{transform:translateX(-50%) scale(1.15)}}`; document.head.appendChild(st);
