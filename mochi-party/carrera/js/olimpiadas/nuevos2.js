@@ -402,7 +402,7 @@ export function lianas(cfg) {
           if (go) { r.wt = 0; r.tu = null; const ok = om > 0 && u > .22 && u < .98; r.jz0 = -r.vi * GAP - Math.sin(th) * LEN; r.jy0 = PY - Math.cos(th) * LEN; r.jt = 0;
             if (ok) { r.st = 'jump'; r.q = u; if (r.me) Audio.sfxPlay('jump'); } else { r.st = 'fall'; r.vy = 0; if (r.me) { Audio.sfxPlay('boing'); E.ui.toast(om <= 0 ? '¡Suéltate cuando vayas hacia delante!' : '¡Un poco más arriba!', '#ffd0ec'); } else say(E, r, '¡Al barro!'); } } }
         else if (r.st === 'jump') { r.jt += dt; if (r.jt >= .6) { r.vi++; r.score = r.vi; r.st = 'swing'; r.ph = Math.asin(-.45) - E.t * W; if (r.q > .8) { r.score += 0; if (r.me) E.ui.toast('¡Vuelo de mono! 🐒', '#ffe27a'); }
-            if (r.vi >= NV) { r.fin = true; r.score = 100 - this.order++; cheer(r, .8); if (r.me) { Audio.sfxPlay('fanfare'); E.ui.toast('¡Llegaste! 🍌', '#ffe27a'); } } } }
+            if (r.vi >= NV) { r.fin = true; r.time = E.t; r.score = 100 - this.order++; cheer(r, .8); if (r.me) { Audio.sfxPlay('fanfare'); E.ui.toast('¡Llegaste! 🍌', '#ffe27a'); } } } }
         else if (r.st === 'fall') { r.jt += dt; if (r.jt > 1.5) { r.st = 'swing'; r.ph = Math.asin(-.6) - E.t * W; } }
         if (!r.fin) r.score = r.vi; r.prog = clamp(r.vi / NV, 0, .99); }
       if (!this.done && (this.order >= 3 || (E.me.fin && this.order >= 2) || E.t > this.maxT - .5)) { this.done = true; scoreEnd(E, r => r.fin ? '¡Meta!' : `${r.vi}/${NV} lianas`); }

@@ -168,6 +168,7 @@ function limiteEl() {
   d = document.createElement('div'); d.id = 'limite'; ($('hud') || document.body).appendChild(d); return d;
 }
 function limiteTick(E, EV, racers, online) {
+  for (const r of racers) if (r._dAt == null && doneOf(EV, r)) { r._dAt = E.t; if (r.me && E.meDone == null) E.meDone = E.t; }
   if (E.winT == null && racers.some(r => doneOf(EV, r))) { E.winT = E.t; E.winDur = winDur(EV, E.t); }
   if (E.winT == null) return false;
   let endT = E.winT + E.winDur; if (!online && E.meDone != null) endT = Math.min(endT, Math.max(E.meDone + 8, E.winT + 8));
@@ -218,7 +219,7 @@ function run(EV, opts = {}) {
   // un jugador real se desconecta: le sustituye la IA (la simula el anfitrión)
   E.dropHuman = id => { const r = racers.find(x => x.id === id); if (!r || r.left) return; r.left = true; r.name = (r.name || r.ch.name) + ' (IA)'; if (opts.net.isHost) { r.remote = false; r.human = false; r.timer = 0; r.hop = null; r.fly = null; r.plan = null; r.stun = 0; } ui.toast(`📴 ${r.name.replace(' (IA)', '')} se ha ido: le sustituye la IA`, '#c9b2ff'); };
   E.go = () => { if (E.phase === 'wait') { E.phase = 'count'; last = performance.now(); } };
-  const order = () => racers.map(r => ({ id: r.id, time: +(r.fin ? r.time : E.t + (1 - r.prog) * Math.max(4, E.t / Math.max(.15, r.prog))).toFixed(2), fin: r.fin })).sort((a, b) => a.time - b.time);
+  const order = () => racers.map(r => ({ id: r.id, time: +(r.fin ? (r.time ?? r._dAt ?? E.t) : E.t + (1 - r.prog) * Math.max(4, E.t / Math.max(.15, r.prog))).toFixed(2), fin: r.fin })).sort((a, b) => a.time - b.time);
   function end() {
     if (sent) return; sent = true;
     const res = order();
