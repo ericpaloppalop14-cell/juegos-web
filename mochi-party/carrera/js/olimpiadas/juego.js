@@ -23,9 +23,9 @@ if (Q0.has('podio')) {
   // GALAXIA: escafandra de cristal con antena luminosa, estela brillante y cámara algo más cercana
   if (o.id === 'espacio') { const T3 = core.THREE, gm = new T3.MeshPhysicalMaterial ? null : null;
     for (const r of E.racers) { const c = r.obj.userData.char; if (!c) continue; c.updateMatrixWorld(true); const bb = new T3.Box3().setFromObject(c), sz = bb.getSize(new T3.Vector3()), ce = bb.getCenter(new T3.Vector3()); c.worldToLocal(ce);
-      const R = Math.max(sz.x, sz.y, sz.z) * .62 / (r.obj.userData.pivot.scale.x || 1), h = new T3.Group();
+      const ps = r.obj.userData.pivot.scale.x || 1, R = Math.max(sz.x, sz.y) * .5 / ps, h = new T3.Group(); ce.y += sz.y * .12 / ps;
       const glass = new T3.Mesh(new T3.SphereGeometry(1, 24, 16), new T3.MeshBasicMaterial({ color: '#bfeaff', transparent: true, opacity: .18, depthWrite: false })); glass.scale.setScalar(R); h.add(glass);
-      const rim = new T3.Mesh(new T3.TorusGeometry(R * .78, R * .09, 8, 28), core.toon('#e8e4ff', { rim: .6 })); rim.rotation.x = Math.PI / 2; rim.position.y = -R * .62; h.add(rim);
+      const rim = new T3.Mesh(new T3.TorusGeometry(R * .62, R * .06, 8, 28), core.toon('#e8e4ff', { rim: .6 })); rim.rotation.x = Math.PI / 2; rim.position.y = -R * .78; h.add(rim);
       const hi = new T3.Mesh(new T3.SphereGeometry(R * .16, 10, 8), new T3.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .7 })); hi.position.set(-R * .45, R * .5, R * .55); h.add(hi);
       const ant = new T3.Mesh(new T3.CylinderGeometry(R * .03, R * .03, R * .5, 6), core.toon('#e8e4ff')); ant.position.y = R * 1.2; h.add(ant); const tip = core.glowSprite(r.ch.color, R * .7, 1); tip.position.y = R * 1.5; h.add(tip); r._tip = tip;
       h.position.copy(ce); c.add(h); }
