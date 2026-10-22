@@ -18,6 +18,8 @@ if (Q0.has('podio')) {
   const ol = Q0.has('stay') || true; const S = JSON.parse(localStorage.getItem('mo_olimp') || 'null'); const n = S && S.oid === o.id && S.mode === 'olimpiada' ? `Prueba ${i + 1}/${o.pruebas.length} · ` : '';
   const pr = $('pres'); pr.innerHTML = `<div class="pIc">${p.icon}</div><div class="pNm">${p.name}</div><div class="pOl">${n}${o.icon} ${o.name}</div>`; pr.classList.add('on'); setTimeout(() => pr.classList.remove('on'), 2600);
   const E = core.run(EV);
+  // dificultad FÁCIL: rivales flojos con azar por prueba, para que quien juegue razonablemente gane a menudo
+  E.racers.forEach(r => { if (!r.me) r.skill = +(0.08 + Math.random() * 0.37).toFixed(2); });
   // joystick visible cuando arrastras en las pruebas de arena
   const st = $('stick'), kn = st.firstElementChild, usesStick = EV.stick || (['recoge', 'superv', 'empuje'].includes(p.tipo) && p.modo !== 'barrido');
   let done = false;
