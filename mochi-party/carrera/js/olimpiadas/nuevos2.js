@@ -114,7 +114,7 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui, moldes, distinto, lianas };
+export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui, moldes, distinto, lianas, parareloj };
 
 // =====================================================================
 //  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
@@ -415,5 +415,47 @@ export function lianas(cfg) {
       for (const r of E.racers) { r.vines.forEach((v, i) => { v.g.rotation.x = (i === r.vi && r.st === 'swing' && !r.fin) ? this.th(E, r) : v.th + Math.sin(t * 1.2 + i) * .08; });
         const [y, z] = this.rpos(E, r); r.obj.position.set(r.x, y + (r.fin ? hopY(r, dt) : 0), z); r.obj.rotation.y = Math.PI; r.obj.userData.pivot.rotation.x = r.st === 'swing' ? -this.th(E, r) * .5 : r.st === 'jump' ? -.5 : 0; squash(r, dt); }
       const me = E.me, [y, z] = this.rpos(E, me), pr = port(); camTo(E, dt, v3(me.x + .6, Math.max(3, y) + (pr ? 3.5 : 2.5), z + (pr ? 12 : 8.5)), v3(me.x, Math.max(2, y) + .5, z - 6), pr ? 70 : 56, 4); },
+  });
+}
+
+// =====================================================================
+//  PARA EL RELOJ — cada reloj empieza a contar y… ¡se derrite! Cuenta en tu cabeza y toca
+//  justo cuando creas que han pasado los segundos que pide. Quien más se acerque, más puntos. 5 rondas.
+// =====================================================================
+export function parareloj(cfg) {
+  const SP = 3.8, NR = 5, TG = [3, 4, 2.5, 5, 3.5], SEE = 1.2;
+  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 70,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -40, half: 14 } }); setButtons('m', { M: '⏱️' });
+      racers(E, .42); E.racers.forEach((r, k) => { r.x = lineX(k, SP); r.score = 0;
+        const g = new THREE.Group(); g.position.set(r.x, 0, -2.2); sc.add(g); r.clk = g;
+        const face = mesh(new THREE.CylinderGeometry(1.25, 1.25, .25, 32), T('#fff6e0'), g, [0, 2.2, 0], [Math.PI / 2, 0, 0]); outline(face, '#c08a2a', 1.06); r.face = face;
+        mesh(new THREE.TorusGeometry(1.25, .12, 10, 32), T('#ffd84a'), g, [0, 2.2, .1]); mesh(CYL(), T('#c08a2a'), g, [0, 1, -.1], null, [.12, 2, .12]);
+        for (let i = 0; i < 12; i++) mesh(SPHL(), T('#5a3a6e'), g, [Math.sin(i / 12 * 6.28) * 1, 2.2 + Math.cos(i / 12 * 6.28) * 1, .16], null, .07);
+        r.hand = new THREE.Group(); r.hand.position.set(0, 2.2, .2); g.add(r.hand); mesh(BOX(), T('#ff6fae'), r.hand, [0, .45, 0], null, [.08, .9, .05]);
+        r.drop = mesh(SPH(), T('#fff6e0'), g, [0, 1, .1], null, [.3, .45, .3]); r.drop.visible = false; });
+      for (let i = 0; i < 7; i++) pm(pick(['luna', 'oveja', 'almohada', 'reloj']), sc, [rnd(-14, 14), 0, rnd(-12, -6)], rnd(1.4, 3), rnd(0, 6));
+      this.round = 0; this.start(E);
+    },
+    start(E) { this.rt = 0; this.tg = TG[this.round]; this.ph = 'intro'; for (const r of E.racers) { r.stop = null; r.err = null; } E.ui.toast(`¡Para el reloj en ${this.tg} segundos! ⏱️`, '#ffe27a'); },
+    update(E, dt) {
+      this.rt += dt;
+      if (this.ph === 'intro' && this.rt > 1.4) { this.ph = 'run'; this.rt = 0; if (E.me) Audio.sfxPlay('go'); }
+      else if (this.ph === 'run') {
+        for (const r of E.racers) { if (r.stop != null) continue; const auto = !(r.me && !E.AUTO), s0 = sk(E, r);
+          if (r.err == null) r.err = (rnd(-1, 1) + rnd(-1, 1)) * .5 * (1.25 - Math.min(1.15, s0)) * (.25 + this.tg * .12);
+          const go = auto ? this.rt >= this.tg + r.err : tapped(E); if (go || this.rt > this.tg + 3) { r.stop = this.rt; const d = Math.abs(r.stop - this.tg), pts = Math.max(0, Math.round(10 - d * 12)); r.score += pts; r.lastP = pts;
+            if (pts >= 8) cheer(r); if (r.me) { Audio.sfxPlay(pts >= 9 ? 'stars' : pts ? 'land' : 'boing'); E.ui.toast(`${r.stop.toFixed(2)} s · ${pts >= 10 ? '¡PERFECTO! ' : ''}+${pts}`, pts >= 8 ? '#ffe27a' : '#ffd0ec'); } else if (Math.random() < .4) E.say(r, `${r.stop.toFixed(2)} s`); } }
+        if (E.racers.every(r => r.stop != null)) { this.ph = 'rev'; this.rt = 0; } }
+      else if (this.ph === 'rev' && this.rt > 2) { this.round++; if (this.round >= NR) { if (!this.done) { this.done = true; scoreEnd(E, r => r.score + ' pts'); } } else this.start(E); }
+      for (const r of E.racers) r.prog = clamp(this.round / NR, 0, .99);
+      board(E, r => r.score + ' pts'); info(`⏱️ Ronda ${Math.min(NR, this.round + 1)}/${NR}<br>Objetivo: <b>${this.tg} s</b>`);
+    },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      for (const r of E.racers) { const run = this.ph === 'run', el = run ? (r.stop != null ? r.stop : this.rt) : this.ph === 'rev' ? r.stop : 0, melt = run && r.stop == null ? clamp((this.rt - SEE) / .8, 0, 1) : this.ph === 'rev' ? 0 : 0;
+        r.hand.rotation.z = -el / 6 * Math.PI * 2; r.hand.visible = melt < .6;
+        r.face.scale.set(1, 1, 1 - melt * .45); r.face.position.y = 2.2 - melt * .35; r.drop.visible = melt > .2; r.drop.position.y = 1.2 - melt * .9 + Math.sin(t * 3) * .05; r.drop.scale.set(.3, .45 + melt * .4, .3);
+        r.obj.position.set(r.x - 1.5, hopY(r, dt), -1.2); r.obj.rotation.y = Math.PI * .85; squash(r, dt); }
+      const me = E.me, pr = port(); camTo(E, dt, v3(me.x - .6, pr ? 3.8 : 3, pr ? 8.5 : 6), v3(me.x - .6, 1.8, -2), pr ? 66 : 54, 3); },
   });
 }
