@@ -104,7 +104,7 @@ export function circuito(cfg) {
         if (r.me) { Audio.sfxPlay(how === 'slime' ? 'squash' : 'bump'); E.ui.toast(how === 'slime' ? '¡Pegote de slime! 🟢' : how === 'meteor' ? '¡Meteorito de goma! ☄️' : '¡Absorbido! 🕳️', '#ff9cb0'); } else if (by && by.me) Audio.sfxPlay('pop'); }
       return true; },
     usePw(E, r, k) { const sc = E.scene, rv = E.racers.filter(o => o !== r), pos = r.obj.position.clone();
-      r.pwS.material.map = this.pwTex[k]; r.pwS.material.needsUpdate = true; r.pwS.visible = true; r.pwT = 1.4; r.expr = 'happy';
+      r.pwS.material.map = this.pwTex[k]; r.pwS.material.needsUpdate = true; r.pwS.visible = !r.me; r.pwT = 1.4; r.expr = 'happy';
       if (r.me) { this.ico.textContent = PW[k][0]; this.ico.style.transform = 'translateX(-50%) scale(1)'; this.ico.style.opacity = 1; clearTimeout(this.icoT); this.icoT = setTimeout(() => { this.ico.style.transform = 'translateX(-50%) scale(0)'; this.ico.style.opacity = 0; }, 1700); E.ui.toast(PW[k][1], '#ffe27a'); Audio.sfxPlay(PW[k][2]); }
       const near = (a, b) => rv.filter(o => { const d = this.dS(o.s, r.s); return d > a && d < b; });
       if (k === 'cohete') { r.boost = 2.2; r.rocket = 2.2; }
@@ -193,7 +193,7 @@ export function circuito(cfg) {
         if (r.shield > 0) { if (!r.shM) { r.shM = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12), new THREE.MeshBasicMaterial({ color: '#7ee3ff', transparent: true, opacity: .22, depthWrite: false })); r.shM.position.y = .9; r.obj.add(r.shM); } r.shM.visible = true; r.shM.scale.setScalar(1 + Math.sin(t * 6) * .04); } else if (r.shM) r.shM.visible = false; }
       if (this.real) this.real.tick(camera, E.me.obj.position, t);
       const me = E.me, q = this.at(me.s), p = port(), back = p ? 8.5 : 7, up = p ? 4.6 : 3.4, la = this.at(me.s + 7);
-      this.fk = lerp(this.fk || 0, me.boost > 0 || me.star > 0 ? 1 : 0, Math.min(1, dt * 4)); camTo(E, dt, v3(q.x + q.nx * me.d * .6 - q.tx * (back - this.fk), up + (me.y || 0) * .5 + ((me.sc || 1) - 1) * 1.5, q.z + q.nz * me.d * .6 - q.tz * (back - this.fk)), v3(la.x + la.nx * me.d * .5, .8 + (me.y || 0) * .4, la.z + la.nz * me.d * .5), (p ? 72 : 60) + this.fk * 12, 6);
+      this.fk = lerp(this.fk || 0, me.boost > 0 || me.star > 0 ? 1 : 0, Math.min(1, dt * 4)); camTo(E, dt, v3(q.x + q.nx * me.d * .6 - q.tx * (back - this.fk + ((me.sc || 1) - 1) * 4), up + (me.y || 0) * .5 + ((me.sc || 1) - 1) * 1.5, q.z + q.nz * me.d * .6 - q.tz * (back - this.fk + ((me.sc || 1) - 1) * 4)), v3(la.x + la.nx * me.d * .5, .8 + (me.y || 0) * .4, la.z + la.nz * me.d * .5), (p ? 72 : 60) + this.fk * 12, 6);
     },
   });
 }
