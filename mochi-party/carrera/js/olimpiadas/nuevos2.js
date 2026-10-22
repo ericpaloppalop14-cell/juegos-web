@@ -71,4 +71,47 @@ export function bumeran(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 5.5 : 4, pr ? 7.5 : 5.5), v3(me.bx, 1.4, -D * .8), pr ? 74 : 58, 3); },
   });
 }
-export const NUEVOS2 = { bumeran };
+
+
+// =====================================================================
+//  TOPOS DE LAVA — dragoncitos asoman por 3 agujeros de lava: aplástalos con el martillo
+//  (⬅ ● ➡ o tocando ese tercio de la pantalla). Los dorados valen 3. Tocar un agujero vacío no resta.
+// =====================================================================
+export function topos(cfg) {
+  const SP = 7, HX = [-1.9, 0, 1.9], DUR = cfg.dur || 30;
+  return base(cfg, { mode: 'puntos', maxT: DUR + 3,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -40, half: 24 } }); setButtons('lmr', { L: '🔨', M: '🔨', R: '🔨' });
+      racers(E, .42); const rock = T(cfg.rock || '#5a3a48'), lava = GL(cfg.lavaC || '#ff7a2a', .9);
+      E.racers.forEach((r, k) => { r.bx = lineX(k, SP); r.score = 0; r.nt = rnd(.6, 1.2); r.mole = null; r.ham = 0; r.hx = 0;
+        const slab = mesh(new THREE.CylinderGeometry(3.2, 3.5, .5, 28), rock, sc, [r.bx, .0, -2.6]); outline(slab, '#2a1820', 1.02);
+        r.holes = HX.map(x => { const g = new THREE.Group(); g.position.set(r.bx + x, .26, -2.6); sc.add(g); mesh(new THREE.TorusGeometry(.62, .16, 10, 24), T('#3a2430'), g, null, [Math.PI / 2, 0, 0]); mesh(new THREE.CircleGeometry(.55, 24), lava, g, [0, .01, 0], [-Math.PI / 2, 0, 0]);
+          const m = fitP(cfg.mole || 'dragon', 1.1); m.position.y = -1.4; g.add(m); const gold = glowSprite('#ffe27a', 2.4, .9); gold.position.y = .6; gold.visible = false; m.add(gold); return { g, m, gold, up: 0, life: 0, st: 'down' }; });
+        pm('volcancito', sc, [r.bx + rnd(-2, 2), 0, -7.5], 3.2, rnd(0, 6));
+        r.hammer = new THREE.Group(); sc.add(r.hammer); mesh(CYL(), T('#c8904a'), r.hammer, [0, .6, 0], null, [.08, 1.2, .08]); const hd = mesh(CYL(), T('#ff6fae'), r.hammer, [0, 1.25, 0], [0, 0, Math.PI / 2], [.32, .8, .32]); outline(hd, '#7a2a50', 1.05); });
+    },
+    whack(E, r, i) { const h = r.holes[i]; r.ham = .25; r.hx = i;
+      if (h.st === 'up' || h.st === 'rise') { const pts = h.goldOn ? 3 : 1; r.score += pts; h.st = 'hit'; h.life = .35; E.burst(h.g.position.clone().add(v3(0, .9, 0)), h.goldOn ? '#ffe27a' : '#ff9a4a', 14, 5, .5, .55); cheer(r, .35);
+        if (r.me) { Audio.sfxPlay(h.goldOn ? 'stars' : 'squash'); E.shake = .15; if (h.goldOn) E.ui.toast('¡Dorado! +3 ✨', '#ffe27a'); } }
+      else if (r.me) Audio.sfxPlay('click'); },
+    update(E, dt) {
+      const t = E.t, tl = Math.max(0, DUR - t), sp = 1 + t / DUR * .7;
+      for (const r of E.racers) {
+        if (t < DUR) { if ((r.nt -= dt * sp) <= 0) { r.nt = rnd(.55, 1.05); const free = r.holes.filter(h => h.st === 'down'); if (free.length) { const h = pick(free); h.st = 'rise'; h.up = 0; h.life = 1.25 / Math.sqrt(sp); h.goldOn = Math.random() < .14; h.gold.visible = h.goldOn; h.seen = 0; } } }
+        for (const h of r.holes) { if (h.st === 'rise') { h.up = Math.min(1, h.up + dt * 6); if (h.up >= 1) h.st = 'up'; } else if (h.st === 'up') { if ((h.life -= dt) <= 0) h.st = 'fall'; } else if (h.st === 'fall' || h.st === 'hit') { h.up = Math.max(0, h.up - dt * (h.st === 'hit' ? 5 : 4)); if (h.up <= 0) { h.st = 'down'; h.gold.visible = false; } } }
+        if (t >= DUR) continue;
+        if (r.me && !E.AUTO) { for (const z of zones(E)) this.whack(E, r, z); }
+        else { const s0 = sk(E, r); r.holes.forEach((h, i) => { if (h.st === 'up' || h.st === 'rise') { h.seen += dt; if (h.react == null) h.react = (.22 + (1.25 - Math.min(1.2, s0)) * .5) * rnd(.8, 1.3); if (h.seen > h.react) { h.react = null; if (Math.random() < .55 + .4 * Math.min(1, s0)) this.whack(E, r, i); else h.seen = -9; } } else h.react = null; }); }
+        r.prog = clamp(t / DUR, 0, .99);
+      }
+      if (!this.done && t > DUR + .6) { this.done = true; scoreEnd(E, r => r.score + ' dragoncitos'); }
+      board(E, r => r.score + ' 🐉'); if (t < DUR) info(`⏱️ ${tl.toFixed(0)} s<br>${E.me.score} 🐉`);
+    },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      for (const r of E.racers) { r.obj.position.set(r.bx + HX[r.hx] * .4, hopY(r, dt), .9); r.obj.rotation.y = Math.PI; squash(r, dt);
+        for (const h of r.holes) { h.m.position.y = -1.4 + h.up * 1.35; h.m.rotation.y = Math.sin(t * 6 + h.g.position.x) * .4; h.m.scale.y = h.st === 'hit' ? h.m.scale.x * .5 : h.m.scale.x; if (Math.random() < .02) E.burst(h.g.position.clone().add(v3(0, .2, 0)), '#ff9a4a', 2, 1.5, .5, .25, 2); }
+        r.ham = Math.max(0, r.ham - dt); const hp = r.holes[r.hx].g.position; r.hammer.position.set(hp.x + .4, .3, hp.z + .7); r.hammer.rotation.set(-(r.ham > 0 ? Math.sin(r.ham / .25 * Math.PI) * 1.3 : .2), 0, .2); }
+      const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
+  });
+}
+export const NUEVOS2 = { bumeran, topos };
