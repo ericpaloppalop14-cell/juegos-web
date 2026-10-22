@@ -3,7 +3,7 @@
 //  salto · esquiva · machaca · vuelo · punteria · recoge · ritmo · superv · empuje
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m9';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o2';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o3';
 
 const LW = 2.3;
 const lx = (l, n = 6) => (l - (n - 1) / 2) * LW;
@@ -16,8 +16,9 @@ const sk = (E, r) => r.me ? (E.AUTO ? 1.3 : 1) : r.skill;
 
 // ---------- utilidades comunes ----------
 function info(html) { let d = $('perf'); if (!d) { d = document.createElement('div'); d.id = 'perf'; d.style.cssText = 'position:absolute;right:10px;top:calc(88px + env(safe-area-inset-top));background:rgba(110,60,150,.6);color:#fff;font:700 14px Fredoka;border-radius:14px;padding:5px 11px;text-align:right;line-height:1.3;border:1.5px solid rgba(255,255,255,.6)'; $('hud').appendChild(d); } if (d._h !== html) { d.innerHTML = html; d._h = html; } }
-function setButtons(mode) { // 'lr' | 'lmr' | 'm' | null
+function setButtons(mode, lab = {}) { // 'lr' | 'lmr' | 'm' | null; lab: {L,M,R} textos
   const c = $('ctl'); c.classList.toggle('on', !!mode); if (!mode) return;
+  $('bL').textContent = lab.L || '⬅'; $('bR').textContent = lab.R || '➡'; $('bM').textContent = lab.M || '🫧';
   $('bL').style.visibility = mode.includes('l') ? 'visible' : 'hidden'; $('bR').style.visibility = mode.includes('r') ? 'visible' : 'hidden'; $('bM').style.visibility = mode.includes('m') ? 'visible' : 'hidden';
 }
 function racers(E, scale = .55) { E.racers.forEach((r, k) => { r.obj = makeRunner(r.ch, k, scale); E.scene.add(r.obj); r.expr = ''; r.sc = scale; r.land = 0; }); }
@@ -46,7 +47,7 @@ function sideTaps(E) { const out = [...E.side]; for (const x of E.taps) out.push
 const say = (E, r, s) => { if (!r.me && Math.random() < .5) E.say(r, s); };
 function hitFx(E, r, color = '#ff9cc8') { r.expr = 'squash'; E.burst(r.obj.position.clone().add(v3(0, .8, 0)), color, 14, 5, .6, .6); if (r.me) { Audio.sfxPlay('boing'); E.shake = .3; } else say(E, r, pick(OUCH)); }
 function scoreFinish(E, key = 'score') { const ord = [...E.racers].sort((a, b) => (b[key] - a[key]) || (b.skill - a.skill)); ord.forEach((r, i) => { r.prog = 1; E.finish(r); r.time = E.t + i * .01; }); }
-function base(cfg, extra) { return { id: cfg.id, name: cfg.name, icon: cfg.icon, maxT: cfg.maxT || 80, music: MUNDOS[cfg.mundo].music, seed: cfg.seed || 7, tagY: 1.35, tagS: .45, how: cfg.how, mode: extra.mode || 'tiempo', dispose() { const d = $('perf'); if (d) d.remove(); }, ...extra }; }
+function base(cfg, extra) { return { id: cfg.id, name: cfg.name, icon: cfg.icon, maxT: cfg.maxT || 80, music: MUNDOS[cfg.mundo].music, seed: cfg.seed || 7, tagY: 1.35, tagS: .45, how: cfg.how, mode: extra.mode || 'tiempo', ownButtons: true, dispose() { const d = $('perf'); if (d) d.remove(); }, ...extra }; }
 
 // =====================================================================
 //  SALTO — corre solo, toca para saltar obstáculos (con doble salto opcional)
@@ -363,7 +364,7 @@ export function superv(cfg) {
     init(E) {
       setButtons(MODE === 'barrido' ? 'm' : null); if (MODE === 'barrido') $('bM').textContent = '⤴';
       if (MODE === 'baldosas') { const M = MUNDOS[cfg.mundo]; this.W = buildWorld(E, cfg.mundo, { arena: { r: R + 3 } }); this.tiles = []; const s = 2.2;
-        this.W.ground.position.y = -6; this.W.spots.visible = false; this.W.deco.forEach(d => d.position.y = -2.5); if (cfg.under) mesh(new THREE.CircleGeometry(R + 60, 40), GL(cfg.under, .55), E.scene, [0, -2.5, 0], [-Math.PI / 2, 0, 0]);
+        this.W.ground.position.y = -6; this.W.spots.visible = false; this.W.deco.forEach(d => d.position.y = -2.5); this.W.rich.sets.forEach(q => q.im.position.y = -2.5); if (cfg.under) mesh(new THREE.CircleGeometry(R + 60, 40), GL(cfg.under, .55), E.scene, [0, -2.5, 0], [-Math.PI / 2, 0, 0]);
         for (let i = -6; i <= 6; i++) for (let j = -6; j <= 6; j++) { const x = i * s, z = j * s; if (Math.hypot(x, z) > R) continue; const m = mesh(BOX(), T((i + j) % 2 ? M.alt : (cfg.tile || M.ground), { rim: .3 }), E.scene, [x, -.3, z], null, [s - .12, .6, s - .12]); this.tiles.push({ x, z, m, st: 0, sh: 0, y: -.3 }); } this.ts = s; }
       else this.A = arena(E, cfg, R, cfg.floor);
       initArenaRacers(E, R); E.racers.forEach(r => { r.hp = 3; r.inv = 0; });
@@ -517,3 +518,5 @@ export function ritmo(cfg) {
 }
 
 export const TIPOS = { salto, esquiva, machaca, vuelo, punteria, recoge, superv, empuje, ritmo };
+
+export { LW, lx, T, GL, v3, $, sk, info, setButtons, racers, squash, trackBase, chaseCam, stickDir, sideTaps, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers };

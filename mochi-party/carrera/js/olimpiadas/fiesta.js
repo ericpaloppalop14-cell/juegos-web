@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { CHARS } from '../data.js';
 import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, makeTrophy } from '../gfx.js?v=m9';
 import { Audio } from '../audio.js';
-import { OLIMPIADAS, PTS } from './catalogo.js?v=o2';
+import { OLIMPIADAS, PTS } from './catalogo.js?v=o3';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
@@ -43,10 +43,9 @@ function fx(scene) {
       else s.position.addScaledVector(u.v, dt); } }
   };
 }
-// alegría: saltos con giro y cara feliz. Derrota: cabizbajo, encogido, carita triste y nubecita con lluvia el último
+// alegría: el ganador salta con giro y cara feliz; los demás aplauden (nunca tristes)
 function animWinner(o, t, k) { const u = o.userData, j = Math.abs(Math.sin(t * 4.2)); o.position.y = (o.userData.by || 0) + j * 1.3; u.pv.rotation.y = (t * 4.2 / Math.PI | 0) % 2 ? Math.min(1, (t * 4.2 / Math.PI) % 1 * 1.6) * 6.283 : 0; const sq = j < .15 ? (1 - j / .15) * .22 : 0; u.pv.scale.set(u.s * (1 + sq), u.s * (1 - sq + (j > .5 ? .06 : 0)), u.s * (1 + sq)); animCharacter(u.c, t + k, 1, 'happy'); }
 function animClap(o, t, k) { const u = o.userData, j = Math.abs(Math.sin(t * 6 + k)); o.position.y = (o.userData.by || 0) + j * .3; u.pv.rotation.z = Math.sin(t * 6 + k) * .12; animCharacter(u.c, t + k, 1, k % 2 ? 'happy' : ''); }
-function animSad(o, t, k) { const u = o.userData; o.position.y = o.userData.by || 0; u.pv.rotation.x = .45 + Math.sin(t * 1.5 + k) * .05; u.pv.rotation.z = Math.sin(t * 1.2 + k) * .08; u.pv.scale.set(u.s * 1.08, u.s * (.86 + Math.sin(t * 2 + k) * .02), u.s * 1.08); animCharacter(u.c, t + k, 1, ''); const c = u.c.userData; c.mouth.rotation.z = 0; c.mouth.position.y = .6; for (const e of c.eyes) e.scale.y = .1; }
 
 // ---------------- resultados de la prueba ----------------
 function orderOf(E, EV) {
@@ -63,41 +62,17 @@ function applyResult(S, o, idx, res) {
 }
 const resTxt = (EV, r) => r.label ? r.label : EV.mode === 'puntos' ? r.score + ' pts' : r.time != null ? r.time.toFixed(1) + ' s' : Math.round(r.prog * 100) + ' %';
 
-export function fiesta(E, EV, o, idx, renderer, camera) {
-  let S = loadS(); const p = o.pruebas[idx];
+// Una sola celebración por prueba: la del propio escenario (core3d: el ganador salta y los demás aplauden).
+// Después solo aparece el panel animado de clasificación, encima de la escena congelada.
+export function fiesta(E, EV, o, idx) {
+  let S = loadS();
   if (!S || S.oid !== o.id) S = { sid: Date.now(), mode: 'suelta', oid: o.id, idx, pj: Q.get('pj') || 'mochi', rv: (Q.get('rv') || 'tiovivo,atomo,cosmo,lava,disco').split(','), skill: {}, pts: {} };
-  const res = orderOf(E, EV); const before = { ...S.pts }; applyResult(S, o, idx, res);
-  ['ctl', 'hint', 'say', 'meter', 'perf', 'hTop', 'hBoard', 'toast', 'stick'].forEach(id => { const e = $(id); if (e) e.style.display = 'none'; });
-  const meP = res.findIndex(r => r.id === 'me') + 1;
-  // ----- escena de celebración -----
-  const sc = new THREE.Scene(); skyGrad(sc, o.color[0], o.color[1]);
-  sc.add(new THREE.HemisphereLight('#ffffff', o.color[0], 1.1)); const d = new THREE.DirectionalLight('#fff4e8', 1.8); d.position.set(5, 10, 8); sc.add(d);
-  const fl = mesh(new THREE.CircleGeometry(14, 48), toon(o.color[1], { rim: 0 }), sc, [0, 0, 0], [-Math.PI / 2, 0, 0]);
-  for (let i = 0; i < 18; i++) { const a = i / 18 * 6.28; mesh(new THREE.SphereGeometry(rnd(.3, .6), 12, 8), toon(pick(['#ff9cc8', '#7ee3c4', '#ffe27a', '#b9a2f7', '#8fd0ff']), { emissive: '#ffffff', ei: .15 }), sc, [Math.cos(a) * 9, rnd(.3, 4), Math.sin(a) * 9 - 3]); }
-  const ped = mesh(new THREE.CylinderGeometry(1.5, 1.7, 1.2, 32), toon('#ffd84a', { rim: .6, emissive: '#ffb030', ei: .15 }), sc, [0, .6, 0]); outline(ped, '#a8741a', 1.03);
-  const F = fx(sc); const figs = [];
-  const spots = [[0, 1.2, 0], [-2.6, 0, 1.2], [2.6, 0, 1.2], [-4.8, 0, 2.6], [4.8, 0, 2.6], [0, 0, 3.4]];
-  res.forEach((r, i) => { const g = runner(chOf(S, r.id), i, i === 0 ? 1.05 : .85); g.position.set(...spots[i]); g.userData.by = spots[i][1]; g.rotation.y = Math.atan2(-g.position.x * .3, 6); sc.add(g); const tag = textSprite(`${i + 1}º ${nm(S, r.id)}`, r.id === 'me' ? '#f0609f' : 'rgba(90,50,130,.85)'); tag.position.y = i === 0 ? 2.9 : 2.4; g.add(tag);
-    if (i >= 3) { const cl = new THREE.Group(); for (let k = 0; k < 4; k++) mesh(new THREE.SphereGeometry(.35, 10, 8), toon('#9aa4c8', { rim: .3 }), cl, [k * .32 - .5, Math.sin(k) * .1, 0]); cl.position.y = 3.3; cl.visible = i === res.length - 1; g.add(cl); g.userData.cloud = cl; }
-    figs.push(g); });
-  const banner = $('banner'); banner.textContent = meP === 1 ? '¡HAS GANADO! 🏆' : meP <= 3 ? `¡${meP}º puesto! 🎉` : `${meP}º… ¡la próxima es tuya! 💪`; banner.classList.add('on');
-  try { Audio.stopSong(); Audio.sfxPlay(meP === 1 ? 'fanfare' : 'finish'); setTimeout(() => Audio.sfxPlay('cheer'), 500); } catch (e) {}
-  F.confetti(new THREE.Vector3(0, 4, 0), 70);
-  let t0 = performance.now(), last = t0, fw = 0, shown = false;
-  function loop(now) {
-    const dt = Math.min(.05, (now - last) / 1000), t = (now - t0) / 1000; last = now;
-    figs.forEach((g, i) => { if (i === 0) animWinner(g, t, i); else if (i < 3) animClap(g, t, i); else { animSad(g, t, i); if (g.userData.cloud && g.userData.cloud.visible && Math.random() < .5) F.rain(g.position.clone().add(new THREE.Vector3(0, 3, 0))); } });
-    if ((fw -= dt) <= 0) { fw = rnd(.35, .8); F.firework(new THREE.Vector3(rnd(-6, 6), rnd(5, 8), rnd(-6, -2)), pick(['#ffe27a', '#ff9cf0', '#7ee3c4', '#8fd0ff'])); if (Math.random() < .4) try { Audio.sfxPlay('firework'); } catch (e) {} }
-    if (Math.random() < .03) F.confetti(new THREE.Vector3(0, 5, 0), 12);
-    F.tick(dt);
-    const port = innerHeight > innerWidth, a = Math.sin(t * .25) * .35; camera.fov = port ? 72 : 50; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-    const dist = lerp(16, port ? 13.5 : 10.5, Math.min(1, t / 2)); const ox = port ? 0 : (shown ? 4.2 : 0); E._fx = lerp(E._fx || 0, ox, Math.min(1, dt * 3)); camera.position.set(Math.sin(a) * dist + E._fx, port ? 6 : 4.2, Math.cos(a) * dist); camera.lookAt(E._fx, port ? 3.2 : 1.8, 0);
-    renderer.render(sc, camera);
-    if (!shown && t > 1.4) { shown = true; banner.classList.remove('on'); tabla(S, o, idx, EV, res, before); }
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-  window.__fiesta = { res, S, get shown() { return shown; } };
+  let res = orderOf(E, EV);
+  try { const m = JSON.parse(localStorage.getItem('mr_res') || 'null'); if (m && m.ev === EV.id && m.order && m.order.length === res.length) { const ids = m.order.map(x => x.id); res.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); } } catch (e) {}
+  const before = { ...S.pts }; applyResult(S, o, idx, res);
+  ['ctl', 'hint', 'say', 'meter', 'perf', 'hTop', 'hBoard', 'toast', 'stick', 'celeb', 'banner'].forEach(id => { const e = $(id); if (e) e.style.display = 'none'; });
+  tabla(S, o, idx, EV, res, before);
+  window.__fiesta = { res, S, shown: true };
 }
 
 // ---------------- panel de clasificación animada ----------------
@@ -151,7 +126,7 @@ export function podioFinal(o, renderer, camera) {
   let t0 = performance.now(), last = t0, fw = 0;
   function loop(now) { const dt = Math.min(.05, (now - last) / 1000), t = (now - t0) / 1000; last = now;
     rays.rotation.z = t * .15;
-    for (const [g, i] of figs) { if (i === 0) { const u = g.userData; const j = Math.abs(Math.sin(t * 3)); g.position.y = u.by + j * .6; animCharacter(u.c, t, 1, 'happy'); u.pv.rotation.y = Math.sin(t * 1.5) * .3; } else if (i < 3) animClap(g, t, i); else animSad(g, t, i); }
+    for (const [g, i] of figs) { if (i === 0) { const u = g.userData; const j = Math.abs(Math.sin(t * 3)); g.position.y = u.by + j * .6; animCharacter(u.c, t, 1, 'happy'); u.pv.rotation.y = Math.sin(t * 1.5) * .3; } else animClap(g, t, i); }
     const w = figs.find(f => f[1] === 0); if (w) { tro.position.set(0, w[0].position.y + 2.3 + Math.sin(t * 3) * .1, .2); tro.rotation.y = t * 1.5; }
     if ((fw -= dt) <= 0) { fw = rnd(.25, .6); F.firework(new THREE.Vector3(rnd(-7, 7), rnd(6, 10), rnd(-8, -3)), pick(['#ffe27a', '#ff9cf0', '#7ee3c4', '#8fd0ff', '#ffb36b'])); }
     if (Math.random() < .05) F.confetti(new THREE.Vector3(0, 7, 0), 14); F.tick(dt);

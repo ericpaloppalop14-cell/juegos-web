@@ -1,7 +1,8 @@
 // ======================================================================
 //  MOCHI PARTY · OLIMPIADAS — mundos (cielo, suelo, decorado) y objetos surrealistas
 // ======================================================================
-import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick } from '../core3d.js?v=m9';
+import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m9';
+import { richDecor } from './decor.js?v=o3';
 
 const G = {};
 const geo = (k, f) => G[k] || (G[k] = f());
@@ -63,6 +64,7 @@ const B = {
   osito(g) { const m = T(pick(['#ff6f8a', '#7ee3c4', '#ffd36b']), { opacity: .85, rim: .8 }); OL(mesh(SPH(), m, g, [0, .7, 0], null, [.6, .7, .5])); mesh(SPH(), m, g, [0, 1.5, 0], null, .45); for (const s of [-1, 1]) mesh(SPH(), m, g, [s * .35, 1.9, 0], null, .15); face(g, 1.5, .45, .6); },
   brocoli(g) { mesh(CYL(), T('#9fe08a'), g, [0, .5, 0], null, [.25, 1, .25]); for (let i = 0; i < 5; i++) mesh(SPH(), T('#3fa84a'), g, [Math.cos(i * 1.3) * .35, 1.2, Math.sin(i * 1.3) * .35], null, .4); face(g, 1.15, .55, .6); },
   bastón(g) { const m = mesh(geo('cane', () => new THREE.TorusGeometry(.5, .14, 8, 16, Math.PI)), T('#ff4f6a'), g, [-.5, 2.5, 0], null, 1); mesh(CYL(), T('#ffffff'), g, [0, 1.25, 0], null, [.14, 2.5, .14]); },
+  nubeLejos(g) { const m = T('#ffffff', { rim: .8 }); for (let k = 0; k < 6; k++) mesh(SPHL(), m, g, [k * .6 - 1.5, Math.sin(k * 2) * .25, rnd(-.3, .3)], null, rnd(.55, .9)); },
   nube(g) { const m = T('#ffffff', { rim: .8 }); for (let k = 0; k < 5; k++) mesh(SPH(), m, g, [k * .55 - 1.1, Math.sin(k) * .2, rnd(-.2, .2)], null, rnd(.5, .75)); face(g, .1, .7, .8); },
   almohada(g) { OL(mesh(SPH(), T(pick(['#ff8fc4', '#ffffff', '#6ab8ff']), { rim: .7 }), g, [0, .5, 0], null, [1.2, .45, .9])); face(g, .55, .42, .8); },
   oveja(g) { const w = T('#ffffff', { rim: .7 }); for (let i = 0; i < 7; i++) mesh(SPH(), w, g, [rnd(-.5, .5), .9 + rnd(-.2, .2), rnd(-.5, .5)], null, .5); OL(mesh(SPH(), T('#4a3a5a'), g, [0, 1, .75], null, [.35, .4, .35])); for (const [x, z] of [[-.3, -.3], [.3, -.3], [-.3, .3], [.3, .3]]) mesh(CYL(), T('#4a3a5a'), g, [x, .25, z], null, [.08, .5, .08]); face(g, 1.05, 1.08, .55); },
@@ -112,13 +114,17 @@ export function buildWorld(E, mk, area) {
   sc.fog = new THREE.Fog(M.fog, 55, 190);
   const sky = skyDome(sc, ...M.sky); sky.renderOrder = -1;
   lights(sc, M.hemi[0], M.hemi[1], 1, M.sun);
-  const gm = toon(M.ground, { rim: 0 }); const ground = mesh(new THREE.CircleGeometry(400, 48), gm, sc, [0, -.05, 0], [-Math.PI / 2, 0, 0]);
-  // manchas del suelo
-  const spots = new THREE.Group(); sc.add(spots); for (let i = 0; i < 40; i++) mesh(new THREE.CircleGeometry(rnd(2, 6), 18), toon(M.alt, { rim: 0 }), spots, [rnd(-120, 120), -.03, rnd(-260, 40)], [-Math.PI / 2, 0, 0]);
+  // cámara: plano cercano más lejos = sin parpadeos (z-fighting) entre capas del suelo a distancia
+  camera.near = .35; camera.updateProjectionMatrix();
+  // suelo único con manchas pintadas en colores por vértice (sin capas superpuestas que parpadeen)
+  const gg0 = new THREE.PlaneGeometry(800, 800, 80, 80); gg0.rotateX(-Math.PI / 2);
+  { const P = gg0.attributes.position, c = [], A = new THREE.Color(M.ground), Bc = new THREE.Color(M.alt), t = new THREE.Color();
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i); const n = Math.sin(x * .07) * Math.cos(z * .05) + Math.sin((x + z) * .023) * .8 + Math.sin(x * .19 - z * .13) * .3; t.copy(A).lerp(Bc, n > .45 ? 1 : n > .2 ? (n - .2) / .25 : 0); c.push(t.r, t.g, t.b); }
+    gg0.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); }
+  const ground = mesh(gg0, toon('#ffffff', { rim: 0, vc: true }), sc, [0, -.05, 0]); ground.receiveShadow = true;
+  const spots = new THREE.Group(); sc.add(spots);
   const deco = [];
-  const place = (x, z, s) => { const p = prop(pick(M.deco)); p.position.set(x, 0, z); p.rotation.y = rnd(-.6, .6) + (x > 0 ? -.5 : .5); p.scale.multiplyScalar(s); sc.add(p); deco.push(p); };
-  if (area.track) { const { z0, z1, half } = area.track; for (let z = z0; z > z1; z -= rnd(9, 15)) for (const s of [-1, 1]) place(s * (half + rnd(3, 14)), z, rnd(1.1, 2.2)); }
-  if (area.arena) { const r = area.arena.r; for (let i = 0; i < 22; i++) { const a = i / 22 * 6.28 + rnd(-.1, .1), d = r + rnd(5, 16); place(Math.cos(a) * d, Math.sin(a) * d, rnd(1.2, 2.4)); } }
+  const rich = richDecor(sc, mk, area, M);
   // partículas ambientales (estrellas, nieve, burbujas, chispas)
   let amb = null;
   if (M.stars || M.snow || M.bubbles || M.embers) {
@@ -127,8 +133,8 @@ export function buildWorld(E, mk, area) {
     amb = new THREE.Points(gg, new THREE.PointsMaterial({ color: M.embers ? '#ffb030' : M.bubbles ? '#e0ffff' : '#ffffff', size: M.stars ? .9 : .45, transparent: true, opacity: .85, fog: !M.stars, depthWrite: false }));
     amb.userData.kind = M.snow ? 'snow' : M.bubbles ? 'bub' : M.embers ? 'emb' : 'star'; amb.frustumCulled = false; sc.add(amb);
   }
-  return { sky, ground, spots, deco, amb, M,
-    tick(dt, cam) { sky.position.copy(cam.position); if (amb && amb.userData.kind !== 'star') { const p = amb.geometry.attributes.position, k = amb.userData.kind; for (let i = 0; i < p.count; i++) { let y = p.getY(i) + (k === 'snow' ? -2.5 : 2) * dt; if (y < 0) y = 30; if (y > 30) y = 0; p.setY(i, y); } p.needsUpdate = true; amb.position.z = cam.position.z * .0; } } };
+  return { sky, ground, spots, deco, amb, M, rich, T: 0,
+    tick(dt, cam) { this.T += dt; rich.tick(this.T); rich.astro.position.set(cam.position.x + 60, 70, cam.position.z - 230); sky.position.copy(cam.position); if (amb && amb.userData.kind !== 'star') { const p = amb.geometry.attributes.position, k = amb.userData.kind; for (let i = 0; i < p.count; i++) { let y = p.getY(i) + (k === 'snow' ? -2.5 : 2) * dt; if (y < 0) y = 30; if (y > 30) y = 0; p.setY(i, y); } p.needsUpdate = true; amb.position.z = cam.position.z * .0; } } };
 }
 
 // arco de salida/meta con letrero

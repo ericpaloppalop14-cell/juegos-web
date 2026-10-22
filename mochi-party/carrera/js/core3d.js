@@ -22,7 +22,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 // nitidez: hasta x3 en móviles con pantalla densa; baja sola si el móvil no llega a ~48 fps (ver frame())
 const PR_MAX = Math.min(devicePixelRatio || 1, Q.get('q') === 'low' ? 1 : 3); let PR = PR_MAX;
 renderer.setPixelRatio(PR);
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 900);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.3, 900);
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
@@ -86,7 +86,10 @@ const cv = $('gl');
 cv.addEventListener('pointerdown', e => { Audio.init(); input.down = true; input.px = e.clientX; input.py = e.clientY; input.sy = e.clientY; input.sx = e.clientX; input.taps.push(e.clientX); });
 cv.addEventListener('pointermove', e => { if (input.down) { input.px = e.clientX; input.py = e.clientY; } });
 addEventListener('pointerup', e => { if (input.down) { const dy = e.clientY - input.sy, dx = e.clientX - input.sx; if (dy > 45 && Math.abs(dy) > Math.abs(dx)) input.swipe = true; else if (dy < -45 && Math.abs(dy) > Math.abs(dx)) input.swipeUp = true; else input.ups.push(e.clientX); } input.down = false; });
-for (const [id, s] of [['bL', 'L'], ['bR', 'R'], ['bM', 'M']]) $(id).addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Audio.init(); if (s === 'M') input.swipe = true; else input.side.push(s); });
+input.held = {}; // botones mantenidos (para pruebas de equilibrio / dirección continua)
+for (const [id, s] of [['bL', 'L'], ['bR', 'R'], ['bM', 'M']]) { const el = $(id);
+  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Audio.init(); input.held[s] = true; try { el.setPointerCapture(e.pointerId); } catch (_) {} if (s === 'M') input.swipe = true; else input.side.push(s); });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, () => { input.held[s] = false; }); }
 addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') input.taps.push(innerWidth / 2); if (e.code === 'ArrowLeft') input.side.push('L'); if (e.code === 'ArrowRight') input.side.push('R'); if (e.code === 'ArrowDown') input.swipe = true; });
 
 // ======================================================================
@@ -94,7 +97,7 @@ addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp
 // ======================================================================
 function seeded(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 // ---------------- celebración final (todas las pruebas) ----------------
-// El ganador salta, gira y lanza confeti; los demás ponen cara triste y se desinflan. La cámara enfoca
+// El ganador salta, gira y lanza confeti; los demás le aplauden con saltitos. La cámara enfoca
 // primero al ganador y, si no eres tú, después a ti. Al acabar llama a cb().
 function celebOverlay() {
   let d = $('celeb'); if (d) return d;
@@ -114,13 +117,13 @@ function celebrate(E, res, cb) {
   if (E.celeb) return; const racers = E.racers, byId = id => racers.find(r => r.id === id);
   const win = byId(res[0].id) || racers[0], me = E.me, nm = r => r.me ? 'Tú' : (r.name || r.ch.name);
   E.celeb = { t: 0, win, me, cb, dur: win === me ? 3.4 : 4.6, done: false, fw: 0 };
-  for (const r of racers) { r.expr = r === win ? 'happy' : 'sad'; r.stun = 0; }
+  for (const r of racers) { r.expr = r === win ? 'happy' : ''; r.stun = 0; }
   ['ctl', 'hint', 'say', 'banner', 'toast', 'perf', 'hTop', 'hBoard', 'exitB'].forEach(id => { const e = $(id); if (e) e.style.visibility = 'hidden'; });
   const o = celebOverlay(); const mePos = res.findIndex(x => x.id === me.id) + 1;
   o.innerHTML = `<div class="cT${win === me ? '' : ' lose'}">${win === me ? '🏆 ¡HAS GANADO! 🎉' : `🏆 ¡Gana ${nm(win)}!`}</div><div class="cRow">${res.map((x, i) => { const r = byId(x.id); return r ? `<div class="${i === 0 ? 'w' : ''} ${r.me ? 'me' : ''}" style="animation-delay:${.25 + i * .12}s">${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'} ${nm(r)}${i === 0 ? ' 😄' : ' 😢'}</div>` : ''; }).join('')}</div>`;
   requestAnimationFrame(() => o.classList.add('on'));
   if (win === me) { Audio.sfxPlay('cheer'); } else { Audio.sfxPlay('pop'); setTimeout(() => Audio.sfxPlay('cheer'), 300); }
-  if (mePos > 1) setTimeout(() => { if (E.celeb && !E.stopped) o.querySelector('.cT').textContent = mePos ? `😢 Has quedado ${mePos}º… ¡a la próxima!` : '😢 ¡A la próxima!'; }, 2300);
+  if (mePos > 1) setTimeout(() => { if (E.celeb && !E.stopped) o.querySelector('.cT').textContent = mePos ? `¡Has quedado ${mePos}º! 👏` : '¡Bien jugado! 👏'; }, 2300);
 }
 const _wp = new THREE.Vector3(), _cp = new THREE.Vector3();
 function celebFrame(E, dt) {
@@ -132,14 +135,12 @@ function celebFrame(E, dt) {
       const sq = ph > .92 || ph < .06 ? .22 : 0; p.scale.set(s * (1 + sq), s * (1 - sq + hop * .12), s * (1 + sq));
       p.rotation.z = Math.sin(t * 9) * .12;
       C.fw -= dt; if (C.fw <= 0) { C.fw = .35; o.getWorldPosition(_wp); E.burst(_wp.clone().add(new THREE.Vector3(rnd(-1.6, 1.6) * s, (2 + rnd(0, 1.5)) * s, rnd(-1.2, 1.2) * s)), pick(['#ffe27a', '#ff9cc8', '#7ee3c4', '#b9a2f7', '#8fd0ff']), 18, 5 * s, .9, .55 * s, -2); }
-    } else { // derrota: se desinfla, cabeza gacha y balanceo lento
-      const k = Math.min(1, t / .6); p.position.y = 0; p.rotation.x = .42 * k; p.rotation.z = Math.sin(now * 1.6 + r.k) * .1 * k; p.rotation.y = Math.sin(now * .7 + r.k) * .3;
-      p.scale.set(s * (1 + .1 * k), s * (1 - .16 * k + Math.sin(now * 2.2 + r.k) * .02), s * (1 + .1 * k));
-      if (Math.random() < dt * 1.5) { o.getWorldPosition(_wp); E.burst(_wp.clone().add(new THREE.Vector3(0, 2.2 * s, 0)), '#8fd0ff', 2, .6 * s, .7, .22 * s, -6); }
+    } else { // los demás aplauden al ganador con saltitos (sin tristeza)
+      const ph = (now * 2.4 + r.k * .37) % 1; p.position.y = Math.sin(ph * Math.PI) * .22 * s; p.rotation.z = Math.sin(now * 6 + r.k) * .08; p.scale.setScalar(s);
     }
   }
   if (t > .1 && t < .2) { C.win.obj.getWorldPosition(_wp); confetti(E.scene, _wp.clone().add(new THREE.Vector3(0, 2.5 * (C.win.obj.userData.sc || 1), 0)), 70); }
-  // cámara: vuelta alrededor del ganador; luego (si has perdido) plano de tu mochi triste
+  // cámara: vuelta alrededor del ganador; luego (si has perdido) plano de tu mochi
   const focus = (C.win !== C.me && t > 2.3) ? C.me : C.win, s = focus.obj.userData.sc || 1;
   focus.obj.getWorldPosition(_wp); const CF = E.EV.celeb || {}, U = CF.keepRot ? new THREE.Vector3(0, 1, 0).applyQuaternion(focus.obj.quaternion) : new THREE.Vector3(0, 1, 0);
   // la cámara sale del lado desde el que ya mirabas (así nada se interpone) y gira un poco alrededor
@@ -175,7 +176,7 @@ function run(EV, opts = {}) {
   const R0 = Math.random; if (opts.seed != null) Math.random = seeded(opts.seed);
   try { EV.init(E); } finally { Math.random = R0; }
   for (const r of racers) { r.tag = nameSprite(nm(r), r.ch.color, r.me); r.tag.position.y = EV.tagY || 2.4; if (EV.tagS) r.tag.scale.multiplyScalar(EV.tagS); r.obj.add(r.tag); }
-  $('hName').textContent = EV.icon + ' ' + EV.name; $('hIcon').textContent = EV.icon; $('ctl').classList.toggle('on', !!EV.buttons);
+  $('hName').textContent = EV.icon + ' ' + EV.name; $('hIcon').textContent = EV.icon; if (!EV.ownButtons) $('ctl').classList.toggle('on', !!EV.buttons); input.held = {};
   $('load').style.display = 'none'; ui.hint(EV.how, 5);
   Audio.init(); Audio.playSong(EV.music, EV.seed || 5);
   let last = performance.now(), acc = 0, sent = false, cntShown = 4, raf = 0, nstep = 0; const STEP = 1 / 60;

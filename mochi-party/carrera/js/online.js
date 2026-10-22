@@ -99,7 +99,7 @@ function hostEnd(order) {
   net.send(pod); podio(pod);
 }
 function podio(d) {
-  // antes del podio: celebración en la pista (el ganador salta de alegría, los demás se entristecen)
+  // antes del podio: celebración en la pista (el ganador salta de alegría, los demás aplauden)
   if (E && E.celebrate && !E.celeb && !E.stopped) { const E0 = E; E0.celebrate(d.order, () => { if (E === E0) podio(d); }); return; }
   if (E) { E.stop(); E = null; } inGame = false; show('sPodio');
   const ev = EVS.find(e => e.id === d.ev), myPos = d.order.findIndex(o => o.id === net.myId) + 1, last = d.round + 1 >= d.total;
