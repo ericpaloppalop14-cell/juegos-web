@@ -2437,7 +2437,7 @@ function onAction(a) {
   Snd.init();
   if (state === 'menu') { if (a === 'tap' || a === 'start') startGame('normal'); return; }
   if (window.ONL && ONL.active && state !== 'play') return;
-  if (state === 'over') { if (overT > 0.45 && (a === 'tap' || a === 'start')) startGame(); return; }
+  if (state === 'over') { if (overT > 0.45 && (a === 'tap' || a === 'start')) AdPace.gate(() => { if (state === 'over') startGame(); }); return; }
   if (state === 'paused') { if (a === 'start') resume(); return; }
   if (state === 'cont') { if (a === 'start') acceptContinue(); return; }
   if (state !== 'play') return;
@@ -2553,7 +2553,7 @@ btn('selPick', () => selPlay());
 btn('contGo', () => acceptContinue());
 btn('contNo', () => { if (!contBusy) declineContinue(); });
 btn('contHome', () => { if (!contBusy && state === 'cont') { Snd.tick(); declineContinue(); goMenu(); } });
-btn('overHome', () => { if (state === 'over' && overT > 0.3) { Snd.tick(); goMenu(); } });
+btn('overHome', () => { if (state === 'over' && overT > 0.3) { Snd.tick(); AdPace.gate(() => { if (state === 'over') goMenu(); }); } });
 btn('contNoAds', async () => { if (contBusy) return; contBusy = true; const ok = await MON.buy(MOCHI_CONFIG.products.noAds, T('prodNoAds')); contBusy = false; if (ok && state === 'cont') { contT = 0; offerContinue(); } });
 btn('selBuy', () => buyPrem());
 btn('selTrial', () => startTrial());
@@ -2622,7 +2622,7 @@ const elCont = document.getElementById('cont'), elContBar = document.getElementB
 // 1.2.4: solo se ofrece si la partida merece la pena (más de 30 s o más de la mitad del récord)
 const CONT_MIN_T = 30, CONT_MIN_FRAC = 0.5;
 function runWorthIt() { const b = turbo ? bestTurbo : best; return runT > CONT_MIN_T || (b > 0 && score > b * CONT_MIN_FRAC); }
-function canContinue() { return !(window.ONL && ONL.active) && MON.available && tutStep < 0 && contUsed < (CFGM.maxContinues ?? 3) && runWorthIt(); }
+function canContinue() { return !(window.ONL && ONL.active) && (MON.adsAvailable || MON.available) && tutStep < 0 && contUsed < (CFGM.maxContinues ?? 3) && runWorthIt(); }
 function offerContinue() {
   state = 'cont'; contT = 0; contBusy = false;
   const left = (CFGM.maxContinues ?? 3) - contUsed, free = MON.noAds();
@@ -2630,7 +2630,7 @@ function offerContinue() {
   document.getElementById('contLeft').textContent = left === 1 ? T('lastChance') : T('canContinue', { n: left });
   document.getElementById('contScore').textContent = fmtN(Math.floor(score));
   const ch = document.getElementById('contHelp'), first = store.get('mochi_conthelp', '0') !== '1'; ch.style.display = first ? '' : 'none'; if (first) store.set('mochi_conthelp', '1');
-  const up = document.getElementById('contNoAds'); up.style.display = free ? 'none' : '';
+  const up = document.getElementById('contNoAds'); up.style.display = free || !MON.available ? 'none' : '';
   up.textContent = T('noAdsForever', { p: MON.price((window.MOCHI_CONFIG || {}).products ? MOCHI_CONFIG.products.noAds : '') });
   setScreen('cont'); elHud.style.opacity = 0;
 }
@@ -2638,11 +2638,21 @@ async function acceptContinue() {
   if (state !== 'cont' || contBusy) return;
   contBusy = true;
   let ok = MON.noAds();
-  if (!ok) { Snd.tick(); ok = await MON.showRewarded(); }
+  if (!ok) { Snd.tick(); ok = await MON.showRewarded(); if (ok) AdPace.rewarded(); }
   contBusy = false;
   if (state !== 'cont') return;
   if (ok) revive(); else declineContinue();
 }
+// ---- Ritmo de intersticiales: solo entre partidas, nunca en la 1.ª sesión, cada N partidas y X minutos, nunca en online
+const AdPace = (() => { const C = Object.assign({ everyRuns: 3, minSeconds: 180, afterRewardSeconds: 90, minSession: 2 }, CFGM.interstitial || {});
+  const ses = (parseInt(store.get('mochi_sessions', '0'), 10) || 0) + 1; store.set('mochi_sessions', String(ses));
+  let runs = 0, lastAd = Date.now(), lastRw = 0, busy = false;
+  return { C, session: ses, get runs() { return runs; },
+    runEnded() { runs++; }, rewarded() { lastRw = Date.now(); },
+    due() { return !!MON.showInterstitial && !MON.noAds() && !(window.ONL && ONL.active) && ses >= C.minSession && runs >= C.everyRuns && Date.now() - lastAd >= C.minSeconds * 1000 && Date.now() - lastRw >= C.afterRewardSeconds * 1000; },
+    async gate(cb) { if (busy) return; if (!this.due()) return cb(); busy = true; try { await MON.showInterstitial(); } catch (e) { } runs = 0; lastAd = Date.now(); busy = false; cb(); },
+    _force() { runs = 99; lastAd = 0; lastRw = 0; } }; })();
+window.__ads = AdPace;
 function declineContinue() { if (state !== 'cont') return; gameOver(); }
 function revive() {
   contUsed++;
@@ -2658,7 +2668,7 @@ function revive() {
   burst(p.x, baseY - laneW * 0.4, PAL[mochi.color].lrgb, 18, { min: 80, max: 260, g: 0, type: 'star', life: 0.8, rmin: 2, rmax: 5 });
   Snd.record();
 }
-function gameOver() {
+function gameOver() { if (!(window.ONL && ONL.active) && tutStep < 0) AdPace.runEnded();
   if (window.ONL && ONL.active) { state = 'over'; overT = 0; ONL.myEnd(); return; }
   state = 'over'; overT = 0; trialEndRun();
   const s = Math.floor(score), prev = turbo ? bestTurbo : best, isRec = s > prev;
