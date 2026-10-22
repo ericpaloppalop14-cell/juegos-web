@@ -1,8 +1,8 @@
 // ======================================================================
 //  MOCHI PARTY · OLIMPIADAS — mundos (cielo, suelo, decorado) y objetos surrealistas
 // ======================================================================
-import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m12';
-import { richDecor } from './decor.js?v=o8';
+import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m13';
+import { richDecor } from './decor.js?v=o9';
 
 const G = {};
 const geo = (k, f) => G[k] || (G[k] = f());

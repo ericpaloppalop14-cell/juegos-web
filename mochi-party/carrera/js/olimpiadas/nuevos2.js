@@ -3,10 +3,11 @@
 //  bumerán · topos de lava · cuenta peces · ¡que no te vea! · bola caliente · salto de esquí ·
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m12';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o8';
-import { mergedGeo } from './decor.js?v=o8';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o8';
+import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m13';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o9';
+import { mergedGeo } from './decor.js?v=o9';
+import { jungle } from './selva-lianas.js?v=o9';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o9';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
@@ -383,14 +384,14 @@ export function lianas(cfg) {
   const SP = 3.4, NV = cfg.nv || 9, GAP = 6.5, PY = 9, LEN = 5.6, A = .72, W = 2.5;
   return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 70,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -NV * GAP - 30, half: 12 } }); setButtons('m', { M: cfg.btn || '🐒' });
-      const vineM = T('#4a9a3a'), barM = T('#8a5a3a');
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -NV * GAP - 30, half: 40 } }); this.J = jungle(E, { NV, GAP, SP, PY }); setButtons('m', { M: cfg.btn || '🐒' });
+      const vineM = T('#4a9a3a'), barM = T('#8a5a3a'), leafM = T('#6ac85a'), flM = [T('#ff6fae'), T('#ffe27a'), T('#c9a2ff')];
       mesh(new THREE.PlaneGeometry(SP * 6 + 2, NV * GAP + 14), T('#8a6a3a', { rim: 0 }), sc, [0, .02, -NV * GAP / 2], [-Math.PI / 2, 0, 0]);
       for (let i = 0; i <= NV; i++) { const z = -i * GAP; const bar = mesh(CYL(), barM, sc, [0, PY + .1, z], [0, 0, Math.PI / 2], [.25, SP * 6 + 2, .25]); outline(bar, '#4a2a1a', 1.05);
         for (const s of [-1, 1]) pm(i % 2 ? 'arbol' : 'palmera', sc, [s * (SP * 3 + 1.6), 0, z], 10.5, rnd(0, 6)); if (i % 2) pm('pina', sc, [rnd(-SP * 3, SP * 3), PY + .3, z], .8); }
       const goal = pm('mono', sc, [0, 0, -NV * GAP - 5], 3.5, 0); pm('platano', sc, [2, 0, -NV * GAP - 5], 1.4);
       racers(E, .42); E.racers.forEach((r, k) => { r.x = lineX(k, SP); r.vi = 0; r.score = 0; r.st = 'swing'; r.ph = rnd(0, 6); r.fin = false;
-        r.vines = []; for (let i = 0; i <= NV; i++) { const g = new THREE.Group(); g.position.set(r.x, PY, -i * GAP); sc.add(g); mesh(CYL(), vineM, g, [0, -LEN / 2, 0], null, [.07, LEN, .07]); for (let j = 1; j < 5; j++) mesh(SPHL(), T('#6ac85a'), g, [.08, -j * LEN / 5, 0], null, [.18, .08, .12]); r.vines.push({ g, th: Math.sin(i * 1.3) * .2 }); } });
+        r.vines = []; for (let i = 0; i <= NV; i++) { const g = new THREE.Group(); g.position.set(r.x, PY, -i * GAP); sc.add(g); mesh(CYL(), vineM, g, [0, -LEN / 2, 0], null, [.07, LEN, .07]); for (let j = 1; j < 6; j++) mesh(SPHL(), leafM, g, [(j % 2 ? .09 : -.09), -j * LEN / 6, 0], [0, 0, j % 2 ? .5 : -.5], [.2, .07, .13]); mesh(SPHL(), flM[i % 3], g, [0, -LEN * .45, .06], null, [.11, .11, .08]); mesh(SPHL(), vineM, g, [0, -LEN, 0], null, [.16, .14, .16]); r.vines.push({ g, th: Math.sin(i * 1.3) * .2 }); } });
       this.order = 0;
     },
     th(E, r) { return A * Math.sin(E.t * W + r.ph); },
@@ -400,13 +401,14 @@ export function lianas(cfg) {
         if (r.st === 'swing') { const th = this.th(E, r), om = this.om(E, r), u = th / A; r.hang = th;
           let go; if (!auto) go = tapped(E); else { if (r.tu == null) r.tu = clamp(.62 + rnd(-1, 1) * (1.2 - Math.min(1.1, s0)) * .55, -.3, 1); go = om > 0 && u > r.tu && (r.wt = (r.wt || 0) + dt) > .4; }
           if (go) { r.wt = 0; r.tu = null; const ok = om > 0 && u > .22 && u < .98; r.jz0 = -r.vi * GAP - Math.sin(th) * LEN; r.jy0 = PY - Math.cos(th) * LEN; r.jt = 0;
-            if (ok) { r.st = 'jump'; r.q = u; if (r.me) Audio.sfxPlay('jump'); } else { r.st = 'fall'; r.vy = 0; if (r.me) { Audio.sfxPlay('boing'); E.ui.toast(om <= 0 ? '¡Suéltate cuando vayas hacia delante!' : '¡Un poco más arriba!', '#ffd0ec'); } else say(E, r, '¡Al barro!'); } } }
-        else if (r.st === 'jump') { r.jt += dt; if (r.jt >= .6) { r.vi++; r.score = r.vi; r.st = 'swing'; r.ph = Math.asin(-.45) - E.t * W; if (r.q > .8) { r.score += 0; if (r.me) E.ui.toast('¡Vuelo de mono! 🐒', '#ffe27a'); }
+            if (ok) { r.st = 'jump'; r.q = u; E.burst(r.obj.position.clone().add(v3(0, 1.2, 0)), '#7ad85a', r.me ? 14 : 6, 3.5, .9, .35, -3); if (r.me) { Audio.sfxPlay(u > .8 ? 'trick' : 'jump'); E.ui.toast(u > .8 ? '¡PERFECTO! 🌟' : u > .55 ? '¡Bien!' : '¡Justito!', u > .8 ? '#ffe27a' : '#ffffff'); this.kick = u > .8 ? 1 : .6; } } else { r.st = 'fall'; r.vy = 0; if (r.me) { Audio.sfxPlay('boing'); E.shake = .25; E.ui.toast(om <= 0 ? '¡Suéltate cuando vayas hacia delante!' : '¡Un poco más arriba!', '#ffd0ec'); } else say(E, r, '¡Al barro!'); } } }
+        else if (r.st === 'jump') { r.jt += dt; if (r.jt >= .6) { r.vi++; r.score = r.vi; r.st = 'swing'; r.ph = Math.asin(-.45) - E.t * W; E.burst(r.obj.position.clone().add(v3(0, 1.4, 0)), '#a8f07a', r.me ? 10 : 4, 2.5, .6, .3, -2); if (r.me) Audio.sfxPlay('land');
             if (r.vi >= NV) { r.fin = true; r.time = E.t; r.score = 100 - this.order++; cheer(r, .8); if (r.me) { Audio.sfxPlay('fanfare'); E.ui.toast('¡Llegaste! 🍌', '#ffe27a'); } } } }
-        else if (r.st === 'fall') { r.jt += dt; if (r.jt > 1.5) { r.st = 'swing'; r.ph = Math.asin(-.6) - E.t * W; } }
+        else if (r.st === 'fall') { r.jt += dt; if (r.jt > .5 && !r.mud) { r.mud = 1; E.burst(v3(r.x, .3, r.jz0), '#8a6a3a', r.me ? 16 : 6, 4, .6, .4); if (r.me) Audio.sfxPlay('squash'); } if (r.jt > 1.5) { r.st = 'swing'; r.mud = 0; r.ph = Math.asin(-.6) - E.t * W; if (r.me) E.ui.toast('¡Arriba otra vez! 💪', '#ffffff'); } }
         if (!r.fin) r.score = r.vi; r.prog = clamp(r.vi / NV, 0, .99); }
       if (!this.done && (this.order >= 3 || (E.me.fin && this.order >= 2) || E.t > this.maxT - .5)) { this.done = true; scoreEnd(E, r => r.fin ? '¡Meta!' : `${r.vi}/${NV} lianas`); }
-      info(`🐒 Liana ${Math.min(NV, E.me.vi + 1)}/${NV}`);
+      { const me = E.me, u = this.th(E, me) / A, now = me.st === 'swing' && !me.fin && this.om(E, me) > 0 && u > .5; const bm = $('bM'); if (bm) { bm.style.transform = now ? 'scale(1.18)' : ''; bm.style.boxShadow = now ? '0 0 0 5px #ffe27a, 0 0 24px #ffe27a' : ''; }
+        info(me.fin ? '🍌 ¡En la meta!' : `🐒 Liana ${Math.min(NV, me.vi + 1)}/${NV}${now ? '<br><b style="color:#ffe27a">¡AHORA!</b>' : ''}`); }
     },
     rpos(E, r) { if (r.st === 'swing' || r.fin) { const th = r.fin ? 0 : this.th(E, r); return [PY - Math.cos(th) * LEN - .9, -r.vi * GAP - Math.sin(th) * LEN]; }
       if (r.st === 'jump') { const k = r.jt / .6, tz = -(r.vi + 1) * GAP - Math.sin(-A * .45) * LEN, ty = PY - Math.cos(A * .45) * LEN; return [lerp(r.jy0, ty, k) + Math.sin(k * Math.PI) * 1.5 - .9, lerp(r.jz0, tz, k)]; }
@@ -414,7 +416,12 @@ export function lianas(cfg) {
     render(E, dt) { const t = E.t; this.W.tick(dt, camera);
       for (const r of E.racers) { r.vines.forEach((v, i) => { v.g.rotation.x = (i === r.vi && r.st === 'swing' && !r.fin) ? this.th(E, r) : v.th + Math.sin(t * 1.2 + i) * .08; });
         const [y, z] = this.rpos(E, r); r.obj.position.set(r.x, y + (r.fin ? hopY(r, dt) : 0), z); r.obj.rotation.y = Math.PI; r.obj.userData.pivot.rotation.x = r.st === 'swing' ? -this.th(E, r) * .5 : r.st === 'jump' ? -.5 : 0; squash(r, dt); }
-      const me = E.me, [y, z] = this.rpos(E, me), pr = port(); camTo(E, dt, v3(me.x + .6, Math.max(3, y) + (pr ? 3.5 : 2.5), z + (pr ? 12 : 8.5)), v3(me.x, Math.max(2, y) + .5, z - 6), pr ? 70 : 56, 4); },
+      this.J.tick(t, dt);
+      { const me = E.me, [y, z] = this.rpos(E, me), pr = port(), vz = this._lz == null ? 0 : (z - this._lz) / Math.max(dt, 1e-3); this._lz = z; this.kick = Math.max(0, (this.kick || 0) - dt * 1.5);
+        const sp = Math.min(1, Math.abs(vz) / 9), sw = me.st === 'swing' && !me.fin ? this.th(E, me) / A : 0;
+        const pos = v3(me.x + 1.1, y + (pr ? 2.3 : 1.7) - sw * .25, z + (pr ? 5.6 : 4.4)), look = v3(me.x - .2, y + .7, z - 6);
+        camTo(E, dt, pos, look, (pr ? 70 : 58) + sp * 8 + this.kick * 6, 5);
+        camera.up.set(Math.sin(sw) * .045, 1, 0).normalize(); camera.lookAt(E._cl); } },
   });
 }
 
