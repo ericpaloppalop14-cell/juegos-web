@@ -214,7 +214,7 @@ export function caliente(cfg) {
       this.ball = fitP('bolafuego', 1.5); sc.add(this.ball); this.outN = 0; this.newBall(E);
     },
     alive(E) { return E.racers.filter(r => !r.out); },
-    newBall(E) { const al = this.alive(E); this.holder = pick(al.filter(r => !r.me).concat(al.length < 3 ? al : [])) || al[0]; this.fuse = E.me.out ? rnd(1.6, 3) : rnd(5, 8.5) * (al.length > 3 ? 1 : .8); // si ya estás fuera, el resto va rápido this.fly = 0; this.from = null; this.holder.hold = 0; },
+    newBall(E) { const al = this.alive(E); this.holder = pick(al.filter(r => !r.me).concat(al.length < 3 ? al : [])) || al[0]; this.fuse = E.me.out ? rnd(1.6, 3) : rnd(5, 8.5) * (al.length > 3 ? 1 : .8); this.fly = 0; this.from = null; this.holder.hold = 0; },
     pos(r) { return v3(Math.cos(r.a) * (r.out ? R + 3.2 : R), 0, Math.sin(r.a) * (r.out ? R + 3.2 : R)); },
     pass(E, r, dir) { const al = E.racers.filter(x => !x.out); const i = al.indexOf(r); const to = al[(i + (dir > 0 ? 1 : al.length - 1)) % al.length]; this.from = r; this.holder = to; this.fly = .38; to.hold = 0; if (r.me) Audio.sfxPlay('throw'); },
     update(E, dt) {
