@@ -114,7 +114,7 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui, moldes, distinto };
+export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui, moldes, distinto, lianas };
 
 // =====================================================================
 //  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
@@ -372,5 +372,48 @@ export function distinto(cfg) {
       for (const it of this.items) { const s = it.odd && this.ph === 'rev' ? 1 + Math.abs(Math.sin(t * 8)) * .35 : 1; it.m.position.y = .4 + (it.odd && this.ph === 'rev' ? .3 : Math.sin(t * 2 + it.ph) * .04); it.m.scale.setScalar(it.m.userData.s0 || (it.m.userData.s0 = it.m.scale.x)); it.m.scale.multiplyScalar(s); it.m.rotation.z *= .9; }
       for (const r of E.racers) { r.obj.position.set(Math.sin(r.a) * 6.2, hopY(r, dt), Math.cos(r.a) * 6.2 + .3); r.obj.rotation.y = r.a + Math.PI; r.obj.userData.pivot.rotation.z = r.dz > 0 ? Math.sin(t * 18) * .25 : 0; squash(r, dt); }
       const pr = port(); camTo(E, dt, v3(0, pr ? 13 : 9, pr ? 6.5 : 6), v3(0, 0, pr ? -.4 : -.8), pr ? 60 : 52, 3); },
+  });
+}
+
+// =====================================================================
+//  LIANAS DE LA SELVA — te balanceas colgado de una liana: toca para soltarte cuando vayas hacia
+//  delante (¡arriba del todo vuelas más!) y agarrarte a la siguiente. Si fallas, al barro y a trepar.
+// =====================================================================
+export function lianas(cfg) {
+  const SP = 3.4, NV = cfg.nv || 9, GAP = 6.5, PY = 9, LEN = 5.6, A = .72, W = 2.5;
+  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 70,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -NV * GAP - 30, half: 12 } }); setButtons('m', { M: cfg.btn || '🐒' });
+      const vineM = T('#4a9a3a'), barM = T('#8a5a3a');
+      mesh(new THREE.PlaneGeometry(SP * 6 + 2, NV * GAP + 14), T('#8a6a3a', { rim: 0 }), sc, [0, .02, -NV * GAP / 2], [-Math.PI / 2, 0, 0]);
+      for (let i = 0; i <= NV; i++) { const z = -i * GAP; const bar = mesh(CYL(), barM, sc, [0, PY + .1, z], [0, 0, Math.PI / 2], [.25, SP * 6 + 2, .25]); outline(bar, '#4a2a1a', 1.05);
+        for (const s of [-1, 1]) pm(i % 2 ? 'arbol' : 'palmera', sc, [s * (SP * 3 + 1.6), 0, z], 10.5, rnd(0, 6)); if (i % 2) pm('pina', sc, [rnd(-SP * 3, SP * 3), PY + .3, z], .8); }
+      const goal = pm('mono', sc, [0, 0, -NV * GAP - 5], 3.5, 0); pm('platano', sc, [2, 0, -NV * GAP - 5], 1.4);
+      racers(E, .42); E.racers.forEach((r, k) => { r.x = lineX(k, SP); r.vi = 0; r.score = 0; r.st = 'swing'; r.ph = rnd(0, 6); r.fin = false;
+        r.vines = []; for (let i = 0; i <= NV; i++) { const g = new THREE.Group(); g.position.set(r.x, PY, -i * GAP); sc.add(g); mesh(CYL(), vineM, g, [0, -LEN / 2, 0], null, [.07, LEN, .07]); for (let j = 1; j < 5; j++) mesh(SPHL(), T('#6ac85a'), g, [.08, -j * LEN / 5, 0], null, [.18, .08, .12]); r.vines.push({ g, th: Math.sin(i * 1.3) * .2 }); } });
+      this.order = 0;
+    },
+    th(E, r) { return A * Math.sin(E.t * W + r.ph); },
+    om(E, r) { return A * W * Math.cos(E.t * W + r.ph); },
+    update(E, dt) {
+      for (const r of E.racers) { if (r.fin) continue; const auto = !(r.me && !E.AUTO), s0 = sk(E, r);
+        if (r.st === 'swing') { const th = this.th(E, r), om = this.om(E, r), u = th / A; r.hang = th;
+          let go; if (!auto) go = tapped(E); else { if (r.tu == null) r.tu = clamp(.62 + rnd(-1, 1) * (1.2 - Math.min(1.1, s0)) * .55, -.3, 1); go = om > 0 && u > r.tu && (r.wt = (r.wt || 0) + dt) > .4; }
+          if (go) { r.wt = 0; r.tu = null; const ok = om > 0 && u > .22 && u < .98; r.jz0 = -r.vi * GAP - Math.sin(th) * LEN; r.jy0 = PY - Math.cos(th) * LEN; r.jt = 0;
+            if (ok) { r.st = 'jump'; r.q = u; if (r.me) Audio.sfxPlay('jump'); } else { r.st = 'fall'; r.vy = 0; if (r.me) { Audio.sfxPlay('boing'); E.ui.toast(om <= 0 ? '¡Suéltate cuando vayas hacia delante!' : '¡Un poco más arriba!', '#ffd0ec'); } else say(E, r, '¡Al barro!'); } } }
+        else if (r.st === 'jump') { r.jt += dt; if (r.jt >= .6) { r.vi++; r.score = r.vi; r.st = 'swing'; r.ph = Math.asin(-.45) - E.t * W; if (r.q > .8) { r.score += 0; if (r.me) E.ui.toast('¡Vuelo de mono! 🐒', '#ffe27a'); }
+            if (r.vi >= NV) { r.fin = true; r.score = 100 - this.order++; cheer(r, .8); if (r.me) { Audio.sfxPlay('fanfare'); E.ui.toast('¡Llegaste! 🍌', '#ffe27a'); } } } }
+        else if (r.st === 'fall') { r.jt += dt; if (r.jt > 1.5) { r.st = 'swing'; r.ph = Math.asin(-.6) - E.t * W; } }
+        if (!r.fin) r.score = r.vi; r.prog = clamp(r.vi / NV, 0, .99); }
+      if (!this.done && (this.order >= 3 || (E.me.fin && this.order >= 2) || E.t > this.maxT - .5)) { this.done = true; scoreEnd(E, r => r.fin ? '¡Meta!' : `${r.vi}/${NV} lianas`); }
+      info(`🐒 Liana ${Math.min(NV, E.me.vi + 1)}/${NV}`);
+    },
+    rpos(E, r) { if (r.st === 'swing' || r.fin) { const th = r.fin ? 0 : this.th(E, r); return [PY - Math.cos(th) * LEN - .9, -r.vi * GAP - Math.sin(th) * LEN]; }
+      if (r.st === 'jump') { const k = r.jt / .6, tz = -(r.vi + 1) * GAP - Math.sin(-A * .45) * LEN, ty = PY - Math.cos(A * .45) * LEN; return [lerp(r.jy0, ty, k) + Math.sin(k * Math.PI) * 1.5 - .9, lerp(r.jz0, tz, k)]; }
+      const k = Math.min(1, r.jt / .5); if (r.jt < 1.1) return [Math.max(0, lerp(r.jy0 - .9, 0, k * k)), r.jz0]; const c = (r.jt - 1.1) / .4; return [lerp(0, PY - LEN * Math.cos(A * .6) - .9, c), lerp(r.jz0, -r.vi * GAP + Math.sin(A * .6) * LEN, c)]; },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      for (const r of E.racers) { r.vines.forEach((v, i) => { v.g.rotation.x = (i === r.vi && r.st === 'swing' && !r.fin) ? this.th(E, r) : v.th + Math.sin(t * 1.2 + i) * .08; });
+        const [y, z] = this.rpos(E, r); r.obj.position.set(r.x, y + (r.fin ? hopY(r, dt) : 0), z); r.obj.rotation.y = Math.PI; r.obj.userData.pivot.rotation.x = r.st === 'swing' ? -this.th(E, r) * .5 : r.st === 'jump' ? -.5 : 0; squash(r, dt); }
+      const me = E.me, [y, z] = this.rpos(E, me), pr = port(); camTo(E, dt, v3(me.x + .6, Math.max(3, y) + (pr ? 3.5 : 2.5), z + (pr ? 12 : 8.5)), v3(me.x, Math.max(2, y) + .5, z - 6), pr ? 70 : 56, 4); },
   });
 }
