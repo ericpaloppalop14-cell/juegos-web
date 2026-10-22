@@ -289,4 +289,4 @@ function run(EV, opts = {}) {
 // pies siempre sobre el suelo: si el cuerpo (por inclinarse, aplastarse o girar) baja de la base, se sube lo justo
 const _fb = new THREE.Box3();
 function feetFix(rs) { for (const r of rs) { const o = r.obj, c = o && o.userData.char; if (!c || !o.visible || r.out || o.parent !== o.parent?.parent && false) continue; if (o.position.y > .6 || o.position.y < -.05 || o.parent.type !== 'Scene') continue; o.updateMatrixWorld(true); _fb.setFromObject(c); const d = _fb.min.y - o.position.y; if (d < -.02) o.position.y -= d + .02; } }
-export { THREE, run, camera, toon, outline, mesh, glowTex, glowSprite, starShape, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, PERS, OUCH, ui };
+export { THREE, renderer, run, camera, toon, outline, mesh, glowTex, glowSprite, starShape, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, PERS, OUCH, ui };
