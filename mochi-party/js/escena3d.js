@@ -55,6 +55,13 @@ const confP = Array.from({ length: CONF }, (_, i) => ({ x: rnd(-6, 6), y: rnd(-1
 { const c = new THREE.Color(); confP.forEach((p, i) => confM.setColorAt(i, c.set(['#ff9cc8', '#7ee3c4', '#ffe27a', '#b9a2f7', '#8fd0ff', '#ffb36b'][i % 6]))); }
 let confAmt = 0; const tmp = new THREE.Object3D();
 function updConf(dt, t) { let n = Math.floor(CONF * confAmt); for (let i = 0; i < n; i++) { const p = confP[i]; p.y -= p.vy * dt; if (p.y < -1.2) { p.y = rnd(6, 9); p.x = rnd(-6, 6); } tmp.position.set(p.x + Math.sin(t * 2 + p.r) * .3, p.y, p.z); tmp.rotation.set(t * p.s * .5 + p.r, t * p.s * .3, p.r); tmp.updateMatrix(); confM.setMatrixAt(i, tmp.matrix); } confM.count = n; confM.instanceMatrix.needsUpdate = true; }
+// globos que suben (instanciados: cuerpo + nudo + cuerda)
+const NB = 14, bal = new THREE.InstancedMesh(new THREE.SphereGeometry(.42, 14, 10).scale(1, 1.18, 1), toon('#ffffff', { rim: .7 }), NB), str = new THREE.InstancedMesh(new THREE.CylinderGeometry(.012, .012, 1.1, 4), new THREE.MeshBasicMaterial({ color: '#ffffff' }), NB);
+bal.frustumCulled = str.frustumCulled = false; scene.add(bal, str);
+const balP = Array.from({ length: NB }, (_, i) => ({ x: 0, y: 0, z: 0, v: 0, ph: rnd(0, 6) })); const resetBal = (p, init) => { const side = Math.random() < .5 ? -1 : 1; p.x = side * rnd(3.4, 6.5); p.z = rnd(-6, -1.5); if (Math.random() < .35) { p.x = rnd(-3, 3); p.z = rnd(-6.5, -4.2); } p.y = init ? rnd(-3, 9) : rnd(-3.5, -2.2); p.v = rnd(.7, 1.3); };
+{ const c = new THREE.Color(); balP.forEach((p, i) => { resetBal(p, true); bal.setColorAt(i, c.set(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7', '#ff9a5a', '#ff4f6f'][i % 7])); }); }
+let balOn = false;
+function updBal(dt, t) { bal.visible = str.visible = balOn; if (!balOn) return; balP.forEach((p, i) => { p.y += p.v * dt; if (p.y > 10) resetBal(p); const sw = Math.sin(t * 1.2 + p.ph) * .25; tmp.position.set(p.x + sw, p.y, p.z); tmp.rotation.set(0, 0, sw * .3); tmp.scale.setScalar(1); tmp.updateMatrix(); bal.setMatrixAt(i, tmp.matrix); tmp.position.set(p.x + sw * .8, p.y - 1.05, p.z); tmp.updateMatrix(); str.setMatrixAt(i, tmp.matrix); }); bal.instanceMatrix.needsUpdate = str.instanceMatrix.needsUpdate = true; }
 // chispas (estallidos)
 const sparks = [];
 function burst(p, c, n = 16, sp = 3) { for (let i = 0; i < n; i++) { const s = glow(c, rnd(.25, .5)); s.position.copy(p); const a = rnd(0, 6.28), b = rnd(-.3, 1.3); s.userData = { v: new THREE.Vector3(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.5, 1)), t: 0, l: rnd(.6, 1.1) }; root.add(s); sparks.push(s); } }
@@ -69,6 +76,7 @@ function actor(id, scale = 1, role = 'dance', seed = 0) {
 }
 function pose(a, t, dt) {
   const u = a.userData, p = u.pivot, s = u.scale, T = t + u.seed * .37; let y = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, expr = '';
+  if (u.roles) { const k = Math.floor((t + u.seed * 2.3) / 5.5) % u.roles.length; if (k !== u.rk) { if (u.rk != null && t - u.enter > 1) burst(a.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 1.2 * s, 0)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][u.seed % 4], 8, 2.2); u.rk = k; u.role = u.roles[k]; } }
   switch (u.role) {
     case 'dance': { const b = Math.abs(Math.sin(T * 4.2)); y = b * .28; rz = Math.sin(T * 4.2) * .14; ry = Math.sin(T * 1.3) * .5; sy = 1 + b * .06 - (1 - b) * .05; sx = 2 - sy; if ((T % 5) < 1) { ry += (T % 5) * Math.PI * 2; y += Math.sin((T % 5) * Math.PI) * .7; expr = 'happy'; } break; }
     case 'wave': { y = Math.abs(Math.sin(T * 3)) * .12; rz = Math.sin(T * 2.4) * .22; ry = Math.sin(T * .8) * .3 - .2; if ((T % 4) < .8) expr = 'happy'; break; }
@@ -76,6 +84,9 @@ function pose(a, t, dt) {
     case 'spin': { ry = T * 1.1; y = Math.abs(Math.sin(T * 2.2)) * .15; break; }
     case 'taunt': { y = Math.abs(Math.sin(T * 5)) * .1; rz = Math.sin(T * 2.5) * .18; rx = -.08; ry = Math.sin(T * 1.7) * .35; if ((T % 3.5) < .6) expr = 'happy'; break; }
     case 'cheer': { const ph = (T * 1.6) % 1, h = Math.sin(ph * Math.PI); y = h * 1.1; ry = Math.floor(T * 1.6) % 2 ? ph * Math.PI * 2 : 0; sy = ph > .93 || ph < .05 ? .8 : 1 + h * .12; sx = 2 - sy; rz = Math.sin(T * 8) * .1; expr = 'happy'; break; }
+    case 'twirl': { const ph = (T * .9) % 1, h = Math.sin(ph * Math.PI); y = h * .9; ry = ph * Math.PI * 2; sy = 1 + h * .1; sx = 2 - sy; expr = 'happy'; break; }
+    case 'wiggle': { y = Math.abs(Math.sin(T * 6)) * .12; rz = Math.sin(T * 6) * .28; sx = 1 + Math.sin(T * 12) * .06; sy = 2 - sx; ry = Math.sin(T * 1.5) * .6; break; }
+    case 'boing': { const ph = (T * 2.2) % 1, h = Math.sin(ph * Math.PI); y = h * .45; sy = ph < .12 || ph > .9 ? .72 : 1 + h * .18; sx = 2 - sy; break; }
     case 'clap': { const ph = (T * 2.4) % 1; y = Math.sin(ph * Math.PI) * .3; rz = Math.sin(T * 6) * .1; expr = (T % 3) < 2 ? 'happy' : ''; break; }
   }
   // voltereta al tocar
@@ -94,13 +105,14 @@ let mode = null, actors = [], deco = null, t0 = 0, camT = { p: new THREE.Vector3
 function clear() { root.clear(); actors = []; deco = null; extra = {}; sparks.length = 0; }
 const now = () => performance.now() / 1000;
 function build(m, d) {
-  clear(); mode = m; t0 = now(); const T = 0;
+  clear(); balOn = false; mode = m; t0 = now(); const T = 0;
   if (m === 'menu') {
-    deco = stage(3.3); root.add(deco); root.add(spots()); confAmt = .35;
-    const hero = actor(d.pj, 1.25, 'dance', 0); hero.position.set(0, 0, 1); root.add(hero); extra.hero = hero;
+    deco = stage(3.3); root.add(deco); root.add(spots()); confAmt = .8; balOn = true;
+    const hero = actor(d.pj, 1.1, 'dance', 0); hero.position.set(0, 0, 1.25); hero.userData.roles = ['dance', 'twirl', 'wiggle', 'cheer']; root.add(hero); extra.hero = hero;
     const pool = (window.MR && MR.CHARS ? MR.CHARS : CHARS).map(c => c.id), others = pool.filter(id => id !== d.pj).sort(() => Math.random() - .5).slice(0, 4);
-    [[-2.25, -.2], [2.25, -.2], [-1.15, -1.5], [1.15, -1.5]].forEach(([x, z], i) => { const a = actor(others[i], .85, ['wave', 'hop', 'dance', 'taunt'][i], i + 1); a.position.set(x, 0, z); a.rotation.y = -x * .12; a.userData.enter = .15 + i * .12; root.add(a); actors.push(a); });
-    actors.push(hero); camT = { p: new THREE.Vector3(0, 2.6, 9.6), l: new THREE.Vector3(0, 1.1, 0), w: 7.2 };
+    const R = [['hop', 'spin', 'boing', 'wave'], ['wiggle', 'cheer', 'dance', 'hop'], ['spin', 'boing', 'twirl', 'taunt'], ['boing', 'dance', 'wave', 'wiggle']];
+    [[-1.55, .35], [1.55, .35], [-2.6, -.85], [2.6, -.85]].forEach(([x, z], i) => { const a = actor(others[i], 1, R[i][0], i + 1); a.userData.roles = R[i]; a.position.set(x, 0, z); a.rotation.y = -x * .14; a.userData.enter = .15 + i * .12; root.add(a); actors.push(a); });
+    actors.push(hero); camT = { p: new THREE.Vector3(0, 3.1, 8), l: new THREE.Vector3(0, 1.2, 0), w: 7.4 };
   } else if (m === 'chars') {
     deco = stage(1.9); root.add(deco); confAmt = .15;
     const a = actor(d.pj, 1.55, 'spin', 0); a.userData.enter = 0; root.add(a); actors.push(a); extra.hero = a;
@@ -148,8 +160,9 @@ function frame() {
   root.children.forEach(o => { if (o.userData.L) o.userData.L.forEach((c, i) => { c.rotation.z = Math.sin(t * .9 + i * 2) * .35; c.rotation.x = Math.cos(t * .7 + i) * .15; }); });
   if (extra.vs) extra.vs.scale.set(2 * (1 + Math.sin(t * 6) * .06), .5 * (1 + Math.sin(t * 6) * .06), 1);
   if (extra.trophy) extra.trophy.rotation.y = t * 1.2;
+  if (mode === 'menu' && t > 1 && Math.random() < dt * 1.2) burst(new THREE.Vector3(rnd(-4, 4), rnd(3.2, 4.6), rnd(-3, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff', '#b9a2f7'][Math.random() * 5 | 0], 16, 2.6);
   if (extra.podio) { confAmt = t > 1.6 ? 1 : 0; if (t > 1.8 && !extra.boom) { extra.boom = true; burst(new THREE.Vector3(0, 3.2, 0), '#ffe27a', 30, 4.5); burst(new THREE.Vector3(0, 3.2, 0), '#ff9cc8', 20, 3.5); } if (Math.random() < dt * 1.6 && t > 2) burst(new THREE.Vector3(rnd(-4, 4), rnd(3, 5), rnd(-2, 0)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][Math.random() * 4 | 0], 14, 3); }
-  updConf(dt, t); updSparks(dt);
+  updConf(dt, t); updSparks(dt); updBal(dt, t);
   // cámara: encuadra el ancho de la escena en el hueco (vertical u horizontal) y se mece un poco
   const asp = r.width / r.height; camera.aspect = asp;
   const fit = camT.w / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1.25, asp), dir = camT.p.clone().sub(camT.l).normalize();
