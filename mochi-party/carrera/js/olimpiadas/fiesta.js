@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { CHARS } from '../data.js';
 import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, makeTrophy } from '../gfx.js?v=m10';
 import { Audio } from '../audio.js';
-import { OLIMPIADAS, PTS } from './catalogo.js?v=o5';
+import { OLIMPIADAS, PTS } from './catalogo.js?v=o6';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
