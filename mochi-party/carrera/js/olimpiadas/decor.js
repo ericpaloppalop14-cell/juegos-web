@@ -3,8 +3,8 @@
 //  Cada objeto del decorado se funde en una sola geometría con colores por vértice y se pinta con
 //  InstancedMesh: cientos de piezas animadas con muy poco coste en el móvil.
 // ======================================================================
-import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m15';
-import { prop } from './mundos.js?v=o15';
+import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m16';
+import { prop } from './mundos.js?v=o16';
 
 const merged = {};
 // funde un objeto (grupo de mallas) en una geometría con color por vértice; sin contornos ni sprites
@@ -78,12 +78,12 @@ export function richDecor(scene, mk, area, M) {
     for (let i = 0; i < 120; i++) { const a = rnd(0, 6.28), d = r + rnd(1.5, 24); add(pick(R.fill), { x: Math.cos(a) * d, z: Math.sin(a) * d, s: rnd(.35, .8), ry: rnd(0, 6.28) }); }
     for (let i = 0; i < 30; i++) { const a = rnd(0, 6.28), d = r + rnd(22, 60); add(pick(R.far), { x: Math.cos(a) * d, z: Math.sin(a) * d, s: rnd(2.5, 5), ry: rnd(0, 6.28) }); }
     if (R.walk) for (let i = 0; i < 10; i++) { const a = rnd(0, 6.28), d = r + rnd(4, 10); add(R.walk, { x: Math.cos(a) * d, z: Math.sin(a) * d, s: rnd(.7, 1.1), ry: rnd(0, 6.28), anim: 'hop', sp: rnd(3, 5), amp: .35, ph: rnd(0, 6) }); }
-    for (let i = 0; i < 40; i++) add(pick(R.sky), { x: rnd(-60, 60), y: rnd(12, 34), z: rnd(-70, 20), s: rnd(1.2, 3), ry: rnd(0, 6.28), anim: 'float', sp: rnd(.5, 1.2), amp: rnd(.6, 1.6), ph: rnd(0, 6) });
+    for (let i = 0; i < 40; i++) { const a = rnd(0, 6.28), d = r + rnd(10, 55); add(pick(R.sky), { x: Math.cos(a) * d, y: rnd(12, 34), z: Math.sin(a) * d - 15, s: rnd(1.2, 3), ry: rnd(0, 6.28), anim: 'float', sp: rnd(.5, 1.2), amp: rnd(.6, 1.6), ph: rnd(0, 6) }); }
   }
   // nubes opacas instanciadas que derivan despacio (antes eran transparentes y parpadeaban)
   if (R.cloud) for (let i = 0; i < 26; i++) add('nubeLejos', { x: rnd(-240, 240), y: rnd(45, 85), z: rnd(-260, -60), s: rnd(5, 11), anim: 'drift', sp: rnd(1, 3) });
   // en el espacio y en el mar los objetos del cielo orbitan / nadan
-  for (const k in by) sets.push(instSet(scene, k, by[k].map(it => (R.skyAnim === 'orbit' && it.anim === 'float' && it.y > 10) ? { ...it, anim: 'orbit', r: rnd(6, 20), sp: rnd(.05, .15) } : it)));
+  for (const k in by) sets.push(instSet(scene, k, by[k].map(it => (R.skyAnim === 'orbit' && it.anim === 'float' && it.y > 10 && !area.arena) ? { ...it, anim: 'orbit', r: rnd(6, 20), sp: rnd(.05, .15) } : it)));
   // estrellas o motas brillantes
   const n = 500, P = new Float32Array(n * 3); for (let i = 0; i < n; i++) { P[i * 3] = rnd(-200, 200); P[i * 3 + 1] = rnd(30, 160); P[i * 3 + 2] = rnd(-320, 60); }
   let stars = null; if (mk === 'espacio' || mk === 'suenos' || mk === 'volcan') { const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(P, 3)); stars = new THREE.Points(gg, new THREE.PointsMaterial({ color: mk === 'volcan' ? '#ffb070' : '#ffffff', size: 1.4, sizeAttenuation: true, fog: false, transparent: true, opacity: .9, depthWrite: false })); stars.frustumCulled = false; scene.add(stars); }

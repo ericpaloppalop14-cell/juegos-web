@@ -3,11 +3,11 @@
 //  bumerán · topos de lava · cuenta peces · ¡que no te vea! · bola caliente · salto de esquí ·
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m15';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o15';
-import { mergedGeo } from './decor.js?v=o15';
-import { jungle } from './selva-lianas.js?v=o15';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o15';
+import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m16';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o16';
+import { mergedGeo } from './decor.js?v=o16';
+import { jungle } from './selva-lianas.js?v=o16';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o16';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
@@ -232,7 +232,7 @@ export function caliente(cfg) {
       if (this.done) return;
       this.fuse -= dt; const h = this.holder; this.fly = Math.max(0, this.fly - dt);
       if (this.fly <= 0) { h.hold += dt;
-        if (h.me && !E.AUTO) { const s = E.side.concat(E.taps.map(x => x < innerWidth / 2 ? 'L' : 'R')); if (s.length && h.hold > .12) this.pass(E, h, s[0] === 'R' ? 1 : -1); }
+        if (h.me && !E.AUTO) { const s = E.side.concat(E.taps.map(x => x < innerWidth / 2 ? 'L' : 'R')); if (s.length && h.hold > .12) this.pass(E, h, s[0] === 'R' ? -1 : 1); // el siguiente del corro queda a tu izquierda en pantalla }
         else { const s0 = sk(E, h); if (h.wait == null) h.wait = rnd(.35, 1.1) * (1.3 - Math.min(1.2, s0)) + .15; if (h.hold > h.wait) { h.wait = null; this.pass(E, h, Math.random() < .5 ? 1 : -1); } } }
       if (this.fuse <= 0) { const v = this.holder; v.out = true; v.score = this.outN++; v.expr = 'squash'; E.burst(this.pos(v).add(v3(0, 1, 0)), '#ffb030', 30, 8, .8, .8); E.shake = .4; Audio.sfxPlay('hit');
         if (v.me) E.ui.toast('¡PUM! 💥 Te toca animar desde fuera', '#ffd0ec'); else say(E, v, '¡Uy, quema!');

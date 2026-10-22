@@ -1,5 +1,5 @@
 // MOCHI PARTY · OLIMPIADAS — arranque de una prueba (o del podio final)
-import { OLIMPIADAS, findEv } from './catalogo.js?v=o15';
+import { OLIMPIADAS, findEv } from './catalogo.js?v=o16';
 const Q0 = new URLSearchParams(location.search);
 // el marco común (core3d) no debe volver al menú antiguo: «stay» le deja aquí para la celebración
 if (!Q0.has('stay')) history.replaceState(null, '', location.pathname + location.search + (location.search ? '&' : '?') + 'stay');
@@ -7,13 +7,13 @@ window.__keys = {}; addEventListener('keydown', e => window.__keys[e.code] = tru
 const { o, i, p } = findEv(Q0.get('o'), Q0.get('e'));
 const $ = id => document.getElementById(id);
 if (Q0.has('podio')) {
-  const THREE = await import('three'); const { podioFinal } = await import('./fiesta.js?v=o15');
+  const THREE = await import('three'); const { podioFinal } = await import('./fiesta.js?v=o16');
   const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true }); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(innerWidth, innerHeight, false);
   podioFinal(o, renderer, new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 500));
 } else {
-  const core = await import('../core3d.js?v=m15'); const { TIPOS } = await import('./tipos.js?v=o15'); const { NUEVOS } = await import('./nuevos.js?v=o15'); const { NUEVOS2 } = await import('./nuevos2.js?v=o15'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o15');
+  const core = await import('../core3d.js?v=m16'); const { TIPOS } = await import('./tipos.js?v=o16'); const { NUEVOS } = await import('./nuevos.js?v=o16'); const { NUEVOS2 } = await import('./nuevos2.js?v=o16'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o16');
   $('load').textContent = `${p.icon} ${p.name}…`;
-  let EV; if (p.base) { EV = { ...(await import(`../ev-${p.base}.js?v=m15`)).default }; EV.mode = 'tiempo'; if (p.base === 'nado') EV.noFeet = true; } else EV = TIPOS[p.tipo]({ ...p, mundo: o.id });
+  let EV; if (p.base) { EV = { ...(await import(`../ev-${p.base}.js?v=m16`)).default }; EV.mode = 'tiempo'; if (p.base === 'nado') EV.noFeet = true; } else EV = TIPOS[p.tipo]({ ...p, mundo: o.id });
   // cartel de presentación de la prueba (se ve durante la cuenta atrás)
   const ol = Q0.has('stay') || true; const S = JSON.parse(localStorage.getItem('mo_olimp') || 'null'); const n = S && S.oid === o.id && S.mode === 'olimpiada' ? `Prueba ${i + 1}/${o.pruebas.length} · ` : '';
   const pr = $('pres'); pr.innerHTML = `<div class="pIc">${p.icon}</div><div class="pNm">${p.name}</div><div class="pOl">${n}${o.icon} ${o.name}</div>`; pr.classList.add('on'); setTimeout(() => pr.classList.remove('on'), 2600);

@@ -3,7 +3,7 @@
 //  combos con multiplicador, anillos que se mueven en la segunda mitad, nubes de tormenta que frenan,
 //  túnel turbo de anillos dorados, retícula de puntería, estela, líneas de velocidad, resolución adaptativa.
 //  Reglas justas: misma velocidad base y mismas reglas para todos; la ventaja se gana atravesando anillos.
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m15';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m16';
 const L = 440, V0 = 13, XM = 6, YMIN = 1.2, YMAX = 8.5, BSTEP = .55, BMAX = 7;
 const RCOL = ['#ff9cc8', '#ffc38a', '#ffe27a', '#8fe8cf', '#9fd0ff', '#c9b2ff'];
 const SENS = 0.034; // unidades de mundo por píxel CSS de arrastre

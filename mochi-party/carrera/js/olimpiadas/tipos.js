@@ -2,8 +2,8 @@
 //  MOCHI PARTY · OLIMPIADAS — los 8 tipos de prueba, configurables por cada olimpiada
 //  salto · esquiva · machaca · vuelo · punteria · recoge · ritmo · superv · empuje
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m15';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o15';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m16';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o16';
 
 const LW = 2.3;
 const lx = (l, n = 6) => (l - (n - 1) / 2) * LW;
@@ -38,10 +38,23 @@ function chaseCam(E, me, dt, x, y, z, fovAdd = 0, look = 7) {
   const port = innerHeight > innerWidth; camera.fov = lerp(camera.fov, (port ? 74 : 62) + fovAdd, Math.min(1, dt * 4)); camera.updateProjectionMatrix();
   camera.position.set(E._cx * .6, y + (port ? 1.2 : 0), E._cz + (port ? 8.6 : 7.2)); camera.lookAt(E._cx * .5, y * .25, E._cz - look);
 }
+// joystick común: flotante (la base sigue al dedo si te pasas), zona muerta radial, curva de respuesta suave,
+// suavizado temporal y dirección relativa a la cámara (arriba en pantalla = hacia donde mira la cámara)
+const _cf = new THREE.Vector3();
 function stickDir(E) {
-  const k = window.__keys || {}; let x = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0), z = (k.ArrowDown || k.KeyS ? 1 : 0) - (k.ArrowUp || k.KeyW ? 1 : 0);
-  const I = E.input; if (I.down && I.px != null) { const dx = I.px - I.sx, dy = I.py - I.sy, d = Math.hypot(dx, dy); if (d > 10) { x = dx / d * Math.min(1, d / 50); z = dy / d * Math.min(1, d / 50); } }
-  const d = Math.hypot(x, z); if (d > 1) { x /= d; z /= d; } return { x, z };
+  const K = window.__keys || {}; let x = (K.ArrowRight || K.KeyD ? 1 : 0) - (K.ArrowLeft || K.KeyA ? 1 : 0), y = (K.ArrowDown || K.KeyS ? 1 : 0) - (K.ArrowUp || K.KeyW ? 1 : 0);
+  const I = E.input, RAD = 55, DZ = .16;
+  if (I.down && I.px != null) { let dx = I.px - I.sx, dy = I.py - I.sy, d = Math.hypot(dx, dy);
+    if (d > RAD) { const k = (d - RAD) / d; I.sx += dx * k; I.sy += dy * k; dx = I.px - I.sx; dy = I.py - I.sy; d = RAD; }
+    const m = d / RAD; if (m > DZ) { const mm = Math.pow((m - DZ) / (1 - DZ), 1.25); x = dx / d * mm; y = dy / d * mm; } else { x = 0; y = 0; } }
+  const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+  // a ejes del mundo según la cámara
+  camera.getWorldDirection(_cf); _cf.y = 0; if (_cf.lengthSq() < 1e-4) _cf.set(0, 0, -1); _cf.normalize();
+  const rx = -_cf.z, rz = _cf.x; let wx = x * rx - y * _cf.x, wz = x * rz - y * _cf.z;
+  // suavizado (sube rápido, frena algo más rápido aún)
+  const now = performance.now(), dt = Math.min(.1, (now - (E._stT || now)) / 1000); E._stT = now; const S = E._st || (E._st = { x: 0, z: 0 });
+  const k = Math.min(1, dt * (Math.hypot(wx, wz) > .05 ? 14 : 20)); S.x += (wx - S.x) * k; S.z += (wz - S.z) * k;
+  return { x: S.x, z: S.z };
 }
 function sideTaps(E) { const out = [...E.side]; for (const x of E.taps) out.push(x < innerWidth / 2 ? 'L' : 'R'); return out; }
 const say = (E, r, s) => { if (!r.me && Math.random() < .5) E.say(r, s); };
@@ -309,9 +322,9 @@ function arena(E, cfg, R, color) {
 }
 function arenaCam(E, me, dt, R) { const port = innerHeight > innerWidth; const tx = (me.x || 0) * .45, tz = (me.z || 0) * .45; E._ax = lerp(E._ax ?? tx, tx, Math.min(1, dt * 3)); E._az = lerp(E._az ?? tz, tz, Math.min(1, dt * 3));
   camera.fov = port ? 72 : 52; camera.updateProjectionMatrix(); camera.position.set(E._ax, R * (port ? 1.45 : 1.0) + 2, E._az + R * (port ? 1.1 : 1.0) + 3); camera.lookAt(E._ax, 0, E._az + (port ? 1.2 : -1)); }
-function moveRacer(r, dir, dt, sp, acc) { r.vx = lerp(r.vx, dir.x * sp, Math.min(1, dt * acc)); r.vz = lerp(r.vz, dir.z * sp, Math.min(1, dt * acc)); r.x += r.vx * dt; r.z += r.vz * dt; if (Math.hypot(r.vx, r.vz) > .3) r.face = Math.atan2(r.vx, r.vz); }
+function moveRacer(r, dir, dt, sp, acc) { const want = Math.hypot(dir.x, dir.z) > .05, a = want ? acc : acc * 1.4; r.vx = lerp(r.vx, dir.x * sp, Math.min(1, dt * a)); r.vz = lerp(r.vz, dir.z * sp, Math.min(1, dt * a)); r.x += r.vx * dt; r.z += r.vz * dt; if (want && Math.hypot(dir.x, dir.z) > .15) r.face = Math.atan2(dir.x, dir.z); else if (Math.hypot(r.vx, r.vz) > .8) r.face = Math.atan2(r.vx, r.vz); }
 function separate(rs, d0 = 1) { for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) { const a = rs[i], b = rs[j]; if (a.out || b.out) continue; const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d < d0 && d > 1e-4) { const k = (d0 - d) / 2 / d; a.x -= dx * k; a.z -= dz * k; b.x += dx * k; b.z += dz * k; } } }
-function poseArena(E, r, t, dt) { const o = r.obj, mv = Math.hypot(r.vx, r.vz) > .5 && !r.out, bob = mv ? Math.abs(Math.sin(t * 14 + r.k)) * .14 : 0; o.position.set(r.x, (r.y || 0) + bob, r.z); o.rotation.y = lerp(o.rotation.y, r.face ?? 0, Math.min(1, dt * 10)); o.userData.shadow.visible = !r.out; o.userData.shadow.position.y = .03 - (r.y || 0) - bob; squash(r, dt); o.userData.pivot.rotation.z = r.stun > 0 ? Math.sin(t * 20) * .3 : 0; }
+function poseArena(E, r, t, dt) { const o = r.obj, mv = Math.hypot(r.vx, r.vz) > .5 && !r.out, bob = mv ? Math.abs(Math.sin(t * 14 + r.k)) * .14 : 0; o.position.set(r.x, (r.y || 0) + bob, r.z); { let da = (r.face ?? 0) - o.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); o.rotation.y += da * Math.min(1, dt * 12); } o.userData.shadow.visible = !r.out; o.userData.shadow.position.y = .03 - (r.y || 0) - bob; squash(r, dt); o.userData.pivot.rotation.z = r.stun > 0 ? Math.sin(t * 20) * .3 : 0; }
 function initArenaRacers(E, R, sc = .55) { racers(E, sc); E.racers.forEach((r, k) => { const a = k / E.racers.length * 6.28 + Math.PI / 2; r.x = Math.cos(a) * R * .55; r.z = Math.sin(a) * R * .55; r.vx = r.vz = 0; r.y = 0; r.vy = 0; r.stun = 0; r.out = false; r.score = 0; r.face = Math.atan2(-r.x, -r.z); r.obj.rotation.y = r.face; }); }
 
 // =====================================================================

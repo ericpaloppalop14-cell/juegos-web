@@ -283,7 +283,7 @@ function run(EV, opts = {}) {
     if (hintT > 0 && (hintT -= dt) <= 0) $('hint').style.opacity = 0;
   }
   raf = requestAnimationFrame(frame);
-  window.__p3 = { E, get phase() { return E.phase; }, renderer };
+  window.__p3 = { E, get phase() { return E.phase; }, renderer }; window.__cam = camera;
   return E;
 }
 // pies siempre sobre el suelo: si el cuerpo (por inclinarse, aplastarse o girar) baja de la base, se sube lo justo

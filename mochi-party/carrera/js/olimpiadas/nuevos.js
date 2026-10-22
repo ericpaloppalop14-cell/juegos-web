@@ -3,10 +3,10 @@
 //  circuito (karts / trineo) · golf · laberinto · tirachinas · bolos · hockey · pesca · memoria ·
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m15';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o15';
-import { mergedGeo, instSet } from './decor.js?v=o15';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o15';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m16';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o16';
+import { mergedGeo, instSet } from './decor.js?v=o16';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o16';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -60,7 +60,7 @@ export function circuito(cfg) {
       for (const r of E.racers) {
         if (r.fin) { r.v = Math.max(4, r.v - 6 * dt); r.s += r.v * dt; continue; }
         let st = 0;
-        if (r.me && !E.AUTO) st = steer(E);
+        if (r.me && !E.AUTO) st = -steer(E); // d>0 es la izquierda del piloto (normal = izquierda de la tangente)
         else { const sk0 = sk(E, r), ls0 = ((r.s % this.L) + this.L) % this.L;
           if (!r.tgt && r.tgt !== 0 || (r.rt -= dt) <= 0) { r.rt = .35 - sk0 * .15; const ahead = this.obs.filter(o => { const ds = o.s - ls0; return ds > 0 && ds < 9 + sk0 * 8; });
             const lanes = [-3.2, 0, 3.2].filter(l => !ahead.some(o => Math.abs(o.d - l) < 1.8)); const pad = this.pads.find(p => { const ds = p.s - ls0; return ds > 2 && ds < 16; });
