@@ -2,8 +2,8 @@
 //  AMBIENTE por mundo (capa extra al estilo de Lianas): capas de fondo, criaturas animadas,
 //  partículas y luz. Todo fuera de la zona de juego, apoyado en el suelo o en el aire. Barato: instanciado + Points.
 // ======================================================================
-import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m14';
-import { instSet } from './decor.js?v=o13';
+import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m15';
+import { instSet } from './decor.js?v=o14';
 
 const lo = () => innerWidth * innerHeight < 500000;
 // punto aleatorio fuera de la zona de juego
@@ -59,7 +59,58 @@ export function ambiente(E, mk, area) {
     ticks.push((t, dt) => { P.tick(t); aur.forEach((a, j) => { const ar = a.geometry.attributes.position.array, b = a.userData.base; for (let i = 0; i < ar.length; i += 3) ar[i + 1] = b[i + 1] + Math.sin(b[i] * .05 + t * .6 + j) * 4; a.geometry.attributes.position.needsUpdate = true; a.material.opacity = .16 + .08 * Math.sin(t * .4 + j * 2); });
       const p = snow.p; for (let i = 0; i < snow.n; i++) { let y = p[i * 3 + 1] - dt * (1.2 + (i % 5) * .3); if (y < 0) y = 25; p[i * 3 + 1] = y; p[i * 3] += Math.sin(t + i) * dt * .4; } snow.g.attributes.position.needsUpdate = true;
       sp.forEach(g => { const k = Math.max(0, Math.sin(t * 2.5 + g.userData.ph)); g.material.opacity = k * k * .9; }); });
-  } else if (mk === 'selva') {
+  } else if (mk === 'mar') {
+    // rayos de sol desde la superficie, burbujas subiendo, bancos de peces, algas que ondulan, medusas que laten
+    const R = rays(sc, 8, '#c8f4ff', area, .1);
+    const bub = points(sc, L ? 120 : 220, '#e8ffff', .25, box, .8, true);
+    const fish = []; for (let i = 0; i < (L ? 18 : 30); i++) { const [x, z] = outside(area, 3, 20); fish.push({ x, y: rnd(2, 8), z, s: rnd(.5, 1), anim: 'orbit', r: rnd(3, 8), sp: rnd(.25, .5) * pick([-1, 1]), ph: rnd(0, 6) }); }
+    const F = instSet(sc, 'pez', fish);
+    const jel = []; for (let i = 0; i < 10; i++) { const [x, z] = outside(area, 4, 18); jel.push({ x, y: rnd(3, 9), z, s: rnd(.7, 1.3), anim: 'float', sp: rnd(.6, 1), amp: 1, ph: rnd(0, 6) }); }
+    const J = instSet(sc, 'medusa', jel);
+    const kelp = []; for (let i = 0; i < (L ? 40 : 70); i++) { const [x, z] = outside(area, 1.5, 22); const h = rnd(1.5, 4.5); kelp.push({ x, y: h / 2, z, s: 1, sx: .18, sy: h, sz: .18, ph: rnd(0, 6), h }); }
+    const km = new THREE.InstancedMesh(new THREE.CylinderGeometry(.6, 1, 1, 6), toon('#3ab07a', { rim: .4 }), kelp.length); km.frustumCulled = false; sc.add(km); const o = new THREE.Object3D();
+    ticks.push((t, dt) => { F.tick(t); J.tick(t); R.forEach(r => r.material.opacity = r.userData.op * (.5 + .5 * Math.sin(t * .7 + r.userData.ph)));
+      kelp.forEach((k, i) => { o.position.set(k.x, 0, k.z); o.rotation.set(Math.sin(t * 1.2 + k.ph) * .15, 0, Math.cos(t + k.ph) * .15); o.scale.set(k.sx, k.h, k.sz); o.updateMatrix(); o.matrix.multiply(new THREE.Matrix4().makeTranslation(0, .5, 0)); km.setMatrixAt(i, o.matrix); }); km.instanceMatrix.needsUpdate = true;
+      const p = bub.p; for (let i = 0; i < bub.n; i++) { let y = p[i * 3 + 1] + dt * (1 + (i % 4) * .4); if (y > 22) y = 0; p[i * 3 + 1] = y; p[i * 3] += Math.sin(t * 2 + i) * dt * .3; } bub.g.attributes.position.needsUpdate = true; });
+  } else if (mk === 'dulces') {
+    // lluvia de caramelos y virutas, donuts y caramelos volando, ositos saltando, arcoíris, purpurina
+    const spr = points(sc, L ? 150 : 260, '#ffffff', .2, box, .95); { const c = new Float32Array(spr.n * 3), col = new THREE.Color(); for (let i = 0; i < spr.n; i++) { col.set(['#ff6fae', '#ffe27a', '#7ee3c4', '#8fd0ff', '#c9a2ff'][i % 5]); c.set([col.r, col.g, col.b], i * 3); } spr.g.setAttribute('color', new THREE.BufferAttribute(c, 3)); spr.m.material.vertexColors = true; }
+    const fly = []; for (let i = 0; i < (L ? 14 : 22); i++) { const [x, z] = outside(area, 3, 22); fly.push({ x, y: rnd(5, 12), z, s: rnd(.6, 1.2), anim: 'orbit', r: rnd(2, 6), sp: rnd(.3, .6), ph: rnd(0, 6) }); }
+    const Fd = instSet(sc, 'donut', fly.slice(0, fly.length / 2 | 0)), Fc = instSet(sc, 'caramelo', fly.slice(fly.length / 2 | 0));
+    const os = []; for (let i = 0; i < 10; i++) { const [x, z] = outside(area, 2.5, 12); os.push({ x, z, s: rnd(.7, 1), ry: rnd(0, 6), anim: 'hop', sp: rnd(3, 5), amp: .5, ph: rnd(0, 6) }); }
+    const O = instSet(sc, 'osito', os);
+    ['#ff6f8f', '#ffb36b', '#ffe27a', '#7ee3c4', '#8fd0ff', '#c9a2ff'].forEach((c, i) => mesh(new THREE.TorusGeometry(70 - i * 2.2, 1.1, 8, 64, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .5, fog: false }), sc, [0, -8, zc - 150]));
+    const gl = []; for (let i = 0; i < (L ? 10 : 18); i++) { const [x, z] = outside(area, 1.5, 12); const g = glowSprite(pick(['#ffffff', '#ffe27a', '#ff9cc8']), .8, .8); g.position.set(x, .3, z); g.userData.ph = rnd(0, 6); sc.add(g); gl.push(g); }
+    ticks.push((t, dt) => { Fd.tick(t); Fc.tick(t); O.tick(t); gl.forEach(g => { const k = Math.max(0, Math.sin(t * 3 + g.userData.ph)); g.material.opacity = k * k; });
+      const p = spr.p; for (let i = 0; i < spr.n; i++) { let y = p[i * 3 + 1] - dt * (1 + (i % 4) * .3); if (y < 0) y = 22; p[i * 3 + 1] = y; } spr.g.attributes.position.needsUpdate = true; });
+  } else if (mk === 'suenos') {
+    // ovejas saltando, nubes que flotan bajas, estrellas que titilan y caen, luciérnagas, lunas
+    const sh = []; for (let i = 0; i < 12; i++) { const [x, z] = outside(area, 3, 14); sh.push({ x, z, s: rnd(.8, 1.2), ry: rnd(0, 6), anim: 'hop', sp: rnd(2, 3), amp: 1.2, ph: rnd(0, 6) }); }
+    const S = instSet(sc, 'oveja', sh);
+    const cl = []; for (let i = 0; i < (L ? 14 : 24); i++) { const [x, z] = outside(area, 4, 30); cl.push({ x, y: rnd(3, 9), z, s: rnd(1.2, 2.5), anim: 'float', sp: rnd(.2, .4), amp: .8, ph: rnd(0, 6) }); }
+    const C = instSet(sc, 'nube', cl);
+    const ff = points(sc, L ? 80 : 150, '#fff2a0', .35, [-40, 40, .5, 10, zc - 50, zc + 20], .9, true);
+    const st = []; for (let i = 0; i < 4; i++) { const s = glowSprite('#fff6c0', 2, 1); s.material.fog = false; sc.add(s); st.push({ s, t: rnd(0, 8) }); }
+    ticks.push((t, dt) => { S.tick(t); C.tick(t); const p = ff.p; for (let i = 0; i < ff.n; i++) { p[i * 3] += Math.sin(t * .7 + i) * dt * .6; p[i * 3 + 1] += Math.cos(t * .9 + i * 1.7) * dt * .4; } ff.g.attributes.position.needsUpdate = true; ff.m.material.opacity = .6 + .3 * Math.sin(t * 2);
+      for (const o of st) { o.t += dt; const k = (o.t % 7) / 1.5; o.s.visible = k < 1; if (k < 1) o.s.position.set(60 - k * 120, 55 - k * 20, zc - 130); } });
+  } else if (mk === 'volcan') {
+    // ascuas subiendo, bolas de fuego en arco, ríos de lava brillantes, humo, cristales que brillan
+    const emb = points(sc, L ? 150 : 260, '#ffa040', .22, box, .9, true);
+    const lava = []; for (let i = 0; i < 10; i++) { const [x, z] = outside(area, 8, 26); lava.push(mesh(new THREE.PlaneGeometry(rnd(1.2, 2.4), rnd(5, 9)), new THREE.MeshBasicMaterial({ color: '#ff6a1a', transparent: true, opacity: .9 }), sc, [x, .03 + i * .002, z], [-Math.PI / 2, 0, rnd(0, 3)])); }
+    const balls = []; for (let i = 0; i < 4; i++) { const g = glowSprite('#ff7a2a', 3, 1); sc.add(g); const [x, z] = outside(area, 8, 25); balls.push({ g, x, z, t: rnd(0, 3), d: rnd(6, 12) * pick([-1, 1]) }); }
+    const smoke = []; for (let i = 0; i < 10; i++) { const s = glowSprite('#5a4050', rnd(5, 9), .35); s.material.blending = THREE.NormalBlending; const [x, z] = outside(area, 10, 35); s.userData = { x, z, t: rnd(0, 6) }; sc.add(s); smoke.push(s); }
+    ticks.push((t, dt) => { lava.forEach((l, i) => l.material.color.setHSL(.05 + .02 * Math.sin(t * 2 + i), 1, .5 + .08 * Math.sin(t * 3 + i)));
+      for (const b of balls) { b.t += dt; const k = (b.t % 3) / 3; b.g.position.set(b.x + b.d * k, Math.max(.5, 14 * k * (1 - k) * 4), b.z); if (k > .97 && !b.hit) { b.hit = 1; E.burst(new THREE.Vector3(b.x + b.d, .3, b.z), '#ffa040', 10, 4, .6, .4); } if (k < .5) b.hit = 0; }
+      smoke.forEach(s => { const u = s.userData; u.t += dt * .3; const k = u.t % 1; s.position.set(u.x, 2 + k * 14, u.z); s.material.opacity = .35 * (1 - k); });
+      const p = emb.p; for (let i = 0; i < emb.n; i++) { let y = p[i * 3 + 1] + dt * (1.2 + (i % 4) * .4); if (y > 22) y = 0; p[i * 3 + 1] = y; p[i * 3] += Math.sin(t * 2 + i) * dt * .5; } emb.g.attributes.position.needsUpdate = true; });
+  }
+  if (mk === 'selva') {
+    const frogs = []; for (let i = 0; i < 10; i++) { const [x, z] = outside(area, 2, 10); frogs.push({ x, z, s: rnd(.6, .9), ry: rnd(0, 6), anim: 'hop', sp: rnd(2.5, 4), amp: .6, ph: rnd(0, 6) }); }
+    const FR = instSet(sc, 'rana', frogs); const ffl = points(sc, L ? 50 : 90, '#e8ff8a', .3, [-40, 40, .5, 6, zc - 50, zc + 20], .8, true);
+    const birds = flyers(sc, 5, ['#ff5a5a', '#3ab0ff', '#ffd030'], [.9, .3], () => ({ cx: rnd(-15, 15), cz: zc + rnd(-25, 0), r: rnd(8, 14), y: rnd(13, 17), sp: rnd(.25, .45), ph: rnd(0, 6) }));
+    ticks.push((t, dt) => { FR.tick(t); ffl.m.material.opacity = .5 + .4 * Math.sin(t * 3); for (const g of birds) { const u = g.userData, k = t * u.sp + u.ph; g.position.set(u.cx + Math.cos(k) * u.r, u.y, u.cz + Math.sin(k) * u.r); g.rotation.y = -k; const f = Math.sin(t * 7 + u.ph) * .7; u.a.rotation.z = f; u.b.rotation.z = -f; } });
+  }
+  if (mk === 'selva') {
     const fl = flyers(sc, L ? 10 : 16, ['#ff9cc8', '#ffe27a', '#8fd0ff', '#c9a2ff'], [.32, .24], () => { const [x, z] = outside(area, 1, 8); return { cx: x, cy: rnd(1.2, 4), cz: z, r: rnd(1, 2.5), sp: rnd(.5, 1.1), ph: rnd(0, 6), bf: 1 }; });
     const leaves = points(sc, L ? 80 : 140, '#7ad85a', .22, box, .9);
     const R = rays(sc, 7, '#fff6c0', area, .09);

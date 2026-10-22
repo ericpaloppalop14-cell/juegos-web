@@ -241,7 +241,16 @@ function run(EV, opts = {}) {
     if (ON) for (const r of racers) if (r.remote) { const p = r.obj.position; if (!r._p) r._p = p.clone(); else { r._p.lerp(p, Math.min(1, dt * 14)); p.copy(r._p); } } else r._p = null;
     if (E.shake > 0) { E.shake -= dt; camera.position.x += rnd(-.15, .15) * E.shake * 4; camera.position.y += rnd(-.15, .15) * E.shake * 4; }
     updParts(dt);
-    for (const r of racers) animCharacter(r.obj.userData.char, now / 1000 + r.k, 1, r.expr || '');
+    for (const r of racers) { const c = r.obj.userData.char, T = now / 1000 + r.k; let ex = r.expr || '';
+      // capa común de animación: esfuerzo al moverse y alegría al acabar (nunca tristeza)
+      if (c) { if (E.celeb || EV.noAnimFx) { c.position.y = 0; c.rotation.x = 0; c.rotation.z = 0; }
+        else if (r.fin) { const ph = (T * 2.1) % 1; c.position.y = Math.sin(ph * Math.PI) * .35; c.rotation.z = Math.sin(T * 7) * .12; c.rotation.x = 0; if (!ex || ex === 'sad') ex = 'happy'; }
+        else if (E.phase === 'run') { const p = r.obj.position, mv = r._lp ? Math.hypot(p.x - r._lp.x, p.z - r._lp.z) / Math.max(dt, 1e-3) : 0; (r._lp || (r._lp = p.clone())).copy(p); r._mv = lerp(r._mv || 0, Math.min(1, mv / 8), Math.min(1, dt * 6));
+          c.rotation.x = -.16 * r._mv + Math.sin(T * 15) * .035 * r._mv; c.rotation.z = Math.sin(T * 9) * .05 * r._mv; c.position.y = Math.abs(Math.sin(T * 12)) * .06 * r._mv;
+          if (r.me && r._mv > .6 && Math.random() < dt * 1.5) burst(scene, r.obj.position.clone().add(new THREE.Vector3(rnd(-.3, .3), 1.1 * (r.obj.userData.sc || 1), 0)), '#bfe8ff', 2, 1.5, .5, .2, -6); }
+        else { c.position.y = 0; c.rotation.x = 0; c.rotation.z = 0; } }
+      if (ex === 'sad') ex = '';
+      animCharacter(c, T, 1, ex); }
     if (!EV.noFeet) feetFix(racers);
     if (E.celeb) E.shake = 0;
     renderer.render(scene, camera);

@@ -3,11 +3,11 @@
 //  bumerán · topos de lava · cuenta peces · ¡que no te vea! · bola caliente · salto de esquí ·
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m14';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o13';
-import { mergedGeo } from './decor.js?v=o13';
-import { jungle } from './selva-lianas.js?v=o13';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o13';
+import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m15';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o14';
+import { mergedGeo } from './decor.js?v=o14';
+import { jungle } from './selva-lianas.js?v=o14';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o14';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
