@@ -117,7 +117,7 @@ export default {
             E.ui.toast(msg, g.gold || perfect ? '#ffe27a' : '#ffffff'); this._combo(r.streak, mult);
             E.burst(new THREE.Vector3(g.x, g.y, -g.z), gold ? '#ffe27a' : perfect ? '#ffffff' : RCOL[i % 6], perfect ? 26 : 16, 6, .6, .55, 0); if (g.gold || (perfect && r.streak >= 5)) { E.ui.flash(); E.shake = .12; } } }
         else { r.streak = 0; if (r.me) { this._combo(0); if (d < g.rr + 1.2) { E.ui.toast(pick(['¡Uy, por fuera!', '¡Casi!', '¡Rozando el anillo!']), '#ffd0e8'); Audio.sfxPlay('tick'); } } else if (Math.random() < .2) E.say(r, pick(['¡Se me ha escapado!', '¡Ese anillo se movió!', ...OUCH])); } } }
-      for (const s of this.S) if (!s.hit.has(r.id) && oz < s.z && r.z >= s.z - .2 && Math.hypot(r.x - s.x, r.y - s.y) < 1.35) { s.hit.add(r.id); r.stun = .9; r.streak = 0; r.boost = 0; r.bonus *= .7; r.expr = 'sad';
+      for (const s of this.S) if (!s.hit.has(r.id) && oz < s.z && r.z >= s.z - .2 && Math.hypot(r.x - s.x, r.y - s.y) < 1.35) { s.hit.add(r.id); r.stun = .9; r.streak = 0; r.boost = 0; r.bonus *= .7; r.expr = 'squash';
         if (r.me) { E.shake = .35; Audio.sfxPlay('thunder'); vib([30, 40, 30]); E.ui.toast('⛈️ ¡Bzzt! Nube de tormenta', '#c9b2ff'); this._combo(0); E.burst(new THREE.Vector3(r.x, r.y, -r.z), '#c9b2ff', 18, 5, .5, .5, 0); } else if (Math.random() < .5) E.say(r, pick(['¡Me ha dado un rayo!', ...OUCH])); }
       r.prog = clamp(r.z / L, 0, 1); if (r.z >= L) E.finish(r);
     }

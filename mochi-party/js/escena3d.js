@@ -77,7 +77,6 @@ function pose(a, t, dt) {
     case 'taunt': { y = Math.abs(Math.sin(T * 5)) * .1; rz = Math.sin(T * 2.5) * .18; rx = -.08; ry = Math.sin(T * 1.7) * .35; if ((T % 3.5) < .6) expr = 'happy'; break; }
     case 'cheer': { const ph = (T * 1.6) % 1, h = Math.sin(ph * Math.PI); y = h * 1.1; ry = Math.floor(T * 1.6) % 2 ? ph * Math.PI * 2 : 0; sy = ph > .93 || ph < .05 ? .8 : 1 + h * .12; sx = 2 - sy; rz = Math.sin(T * 8) * .1; expr = 'happy'; break; }
     case 'clap': { const ph = (T * 2.4) % 1; y = Math.sin(ph * Math.PI) * .3; rz = Math.sin(T * 6) * .1; expr = (T % 3) < 2 ? 'happy' : ''; break; }
-    case 'sad': { const ph = (T * 2) % 1; y = Math.sin(ph * Math.PI) * .18; rz = Math.sin(T * 5) * .08; break; } // ya no hay tristeza: aplauden
   }
   // voltereta al tocar
   const fl = t - u.flip; if (fl >= 0 && fl < .9) { const k = fl / .9; y += Math.sin(k * Math.PI) * 1.4; rx -= k * Math.PI * 2; expr = 'happy'; }
@@ -128,7 +127,7 @@ function build(m, d) {
         cr.position.y = 1.62; cr.rotation.z = .15; a.userData.c.add(cr);
         const tr = makeTrophy('#ffd84a', 0); tr.scale.setScalar(.28); tr.position.set(.55, 1.45, .55); base.add(tr); extra.trophy = tr; } }
     // los demás, abajo, aplaudiendo
-    ids.slice(3).forEach((id, k) => { const n = ids.length - 3, x = (k - (n - 1) / 2) * 1.25, a = actor(id, .46, 'sad', k + 3); a.position.set(x, 0, 2.55); a.userData.enter = 1.9 + k * .12; root.add(a); actors.push(a);
+    ids.slice(3).forEach((id, k) => { const n = ids.length - 3, x = (k - (n - 1) / 2) * 1.25, a = actor(id, .46, 'clap', k + 3); a.position.set(x, 0, 2.55); a.userData.enter = 1.9 + k * .12; root.add(a); actors.push(a);
       const tg = textSprite((k + 3) === meIdx ? 'Tú' : CH(id).name, CH(id).color, (k + 3) === meIdx); tg.scale.multiplyScalar(.55); tg.position.set(x, -.05, 3.25); tg.visible = false; root.add(tg); a.userData.tag = tg; });
     extra.podio = true; camT = { p: new THREE.Vector3(0, 4.6, 10.5), l: new THREE.Vector3(0, 1.3, .4), w: 7.6 };
   }
