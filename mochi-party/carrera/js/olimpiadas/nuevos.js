@@ -4,9 +4,9 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m16';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o20';
-import { mergedGeo, instSet } from './decor.js?v=o20';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o20';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o21';
+import { mergedGeo, instSet } from './decor.js?v=o21';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o21';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -26,7 +26,7 @@ export function circuito(cfg) {
   const LAPS = cfg.laps || 2, W = cfg.width || 10, A = cfg.A || 42, Bz = cfg.B || 26;
   return base(cfg, { mode: 'tiempo', maxT: cfg.maxT || 120,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: A + 6 } }); setButtons('lr', { L: '⬅', R: '➡' });
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: A + 14 } }); setButtons('lr', { L: '⬅', R: '➡' });
       const raw = []; for (let i = 0; i <= 2000; i++) { const a = i / 2000 * Math.PI * 2, c = Math.cos(a), s = Math.sin(a); raw.push([A * Math.sign(c) * Math.pow(Math.abs(c), .62), -Bz * Math.sign(s) * Math.pow(Math.abs(s), .62) + Math.sin(a * 3) * 3]); }
       let L = 0; const cum = [0]; for (let i = 1; i < raw.length; i++) cum.push(L += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]));
       const N = 700, ds = L / N, P = []; let j = 0; for (let i = 0; i < N; i++) { const s = i * ds; while (cum[j + 1] < s) j++; const k = (s - cum[j]) / (cum[j + 1] - cum[j]); P.push([lerp(raw[j][0], raw[j + 1][0], k), lerp(raw[j][1], raw[j + 1][1], k)]); }

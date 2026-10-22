@@ -3,8 +3,8 @@
 //  mariposas, pájaros, rayos de luz y hojas que caen. Todo instanciado (barato en móvil).
 // ======================================================================
 import { THREE, toon, mesh, rnd, pick } from '../core3d.js?v=m16';
-import { CYL, SPH, SPHL } from './mundos.js?v=o20';
-import { instSet } from './decor.js?v=o20';
+import { CYL, SPH, SPHL } from './mundos.js?v=o21';
+import { instSet } from './decor.js?v=o21';
 
 function stripeTex(c1, c2, n = 8) { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const x = cv.getContext('2d'); x.fillStyle = c1; x.fillRect(0, 0, 64, 256);
   for (let i = 0; i < n * 3; i++) { x.fillStyle = c2; x.globalAlpha = rnd(.25, .7); x.fillRect(rnd(0, 60), rnd(0, 256), rnd(2, 6), rnd(10, 40)); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; }
