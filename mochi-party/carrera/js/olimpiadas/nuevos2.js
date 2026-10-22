@@ -114,4 +114,46 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos };
+export const NUEVOS2 = { bumeran, topos, cuenta };
+
+// =====================================================================
+//  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
+//  elige el número correcto entre tres. Acertar el primero vale más. 6 rondas.
+// =====================================================================
+export function cuenta(cfg) {
+  const NR = 6, SHOW = 4.6, ASK = 5;
+  return base(cfg, { mode: 'puntos', maxT: NR * (SHOW + ASK + 1.6) + 4,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 14 } }); setButtons(null);
+      racers(E, .42); E.racers.forEach((r, k) => { r.bx = (k - 2.5) * 1.5; r.score = 0; });
+      pm(cfg.big || 'ballena', sc, [-9, 0, -16], 5, .6); pm('coral', sc, [7, 0, -9], 2.4); pm('coral', sc, [-6, 0, -7], 1.8); pm('altavoz', sc, [9, 0, -15], 3, -.5);
+      this.pool = []; for (let i = 0; i < 14; i++) { const m = fitP(i < 11 ? (cfg.item || 'pez') : (cfg.decoy || 'medusa'), 1.5); const gw = glowSprite(i < 11 ? '#ffe27a' : '#ff9cf0', 3.2, .55); m.add(gw); m.visible = false; sc.add(m); this.pool.push({ m, fish: i < 11 }); }
+      this.round = 0; this.newRound(E);
+    },
+    newRound(E) { this.ph = 'show'; this.pt = 0; const n = 3 + Math.min(6, this.round + Math.floor(rnd(0, 3))), d = this.round >= 2 ? Math.floor(rnd(1, 3)) : 0; this.n = n;
+      this.act = []; let fi = 0, di = 0; const list = []; for (let i = 0; i < n; i++) list.push(this.pool[fi++]); for (let i = 0; i < d; i++) list.push(this.pool[11 + di++]);
+      list.sort(() => Math.random() - .5).forEach((p, i) => { p.x0 = -16 - i * rnd(1.6, 2.6); p.y = rnd(2, 4.6); p.z = rnd(-3.5, -1.5); p.m.visible = true; this.act.push(p); });
+      for (const r of E.racers) { r.ans = null; r.at = 0; r.ok = false; r.react = null; }
+      const opts = new Set([n]); while (opts.size < 3) opts.add(Math.max(1, n + pick([-2, -1, 1, 2]))); this.opts = [...opts].sort((a, b) => a - b); this.first = null; },
+    answer(E, r, i) { if (r.ans != null || this.ph !== 'ask') return; r.ans = this.opts[i]; r.at = this.pt; r.ok = r.ans === this.n;
+      if (r.ok) { const pts = this.first ? 2 : 3; if (!this.first) this.first = r; r.score += pts; cheer(r); if (r.me) { Audio.sfxPlay('stars'); E.ui.toast(`¡Bien! Eran ${this.n} 🐟 +${pts}`, '#7ee3c4'); } else say(E, r, '¡Lo sabía!'); }
+      else if (r.me) { Audio.sfxPlay('boing'); E.ui.toast(`¡Uy! Eran ${this.n} 🐟`, '#ffd0ec'); } },
+    update(E, dt) {
+      this.pt += dt;
+      if (this.ph === 'show') { const spd = 5.2 + this.round * .3; for (const p of this.act) p.cx = p.x0 + this.pt * spd;
+        if (this.pt > SHOW + .2 && this.act.every(p => p.cx > 14)) { this.ph = 'ask'; this.pt = 0; for (const p of this.act) p.m.visible = false; setButtons('lmr', { L: String(this.opts[0]), M: String(this.opts[1]), R: String(this.opts[2]) }); if (E.me) E.ui.toast('¿Cuántos PECES has visto? 🐟', '#bff4ff'); } }
+      else if (this.ph === 'ask') {
+        for (const r of E.racers) { if (r.ans != null) continue; if (r.me && !E.AUTO) { const z = zones(E); if (z.length) this.answer(E, r, z[0]); }
+          else { const s0 = sk(E, r); if (r.react == null) r.react = rnd(.7, 2.2) * (1.35 - Math.min(1.2, s0)); if (this.pt > r.react) { const ok = Math.random() < .55 + .4 * Math.min(1, s0); this.answer(E, r, ok ? this.opts.indexOf(this.n) : pick([0, 1, 2].filter(i => this.opts[i] !== this.n))); } } }
+        if (this.pt > ASK || E.racers.every(r => r.ans != null)) { this.ph = 'rev'; this.pt = 0; setButtons(null); if (E.me.ans == null) E.ui.toast(`¡Eran ${this.n} peces! 🐟`, '#bff4ff'); } }
+      else if (this.ph === 'rev' && this.pt > 1.6) { this.round++; if (this.round >= NR) { this.ph = 'end'; } else this.newRound(E); }
+      for (const r of E.racers) r.prog = clamp(this.round / NR, 0, .99);
+      if (!this.done && this.ph === 'end') { this.done = true; scoreEnd(E, r => r.score + ' pts'); }
+      board(E, r => r.score + ' pts'); info(`🐟 Ronda ${Math.min(NR, this.round + 1)}/${NR}<br>${E.me.score} pts`);
+    },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      if (this.ph === 'show') for (const p of this.act) { p.m.position.set(p.cx, p.y + Math.sin(t * 3 + p.x0) * .3, p.z); p.m.rotation.set(0, Math.PI / 2, Math.sin(t * 8 + p.x0) * .15); }
+      E.racers.forEach(r => { r.obj.position.set(r.bx, hopY(r, dt), 2); r.obj.rotation.y = Math.PI; squash(r, dt); });
+      const pr = port(); camTo(E, dt, v3(0, pr ? 2.2 : 2.2, pr ? 13 : 8.5), v3(0, pr ? 4.4 : 3, -5), pr ? 70 : 60, 3); },
+  });
+}
