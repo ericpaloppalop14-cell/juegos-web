@@ -114,7 +114,7 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui, moldes };
+export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui, moldes, distinto };
 
 // =====================================================================
 //  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
@@ -332,5 +332,45 @@ export function moldes(cfg) {
         r.line.material.emissiveIntensity = .6 + Math.sin(t * 6) * .3;
         r.obj.position.set(r.x - 1.2, .8 + hopY(r, dt), -1); r.obj.rotation.y = Math.PI * .8; squash(r, dt); }
       const me = E.me, pr = port(); camTo(E, dt, v3(me.x, pr ? 5.2 : 3.6, pr ? 8 : 5.5), v3(me.x, pr ? 1.2 : 1.6, -2), pr ? 64 : 52, 3); },
+  });
+}
+
+// =====================================================================
+//  ¿CUÁL ES DISTINTO? — en la bandeja hay muchas golosinas iguales y UNA diferente.
+//  Tócala antes que nadie. Si fallas, te quedas un momento mareado. 8 rondas.
+// =====================================================================
+export function distinto(cfg) {
+  const NR = 8, CS = 1.55, PAIRS = cfg.pairs || [['caramelo', 'piruleta'], ['cupcake', 'donut'], ['osito', 'caramelo'], ['piruleta', 'bastón'], ['donut', 'tarta'], ['caramelo', 'cupcake'], ['osito', 'piruleta'], ['donut', 'cupcake']];
+  return base(cfg, { mode: 'puntos', maxT: NR * 8 + 5,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 10 } }); setButtons(null);
+      const tray = mesh(new THREE.CylinderGeometry(4.6, 4.8, .4, 40), T('#ffd0e6'), sc, [0, .2, 0]); outline(tray, '#c0508a', 1.01);
+      mesh(new THREE.TorusGeometry(4.7, .18, 10, 48), T('#ff8fc8'), sc, [0, .42, 0], [Math.PI / 2, 0, 0]);
+      for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28 + .3; pm(pick(['piruleta', 'cupcake', 'bastón', 'tarta']), sc, [Math.cos(a) * 9.5, 0, Math.sin(a) * 9.5 - 2], rnd(2, 3.4), a); }
+      racers(E, .42); E.racers.forEach((r, k) => { r.a = Math.PI + (k - 2.5) * .32; r.score = 0; r.dz = 0; });
+      this.items = []; this.round = 0; this.start(E);
+    },
+    start(E) { for (const it of this.items) E.scene.remove(it.m); this.items = []; const [a, b] = PAIRS[this.round % PAIRS.length], nx = this.round < 3 ? 3 : 4, nz = this.round < 3 ? 3 : 4, odd = Math.floor(rnd(0, nx * nz));
+      for (let i = 0; i < nx * nz; i++) { const x = (i % nx - (nx - 1) / 2) * CS, z = (Math.floor(i / nx) - (nz - 1) / 2) * CS; const k2 = i === odd ? b : a; const m = pm(k2, E.scene, [x, .4, z], k2 === 'caramelo' ? .6 : k2 === 'bastón' ? 1.2 : 1.05, rnd(-.3, .3)); this.items.push({ m, odd: i === odd, x, z, ph: rnd(0, 6) }); }
+      this.rt = 0; this.ph = 'go'; this.win = null; for (const r of E.racers) { r.ans = false; r.react = null; r.dz = 0; } },
+    scr(p) { const v = p.clone().project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
+    hint() { const it = this.items.find(i => i.odd); return it ? this.scr(it.m.position.clone().add(v3(0, .5, 0))) : null; },
+    pickAt(x, y) { let best = null, bd = 80; for (const it of this.items) { const [sx, sy] = this.scr(it.m.position.clone().add(v3(0, .5, 0))); const d = Math.hypot(sx - x, sy - y); if (d < bd) { bd = d; best = it; } } return best; },
+    got(E, r) { r.ans = true; const pts = this.win ? 1 : 3; if (!this.win) this.win = r; r.score += pts; cheer(r);
+      if (r.me) { Audio.sfxPlay('stars'); E.ui.toast(pts === 3 ? '¡El primero! +3 🍬' : '¡Bien! +1', '#ffe27a'); } else say(E, r, pick(['¡Ahí!', '¡Lo vi!'])); },
+    update(E, dt) {
+      this.rt += dt;
+      if (this.ph === 'go') { for (const r of E.racers) { if (r.ans) continue; if (r.dz > 0) { r.dz -= dt; continue; }
+          if (r.me && !E.AUTO) { if (E.taps.length) { const I = E.input; const it = this.pickAt(I.sx, I.sy); if (it) { if (it.odd) this.got(E, r); else { r.dz = .9; Audio.sfxPlay('boing'); E.ui.toast('¡Esa no! 😵‍💫', '#ffd0ec'); it.m.rotation.z = .5; } } } }
+          else { const s0 = sk(E, r); if (r.react == null) r.react = rnd(1.1, 3) * (1.45 - Math.min(1.25, s0)) + this.round * .12; if (this.rt > r.react) { if (Math.random() < .72 + .25 * Math.min(1, s0)) this.got(E, r); else { r.dz = .9; r.react = this.rt + rnd(.8, 1.6); } } } }
+        if ((this.win && (E.racers.every(r => r.ans) || this.rt > (this.winT = this.winT || this.rt) + 1.6)) || this.rt > 7) { this.ph = 'rev'; this.rt = 0; this.winT = 0; if (!E.me.ans && !(E.me.dz > 0 && false)) E.ui.toast('¡Era esta! 👀', '#ffd0ec'); } }
+      else if (this.ph === 'rev' && this.rt > 1.2) { this.round++; if (this.round >= NR) { if (!this.done) { this.done = true; scoreEnd(E, r => r.score + ' pts'); } } else this.start(E); }
+      for (const r of E.racers) r.prog = clamp(this.round / NR, 0, .99);
+      board(E, r => r.score + ' pts'); info(`🍬 Ronda ${Math.min(NR, this.round + 1)}/${NR}<br>${E.me.score} pts`);
+    },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      for (const it of this.items) { const s = it.odd && this.ph === 'rev' ? 1 + Math.abs(Math.sin(t * 8)) * .35 : 1; it.m.position.y = .4 + (it.odd && this.ph === 'rev' ? .3 : Math.sin(t * 2 + it.ph) * .04); it.m.scale.setScalar(it.m.userData.s0 || (it.m.userData.s0 = it.m.scale.x)); it.m.scale.multiplyScalar(s); it.m.rotation.z *= .9; }
+      for (const r of E.racers) { r.obj.position.set(Math.sin(r.a) * 6.2, hopY(r, dt), Math.cos(r.a) * 6.2 + .3); r.obj.rotation.y = r.a + Math.PI; r.obj.userData.pivot.rotation.z = r.dz > 0 ? Math.sin(t * 18) * .25 : 0; squash(r, dt); }
+      const pr = port(); camTo(E, dt, v3(0, pr ? 13 : 9, pr ? 6.5 : 6), v3(0, 0, pr ? -.4 : -.8), pr ? 60 : 52, 3); },
   });
 }
