@@ -45,29 +45,39 @@ export function bumeran(cfg) {
         mesh(new THREE.BoxGeometry(.12, .04, 1.4), new THREE.MeshBasicMaterial({ color: '#fff6c0', transparent: true, opacity: .7 }), r.ag, [0, 0, -1.6], null, [1, 1, 1.4]);
         r.ag.visible = r.me; });
     },
-    targets(E, r) { for (const t of r.tg) if (!t.hit) E.scene.remove(t.m); r.tg = []; const n = 3;
-      for (let i = 0; i < n; i++) { const a = (i - 1) * .42 + rnd(-.1, .1); const m = fitP(cfg.target || 'coco', 1.3); const y = 1.2 + rnd(0, 1.4); m.position.set(r.bx + Math.sin(a) * D, y, -.6 - Math.cos(a) * D); E.scene.add(m); r.tg.push({ a, m, y, hit: false, ph: rnd(0, 6) }); } },
+    targets(E, r) { for (const t of r.tg) { if (!t.hit) E.scene.remove(t.m); E.scene.remove(t.post); } r.tg = []; const n = 3;
+      for (let i = 0; i < n; i++) { const a = (i - 1) * .42 + rnd(-.1, .1); const m = fitP(cfg.target || 'coco', 1.3); const y = 1.3 + rnd(0, 1.3), x = r.bx + Math.sin(a) * D, z = -.6 - Math.cos(a) * D; m.position.set(x, y, z); E.scene.add(m);
+        const post = new THREE.Group(); mesh(CYL(), T('#a0703a'), post, [0, (y - .55) / 2, 0], null, [.09, y - .55, .09]); mesh(new THREE.CylinderGeometry(.42, .3, .14, 14), T('#c8925a'), post, [0, y - .55, 0]); post.position.set(x, 0, z); E.scene.add(post);
+        r.tg.push({ a, m, y, post, hit: false, ph: rnd(0, 6) }); } },
     update(E, dt) {
       const t = E.t;
       for (const r of E.racers) {
         if (r.st === 'aim') { r.aim = Math.sin(t * 1.9 + r.ph) * .72;
           let go; if (r.me && !E.AUTO) go = tapped(E); else { const s0 = sk(E, r); const free = r.tg.filter(x => !x.hit); if (r.err == null) r.err = rnd(-1, 1) * (1.25 - Math.min(1.1, s0)) * .6; const tgt = free.length ? free[(r.thr + r.k) % free.length].a : 0; go = Math.abs(r.aim - tgt - r.err) < .05 || r.wt > 4; r.wt = (r.wt || 0) + dt; if (go) { r.err = null; r.wt = 0; } }
-          if (go) { r.st = 'fly'; r.ft = 0; r.fa = r.aim; r.got = 0; r.bm.visible = true; if (r.me) Audio.sfxPlay('throw'); } }
+          if (go) { r.throwT = .35; r.st = 'fly'; r.ft = 0; r.fa = r.aim; r.got = 0; r.bm.visible = true; if (r.me) Audio.sfxPlay('throw'); } }
         else if (r.st === 'fly') { const u0 = r.ft / FT; r.ft += dt; const u = r.ft / FT;
-          if (u0 < .5 && u >= .5) { for (const g of r.tg) if (!g.hit && Math.abs(g.a - r.fa) < .15) { g.hit = true; r.got++; r.score++; this.fall.push({ m: g.m, vy: 2, vx: Math.sin(r.fa) * 2 }); E.burst(g.m.position.clone(), '#ffe27a', 12, 4, .5, .5); }
-            if (r.got) { if (r.got > 1) r.score++; if (r.me) { Audio.sfxPlay('stars'); E.ui.toast(r.got > 1 ? `¡Doble! 🥥🥥 +${r.got + 1}` : '¡Coco! 🥥', '#ffe27a'); } else say(E, r, '¡Toma coco!'); }
-            else if (r.me) E.ui.toast('¡Casi! Apunta a un coco', '#ffd0ec'); }
-          if (u >= 1) { r.st = 'aim'; r.bm.visible = false; r.thr++; if (r.got) cheer(r); if (r.tg.every(g => g.hit) || r.thr % 3 === 0) this.targets(E, r); if (r.thr >= NT) { r.st = 'done'; r.ag.visible = false; } } }
+          const P = this.bpos(r, Math.min(1, u)), V = P.clone().sub(this.bpos(r, Math.max(0, u0)));
+          for (const g of r.tg) if (!g.hit && Math.hypot(g.m.position.x - P.x, g.m.position.z - P.z) < .85 && Math.abs(g.m.position.y - P.y) < 1.5) { // colisión real: impacto, salto del coco y rebotes
+            g.hit = true; r.got++; r.score++; const k = 1 / Math.max(dt, 1e-3) * .35; this.fall.push({ m: g.m, vx: V.x * k + rnd(-1, 1), vy: 4.5 + rnd(0, 2), vz: V.z * k + rnd(-1, 1), sp: rnd(8, 14), b: 0, t: 0 });
+            E.burst(g.m.position.clone(), '#8a5a2a', 10, 5, .55, .35, -9); E.burst(g.m.position.clone(), '#ffffff', 8, 3.5, .5, .3, -6); E.burst(g.m.position.clone(), '#ffe27a', 6, 2.5, .35, .5, 0);
+            if (r.me) { Audio.sfxPlay('kick'); setTimeout(() => Audio.sfxPlay('pop'), 70); E.shake = .22; E.ui.toast(r.got > 1 ? `¡Doble! 🥥🥥 +${r.got + 1}` : '¡Coco! 🥥', '#ffe27a'); } else if (Math.random() < .4) say(E, r, '¡Toma coco!');
+            if (r.got === 2) r.score++; }
+          if (u >= 1 && !r.got && r.me) E.ui.toast('¡Casi! Apunta a un coco', '#ffd0ec');
+          if (u >= 1) { r.catchT = .5; if (r.me) Audio.sfxPlay('got'); r.st = 'aim'; r.bm.visible = false; r.thr++; if (r.got) cheer(r); if (r.tg.every(g => g.hit) || r.thr % 3 === 0) this.targets(E, r); if (r.thr >= NT) { r.st = 'done'; r.ag.visible = false; } } }
         r.prog = clamp(r.thr / NT, 0, .99);
       }
-      for (let i = this.fall.length - 1; i >= 0; i--) { const f = this.fall[i]; f.vy -= 14 * dt; f.m.position.y += f.vy * dt; f.m.position.x += f.vx * dt; f.m.rotation.z += 6 * dt; if (f.m.position.y < .45) { f.m.position.y = .45; f.vy = 0; f.vx = 0; this.fall.splice(i, 1); } }
+      for (let i = this.fall.length - 1; i >= 0; i--) { const f = this.fall[i], m = f.m; f.t += dt; f.vy -= 16 * dt; m.position.x += f.vx * dt; m.position.y += f.vy * dt; m.position.z += f.vz * dt; m.rotation.z += f.sp * dt; m.rotation.x += f.sp * .6 * dt;
+        if (m.position.y < .45) { m.position.y = .45; if (f.vy < -2.5) { f.vy = -f.vy * .45; f.vx *= .7; f.vz *= .7; f.sp *= .7; f.b++; E.burst(m.position.clone().setY(.1), '#f0dca0', 6, 2.2, .4, .3, -6); if (f.b === 1 && E.me.tg && E.me.tg.some(g => g.m === m)) Audio.sfxPlay('land'); } else { f.vy = 0; f.vx *= .9; f.vz *= .9; f.sp *= .9; } }
+        if (f.t > 3.5) { m.scale.multiplyScalar(.9); if (f.t > 4.2) { E.scene.remove(m); this.fall.splice(i, 1); } } }
       if (!this.done && (E.racers.every(r => r.st === 'done') || E.t > this.maxT - .5)) { this.done = true; scoreEnd(E, r => r.score + ' cocos'); }
       board(E, r => r.score + ' 🥥'); if (E.me.st !== 'done') info(`🪃 ${E.me.thr + 1}/${NT}<br>${E.me.score} 🥥`);
     },
+    bpos(r, u) { const s = Math.sin(u * Math.PI) * (D + .6), l = Math.sin(u * Math.PI * 2) * 1.8, a = r.fa; return v3(r.bx + Math.sin(a) * s + Math.cos(a) * l, 1.4 + Math.sin(u * Math.PI) * .6 + .4, -.6 - Math.cos(a) * s + Math.sin(a) * l); },
     render(E, dt) { const t = E.t; this.W.tick(dt, camera);
       for (const r of E.racers) { r.ag.rotation.y = -r.aim; r.obj.position.set(r.bx, hopY(r, dt), 0); r.obj.rotation.y = Math.PI - r.aim * .6; squash(r, dt);
+        { const pv = r.obj.userData.pivot; r.throwT = Math.max(0, (r.throwT || 0) - dt); r.catchT = Math.max(0, (r.catchT || 0) - dt); pv.rotation.x = r.throwT > 0 ? -Math.sin(r.throwT / .35 * Math.PI) * .45 : r.st === 'aim' ? Math.sin(t * 3 + r.ph) * .05 : 0; pv.rotation.z = r.st === 'aim' ? Math.sin(t * 1.9 + r.ph) * .08 : 0; if (r.catchT > 0) pv.position.y = Math.sin(r.catchT / .5 * Math.PI) * .35; else pv.position.y = 0; r.expr = r.catchT > 0 && r.got ? 'happy' : r.expr; }
         for (const g of r.tg) if (!g.hit) { g.m.position.y = g.y + Math.sin(t * 2 + g.ph) * .15; g.m.rotation.y = Math.sin(t + g.ph) * .4; }
-        if (r.st === 'fly') { const u = r.ft / FT, s = Math.sin(u * Math.PI) * (D + .6), l = Math.sin(u * Math.PI * 2) * 1.8, a = r.fa; r.bm.position.set(r.bx + Math.sin(a) * s + Math.cos(a) * l, 1.4 + Math.sin(u * Math.PI) * .6, -.6 - Math.cos(a) * s + Math.sin(a) * l); r.bm.rotation.set(Math.PI / 2, 0, t * 18);
+        if (r.st === 'fly') { r.bm.position.copy(this.bpos(r, Math.min(1, r.ft / FT))); r.bm.rotation.set(Math.PI / 2, 0, t * 18);
           if (Math.random() < .5) E.burst(r.bm.position.clone(), '#fff6a0', 1, 1, .3, .3, 0); } }
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 5.5 : 4, pr ? 7.5 : 5.5), v3(me.bx, 1.4, -D * .8), pr ? 74 : 58, 3); },
   });
