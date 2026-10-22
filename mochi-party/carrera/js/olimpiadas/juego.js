@@ -1,5 +1,5 @@
 // MOCHI PARTY · OLIMPIADAS — arranque de una prueba (o del podio final)
-import { OLIMPIADAS, findEv } from './catalogo.js?v=o16';
+import { OLIMPIADAS, findEv } from './catalogo.js?v=o17';
 const Q0 = new URLSearchParams(location.search);
 // el marco común (core3d) no debe volver al menú antiguo: «stay» le deja aquí para la celebración
 if (!Q0.has('stay')) history.replaceState(null, '', location.pathname + location.search + (location.search ? '&' : '?') + 'stay');
@@ -7,11 +7,11 @@ window.__keys = {}; addEventListener('keydown', e => window.__keys[e.code] = tru
 const { o, i, p } = findEv(Q0.get('o'), Q0.get('e'));
 const $ = id => document.getElementById(id);
 if (Q0.has('podio')) {
-  const THREE = await import('three'); const { podioFinal } = await import('./fiesta.js?v=o16');
+  const THREE = await import('three'); const { podioFinal } = await import('./fiesta.js?v=o17');
   const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true }); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(innerWidth, innerHeight, false);
   podioFinal(o, renderer, new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 500));
 } else {
-  const core = await import('../core3d.js?v=m16'); const { TIPOS } = await import('./tipos.js?v=o16'); const { NUEVOS } = await import('./nuevos.js?v=o16'); const { NUEVOS2 } = await import('./nuevos2.js?v=o16'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o16');
+  const core = await import('../core3d.js?v=m16'); const { TIPOS } = await import('./tipos.js?v=o17'); const { NUEVOS } = await import('./nuevos.js?v=o17'); const { NUEVOS2 } = await import('./nuevos2.js?v=o17'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o17');
   $('load').textContent = `${p.icon} ${p.name}…`;
   let EV; if (p.base) { EV = { ...(await import(`../ev-${p.base}.js?v=m16`)).default }; EV.mode = 'tiempo'; if (p.base === 'nado') EV.noFeet = true; } else EV = TIPOS[p.tipo]({ ...p, mundo: o.id });
   // cartel de presentación de la prueba (se ve durante la cuenta atrás)
@@ -20,6 +20,19 @@ if (Q0.has('podio')) {
   const E = core.run(EV);
   // dificultad FÁCIL: rivales flojos con azar por prueba, para que quien juegue razonablemente gane a menudo
   E.racers.forEach(r => { if (!r.me) r.skill = +(0.08 + Math.random() * 0.37).toFixed(2); });
+  // GALAXIA: escafandra de cristal con antena luminosa, estela brillante y cámara algo más cercana
+  if (o.id === 'espacio') { const T3 = core.THREE, gm = new T3.MeshPhysicalMaterial ? null : null;
+    for (const r of E.racers) { const c = r.obj.userData.char; if (!c) continue; c.updateMatrixWorld(true); const bb = new T3.Box3().setFromObject(c), sz = bb.getSize(new T3.Vector3()), ce = bb.getCenter(new T3.Vector3()); c.worldToLocal(ce);
+      const R = Math.max(sz.x, sz.y, sz.z) * .62 / (r.obj.userData.pivot.scale.x || 1), h = new T3.Group();
+      const glass = new T3.Mesh(new T3.SphereGeometry(1, 24, 16), new T3.MeshBasicMaterial({ color: '#bfeaff', transparent: true, opacity: .18, depthWrite: false })); glass.scale.setScalar(R); h.add(glass);
+      const rim = new T3.Mesh(new T3.TorusGeometry(R * .78, R * .09, 8, 28), core.toon('#e8e4ff', { rim: .6 })); rim.rotation.x = Math.PI / 2; rim.position.y = -R * .62; h.add(rim);
+      const hi = new T3.Mesh(new T3.SphereGeometry(R * .16, 10, 8), new T3.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .7 })); hi.position.set(-R * .45, R * .5, R * .55); h.add(hi);
+      const ant = new T3.Mesh(new T3.CylinderGeometry(R * .03, R * .03, R * .5, 6), core.toon('#e8e4ff')); ant.position.y = R * 1.2; h.add(ant); const tip = core.glowSprite(r.ch.color, R * .7, 1); tip.position.y = R * 1.5; h.add(tip); r._tip = tip;
+      h.position.copy(ce); c.add(h); }
+    const rnd = (a, b) => a + Math.random() * (b - a); let last = { };
+    const r0 = EV.render.bind(EV); EV.render = (E2, dt) => { r0(E2, dt); if (!p.base && !E2.celeb) { core.camera.fov *= .86; core.camera.updateProjectionMatrix(); }
+      for (const r of E2.racers) { if (r._tip) r._tip.material.opacity = .6 + .4 * Math.sin(performance.now() / 180 + r.k); const q = r.obj.position, l = last[r.id]; if (l && E2.phase === 'run') { const v = Math.hypot(q.x - l.x, q.z - l.z) / Math.max(dt, 1e-3); if (v > 2 && Math.random() < (r.me ? .9 : .35)) E2.burst(q.clone().add(new core.THREE.Vector3(rnd(-.2, .2), .4, rnd(-.2, .2))), r.me ? '#bfe0ff' : r.ch.color, 1, .8, .45, .35, 0); } last[r.id] = q.clone(); } };
+  }
   // joystick visible cuando arrastras en las pruebas de arena
   const st = $('stick'), kn = st.firstElementChild, usesStick = EV.stick || (['recoge', 'superv', 'empuje'].includes(p.tipo) && p.modo !== 'barrido');
   let done = false;

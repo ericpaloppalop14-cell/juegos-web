@@ -3,7 +3,7 @@
 //  partículas y luz. Todo fuera de la zona de juego, apoyado en el suelo o en el aire. Barato: instanciado + Points.
 // ======================================================================
 import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m16';
-import { instSet } from './decor.js?v=o16';
+import { instSet } from './decor.js?v=o17';
 
 const lo = () => innerWidth * innerHeight < 500000;
 // punto aleatorio fuera de la zona de juego
@@ -29,6 +29,19 @@ export function ambiente(E, mk, area) {
     const A = instSet(sc, 'meteoro', ast);
     const cr = []; for (let i = 0; i < (L ? 10 : 18); i++) { const [x, z] = outside(area, 3, 14); const g = glowSprite(pick(['#c9b2ff', '#7ee3ff', '#ff9cf0']), 2.4, .6); g.position.set(x, .6, z); sc.add(g); cr.push(g); }
     const dust = points(sc, L ? 120 : 220, '#d8c8ff', .18, box, .8, true);
+    // planetas gigantes con anillos, estación espacial con neones, cráteres y balizas de neón alrededor
+    const big = [['#ff9cf0', '#ffe27a', -90, 45, -160, 26], ['#7ee3ff', '#c9a2ff', 110, 30, -120, 16], ['#ffb36b', '#ff6fae', -40, 70, -230, 34]];
+    const planets = big.map(([c, rc, x, y, z, R]) => { const g = new THREE.Group(); const m = toon(c, { rim: .5, emissive: c, ei: .25 }); m.fog = false; mesh(new THREE.SphereGeometry(R, 32, 20), m, g);
+      const rm = new THREE.MeshBasicMaterial({ color: rc, transparent: true, opacity: .7, side: THREE.DoubleSide, fog: false }); const ring = mesh(new THREE.RingGeometry(R * 1.35, R * 1.9, 64), rm, g, [0, 0, 0], [Math.PI / 2 - .35, 0, .2]);
+      g.position.set(x, y, zc + z); sc.add(g); return g; });
+    const st = new THREE.Group(); { const hm = toon('#e8e4ff', { rim: .5 }), nm = new THREE.MeshBasicMaterial({ color: '#ff5ad8', fog: false }), nm2 = new THREE.MeshBasicMaterial({ color: '#5ae8ff', fog: false });
+      mesh(new THREE.TorusGeometry(9, 1.1, 10, 40), hm, st); mesh(new THREE.TorusGeometry(9, .25, 6, 40), nm, st, [0, 0, 1.15]); mesh(new THREE.CylinderGeometry(1.4, 1.4, 6, 16), hm, st, [0, 0, 0], [Math.PI / 2, 0, 0]);
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; mesh(new THREE.CylinderGeometry(.35, .35, 9, 8), hm, st, [Math.cos(a) * 4.5, Math.sin(a) * 4.5, 0], [0, 0, a + Math.PI / 2]); mesh(new THREE.BoxGeometry(5, .1, 2.4), toon('#3a5ad0', { rim: .4, emissive: '#3a5ad0', ei: .3 }), st, [Math.cos(a) * 13, Math.sin(a) * 13, 0], [0, 0, a]); }
+      mesh(new THREE.TorusGeometry(1.6, .2, 6, 24), nm2, st, [0, 0, 3.1]); st.position.set(55, 40, zc - 110); st.rotation.set(.4, -.5, 0); st.traverse(o => { if (o.material) o.material.fog = false; }); sc.add(st); }
+    const crat = []; for (let i = 0; i < (L ? 14 : 24); i++) { const [x, z] = outside(area, 3, 26); crat.push({ x, y: .06, z, s: 1, sx: rnd(1.2, 3), sy: rnd(1.2, 3), sz: 1, rx: -Math.PI / 2 }); }
+    { const cm = new THREE.InstancedMesh(new THREE.TorusGeometry(1, .28, 6, 20), toon('#7a6ac0', { rim: .3 }), crat.length), o = new THREE.Object3D(); crat.forEach((c, i) => { o.position.set(c.x, .06, c.z); o.rotation.set(-Math.PI / 2, 0, 0); o.scale.set(c.sx, c.sx, .6); o.updateMatrix(); cm.setMatrixAt(i, o.matrix); }); cm.frustumCulled = false; sc.add(cm); }
+    const neon = []; for (let i = 0; i < (L ? 12 : 20); i++) { const [x, z] = outside(area, 1.5, 9); const c = pick(['#ff5ad8', '#5ae8ff', '#ffe27a', '#8a7aff']); mesh(new THREE.CylinderGeometry(.08, .12, 1.6, 8), new THREE.MeshBasicMaterial({ color: '#2a2050' }), sc, [x, .8, z]); const g = glowSprite(c, 1.6, .9); g.position.set(x, 1.7, z); g.userData.ph = rnd(0, 6); sc.add(g); const b = mesh(new THREE.SphereGeometry(.18, 10, 8), new THREE.MeshBasicMaterial({ color: c }), sc, [x, 1.7, z]); neon.push(g); }
+    ticks.push((t) => { planets.forEach((g, i) => g.rotation.y = t * (.02 + i * .01)); st.rotation.z = t * .08; neon.forEach(g => g.material.opacity = .45 + .45 * Math.abs(Math.sin(t * 2.5 + g.userData.ph))); });
     ticks.push((t, dt) => { A.tick(t); cr.forEach((g, i) => g.material.opacity = .35 + .3 * Math.sin(t * 2 + i));
       for (const o of sh) { o.t += dt; const k = (o.t % 6) / 1.2; if (k < 1) { const x = -80 + k * 160, y = 60 - k * 25, z = zc - 140; o.s.position.set(x, y, z); o.tr.position.set(x - 4, y + .6, z); o.s.visible = o.tr.visible = true; } else o.s.visible = o.tr.visible = false; }
       const p = dust.p; for (let i = 0; i < dust.n; i++) p[i * 3 + 1] += Math.sin(t + i) * dt * .2; dust.g.attributes.position.needsUpdate = true; });
