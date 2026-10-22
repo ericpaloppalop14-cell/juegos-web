@@ -4,10 +4,10 @@
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m17';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o23';
-import { mergedGeo } from './decor.js?v=o23';
-import { jungle } from './selva-lianas.js?v=o23';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o23';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o24';
+import { mergedGeo } from './decor.js?v=o24';
+import { jungle } from './selva-lianas.js?v=o24';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o24';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
@@ -350,9 +350,10 @@ export function moldes(cfg) {
 //  ¿CUÁL ES DISTINTO? — en la bandeja hay muchas golosinas iguales y UNA diferente.
 //  Tócala antes que nadie. Si fallas, te quedas un momento mareado. 8 rondas.
 // =====================================================================
+const KINDS = ['caramelo', 'piruleta', 'cupcake', 'donut', 'osito', 'bastón', 'tarta'];
 export function distinto(cfg) {
   const NR = 8, CS = 1.55, PAIRS = cfg.pairs || [['caramelo', 'piruleta'], ['cupcake', 'donut'], ['osito', 'caramelo'], ['piruleta', 'bastón'], ['donut', 'tarta'], ['caramelo', 'cupcake'], ['osito', 'piruleta'], ['donut', 'cupcake']];
-  return base(cfg, { mode: 'puntos', maxT: NR * 8 + 5,
+  return base(cfg, { mode: 'puntos', maxT: NR * 11 + 5,
     init(E) {
       const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 10 } }); setButtons(null);
       const tray = mesh(new THREE.CylinderGeometry(4.6, 4.8, .4, 40), T('#ffd0e6'), sc, [0, .2, 0]); outline(tray, '#c0508a', 1.01);
@@ -361,8 +362,13 @@ export function distinto(cfg) {
       racers(E, .42); E.racers.forEach((r, k) => { r.a = Math.PI + (k - 2.5) * .32; r.score = 0; r.dz = 0; });
       this.items = []; this.round = 0; this.start(E);
     },
-    start(E) { for (const it of this.items) E.scene.remove(it.m); this.items = []; const [a, b] = PAIRS[this.round % PAIRS.length], nx = this.round < 3 ? 3 : 4, nz = this.round < 3 ? 3 : 4, odd = Math.floor(rnd(0, nx * nz));
-      for (let i = 0; i < nx * nz; i++) { const x = (i % nx - (nx - 1) / 2) * CS, z = (Math.floor(i / nx) - (nz - 1) / 2) * CS; const k2 = i === odd ? b : a; const m = pm(k2, E.scene, [x, .4, z], k2 === 'caramelo' ? .6 : k2 === 'bastón' ? 1.2 : 1.05, rnd(-.3, .3)); this.items.push({ m, odd: i === odd, x, z, ph: rnd(0, 6) }); }
+    /* la distinta es la MISMA golosina con un cambio sutil (matiz de color, tamaño, giro o inclinación) que se hace más fino ronda a ronda */
+    start(E) { for (const it of this.items) E.scene.remove(it.m); this.items = []; const R = this.round, k = R / (NR - 1), a = KINDS[(R * 3 + 1) % KINDS.length], n = R < 2 ? 3 : 4, odd = Math.floor(rnd(0, n * n));
+      const vars = ['tono', 'giro', 'tamaño', 'inclina']; const v = this.kind = R < 4 ? vars[R] : vars[Math.floor(rnd(0, 4))]; const ry0 = rnd(-.4, .4), sc0 = a === 'caramelo' ? .6 : a === 'bastón' ? 1.2 : 1.05, cs = n === 3 ? CS : CS * .95;
+      const tint = new THREE.Color().setHSL(rnd(0, 1), 1, .5);
+      for (let i = 0; i < n * n; i++) { const x = (i % n - (n - 1) / 2) * cs, z = (Math.floor(i / n) - (n - 1) / 2) * cs, o = i === odd; const m = pm(a, E.scene, [x, .4, z], sc0 * (n === 4 ? 1.2 : 1.35), ry0);
+        if (o) { if (v === 'tono') m.material.color.lerp(tint, lerp(.42, .16, k)); else if (v === 'giro') m.rotation.y += lerp(1, .4, k) * (Math.random() < .5 ? -1 : 1); else if (v === 'tamaño') m.scale.multiplyScalar(lerp(1.22, 1.09, k)); else m.rotation.x = lerp(.5, .2, k) * (Math.random() < .5 ? -1 : 1); }
+        this.items.push({ m, odd: o, x, z, ph: rnd(0, 6) }); }
       this.rt = 0; this.ph = 'go'; this.win = null; for (const r of E.racers) { r.ans = false; r.react = null; r.dz = 0; } },
     scr(p) { const v = p.clone().project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     hint() { const it = this.items.find(i => i.odd); return it ? this.scr(it.m.position.clone().add(v3(0, .5, 0))) : null; },
@@ -373,14 +379,15 @@ export function distinto(cfg) {
       this.rt += dt;
       if (this.ph === 'go') { for (const r of E.racers) { if (r.ans) continue; if (r.dz > 0) { r.dz -= dt; continue; }
           if (r.me && !E.AUTO) { if (E.taps.length) { const I = E.input; const it = this.pickAt(I.sx, I.sy); if (it) { if (it.odd) this.got(E, r); else { r.dz = .9; Audio.sfxPlay('boing'); E.ui.toast('¡Esa no! 😵‍💫', '#ffd0ec'); it.m.rotation.z = .5; } } } }
-          else { const s0 = sk(E, r); if (r.react == null) r.react = rnd(1.1, 3) * (1.45 - Math.min(1.25, s0)) + this.round * .12; if (this.rt > r.react) { if (Math.random() < .72 + .25 * Math.min(1, s0)) this.got(E, r); else { r.dz = .9; r.react = this.rt + rnd(.8, 1.6); } } } }
-        if ((this.win && (E.racers.every(r => r.ans) || this.rt > (this.winT = this.winT || this.rt) + 1.6)) || this.rt > 7) { this.ph = 'rev'; this.rt = 0; this.winT = 0; if (!E.me.ans && !(E.me.dz > 0 && false)) E.ui.toast('¡Era esta! 👀', '#ffd0ec'); } }
+          else { const s0 = sk(E, r); if (r.react == null) r.react = rnd(1.8, 4.2) * (1.45 - Math.min(1.25, s0)) + this.round * .35; if (this.rt > r.react) { if (Math.random() < .72 + .25 * Math.min(1, s0)) this.got(E, r); else { r.dz = .9; r.react = this.rt + rnd(.8, 1.6); } } } }
+        if ((this.win && (E.racers.every(r => r.ans) || this.rt > (this.winT = this.winT || this.rt) + 1.6)) || this.rt > 7 + this.round * .4) { this.ph = 'rev'; this.rt = 0; this.winT = 0; if (!E.me.ans && !(E.me.dz > 0 && false)) E.ui.toast('¡Era esta! 👀', '#ffd0ec'); } }
       else if (this.ph === 'rev' && this.rt > 1.2) { this.round++; if (this.round >= NR) { if (!this.done) { this.done = true; scoreEnd(E, r => r.score + ' pts'); } } else this.start(E); }
       for (const r of E.racers) r.prog = clamp(this.round / NR, 0, .99);
       board(E, r => r.score + ' pts'); info(`🍬 Ronda ${Math.min(NR, this.round + 1)}/${NR}<br>${E.me.score} pts`);
     },
     render(E, dt) { const t = E.t; this.W.tick(dt, camera);
       for (const it of this.items) { const s = it.odd && this.ph === 'rev' ? 1 + Math.abs(Math.sin(t * 8)) * .35 : 1; it.m.position.y = .4 + (it.odd && this.ph === 'rev' ? .3 : Math.sin(t * 2 + it.ph) * .04); it.m.scale.setScalar(it.m.userData.s0 || (it.m.userData.s0 = it.m.scale.x)); it.m.scale.multiplyScalar(s); it.m.rotation.z *= .9; }
+      if (this.ph === 'rev') for (const it of this.items) if (it.odd && it.m.material.emissive) { it.m.material.emissive.setHSL(.14, 1, .25 + Math.abs(Math.sin(t * 8)) * .2); }
       for (const r of E.racers) { r.obj.position.set(Math.sin(r.a) * 6.2, hopY(r, dt), Math.cos(r.a) * 6.2 + .3); r.obj.rotation.y = r.a + Math.PI; r.obj.userData.pivot.rotation.z = r.dz > 0 ? Math.sin(t * 18) * .25 : 0; squash(r, dt); }
       const pr = port(); camTo(E, dt, v3(0, pr ? 13 : 9, pr ? 6.5 : 6), v3(0, 0, pr ? -.4 : -.8), pr ? 60 : 52, 3); },
   });
