@@ -2,7 +2,7 @@
 //  LIANAS DE LA SELVA — escenario inmersivo: selva en capas, río, cascada, flores,
 //  mariposas, pájaros, rayos de luz y hojas que caen. Todo instanciado (barato en móvil).
 // ======================================================================
-import { THREE, toon, mesh, rnd, pick } from '../core3d.js?v=m13';
+import { THREE, toon, mesh, rnd, pick } from '../core3d.js?v=m14';
 import { CYL, SPH, SPHL } from './mundos.js?v=o9';
 import { instSet } from './decor.js?v=o9';
 
@@ -44,7 +44,7 @@ export function jungle(E, { NV, GAP, SP, PY }) {
   inst(sc, new THREE.ConeGeometry(1, 1, 6), toon('#3fae4a', { rim: .4 }), ferns, ['#3fae4a', '#4fc25a', '#2f9a3f']);
   for (let i = 0; i < (lo ? 110 : 180); i++) { const x = pick([-1, 1]) * rnd(10.6, 22), z = rnd(Z1, Z0); if (x < -12.4 && x > -18.6) continue; fl.push({ x, y: .28, z, s: rnd(.13, .22) }); }
   inst(sc, SPHL(), toon('#ffffff', { rim: .5 }), fl, ['#ff6fae', '#ffe27a', '#ff9a5a', '#c9a2ff', '#ffffff', '#ff4f6f']);
-  for (let i = 0; i < 26; i++) shrooms.push({ x: pick([-1, 1]) * rnd(11, 20), y: 0, z: rnd(Z1, Z0), s: rnd(.6, 1.1), ry: rnd(0, 6) });
+  for (let i = 0; i < 26; i++) shrooms.push({ x: pick([-1, 1]) * rnd(12.5, 22), y: 0, z: rnd(Z1, Z0), s: rnd(.22, .4), ry: rnd(0, 6) });
   instSet(sc, 'hongo', shrooms.filter(s => !(s.x < -12.4 && s.x > -18.6)));
   // copa de la selva por encima (techo verde) y lianas decorativas colgando
   const canopy = []; for (let z = Z0; z > Z1; z -= 4) for (const x of [-26, -16, 16, 26]) canopy.push({ x: x + rnd(-3, 3), y: rnd(15, 19), z: z + rnd(-2, 2), s: 1, sx: rnd(5, 8), sy: rnd(2, 3.2), sz: rnd(4, 6) });

@@ -118,7 +118,7 @@ function celebrate(E, res, cb) {
   const win = byId(res[0].id) || racers[0], me = E.me, nm = r => r.me ? 'Tú' : (r.name || r.ch.name);
   E.celeb = { t: 0, win, me, cb, dur: win === me ? 3.4 : 4.6, done: false, fw: 0 };
   for (const r of racers) { r.expr = r === win ? 'happy' : ''; r.stun = 0; }
-  ['ctl', 'hint', 'say', 'banner', 'toast', 'perf', 'hTop', 'hBoard', 'exitB', 'limite'].forEach(id => { const e = $(id); if (e) e.style.visibility = 'hidden'; });
+  ['ctl', 'hint', 'say', 'banner', 'toast', 'perf', 'hTop', 'hBoard', 'exitB', 'limite', 'bL', 'bM', 'bR'].forEach(id => { const e = $(id); if (e) e.style.visibility = 'hidden'; });
   const o = celebOverlay(); const mePos = res.findIndex(x => x.id === me.id) + 1;
   o.innerHTML = `<div class="cT${win === me ? '' : ' lose'}">${win === me ? '🏆 ¡HAS GANADO! 🎉' : `🏆 ¡Gana ${nm(win)}!`}</div><div class="cRow">${res.map((x, i) => { const r = byId(x.id); return r ? `<div class="${i === 0 ? 'w' : ''} ${r.me ? 'me' : ''}" style="animation-delay:${.25 + i * .12}s">${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'} ${nm(r)}${i === 0 ? ' 😄' : ''}</div>` : ''; }).join('')}</div>`;
   requestAnimationFrame(() => o.classList.add('on'));

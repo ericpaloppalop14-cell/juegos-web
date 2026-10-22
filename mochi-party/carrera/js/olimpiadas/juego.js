@@ -11,9 +11,9 @@ if (Q0.has('podio')) {
   const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true }); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(innerWidth, innerHeight, false);
   podioFinal(o, renderer, new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 500));
 } else {
-  const core = await import('../core3d.js?v=m13'); const { TIPOS } = await import('./tipos.js?v=o9'); const { NUEVOS } = await import('./nuevos.js?v=o9'); const { NUEVOS2 } = await import('./nuevos2.js?v=o9'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o9');
+  const core = await import('../core3d.js?v=m14'); const { TIPOS } = await import('./tipos.js?v=o9'); const { NUEVOS } = await import('./nuevos.js?v=o9'); const { NUEVOS2 } = await import('./nuevos2.js?v=o11'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o9');
   $('load').textContent = `${p.icon} ${p.name}…`;
-  let EV; if (p.base) { EV = { ...(await import(`../ev-${p.base}.js?v=m13`)).default }; EV.mode = 'tiempo'; if (p.base === 'nado') EV.noFeet = true; } else EV = TIPOS[p.tipo]({ ...p, mundo: o.id });
+  let EV; if (p.base) { EV = { ...(await import(`../ev-${p.base}.js?v=m14`)).default }; EV.mode = 'tiempo'; if (p.base === 'nado') EV.noFeet = true; } else EV = TIPOS[p.tipo]({ ...p, mundo: o.id });
   // cartel de presentación de la prueba (se ve durante la cuenta atrás)
   const ol = Q0.has('stay') || true; const S = JSON.parse(localStorage.getItem('mo_olimp') || 'null'); const n = S && S.oid === o.id && S.mode === 'olimpiada' ? `Prueba ${i + 1}/${o.pruebas.length} · ` : '';
   const pr = $('pres'); pr.innerHTML = `<div class="pIc">${p.icon}</div><div class="pNm">${p.name}</div><div class="pOl">${n}${o.icon} ${o.name}</div>`; pr.classList.add('on'); setTimeout(() => pr.classList.remove('on'), 2600);
