@@ -114,7 +114,7 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos, cuenta, acecho };
+export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente };
 
 // =====================================================================
 //  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
@@ -195,5 +195,46 @@ export function acecho(cfg) {
       for (const r of E.racers) { const w = r.mv ? Math.sin(t * 10 + r.k) * .06 : 0; r.shell.position.set(r.x, 0, -r.z); r.shell.rotation.y = Math.PI + w; r.shell.scale.y = r.shell.scale.x * (1 + (r.mv ? Math.sin(t * 12) * .06 : 0));
         r.obj.position.set(r.x, .62 + hopY(r, dt) + (r.mv ? Math.abs(Math.sin(t * 10)) * .05 : 0), -r.z - .1); r.obj.rotation.y = Math.PI; squash(r, dt); r.obj.userData.pivot.rotation.z = r.stun > 0 ? Math.sin(t * 20) * .3 : 0; }
       const me = E.me, pr = port(); camTo(E, dt, v3(me.x * .8, pr ? 6.5 : 4.5, -me.z + (pr ? 11 : 8)), v3(me.x * .6, 1.5, -me.z - 10), pr ? 70 : 58, 3); },
+  });
+}
+
+// =====================================================================
+//  BOLA CALIENTE — una bola de fuego pasa de mano en mano alrededor del cráter. ¡Pásala (⬅ o ➡)
+//  antes de que explote! A quien le explote sale del corro (y se va a animar desde fuera).
+// =====================================================================
+export function caliente(cfg) {
+  const R = 4.6;
+  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 75,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 9 } }); setButtons('lr', { L: '⬅ 🔥', R: '🔥 ➡' });
+      const rim = mesh(new THREE.CylinderGeometry(R + 1.6, R + 2.2, .5, 40), T(cfg.floor || '#6a4a5a'), sc, [0, -.05, 0]); outline(rim, '#2a1820', 1.01);
+      mesh(new THREE.CircleGeometry(R - 1.2, 36), GL(cfg.lavaC || '#ff7a2a', 1), sc, [0, .22, 0], [-Math.PI / 2, 0, 0]); this.glow = glowSprite('#ff6a2a', 9, .5); this.glow.position.y = 1; sc.add(this.glow);
+      for (let i = 0; i < 10; i++) { const a = i / 10 * 6.28; pm(i % 3 ? 'roca' : 'volcancito', sc, [Math.cos(a) * (R + 6), 0, Math.sin(a) * (R + 6)], i % 3 ? 1.1 : 2, a); }
+      racers(E, .5); const n = E.racers.length; E.racers.forEach((r, k) => { r.a = k / n * 6.28 + Math.PI / 2; r.out = false; r.score = 0; r.hold = 0; });
+      this.ball = fitP('bolafuego', 1.5); sc.add(this.ball); this.outN = 0; this.newBall(E);
+    },
+    alive(E) { return E.racers.filter(r => !r.out); },
+    newBall(E) { const al = this.alive(E); this.holder = pick(al.filter(r => !r.me).concat(al.length < 3 ? al : [])) || al[0]; this.fuse = rnd(5, 8.5) * (al.length > 3 ? 1 : .8); this.fly = 0; this.from = null; this.holder.hold = 0; },
+    pos(r) { return v3(Math.cos(r.a) * (r.out ? R + 3.2 : R), 0, Math.sin(r.a) * (r.out ? R + 3.2 : R)); },
+    pass(E, r, dir) { const al = E.racers.filter(x => !x.out); const i = al.indexOf(r); const to = al[(i + (dir > 0 ? 1 : al.length - 1)) % al.length]; this.from = r; this.holder = to; this.fly = .38; to.hold = 0; if (r.me) Audio.sfxPlay('throw'); },
+    update(E, dt) {
+      if (this.done) return;
+      this.fuse -= dt; const h = this.holder; this.fly = Math.max(0, this.fly - dt);
+      if (this.fly <= 0) { h.hold += dt;
+        if (h.me && !E.AUTO) { const s = E.side.concat(E.taps.map(x => x < innerWidth / 2 ? 'L' : 'R')); if (s.length && h.hold > .12) this.pass(E, h, s[0] === 'R' ? 1 : -1); }
+        else { const s0 = sk(E, h); if (h.wait == null) h.wait = rnd(.35, 1.1) * (1.3 - Math.min(1.2, s0)) + .15; if (h.hold > h.wait) { h.wait = null; this.pass(E, h, Math.random() < .5 ? 1 : -1); } } }
+      if (this.fuse <= 0) { const v = this.holder; v.out = true; v.score = this.outN++; v.expr = 'squash'; E.burst(this.pos(v).add(v3(0, 1, 0)), '#ffb030', 30, 8, .8, .8); E.shake = .4; Audio.sfxPlay('hit');
+        if (v.me) E.ui.toast('¡PUM! 💥 Te toca animar desde fuera', '#ffd0ec'); else say(E, v, '¡Uy, quema!');
+        const al = this.alive(E); if (al.length <= 1 || (E.me.out && al.length <= 2 && E.t > 20)) { let s = 100; for (const r of al) r.score = s--; for (const r of al) cheer(r, .8); this.done = true; scoreEnd(E, r => r.out ? `fuera (${r.score + 1}º en salir)` : '¡Campeón!'); return; }
+        this.newBall(E); if (al.includes(E.me)) E.ui.toast('¡Nueva bola! 🔥', '#ffe27a'); }
+      for (const r of E.racers) r.prog = clamp(this.outN / (E.racers.length - 1), 0, .99);
+      info(`🔥 Quedan ${this.alive(E).length}<br>${this.holder.me ? '<b>¡PÁSALA!</b>' : ''}`);
+    },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera); this.glow.material.opacity = .4 + Math.sin(t * 3) * .1;
+      for (const r of E.racers) { const p = this.pos(r); r.obj.position.set(p.x, r.out ? Math.abs(Math.sin(t * 6 + r.k)) * .4 : hopY(r, dt) + (r === this.holder && this.fly <= 0 ? Math.abs(Math.sin(t * 14)) * .12 : 0), p.z); r.obj.rotation.y = Math.atan2(-p.x, -p.z); squash(r, dt); }
+      const hp = this.pos(this.holder).add(v3(0, 1.5, 0)); let bp = hp; if (this.fly > 0 && this.from) { const k = 1 - this.fly / .38, fp = this.pos(this.from).add(v3(0, 1.5, 0)); bp = fp.lerp(hp, k); bp.y += Math.sin(k * Math.PI) * 1.6; }
+      this.ball.position.copy(bp); const hot = clamp(1 - this.fuse / 6, 0, 1); this.ball.scale.setScalar(this.ball.userData.s0 || (this.ball.userData.s0 = this.ball.scale.x)); this.ball.scale.multiplyScalar(1 + Math.sin(t * (6 + hot * 20)) * .08 * (1 + hot * 2)); this.ball.rotation.y = t * 4;
+      if (Math.random() < .3 + hot * .5) E.burst(bp.clone(), '#ffb030', 1, 1.5, .4, .4, 2);
+      const pr = port(); camTo(E, dt, v3(0, pr ? 15 : 9.5, pr ? 13 : 9.5), v3(0, 0, 0), pr ? 62 : 55, 3); },
   });
 }
