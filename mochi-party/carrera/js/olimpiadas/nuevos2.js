@@ -214,7 +214,7 @@ export function caliente(cfg) {
       this.ball = fitP('bolafuego', 1.5); sc.add(this.ball); this.outN = 0; this.newBall(E);
     },
     alive(E) { return E.racers.filter(r => !r.out); },
-    newBall(E) { const al = this.alive(E); this.holder = pick(al.filter(r => !r.me).concat(al.length < 3 ? al : [])) || al[0]; this.fuse = rnd(5, 8.5) * (al.length > 3 ? 1 : .8); this.fly = 0; this.from = null; this.holder.hold = 0; },
+    newBall(E) { const al = this.alive(E); this.holder = pick(al.filter(r => !r.me).concat(al.length < 3 ? al : [])) || al[0]; this.fuse = E.me.out ? rnd(1.6, 3) : rnd(5, 8.5) * (al.length > 3 ? 1 : .8); // si ya estás fuera, el resto va rápido this.fly = 0; this.from = null; this.holder.hold = 0; },
     pos(r) { return v3(Math.cos(r.a) * (r.out ? R + 3.2 : R), 0, Math.sin(r.a) * (r.out ? R + 3.2 : R)); },
     pass(E, r, dir) { const al = E.racers.filter(x => !x.out); const i = al.indexOf(r); const to = al[(i + (dir > 0 ? 1 : al.length - 1)) % al.length]; this.from = r; this.holder = to; this.fly = .38; to.hold = 0; if (r.me) Audio.sfxPlay('throw'); },
     update(E, dt) {
@@ -225,7 +225,7 @@ export function caliente(cfg) {
         else { const s0 = sk(E, h); if (h.wait == null) h.wait = rnd(.35, 1.1) * (1.3 - Math.min(1.2, s0)) + .15; if (h.hold > h.wait) { h.wait = null; this.pass(E, h, Math.random() < .5 ? 1 : -1); } } }
       if (this.fuse <= 0) { const v = this.holder; v.out = true; v.score = this.outN++; v.expr = 'squash'; E.burst(this.pos(v).add(v3(0, 1, 0)), '#ffb030', 30, 8, .8, .8); E.shake = .4; Audio.sfxPlay('hit');
         if (v.me) E.ui.toast('¡PUM! 💥 Te toca animar desde fuera', '#ffd0ec'); else say(E, v, '¡Uy, quema!');
-        const al = this.alive(E); if (al.length <= 1 || (E.me.out && al.length <= 2 && E.t > 20)) { let s = 100; for (const r of al) r.score = s--; for (const r of al) cheer(r, .8); this.done = true; scoreEnd(E, r => r.out ? `fuera (${r.score + 1}º en salir)` : '¡Campeón!'); return; }
+        const al = this.alive(E); if (al.length <= 1) { let s = 100; for (const r of al) r.score = s--; for (const r of al) cheer(r, .8); this.done = true; scoreEnd(E, r => r.out ? `fuera (${r.score + 1}º en salir)` : '¡Campeón!'); return; }
         this.newBall(E); if (al.includes(E.me)) E.ui.toast('¡Nueva bola! 🔥', '#ffe27a'); }
       for (const r of E.racers) r.prog = clamp(this.outN / (E.racers.length - 1), 0, .99);
       info(`🔥 Quedan ${this.alive(E).length}<br>${this.holder.me ? '<b>¡PÁSALA!</b>' : ''}`);
