@@ -114,7 +114,7 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos, cuenta };
+export const NUEVOS2 = { bumeran, topos, cuenta, acecho };
 
 // =====================================================================
 //  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
@@ -155,5 +155,45 @@ export function cuenta(cfg) {
       if (this.ph === 'show') for (const p of this.act) { p.m.position.set(p.cx, p.y + Math.sin(t * 3 + p.x0) * .3, p.z); p.m.rotation.set(0, Math.PI / 2, Math.sin(t * 8 + p.x0) * .15); }
       E.racers.forEach(r => { r.obj.position.set(r.bx, hopY(r, dt), 2); r.obj.rotation.y = Math.PI; squash(r, dt); });
       const pr = port(); camTo(E, dt, v3(0, pr ? 2.2 : 2.2, pr ? 13 : 8.5), v3(0, pr ? 4.4 : 3, -5), pr ? 70 : 60, 3); },
+  });
+}
+
+// =====================================================================
+//  ¡QUE NO TE VEA! — mantén pulsado para que tu caracol avance mientras el mono gigante mira
+//  hacia otro lado. Cuando se gira (¡ojos rojos!), suelta. Si te pilla moviéndote, retrocedes.
+// =====================================================================
+export function acecho(cfg) {
+  const L = cfg.L || 46, SP = 2.6, V = 5.2;
+  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 60,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 14, z1: -L - 20, half: 9 } }); setButtons('m', { M: cfg.btn || '🐌' });
+      const road = mesh(new THREE.PlaneGeometry(SP * 6 + 1, L + 8), T(cfg.road || '#a8d870', { rim: 0 }), sc, [0, .01, -L / 2], [-Math.PI / 2, 0, 0]);
+      for (let z = 0; z <= L; z += 6) for (const s of [-1, 1]) pm(pick(cfg.side || ['seta', 'hongo', 'arbol']), sc, [s * (SP * 3 + 1.8 + rnd(0, 2)), 0, -z], rnd(1.4, 2.6), rnd(0, 6));
+      const meta = mesh(new THREE.PlaneGeometry(SP * 6, 1.2), GL('#ffe27a', .5), sc, [0, .02, -L], [-Math.PI / 2, 0, 0]);
+      this.boss = new THREE.Group(); this.boss.position.set(0, 0, -L - 6); sc.add(this.boss); const b = fitP(cfg.boss || 'mono', 6); this.boss.add(b);
+      this.eyes = [-1, 1].map(s => { const e = glowSprite('#ff3a3a', 2.4, .95); e.position.set(s * 1.1, 4, 3.4); this.boss.add(e); return e; });
+      racers(E, .45); E.racers.forEach((r, k) => { r.x = lineX(k, SP); r.z = 0; r.mv = false; r.stun = 0; r.score = 0; r.done = false;
+        r.shell = fitP(cfg.ride || 'caracol', .9); r.shell.position.set(r.x, 0, 0); sc.add(r.shell); });
+      this.st = 'green'; this.tt = rnd(2.2, 3.4); this.rot = Math.PI; this.order = 0;
+    },
+    update(E, dt) {
+      this.tt -= dt; const look = this.st === 'red' && this.tt < this.redT - .2;
+      if (this.tt <= 0) { if (this.st === 'green') { this.st = 'warn'; this.tt = .7; } else if (this.st === 'warn') { this.st = 'red'; this.tt = this.redT = rnd(1.3, 2.1); if (!E.me.done) Audio.sfxPlay('tick'); } else { this.st = 'green'; this.tt = rnd(1.4, 3.4); } }
+      for (const r of E.racers) { if (r.done) continue;
+        if (r.stun > 0) { r.stun -= dt; r.mv = false; continue; }
+        if (r.me && !E.AUTO) r.mv = holding(E);
+        else { const s0 = sk(E, r); if (this.st === 'green') { r.rd = null; r.mv = true; } else { if (r.rd == null) r.rd = .15 + (1.25 - Math.min(1.2, s0)) * rnd(.2, .75); const since = this.st === 'warn' ? .7 - this.tt : .7 + (this.redT - this.tt); r.mv = since < r.rd; } }
+        if (r.mv) { r.z += V * dt; if (look) { r.z = Math.max(0, r.z - 6); r.stun = 1.1; E.burst(v3(r.x, 1, -r.z), '#ff9cc8', 12, 4, .5, .5); if (r.me) { Audio.sfxPlay('boing'); E.ui.toast('¡Te ha visto! 🙈 Atrás…', '#ffd0ec'); E.shake = .2; } else say(E, r, '¡Ups!'); } }
+        if (r.z >= L) { r.z = L; r.done = true; r.score = 1000 - this.order++; cheer(r, .8); if (r.me) { Audio.sfxPlay('fanfare'); E.ui.toast('¡Llegaste! 🏁', '#ffe27a'); } }
+        if (!r.done) r.score = r.z; r.prog = clamp(r.z / L, 0, .99); }
+      if (!this.done && (this.order >= 3 || E.me.done && this.order >= 1 && E.racers.filter(r => r.done).length >= 2 || E.t > this.maxT - .5)) { this.done = true; scoreEnd(E, r => r.done ? '¡Meta!' : `${r.z.toFixed(0)} m`); }
+      info(`${this.st === 'green' ? '🟢 ¡Avanza!' : this.st === 'warn' ? '🟡 ¡Se gira!' : '🔴 ¡Quieto!'}<br>${Math.max(0, L - E.me.z).toFixed(0)} m`);
+    },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      const tgt = this.st === 'green' ? Math.PI : 0; this.rot = lerp(this.rot, tgt, Math.min(1, dt * (this.st === 'warn' ? 3 : 8))); this.boss.rotation.y = this.rot + (this.st === 'warn' ? Math.sin(t * 30) * .05 : 0);
+      for (const e of this.eyes) e.visible = this.st === 'red';
+      for (const r of E.racers) { const w = r.mv ? Math.sin(t * 10 + r.k) * .06 : 0; r.shell.position.set(r.x, 0, -r.z); r.shell.rotation.y = Math.PI + w; r.shell.scale.y = r.shell.scale.x * (1 + (r.mv ? Math.sin(t * 12) * .06 : 0));
+        r.obj.position.set(r.x, .62 + hopY(r, dt) + (r.mv ? Math.abs(Math.sin(t * 10)) * .05 : 0), -r.z - .1); r.obj.rotation.y = Math.PI; squash(r, dt); r.obj.userData.pivot.rotation.z = r.stun > 0 ? Math.sin(t * 20) * .3 : 0; }
+      const me = E.me, pr = port(); camTo(E, dt, v3(me.x * .8, pr ? 6.5 : 4.5, -me.z + (pr ? 11 : 8)), v3(me.x * .6, 1.5, -me.z - 10), pr ? 70 : 58, 3); },
   });
 }
