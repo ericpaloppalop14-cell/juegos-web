@@ -58,3 +58,11 @@ Rehechas o nuevas: 19 de 40.
 - **esquiva** ×2: Piñas y Almohadas.
 
 ## Puntos de la revisión
+| Punto | Estado |
+|---|---|
+| Tirones de las nubes | Hecho: nubes opacas instanciadas (sesión anterior) + ahora acompañan a la cámara con parallax; los obstáculos (nubes, almohadas, vallas, aros) aparecen a 140 m dentro de la niebla en vez de a 80-90 m de golpe |
+| Control lateral Sueños (Equilibrio, prueba 4) y Almohadas | Hecho y probado con toques reales (CDP): ⬅ ➡ llegan, cambian de carril / inclinación; Equilibrio responde más (fuerza 3,6→4,4) |
+| Sin tristeza | Hecho en todas partes: olimpiadas, celebración común (core3d), podio de la tanda 4 (escena3d: los perdedores ahora aplauden) y choque en Anillos (cara aplastada, no triste) |
+| Una sola celebración por prueba | Hecho: solo la celebración del escenario + panel de clasificación (fiesta.js) |
+| Personajes no atraviesan el suelo | Hecho: decorado apoyado en el suelo; prueba de 40 pruebas: peor valor −0,020 (aplastado de aterrizaje, tolerancia −0,06), ninguno hundido |
+| Escenarios detallados | Parcial: decorado instanciado rico por mundo (sesión anterior); falta pulir por prueba (fase B) |
