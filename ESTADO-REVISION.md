@@ -5,7 +5,7 @@ Base: commit d356f81. «Rehecha» = la prueba usa una mecánica nueva (nuevos.js
 | Olimpiada | # | Prueba | Mecánica (tipo) | ¿Rehecha? |
 |---|---|---|---|---|
 | Espacio | 1 | Saltos Planetarios | planetas (base) | No (original tanda 3) |
-| Espacio | 2 | Lluvia de Meteoritos | superv/lluvia | No |
+| Espacio | 2 | Lluvia de Meteoritos | superv/lluvia | No (única «lluvia» que queda) |
 | Espacio | 3 | Golf Lunar | golf | Sí (nueva) |
 | Espacio | 4 | Cazaestrellas | recoge (hielo) | No |
 | Espacio | 5 | Karts en el Anillo | circuito | Sí (nueva) |
@@ -14,8 +14,8 @@ Base: commit d356f81. «Rehecha» = la prueba usa una mecánica nueva (nuevos.js
 | Desierto | 3 | Tirachinas de Cactus | tirachinas | Sí (nueva) |
 | Desierto | 4 | Sumo en la Duna | empuje | No |
 | Desierto | 5 | Baile del Oasis | ritmo | No |
-| Nieve | 1 | Trineo en el Circuito Helado | circuito (trineo) | Sí (antes esquiva) |
-| Nieve | 2 | Hielo que se Rompe | superv/baldosas | No |
+| Nieve | 1 | Salto de Esquí Pingüino | esqui (saltar en el borde + telemark) | Sí (fase B) |
+| Nieve | 2 | Hielo que se Rompe | superv/baldosas | No (única de baldosas que queda) |
 | Nieve | 3 | Saltos de Iglú | salto (doble) | No |
 | Nieve | 4 | Bolos de Nieve | bolos | Sí (nueva) |
 | Nieve | 5 | Hockey Hexagonal | hockey | Sí (nueva) |
@@ -23,39 +23,33 @@ Base: commit d356f81. «Rehecha» = la prueba usa una mecánica nueva (nuevos.js
 | Mar | 2 | Pesca Loca | pesca | Sí (nueva) |
 | Mar | 3 | Burbujas Voladoras | vuelo | No |
 | Mar | 4 | Memoria de Conchas | memoria | Sí (nueva) |
-| Mar | 5 | Concierto de Ballenas | ritmo | No |
-| Selva | 1 | Estampida de Piñas | esquiva | No |
-| Selva | 2 | Lluvia de Cocos | superv/lluvia | No |
+| Mar | 5 | Cuenta Peces | cuenta (contar y elegir número) | Sí (fase B) |
+| Selva | 1 | Lianas de la Selva | lianas (balanceo, soltarse a tiempo) | Sí (fase B) |
+| Selva | 2 | Bumerán de Plátano | bumeran (apuntar, lanzar y que vuelva) | Sí (fase B) |
 | Selva | 3 | Rebanar Fruta | rebanar | Sí (nueva) |
 | Selva | 4 | Torre de Tótems | torre | Sí (nueva) |
-| Selva | 5 | Caracoles Turbo | machaca | No |
+| Selva | 5 | ¡Que no te vea el Mono! | acecho (luz roja / luz verde) | Sí (fase B) |
 | Dulces | 1 | Vallas Serpiente | vallas (base) | Final añadido en tanda 4 |
 | Dulces | 2 | Vuelo de Anillos | anillos (base) | No |
 | Dulces | 3 | Pinta la Tarta | pinta | Sí (nueva) |
 | Dulces | 4 | Fútbol de Gominola | futbol | Sí (nueva) |
-| Dulces | 5 | Lluvia de Caramelos | recoge | No |
+| Dulces | 5 | ¿Cuál es Distinto? | distinto (búsqueda visual, tocar) | Sí (fase B) |
 | Sueños | 1 | Globo de los Sueños | globo | Sí (nueva) |
 | Sueños | 2 | Lluvia de Almohadas | esquiva (deriva) | No |
 | Sueños | 3 | Caza de Mariposas | mariposas | Sí (nueva) |
 | Sueños | 4 | Equilibrio sobre la Luna | equilibrio | Sí (nueva) |
-| Sueños | 5 | El Reloj Derretido | superv/barrido | No |
+| Sueños | 5 | Para el Reloj Derretido | parareloj (contar el tiempo a ciegas) | Sí (fase B) |
 | Volcán | 1 | Caída al Centro de la Tierra | caida (base) | Mejorada en tanda 4 |
-| Volcán | 2 | El Suelo es Lava | superv/baldosas | No |
+| Volcán | 2 | Topos de Lava | topos (aplastar en 3 agujeros) | Sí (fase B) |
 | Volcán | 3 | Chiles al Dragón | punteria | No |
-| Volcán | 4 | Sumo en el Cráter | empuje | No |
-| Volcán | 5 | Bolos de Lava | bolos | Sí (nueva) |
+| Volcán | 4 | Bola Caliente del Cráter | caliente (patata caliente) | Sí (fase B) |
+| Volcán | 5 | Moldes de Lava | moldes (verter y parar en la raya) | Sí (fase B) |
 
-Rehechas o nuevas: 19 de 40.
+Rehechas o nuevas: 28 de 40 (19 en fase A + 10 en fase B; Bolos de Lava ya contaba).
 
-## Mecánicas que siguen repetidas (para la fase B)
-- **superv** ×5: Meteoritos y Cocos (lluvia, casi idénticas), Hielo y Suelo es Lava (baldosas, casi idénticas), Reloj (barrido, distinta en la práctica).
-- **ritmo** ×2: Oasis y Ballenas.
-- **machaca** ×2: Camellos y Caracoles.
-- **empuje** ×2: Duna y Cráter (casi idénticas).
-- **circuito** ×2: Karts y Trineo (el trineo resbala).
-- **bolos** ×2: Nieve y Lava.
-- **recoge** ×2: Cazaestrellas y Caramelos.
-- **esquiva** ×2: Piñas y Almohadas.
+## Mecánicas repetidas
+Tras la fase B, cada mecánica aparece **una sola vez**, salvo **superv**: Meteoritos (lluvia) y Hielo que se Rompe (baldosas) comparten el marco de «supervivencia en arena», aunque se juegan distinto.
+Nuevas en la fase B (nuevos2.js): bumeran, topos, cuenta, acecho, caliente, esqui, moldes, distinto, lianas y parareloj.
 
 ## Puntos de la revisión
 | Punto | Estado |

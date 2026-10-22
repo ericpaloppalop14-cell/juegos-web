@@ -50,7 +50,7 @@ export function bumeran(cfg) {
       const t = E.t;
       for (const r of E.racers) {
         if (r.st === 'aim') { r.aim = Math.sin(t * 1.9 + r.ph) * .72;
-          let go; if (r.me && !E.AUTO) go = tapped(E); else { const s0 = sk(E, r); const free = r.tg.filter(x => !x.hit); if (r.err == null) r.err = rnd(-1, 1) * (1.2 - Math.min(1.1, s0)) * .45; const tgt = free.length ? free[(r.thr + r.k) % free.length].a : 0; go = Math.abs(r.aim - tgt - r.err) < .05 || r.wt > 4; r.wt = (r.wt || 0) + dt; if (go) { r.err = null; r.wt = 0; } }
+          let go; if (r.me && !E.AUTO) go = tapped(E); else { const s0 = sk(E, r); const free = r.tg.filter(x => !x.hit); if (r.err == null) r.err = rnd(-1, 1) * (1.25 - Math.min(1.1, s0)) * .6; const tgt = free.length ? free[(r.thr + r.k) % free.length].a : 0; go = Math.abs(r.aim - tgt - r.err) < .05 || r.wt > 4; r.wt = (r.wt || 0) + dt; if (go) { r.err = null; r.wt = 0; } }
           if (go) { r.st = 'fly'; r.ft = 0; r.fa = r.aim; r.got = 0; r.bm.visible = true; if (r.me) Audio.sfxPlay('throw'); } }
         else if (r.st === 'fly') { const u0 = r.ft / FT; r.ft += dt; const u = r.ft / FT;
           if (u0 < .5 && u >= .5) { for (const g of r.tg) if (!g.hit && Math.abs(g.a - r.fa) < .15) { g.hit = true; r.got++; r.score++; this.fall.push({ m: g.m, vy: 2, vx: Math.sin(r.fa) * 2 }); E.burst(g.m.position.clone(), '#ffe27a', 12, 4, .5, .5); }
