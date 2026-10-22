@@ -4,9 +4,9 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m15';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o14';
-import { mergedGeo, instSet } from './decor.js?v=o14';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o14';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o15';
+import { mergedGeo, instSet } from './decor.js?v=o15';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o15';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -351,7 +351,7 @@ export function hockey(cfg) {
       for (const r of E.racers) { const sd = r.side; sd.wall.position.y = sd.alive ? -.6 : lerp(sd.wall.position.y, .4, Math.min(1, dt * 4)); sd.goal.visible = sd.alive;
         if (r.out) { r.obj.position.set(sd.nx * (AP + 1.6), Math.abs(Math.sin(t * 5 + r.k)) * .2, sd.nz * (AP + 1.6)); } else r.obj.position.set(r.x, 0, r.z);
         r.obj.rotation.y = Math.atan2(-sd.nx, -sd.nz); r.obj.userData.pivot.rotation.z = -r.uv * .03; }
-      const pr = port(); camTo(E, dt, v3(0, pr ? 25 : 15, pr ? 14 : 15), v3(0, 0, pr ? 1.5 : 1), pr ? 62 : 55, 3);
+      const pr = port(); camTo(E, dt, v3(0, pr ? 26 : 19, pr ? 15 : 16.5), v3(0, 0, pr ? 2.2 : 2.6), pr ? 62 : 56, 3);
     },
   });
 }

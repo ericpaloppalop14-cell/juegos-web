@@ -4,7 +4,7 @@
 //  InstancedMesh: cientos de piezas animadas con muy poco coste en el móvil.
 // ======================================================================
 import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m15';
-import { prop } from './mundos.js?v=o14';
+import { prop } from './mundos.js?v=o15';
 
 const merged = {};
 // funde un objeto (grupo de mallas) en una geometría con color por vértice; sin contornos ni sprites
