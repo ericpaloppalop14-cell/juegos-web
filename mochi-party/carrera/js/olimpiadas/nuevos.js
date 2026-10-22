@@ -4,10 +4,10 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m17';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o24';
-import { espacioReal, asfaltoTex } from './espacio-real.js?v=o24';
-import { mergedGeo, instSet } from './decor.js?v=o24';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o24';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o25';
+import { espacioReal, asfaltoTex } from './espacio-real.js?v=o25';
+import { mergedGeo, instSet } from './decor.js?v=o25';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o25';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -613,6 +613,8 @@ export function torre(cfg) {
       racers(E, .45); E.racers.forEach((r, k) => { r.tx = (k - 2.5) * SP; const ped = mesh(new THREE.CylinderGeometry(2.2, 2.5, .5, 24), T('#a8784a'), sc, [r.tx, -.25, -2]); outline(ped, '#5a3a2a', 1.03);
         r.stack = [{ x: r.tx, z: -2, sx: 2.4, sz: 2.4, y: 0 }]; r.score = 0; r.st = 'move'; r.tt = 0; r.cur = this.newBlock(E, r); r.combo = 0; r.hop = 0; r.dy = 0; });
     },
+    // gana el tótem MÁS ALTO (altura máxima alcanzada), no el último que queda en pie
+    timeUp(E) { if (this.done) return; this.done = true; for (const r of E.racers) if (r.cur) { E.scene.remove(r.cur.m); r.cur = null; } scoreEnd(E, r => r.score + (r.score === 1 ? ' piso' : ' pisos')); },
     col(n) { return new THREE.Color().setHSL((n * .09 + .02) % 1, .75, .62); },
     newBlock(E, r) { const top = r.stack[r.stack.length - 1], n = r.stack.length, ax = n % 2 ? 'x' : 'z'; const m = new THREE.Mesh(this.bg, T('#' + this.col(n).getHexString(), { rim: .35 })); outline(m, '#3a2050', 1.03); E.scene.add(m);
       const eyes = new THREE.Group(); m.add(eyes); for (const s of [-1, 1]) mesh(SPHL(), new THREE.MeshBasicMaterial({ color: '#2a1838' }), eyes, [s * .18, .05, .51], null, [.06, .1, .03]); mesh(new THREE.TorusGeometry(.07, .02, 6, 10, Math.PI), new THREE.MeshBasicMaterial({ color: '#2a1838' }), eyes, [0, -.12, .51], [0, 0, Math.PI]);
@@ -632,8 +634,8 @@ export function torre(cfg) {
         let go; if (r.me && !E.AUTO) go = tapped(E); else { const s0 = sk(E, r); if (r.err == null) r.err = rnd(-1, 1) * (1.15 - s0) * (.25 + r.score * .02); go = r.tt > .6 && Math.abs(o - r.err) < .09; if (go) r.err = null; }
         if (go) this.drop(E, r); r.prog = clamp(r.score / 30, 0, .99); }
       for (let i = this.falling.length - 1; i >= 0; i--) { const f = this.falling[i]; f.vy -= 14 * dt; f.y += f.vy * dt; f.m.position.set(f.x, f.y, f.z); f.m.rotation.x += f.rx * dt; if (f.y < -6) { E.scene.remove(f.m); this.falling.splice(i, 1); } }
-      if (!this.done && (E.racers.every(r => r.st === 'done') || E.t > this.maxT - .5)) { this.done = true; for (const r of E.racers) if (r.cur) { E.scene.remove(r.cur.m); r.cur = null; } scoreEnd(E, r => r.score + ' pisos'); }
-      board(E, r => r.score + ' pisos');
+      if (!this.done && (E.racers.every(r => r.st === 'done') || E.t > this.maxT - .5)) this.timeUp(E);
+      info('🗿 <b>Gana el más alto</b><br>' + E.racers.slice().sort((a, b) => b.score - a.score).map(r => `${r.me ? '<u>Tú</u>' : r.ch.name}: ${r.score} ${r.score === 1 ? 'piso' : 'pisos'}${r.st === 'done' ? ' 💥' : ''}`).join('<br>'));
     },
     render(E, dt) { const t = E.t; this.W.tick(dt, camera);
       for (const r of E.racers) { if (r.cur) { const c = r.cur; c.m.position.set(c.x, c.y - H / 2, c.z); c.m.scale.set(c.sx, H, c.sz); }

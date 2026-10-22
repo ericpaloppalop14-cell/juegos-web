@@ -3,7 +3,7 @@
 //  partículas y luz. Todo fuera de la zona de juego, apoyado en el suelo o en el aire. Barato: instanciado + Points.
 // ======================================================================
 import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m17';
-import { instSet } from './decor.js?v=o24';
+import { instSet } from './decor.js?v=o25';
 
 const lo = () => innerWidth * innerHeight < 500000;
 // punto aleatorio fuera de la zona de juego

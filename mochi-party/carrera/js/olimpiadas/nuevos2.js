@@ -4,10 +4,10 @@
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m17';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o24';
-import { mergedGeo } from './decor.js?v=o24';
-import { jungle } from './selva-lianas.js?v=o24';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o24';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o25';
+import { mergedGeo } from './decor.js?v=o25';
+import { jungle } from './selva-lianas.js?v=o25';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o25';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
