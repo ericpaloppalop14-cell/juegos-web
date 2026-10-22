@@ -3,10 +3,10 @@
 //  circuito (karts / trineo) · golf · laberinto · tirachinas · bolos · hockey · pesca · memoria ·
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m10';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o7';
-import { mergedGeo, instSet } from './decor.js?v=o7';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o7';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m12';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o8';
+import { mergedGeo, instSet } from './decor.js?v=o8';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o8';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -98,7 +98,7 @@ export function circuito(cfg) {
 export function golf(cfg) {
   const R = 15, K = .9, VMAX = 27;
   const HOLES = [{ tee: [0, 11], hole: [0, -10], bump: [[0, 0, 1.6], [-4, -5, 1], [4, -5, 1]] }, { tee: [-10, 8], hole: [9, -6], bump: [[0, 1, 1.4], [4, 4, 1], [-3, -5, 1.2]] }, { tee: [9, 10], hole: [-8, -9], bump: [[0, 0, 1], [3, -3, 1], [-3, 3, 1], [-5, -3, 1]] }];
-  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 150,
+  return base(cfg, { mode: 'puntos', timeUp(E) { if (!this.done) { this.done = true; scoreEnd(E, r => r.strokes + ' golpes'); } }, maxT: cfg.maxT || 150,
     init(E) {
       const sc = E.scene; this.A = arena(E, cfg, R, cfg.green || '#8a7ad8'); setButtons('m', { M: '⛳' });
       this.flag = new THREE.Group(); sc.add(this.flag); mesh(new THREE.CircleGeometry(.55, 24), new THREE.MeshBasicMaterial({ color: '#1a0a2a' }), this.flag, [0, .04, 0], [-Math.PI / 2, 0, 0]); mesh(CYL(), T('#ffffff'), this.flag, [0, 1.6, 0], null, [.05, 3.2, .05]); mesh(new THREE.PlaneGeometry(1.2, .8), T('#ff6fae', { side: THREE.DoubleSide }), this.flag, [.6, 2.8, 0]); const gs = glowSprite('#ffe27a', 3, .5); gs.position.set(0, 3.2, 0); this.flag.add(gs);
@@ -107,7 +107,7 @@ export function golf(cfg) {
       racers(E, .5); E.racers.forEach(r => { r.ball = mesh(SPH(), T(r.ch.color, { rim: .6 }), sc, null, null, .28); outline(r.ball, '#3a2050', 1.12); r.strokes = 0; r.score = 0; });
       this.setHole(E, 0);
     },
-    setHole(E, h) {
+    setHole(E, h) { this.inT = null;
       this.hole = h; const H = HOLES[h]; this.flag.position.set(H.hole[0], 0, H.hole[1]);
       for (const b of this.bumps) E.scene.remove(b.m); this.bumps = H.bump.map(([x, z, s]) => { const m = prop('meteoro'); m.position.set(x, s * .8, z); m.scale.setScalar(s); E.scene.add(m); return { x, z, r: s * .95, m }; });
       E.racers.forEach((r, k) => { r.bx = H.tee[0] + (k - 2.5) * .7; r.bz = H.tee[1]; r.bvx = r.bvz = 0; r.st = 'aim'; r.hs = 0; r.ph = rnd(0, 6); r.wait = rnd(.4, 1.2); r.cx = r.bx; r.cz = r.bz + .8; r.sink = 0; r.ang = null; });
@@ -135,6 +135,7 @@ export function golf(cfg) {
         } else if (r.st === 'in') r.sink += dt;
         r.score = -r.strokes; r.prog = clamp((this.hole + (r.st === 'in' ? 1 : .5 * (1 - Math.min(1, d / 20)))) / 3, 0, .99);
       }
+      if (this.inT == null && E.racers.some(r => r.st === 'in')) this.inT = E.t; if (this.inT != null && E.t - this.inT > 15) for (const r of E.racers) if (r.st !== 'in') { r.st = 'in'; r.sink = 0; r.strokes += 2; if (r.me) E.ui.toast('⏱️ ¡Tiempo! +2 golpes'); }
       if (E.racers.every(r => r.st === 'in') && (this.next += dt) > 1.4) { if (this.hole < 2) this.setHole(E, this.hole + 1); else if (!this.done) { this.done = true; scoreEnd(E, r => r.strokes + ' golpes'); } }
       info(`⛳ Hoyo ${this.hole + 1}/3 · ${E.me.strokes} golpes<br><small>${E.me.st === 'aim' ? 'Toca: dirección' : E.me.st === 'pow' ? 'Toca: ¡fuerza!' : ''}</small>`);
     },
@@ -267,7 +268,7 @@ export function tirachinas(cfg) {
 // =====================================================================
 export function bolos(cfg) {
   const SP = 4.2, LEN = 18, ROUNDS = 5;
-  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 80,
+  return base(cfg, { mode: 'puntos', doneSt: 'done', maxT: cfg.maxT || 80,
     init(E) {
       const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 10, z1: -30, half: 14 } }); setButtons('m', { M: cfg.btn || '🎳' });
       const lanes = new THREE.Group(); sc.add(lanes);
@@ -499,7 +500,7 @@ export function rebanar(cfg) {
 // =====================================================================
 export function torre(cfg) {
   const SP = 6.5, H = .55, AMP = 3.4;
-  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 60,
+  return base(cfg, { mode: 'puntos', doneSt: 'done', maxT: cfg.maxT || 60,
     init(E) {
       const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -40, half: 20 } }); setButtons('m', { M: '🗿' });
       this.bg = new THREE.BoxGeometry(1, 1, 1); this.falling = [];

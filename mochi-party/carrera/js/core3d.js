@@ -118,9 +118,9 @@ function celebrate(E, res, cb) {
   const win = byId(res[0].id) || racers[0], me = E.me, nm = r => r.me ? 'Tú' : (r.name || r.ch.name);
   E.celeb = { t: 0, win, me, cb, dur: win === me ? 3.4 : 4.6, done: false, fw: 0 };
   for (const r of racers) { r.expr = r === win ? 'happy' : ''; r.stun = 0; }
-  ['ctl', 'hint', 'say', 'banner', 'toast', 'perf', 'hTop', 'hBoard', 'exitB'].forEach(id => { const e = $(id); if (e) e.style.visibility = 'hidden'; });
+  ['ctl', 'hint', 'say', 'banner', 'toast', 'perf', 'hTop', 'hBoard', 'exitB', 'limite'].forEach(id => { const e = $(id); if (e) e.style.visibility = 'hidden'; });
   const o = celebOverlay(); const mePos = res.findIndex(x => x.id === me.id) + 1;
-  o.innerHTML = `<div class="cT${win === me ? '' : ' lose'}">${win === me ? '🏆 ¡HAS GANADO! 🎉' : `🏆 ¡Gana ${nm(win)}!`}</div><div class="cRow">${res.map((x, i) => { const r = byId(x.id); return r ? `<div class="${i === 0 ? 'w' : ''} ${r.me ? 'me' : ''}" style="animation-delay:${.25 + i * .12}s">${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'} ${nm(r)}${i === 0 ? ' 😄' : ' 😢'}</div>` : ''; }).join('')}</div>`;
+  o.innerHTML = `<div class="cT${win === me ? '' : ' lose'}">${win === me ? '🏆 ¡HAS GANADO! 🎉' : `🏆 ¡Gana ${nm(win)}!`}</div><div class="cRow">${res.map((x, i) => { const r = byId(x.id); return r ? `<div class="${i === 0 ? 'w' : ''} ${r.me ? 'me' : ''}" style="animation-delay:${.25 + i * .12}s">${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'} ${nm(r)}${i === 0 ? ' 😄' : ''}</div>` : ''; }).join('')}</div>`;
   requestAnimationFrame(() => o.classList.add('on'));
   if (win === me) { Audio.sfxPlay('cheer'); } else { Audio.sfxPlay('pop'); setTimeout(() => Audio.sfxPlay('cheer'), 300); }
   if (mePos > 1) setTimeout(() => { if (E.celeb && !E.stopped) o.querySelector('.cT').textContent = mePos ? `¡Has quedado ${mePos}º! 👏` : '¡Bien jugado! 👏'; }, 2300);
@@ -152,6 +152,38 @@ function celebFrame(E, dt) {
   { const df = C.cam.distanceTo(_wp); for (const r of E.racers) { if (r.tag) r.tag.visible = false; if (r !== focus) { r.obj.getWorldPosition(_cp); if (C.cam.distanceTo(_cp) < df - .3) r.obj.visible = false; } } }
   camera.up.copy(U); camera.fov = lerp(camera.fov, 55, Math.min(1, dt * 4)); camera.updateProjectionMatrix(); camera.lookAt(_wp.clone().addScaledVector(U, .9 * s));
   if (t >= C.dur && !C.done) { C.done = true; const o = $('celeb'); if (o) o.classList.remove('on'); C.cb && C.cb(); }
+}
+
+// ---------------- LÍMITE DE TIEMPO (todas las pruebas) ----------------
+// Cuando el primero acaba, los demás tienen una ventana: carreras = 35 % del tiempo del ganador (mín. 8 s, máx. 15 s);
+// pruebas por puntos con final individual = 10 s. Red de seguridad: maxT de la prueba + 5 s (nunca infinita).
+const doneOf = (EV, r) => !!(r.fin || r.done === true || (EV.doneSt && r.st === EV.doneSt));
+function winDur(EV, t) { if (EV.limite) return EV.limite; if (EV.mode === 'puntos') return 10; return clamp(Math.round(t * .35), 8, 15); }
+function limiteEl() {
+  let d = $('limite'); if (d) return d;
+  const st = document.createElement('style'); st.textContent = `#limite{position:absolute;left:50%;top:calc(64px + env(safe-area-inset-top));transform:translateX(-50%) scale(.6);opacity:0;pointer-events:none;z-index:7;font:700 30px Fredoka,sans-serif;color:#fff;-webkit-text-stroke:2px #9b5fd0;text-shadow:0 4px 0 #9b5fd0,0 0 18px rgba(200,150,255,.9);white-space:nowrap;transition:opacity .3s,transform .35s cubic-bezier(.3,1.6,.5,1)}
+#limite.on{opacity:1;transform:translateX(-50%) scale(1)}
+#limite.urg{color:#ffe27a;-webkit-text-stroke-color:#e0405f;text-shadow:0 4px 0 #e0405f,0 0 22px rgba(255,90,120,.9);animation:limP .5s ease-in-out infinite}
+@keyframes limP{50%{transform:translateX(-50%) scale(1.15)}}`; document.head.appendChild(st);
+  d = document.createElement('div'); d.id = 'limite'; ($('hud') || document.body).appendChild(d); return d;
+}
+function limiteTick(E, EV, racers, online) {
+  if (E.winT == null && racers.some(r => doneOf(EV, r))) { E.winT = E.t; E.winDur = winDur(EV, E.t); }
+  if (E.winT == null) return false;
+  let endT = E.winT + E.winDur; if (!online && E.meDone != null) endT = Math.min(endT, Math.max(E.meDone + 8, E.winT + 8));
+  const left = Math.max(0, endT - E.t), n = Math.ceil(left), d = limiteEl();
+  if (n !== E.limN && racers.some(r => !doneOf(EV, r))) { E.limN = n; d.textContent = n > 0 ? `⏱️ ¡Quedan ${n} s!` : '⏱️ ¡Tiempo!'; d.classList.add('on'); d.classList.toggle('urg', n <= 3); if (n <= 3) Audio.sfxPlay(n > 0 ? 'tick' : 'beep'); }
+  return left <= 0;
+}
+function limiteOff() { const d = $('limite'); if (d) d.classList.remove('on', 'urg'); }
+// cierre forzado: los que no acabaron quedan detrás de los que sí, ordenados por su progreso / puntos
+function forceEnd(E, EV, racers) {
+  if (EV.timeUp) { try { EV.timeUp(E); } catch (e) {} }
+  const un = racers.filter(r => !r.fin); if (!un.length) return;
+  if (racers.some(r => typeof r.score === 'number')) {
+    un.sort((a, b) => (doneOf(EV, b) - doneOf(EV, a)) || ((b.score || 0) - (a.score || 0)) || (b.prog - a.prog));
+    un.forEach((r, i) => { if (r.label == null && EV.mode === 'puntos') r.label = r.score + ' pts'; r.prog = Math.max(r.prog || 0, .999); E.finish(r); r.time = E.t + 1 + i * .01; });
+  } else for (const r of un) { if (r.label == null) r.label = `${Math.round((r.prog || 0) * 100)} % · sin acabar`; }
 }
 // opts (modo online): { racers:[{id,ch,name,human,me,skill}], seed, net:{isHost, send(d)}, onEnd(order), wait:true }
 function run(EV, opts = {}) {
@@ -224,10 +256,12 @@ function run(EV, opts = {}) {
       EV.update(E, dt); E.t += dt;
       if (ON) {
         if (++nstep % 4 === 0) { const mine = racers.filter(r => !r.remote); if (mine.length) opts.net.send({ t: 'st', s: mine.map(snap) }); }
+        const limUp = limiteTick(E, EV, racers, true);
         if (opts.net.isHost) { const hum = racers.filter(r => r.human && !r.left); const allHum = hum.every(r => r.fin); if (E.allHumAt == null && allHum) E.allHumAt = E.t;
-          if ((E.allHumAt != null && E.t - E.allHumAt > 2.6) || E.fins.length === racers.length || E.t > EV.maxT) { E.phase = 'done'; end(); } }
+          if ((E.allHumAt != null && E.t - E.allHumAt > 2.6) || E.fins.length === racers.length || limUp || E.t > EV.maxT + 5) { limiteOff(); E.phase = 'done'; end(); } }
         else if (E.t > EV.maxT + 8) { E.phase = 'watch'; }
-      } else if ((E.meDone != null && E.t - E.meDone > 1.6) || E.fins.length === racers.length || E.t > EV.maxT) { const res = order(); E.phase = 'celebra'; celebrate(E, res, () => { E.phase = 'done'; end(); }); }
+      } else { const limUp = limiteTick(E, EV, racers, false);
+        if (E.fins.length === racers.length || limUp || E.t > EV.maxT + 5) { if (E.fins.length < racers.length) forceEnd(E, EV, racers); limiteOff(); const res = order(); E.phase = 'celebra'; celebrate(E, res, () => { E.phase = 'done'; end(); }); } }
     }
   }
   function hud(dt) {

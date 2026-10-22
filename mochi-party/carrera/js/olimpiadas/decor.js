@@ -3,8 +3,8 @@
 //  Cada objeto del decorado se funde en una sola geometría con colores por vértice y se pinta con
 //  InstancedMesh: cientos de piezas animadas con muy poco coste en el móvil.
 // ======================================================================
-import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m10';
-import { prop } from './mundos.js?v=o7';
+import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m12';
+import { prop } from './mundos.js?v=o8';
 
 const merged = {};
 // funde un objeto (grupo de mallas) en una geometría con color por vértice; sin contornos ni sprites
