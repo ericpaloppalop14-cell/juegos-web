@@ -57,7 +57,7 @@ export const OLIMPIADAS = [
     { id: 'sueloLava', tipo: 'topos', mole: 'dragon', name: 'Topos de Lava', icon: '🔨', desc: 'Dragoncitos traviesos asoman por los agujeros de lava. ¡Aplástalos con tu martillo blandito! Los dorados valen 3.', how: 'Toca ⬅ ● ➡ (o el tercio de la pantalla) del agujero por el que asoma el dragoncito.' },
     { id: 'dragon', tipo: 'punteria', proj: 'chile', target: 'dragon', mouth: true, ts: .8, dy: 1.1, name: 'Chiles al Dragón', icon: '🐉', desc: 'Lanza chiles a la boca del dragón. Si la tiene abierta, ¡puntos dobles!', how: 'Toca en la zona verde. Si el dragón abre la boca, ¡x2!' },
     { id: 'crater', tipo: 'caliente', floor: '#6a4a5a', name: 'Bola Caliente del Cráter', icon: '🔥', desc: 'Una bola de fuego pasa de mano en mano alrededor del cráter. ¡Quítatela de encima antes de que explote! El último en el corro gana.', how: 'Cuando tengas la bola, toca ⬅ o ➡ para pasársela al de tu lado. ¡Rápido!' },
-    { id: 'bolosLava', tipo: 'bolos', pin: 'huevo', ps: .28, ballProp: 'bolafuego', gutter: '#ff6a2a', lane: '#5a3848', lane2: '#6a4a5a', back: '#2a1820', btn: '🔥', name: 'Bolos de Lava', icon: '🔥', desc: 'Bolos con una bola de fuego contra huevos de dragón, entre canales de lava.', how: 'Toca para lanzar cuando la bola esté en el centro. ⬅ ➡ le dan efecto mientras rueda.' },
+    { id: 'bolosLava', tipo: 'moldes', name: 'Moldes de Lava', icon: '🫗', desc: 'Llena moldes con lava del volcán y para justo en la raya dorada. ¡Cuidado, que gotea un poco al soltar! Si rebosa, no puntúa.', how: 'Mantén pulsado 🌋 (o la pantalla) para verter y suelta un pelín antes de la raya dorada.' },
   ] },
 ];
 export const PTS = [10, 7, 5, 3, 2, 1];

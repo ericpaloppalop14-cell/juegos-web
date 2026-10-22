@@ -114,7 +114,7 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui };
+export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui, moldes };
 
 // =====================================================================
 //  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
@@ -285,5 +285,52 @@ export function esqui(cfg) {
       for (const r of E.racers) { const [y, z] = this.rpos(r); r.obj.position.set(r.x, Math.max(0, y) + hopY(r, dt), z); r.obj.rotation.y = Math.PI; squash(r, dt);
         r.obj.userData.pivot.rotation.x = r.st === 'slide' ? .45 : r.st === 'fly' ? -.25 + (r.tf / r.FT) * .2 : 0; if (r.st === 'slide' && Math.random() < .4) E.burst(r.obj.position.clone(), '#ffffff', 1, 1.5, .3, .3, 0); }
       const me = E.me, [y, z] = this.rpos(me), pr = port(); camTo(E, dt, v3(me.x + .8, Math.max(2, y) + (pr ? 3.6 : 2.8), z + (pr ? 8.5 : 6.5)), v3(me.x, Math.max(0, y) * .6, z - 10), pr ? 72 : 58, 7); },
+  });
+}
+
+// =====================================================================
+//  MOLDES DE LAVA — mantén pulsado para verter lava en el molde y suelta justo en la raya
+//  dorada. Ojo: la lava sigue goteando un poquito al soltar. Si rebosa, 0 puntos. 5 moldes.
+// =====================================================================
+export function moldes(cfg) {
+  const SP = 3.6, NR = 5, H = 2.6, DRIP = .05;
+  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 60,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -40, half: 14 } }); setButtons('m', { M: cfg.btn || '🌋' });
+      const glass = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide }), lava = GL(cfg.lavaC || '#ff7a2a', .9);
+      mesh(new THREE.BoxGeometry(SP * 6 + 2, .8, 2.2), T('#9a6a7a'), sc, [0, .4, -2]);
+      racers(E, .42); E.racers.forEach((r, k) => { r.x = lineX(k, SP); r.score = 0;
+        const g = new THREE.Group(); g.position.set(r.x, .8, -2); sc.add(g); r.cup = g;
+        mesh(new THREE.CylinderGeometry(.85, .7, H, 24, 1, true), glass, g, [0, H / 2, 0]); const bot = mesh(new THREE.CylinderGeometry(.72, .72, .1, 24), T('#c8b0a0'), g, [0, .05, 0]);
+        r.fill = mesh(new THREE.CylinderGeometry(.78, .68, 1, 24), lava, g, [0, 0, 0]); r.fill.scale.y = .001;
+        r.line = mesh(new THREE.TorusGeometry(.86, .06, 8, 28), GL('#ffe27a', .9), g, [0, 1, 0], [Math.PI / 2, 0, 0]);
+        r.spout = pm('volcancito', g, [0, H + .9, -.2], 1.1); r.stream = mesh(CYL(), lava, g, [0, H / 2 + .5, 0], null, [.1, H, .1]); r.stream.visible = false; });
+      pm('dragon', sc, [SP * 3 + 2.5, 0, -6], 3.5, -.6); pm('huevo', sc, [-SP * 3 - 2, 0, -4], 1.4); pm('huevo', sc, [-SP * 3 - 3, 0, -5.5], 1.1);
+      this.round = 0; this.start(E);
+    },
+    start(E) { this.rt = 0; for (const r of E.racers) { r.lv = 0; r.st = 'ready'; r.tgt = rnd(.45, .85); r.drip = 0; r.err = null; r.line.position.y = r.tgt * H; } },
+    update(E, dt) {
+      this.rt += dt; const sp = .3 + this.round * .05;
+      for (const r of E.racers) { const auto = !(r.me && !E.AUTO), s0 = sk(E, r);
+        if (r.st === 'ready' && this.rt > .8) r.st = 'wait';
+        if (r.st === 'wait' || r.st === 'pour') { let on;
+          if (auto) { if (r.err == null) r.err = rnd(-1, 1) * (1.2 - Math.min(1.1, s0)) * .09; on = r.lv < r.tgt - DRIP + r.err; if (r.st === 'wait' && this.rt < 1 + r.k * .15) on = false; }
+          else on = holding(E);
+          if (on) { r.st = 'pour'; r.lv += sp * dt; } else if (r.st === 'pour') { r.st = 'drip'; r.drip = DRIP; }
+          if (r.st === 'wait' && this.rt > 7) { r.st = 'drip'; r.drip = 0; } }
+        else if (r.st === 'drip') { const d = Math.min(r.drip, dt * .2); r.lv += d; r.drip -= d; if (r.drip <= 1e-4) { r.st = 'done'; const diff = Math.abs(r.lv - r.tgt), over = r.lv > 1;
+            const pts = over ? 0 : r.lv === 0 ? 0 : diff < .025 ? 10 : diff < .06 ? 6 : diff < .12 ? 3 : 1; r.score += pts; r.lastP = pts;
+            if (pts >= 6) cheer(r); if (r.me) { Audio.sfxPlay(pts >= 10 ? 'stars' : pts ? 'land' : 'boing'); E.ui.toast(over ? '¡Rebosa! 0 pts' : pts >= 10 ? '¡CLAVADO! +10 ✨' : `+${pts} pts`, pts >= 10 ? '#ffe27a' : '#ffd0ec'); } } }
+        if (r.lv > 1.12) r.lv = 1.12;
+        r.prog = clamp((this.round + (r.st === 'done' ? 1 : 0)) / NR, 0, .99); }
+      if (E.racers.every(r => r.st === 'done') && (this.dt2 = (this.dt2 || 0) + dt) > 1.4) { this.dt2 = 0; this.round++; if (this.round >= NR) { if (!this.done) { this.done = true; scoreEnd(E, r => r.score + ' pts'); } } else this.start(E); }
+      board(E, r => r.score + ' pts'); info(`🌋 Molde ${Math.min(NR, this.round + 1)}/${NR}<br>${E.me.score} pts`);
+    },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      for (const r of E.racers) { const lv = Math.min(1.05, r.lv); r.fill.scale.y = Math.max(.001, lv * H); r.fill.position.y = lv * H / 2; r.stream.visible = r.st === 'pour' || r.st === 'drip';
+        if (r.lv > 1 && Math.random() < .3) E.burst(r.cup.position.clone().add(v3(0, H, 0)), '#ff7a2a', 2, 2, .4, .3, -6);
+        r.line.material.emissiveIntensity = .6 + Math.sin(t * 6) * .3;
+        r.obj.position.set(r.x - 1.2, .8 + hopY(r, dt), -1); r.obj.rotation.y = Math.PI * .8; squash(r, dt); }
+      const me = E.me, pr = port(); camTo(E, dt, v3(me.x, pr ? 5.2 : 3.6, pr ? 8 : 5.5), v3(me.x, pr ? 1.2 : 1.6, -2), pr ? 64 : 52, 3); },
   });
 }
