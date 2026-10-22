@@ -114,7 +114,7 @@ export function topos(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx, pr ? 7.5 : 5.2, pr ? 7 : 5.2), v3(me.bx, 0, -2.8), pr ? 66 : 56, 3); },
   });
 }
-export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente };
+export const NUEVOS2 = { bumeran, topos, cuenta, acecho, caliente, esqui };
 
 // =====================================================================
 //  CUENTA PECES — pasa un banco de peces (y alguna medusa que NO cuenta). Cuenta los peces y
@@ -236,5 +236,54 @@ export function caliente(cfg) {
       this.ball.position.copy(bp); const hot = clamp(1 - this.fuse / 6, 0, 1); this.ball.scale.setScalar(this.ball.userData.s0 || (this.ball.userData.s0 = this.ball.scale.x)); this.ball.scale.multiplyScalar(1 + Math.sin(t * (6 + hot * 20)) * .08 * (1 + hot * 2)); this.ball.rotation.y = t * 4;
       if (Math.random() < .3 + hot * .5) E.burst(bp.clone(), '#ffb030', 1, 1.5, .4, .4, 2);
       const pr = port(); camTo(E, dt, v3(0, pr ? 15 : 9.5, pr ? 13 : 9.5), v3(0, 0, 0), pr ? 62 : 55, 3); },
+  });
+}
+
+// =====================================================================
+//  SALTO DE ESQUÍ — bajas por el trampolín: toca justo en el borde para saltar lejísimos y
+//  vuelve a tocar antes de aterrizar para un «telemark» (+5 m). 3 saltos, se suman los metros.
+// =====================================================================
+export function esqui(cfg) {
+  const SP = 4, NR = 3, SL = 2.3, RZ = 16, RH = 7.5, EY = 1.4;
+  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 60,
+    init(E) {
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 14, z1: -110, half: 16 } }); setButtons('m', { M: cfg.btn || '⛷️' });
+      const snow = T(cfg.ramp || '#f4fbff'), blue = T('#8fc8ff');
+      const len = Math.hypot(RZ, RH - EY), ang = Math.atan2(RH - EY, RZ);
+      racers(E, .42); E.racers.forEach((r, k) => { r.x = lineX(k, SP); r.score = 0; r.best = 0;
+        const rp = mesh(new THREE.BoxGeometry(2.2, .4, len), snow, sc, [r.x, (RH + EY) / 2 - .2, -RZ / 2], [ang, 0, 0]); outline(rp, '#6a9ac8', 1.01);
+        for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(.15, .5, len), blue, sc, [r.x + s * 1.1, (RH + EY) / 2 + .05, -RZ / 2], [ang, 0, 0]);
+        mesh(new THREE.BoxGeometry(2.4, RH, 1.2), T('#c8e4ff'), sc, [r.x, RH / 2 - .2, .4]);
+        r.ski = new THREE.Group(); r.obj.add(r.ski); for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(.12, .05, 1.6), T('#ff6fae'), r.ski, [s * .22, .02, 0]); });
+      // pista de aterrizaje con marcas cada 10 m
+      mesh(new THREE.PlaneGeometry(SP * 6 + 6, 110), T('#ffffff', { rim: 0 }), sc, [0, .02, -RZ - 55], [-Math.PI / 2, 0, 0]);
+      for (let m = 20; m <= 90; m += 10) { mesh(new THREE.PlaneGeometry(SP * 6 + 4, .25), T(m % 30 ? '#8fc8ff' : '#ff6fae', { rim: 0 }), sc, [0, .03, -RZ - m], [-Math.PI / 2, 0, 0]); for (const s of [-1, 1]) pm(m % 20 ? 'pino' : 'pinguino', sc, [s * (SP * 3 + 2.5), 0, -RZ - m], m % 20 ? 3 : 1.2, s > 0 ? -1.5 : 1.5); }
+      this.round = 0; this.start(E);
+    },
+    start(E) { this.rt = 0; for (const r of E.racers) { r.st = 'wait'; r.u = 0; r.d = 0; r.tel = false; r.q = 0; r.delay = rnd(0, .6); r.err = null; } },
+    update(E, dt) {
+      this.rt += dt; const t = this.rt;
+      for (const r of E.racers) { const auto = !(r.me && !E.AUTO), s0 = sk(E, r), tap = auto ? false : tapped(E);
+        if (r.st === 'wait') { if (t > .8 + r.delay) { r.st = 'slide'; r.ts = 0; } }
+        else if (r.st === 'slide') { r.ts += dt; r.u = Math.min(1.25, r.ts / SL);
+          if (r.err == null) r.err = rnd(-1, 1) * (1.15 - Math.min(1.1, s0)) * .32;
+          const go = auto ? r.ts >= SL + r.err : tap;
+          if (go || r.u >= 1.18) { const off = r.ts - SL; r.q = go ? clamp(1 - Math.abs(off) / .42, 0, 1) : .05; r.st = 'fly'; r.tf = 0; r.D = 16 + 52 * r.q; r.FT = 1.3 + 1.1 * r.q; if (r.me) { Audio.sfxPlay('jump'); E.ui.toast(r.q > .85 ? '¡SALTO PERFECTO! 🚀' : r.q > .5 ? '¡Buen salto!' : r.q > .1 ? 'Saltito…' : '¡Toca en el borde!', r.q > .85 ? '#ffe27a' : '#bff4ff'); } } }
+        else if (r.st === 'fly') { r.tf += dt; const k = r.tf / r.FT;
+          const tl = auto ? (Math.random() < (.25 + .65 * Math.min(1, s0)) * dt * 4 && k > .72) : tap; if (tl && !r.tel && k > .45) { r.tel = k > .7; if (r.me) E.ui.toast(r.tel ? '¡Telemark! +5 m ✨' : '¡Demasiado pronto!', r.tel ? '#ffe27a' : '#ffd0ec'); if (!r.tel) r.telFail = true; }
+          if (k >= 1) { const m = r.D + (r.tel ? 5 : 0); r.score += m; r.best = Math.max(r.best, m); r.last = m; r.st = 'land'; r.tl = 0; r.land = .3; E.burst(v3(r.x, .3, -RZ - r.D), '#ffffff', 16, 5, .6, .5); if (r.me) { Audio.sfxPlay('land'); E.ui.toast(`${m.toFixed(1)} m`, '#ffffff'); } if (m > 55) cheer(r, .6); } }
+        else if (r.st === 'land') { r.tl += dt; }
+        r.prog = clamp((this.round + (r.st === 'land' ? 1 : 0)) / NR, 0, .99); }
+      if (E.racers.every(r => r.st === 'land' && r.tl > 1.1)) { this.round++; if (this.round >= NR) { if (!this.done) { this.done = true; scoreEnd(E, r => r.score.toFixed(1) + ' m'); } } else this.start(E); }
+      board(E, r => r.score.toFixed(0) + ' m'); info(`⛷️ Salto ${Math.min(NR, this.round + 1)}/${NR}<br>${E.me.score.toFixed(0)} m`);
+    },
+    rpos(r) { if (r.st === 'wait') return [RH + .1, .6];
+      if (r.st === 'slide') { const u = Math.min(1, r.u); return [RH - (RH - EY) * u + .15, -RZ * u - Math.max(0, r.u - 1) * 6]; }
+      if (r.st === 'fly') { const k = r.tf / r.FT; return [EY + .15 + (1 - EY) * 0 + Math.sin(k * Math.PI) * (2 + 4 * r.q) * (1 - k * .2) - k * (EY + .15), -RZ - r.D * k]; }
+      return [0, -RZ - r.D - Math.min(1, r.tl) * 4]; },
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+      for (const r of E.racers) { const [y, z] = this.rpos(r); r.obj.position.set(r.x, Math.max(0, y) + hopY(r, dt), z); r.obj.rotation.y = Math.PI; squash(r, dt);
+        r.obj.userData.pivot.rotation.x = r.st === 'slide' ? .45 : r.st === 'fly' ? -.25 + (r.tf / r.FT) * .2 : 0; if (r.st === 'slide' && Math.random() < .4) E.burst(r.obj.position.clone(), '#ffffff', 1, 1.5, .3, .3, 0); }
+      const me = E.me, [y, z] = this.rpos(me), pr = port(); camTo(E, dt, v3(me.x + .8, Math.max(2, y) + (pr ? 3.6 : 2.8), z + (pr ? 8.5 : 6.5)), v3(me.x, Math.max(0, y) * .6, z - 10), pr ? 72 : 58, 7); },
   });
 }
