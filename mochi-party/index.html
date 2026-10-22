@@ -67,6 +67,9 @@ tr.me{background:#fff0f8;font-weight:700}
 .mBtn i{font-style:normal;font-size:26px;width:46px;height:46px;flex:none;display:grid;place-items:center;border-radius:15px;background:rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 2px 4px rgba(0,0,0,.08)}
 .mBtn span{display:flex;flex-direction:column;line-height:1.1}
 .mBtn small{font-weight:500;font-size:13px;opacity:.9;text-shadow:none}
+#bOlimp{position:relative;background:linear-gradient(135deg,#ffd84a,#ff9a3a 55%,#ff6fae);color:#fff;box-shadow:0 6px 0 #d0702a,0 0 0 3px #fff,0 10px 26px rgba(255,150,60,.55);animation:olP 1.8s ease-in-out infinite;font-size:22px}
+#bOlimp .nuevo{position:absolute;right:10px;top:4px;background:#ff3f7f;color:#fff;font:700 11px Fredoka,sans-serif;padding:2px 8px;border-radius:10px;border:2px solid #fff;transform:rotate(6deg)}
+@keyframes olP{50%{transform:scale(1.035)}}
 #bTorneo{background:linear-gradient(#ffa4cf,#ff79b5 55%,#f562a6);box-shadow:0 6px 0 #d94c91,0 12px 18px rgba(230,80,150,.32)}
 #bOnline{background:linear-gradient(#86e3c4,#5fc7a6 55%,#4cb795);box-shadow:0 6px 0 #379a7b,0 12px 18px rgba(60,170,130,.3)}
 #bTorneo::after{animation-delay:.6s}
@@ -163,7 +166,7 @@ canvas#c{z-index:9}
   #sMenu.on{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"top main" "hero evs" "hero pj";align-items:start;justify-items:center;column-gap:14px;row-gap:8px;padding-top:calc(8px + env(safe-area-inset-top))}
   #sMenu>.mTop{grid-area:top}#sMenu>.mHero{grid-area:hero;margin:0}#sMenu>.mMain{grid-area:main;padding-bottom:12px}#sMenu>.mEvs{grid-area:evs}#sMenu>.mPj{grid-area:pj}
   #sMenu::after{display:none}.mLogo{font-size:34px}.mLogo .l2{font-size:40px}.mSub{display:none}
-  .mMain{flex-direction:row!important;gap:8px!important}.mMain .mBtn{flex:1 1 0;min-width:0;font-size:15px;padding:8px 10px;gap:8px}.mMain .mBtn small{display:none}.mMain .mBtn i{width:34px;height:34px;font-size:19px}
+  .mMain{flex-direction:row!important;flex-wrap:wrap;gap:8px!important}.mMain #bOlimp{flex:1 1 100%;font-size:18px}.mMain .mBtn{flex:1 1 0;min-width:0;font-size:15px;padding:8px 10px;gap:8px}.mMain .mBtn small{display:none}.mMain .mBtn i{width:34px;height:34px;font-size:19px}
   #menuStage{height:calc(100dvh - 130px);min-height:180px;width:min(400px,100%)}
   .lay{flex-direction:row;align-items:stretch}
   .colA{flex:1 1 50%;min-width:0}.colB{flex:1 1 50%;min-width:0;overflow-y:auto;padding-bottom:6px}
@@ -194,7 +197,7 @@ canvas#c{z-index:9}
     <div class="who mWho" id="menuWho"></div>
   </div>
   <div class="mCard mMain">
-    <button class="btn mBtn" id="bOlimp" onclick="location.href='carrera/olimpiadas.html?v=o9'"><i>🏅</i><span>Olimpiadas<small>8 mundos · 40 pruebas surrealistas</small></span></button>
+    <button class="btn mBtn" id="bOlimp" onclick="location.href='carrera/olimpiadas.html?v=o13'"><i>🏅</i><b class="nuevo">¡NUEVO!</b><span>Olimpiadas<small>8 mundos · 40 pruebas surrealistas</small></span></button>
     <button class="btn mBtn" id="bTorneo"><i>🏆</i><span>Torneo completo<small>Las 6 pruebas seguidas</small></span></button>
     <button class="btn g mBtn" id="bOnline"><i>🌐</i><span>Online con amigos<small>Juega con tu gente</small></span></button>
   </div>
@@ -233,7 +236,7 @@ canvas#c{z-index:9}
 <script src="js/pruebas.js?v=m10"></script>
 <script src="js/torneo.js?v=m10"></script>
 <script src="js/inicio.js?v=m10"></script>
-<script type="module" src="js/escena3d.js?v=m12"></script>
+<script type="module" src="js/escena3d.js?v=m13"></script>
 <script>setTimeout(()=>{if(!window.MP3D)document.body.classList.add('no3d')},5000)</script>
 </body>
 </html>
