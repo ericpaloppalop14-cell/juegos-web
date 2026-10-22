@@ -8,7 +8,7 @@
   const Cap = window.Capacitor;
   const NATIVE = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
   const DEBUG = /[?&]debug=/.test(location.search);
-  const mode = NATIVE ? 'native' : DEBUG ? 'debug' : 'off';
+  const mode = NATIVE ? 'native' : DEBUG ? 'debug' : 'web'; // web: compras ocultas, anuncios SIMULADOS
   const KEY = 'mochi_ent';
   let owned = new Set();
   try { owned = new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); } catch (e) {}
@@ -59,7 +59,14 @@
     (r.purchases || []).forEach(p => { if (p.productIdentifier && (p.purchaseState == null || String(p.purchaseState) === '1')) { if (!owned.has(p.productIdentifier)) n++; owned.add(p.productIdentifier); } });
     save(); changed(); return n;
   }
-  function preloadAd() {
+  let intReady = false, intLoading = null;
+  function preloadInt() {
+    if (!AdMob || !CFG.admob.interstitialAndroid || intReady || intLoading) return intLoading;
+    intLoading = AdMob.prepareInterstitial({ adId: CFG.admob.interstitialAndroid, isTesting: !!CFG.admob.testing })
+      .then(() => { intReady = true; }).catch(e => { console.warn('int load', e); intReady = false; }).finally(() => { intLoading = null; });
+    return intLoading;
+  }
+  function preloadAd() { preloadInt();
     if (!AdMob || adReady || adLoading) return adLoading;
     adLoading = AdMob.prepareRewardVideoAd({ adId: CFG.admob.rewardedAndroid, isTesting: !!CFG.admob.testing })
       .then(() => { adReady = true; }).catch(e => { console.warn('ad load', e); adReady = false; })
@@ -69,7 +76,7 @@
 
   // ---------- public API
   const Monet = {
-    mode, native: NATIVE, available: mode !== 'off',
+    mode, native: NATIVE, available: mode === 'native' || mode === 'debug', adsAvailable: true,
     onChange(f) { listeners.push(f); },
     owns(id) { return owned.has(id); },
     noAds() { return owned.has(CFG.products.noAds); },
@@ -107,11 +114,28 @@
       if (mode === 'debug') { toast(T('mPrivSim')); return; }
       if (AdMob) try { await AdMob.showPrivacyOptionsForm(); } catch (e) {}
     },
+    // Intersticial (solo entre partidas; el ritmo lo decide el juego). Siempre resuelve, nunca bloquea.
+    async showInterstitial() {
+      if (owned.has(CFG.products.noAds)) return false;
+      if (mode === 'debug' || mode === 'web') {
+        return new Promise(res => {
+          const o = overlay(`<div class="mon-t">Anuncio <small>(simulado · ${mode})</small></div><div class="mon-ad">AD</div><div class="mon-p" id="monIc">Puedes cerrarlo en 5…</div><div class="mon-row"><button class="mon-b no" data-a="0" style="visibility:hidden">✕ Cerrar</button></div>`);
+          o.dataset.kind = 'interstitial'; let n = 5; const cd = o.querySelector('#monIc'), b = o.querySelector('button');
+          const iv = setInterval(() => { n--; if (n > 0) cd.textContent = `Puedes cerrarlo en ${n}…`; else { clearInterval(iv); cd.textContent = '¡Gracias por apoyar a Mochi! 💕'; b.style.visibility = ''; } }, 1000);
+          btnHandler(b, () => { if (n > 0) return; o.remove(); res(true); });
+        });
+      }
+      if (mode !== 'native' || !AdMob || !consentOk || !CFG.admob.interstitialAndroid) return false;
+      if (!intReady) { preloadInt(); return false; } // si no está cargado, no se espera: se juega
+      intReady = false;
+      try { await AdMob.showInterstitial(); } catch (e) { }
+      preloadInt(); return true;
+    },
     // Rewarded ad. Resolves true only if the reward was earned.
     async showRewarded() {
-      if (mode === 'debug') {
+      if (mode === 'debug' || mode === 'web') {
         return new Promise(res => {
-          const o = overlay(`<div class="mon-t">${T('mAdTest')} <small>${T('mSim')}</small></div><div class="mon-ad">AD</div><div class="mon-p" id="monCd">${T('mAdEnds', { n: 3 })}</div><div class="mon-row"><button class="mon-b no" data-a="0">${T('mClose')}</button></div>`);
+          const o = overlay(`<div class="mon-t">${T('mAdTest')} <small>${mode === 'web' ? '(simulado · web)' : T('mSim')}</small></div><div class="mon-ad">AD</div><div class="mon-p" id="monCd">${T('mAdEnds', { n: 3 })}</div><div class="mon-row"><button class="mon-b no" data-a="0">${T('mClose')}</button></div>`);
           let n = 3; const cd = o.querySelector('#monCd');
           const iv = setInterval(() => { n--; if (n > 0) cd.textContent = T('mAdEnds', { n }); else { clearInterval(iv); o.remove(); res(true); } }, 700);
           btnHandler(o.querySelector('button'), () => { clearInterval(iv); o.remove(); res(false); });
