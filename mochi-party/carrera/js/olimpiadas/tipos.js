@@ -3,7 +3,7 @@
 //  salto · esquiva · machaca · vuelo · punteria · recoge · ritmo · superv · empuje
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m10';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o4';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o5';
 
 const LW = 2.3;
 const lx = (l, n = 6) => (l - (n - 1) / 2) * LW;
@@ -90,7 +90,7 @@ export function salto(cfg) {
     },
     render(E, dt) {
       const t = performance.now() / 1000;
-      for (const s of this.S) { const near = s.z - E.me.z > -8 && s.z - E.me.z < 80; s.objs.forEach((o, l) => { o.visible = near; if (!near) return; o.position.z = -s.z; if (cfg.bob) o.position.y = Math.abs(Math.sin(t * 3 + s.ph + l * .4)) * cfg.bob; if (cfg.roll) o.rotation.x = -E.t * cfg.roll / (cfg.os || .7); else o.rotation.y = Math.sin(t * 2 + l + s.ph) * .3; }); }
+      for (const s of this.S) { const near = s.z - E.me.z > -8 && s.z - E.me.z < 140; s.objs.forEach((o, l) => { o.visible = near; if (!near) return; o.position.z = -s.z; if (cfg.bob) o.position.y = Math.abs(Math.sin(t * 3 + s.ph + l * .4)) * cfg.bob; if (cfg.roll) o.rotation.x = -E.t * cfg.roll / (cfg.os || .7); else o.rotation.y = Math.sin(t * 2 + l + s.ph) * .3; }); }
       for (const u of this.PU) if (u.g.visible) { u.g.rotation.y = t * 2; u.g.position.y = 1 + Math.sin(t * 4 + u.l) * .2; }
       for (const r of E.racers) { const o = r.obj, run = r.y === 0 && r.v > .5 && r.stun <= 0, bob = run ? Math.abs(Math.sin(t * 15 + r.k)) * .14 : 0;
         o.position.set(lx(r.lane), r.y + bob, -r.z); o.userData.shadow.position.y = .03 - r.y - bob; squash(r, dt);
@@ -146,7 +146,7 @@ export function esquiva(cfg) {
     },
     render(E, dt) {
       const t = performance.now() / 1000, et = E.t, me = E.me;
-      for (const w of this.R) { const dz = w.z - me.z, near = dz > -8 && dz < 85; for (const o of w.o) { o.g.visible = near; if (o.w) o.w.visible = near && dz > 0; if (!near) continue; o.g.position.x = this.ox(o, et); if (o.w) o.w.position.x = o.g.position.x;
+      for (const w of this.R) { const dz = w.z - me.z, near = dz > -8 && dz < 140; for (const o of w.o) { o.g.visible = near; if (o.w) o.w.visible = near && dz > 0; if (!near) continue; o.g.position.x = this.ox(o, et); if (o.w) o.w.position.x = o.g.position.x;
         o.g.position.y = cfg.sky ? clamp((dz - 6) * 1.6, 0, 40) : cfg.bounce ? Math.abs(Math.sin(t * 4 + o.ph)) * cfg.bounce : 0; o.g.rotation.y = cfg.spin ? t * cfg.spin : Math.sin(t * 2 + o.ph) * .3; if (cfg.rollx) o.g.rotation.z = -t * 3; }
         if (w.pu && w.pu.g.visible) { w.pu.g.rotation.y = t * 2; w.pu.g.position.y = 1 + Math.sin(t * 4) * .2; } }
       for (const r of E.racers) { const o = r.obj, run = r.v > .5 && r.stun <= 0, bob = run ? Math.abs(Math.sin(t * 15 + r.k)) * .14 : 0;
@@ -231,8 +231,8 @@ export function vuelo(cfg) {
     },
     render(E, dt) {
       const t = performance.now() / 1000, me = E.me;
-      for (const w of this.rings) { const dz = w.z - me.z, near = dz > -6 && dz < 90; w.g.forEach((g, l) => { g.visible = near; g.rotation.z = t; }); }
-      for (const w of this.haz) { const dz = w.z - me.z, near = dz > -6 && dz < 90; w.g.forEach((g, l) => { g.visible = near; g.position.y = w.h + Math.sin(t * 2 + l) * .25; g.rotation.y = t; }); }
+      for (const w of this.rings) { const dz = w.z - me.z, near = dz > -6 && dz < 140; w.g.forEach((g, l) => { g.visible = near; g.rotation.z = t; }); }
+      for (const w of this.haz) { const dz = w.z - me.z, near = dz > -6 && dz < 140; w.g.forEach((g, l) => { g.visible = near; g.position.y = w.h + Math.sin(t * 2 + l) * .25; g.rotation.y = t; }); }
       for (const r of E.racers) { const o = r.obj; r.flap = Math.max(0, r.flap - dt); o.position.set(lx(r.lane), r.y, -r.z); o.userData.pivot.rotation.x = clamp(-r.vy * .06, -.6, .5); o.userData.pivot.rotation.z = r.stun > 0 ? Math.sin(t * 20) * .4 : 0; o.userData.shadow.position.y = .03 - r.y; o.userData.shadow.scale.setScalar(.5);
         const s = r.sc * (1 + r.flap * .6); o.userData.pivot.scale.set(s, r.sc * (1 - r.flap * .4), s);
         if (r.ride) { r.ride.rotation.z = Math.sin(t * 14) * (r.flap > 0 ? .5 : .1); r.ride.scale.y = (cfg.rs || .9) * (1 - r.flap); }

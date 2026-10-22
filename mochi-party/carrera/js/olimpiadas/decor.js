@@ -4,7 +4,7 @@
 //  InstancedMesh: cientos de piezas animadas con muy poco coste en el móvil.
 // ======================================================================
 import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m10';
-import { prop } from './mundos.js?v=o4';
+import { prop } from './mundos.js?v=o5';
 
 const merged = {};
 // funde un objeto (grupo de mallas) en una geometría con color por vértice; sin contornos ni sprites
@@ -33,7 +33,7 @@ export function instSet(scene, kind, items) {
   const o = new THREE.Object3D(); const animd = [];
   items.forEach((it, i) => { o.position.set(it.x, it.y || 0, it.z); o.rotation.set(it.rx || 0, it.ry || 0, 0); o.scale.setScalar(it.s || 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); if (it.anim) animd.push(i); });
   im.instanceMatrix.needsUpdate = true; scene.add(im);
-  return { im, items, animd, o,
+  return { im, items, animd, o, kind,
     tick(t) { if (!animd.length) return; for (const i of animd) { const it = items[i]; const k = it.anim;
         if (k === 'float') o.position.set(it.x, (it.y || 0) + Math.sin(t * (it.sp || 1) + it.ph) * (it.amp || .5), it.z), o.rotation.set(0, (it.ry || 0) + t * .3, 0);
         else if (k === 'sway') o.position.set(it.x, it.y || 0, it.z), o.rotation.set(Math.sin(t * 1.3 + it.ph) * .06, it.ry || 0, Math.sin(t * 1.1 + it.ph) * .08);
@@ -91,5 +91,7 @@ export function richDecor(scene, mk, area, M) {
   const astro = new THREE.Group(); astro.position.set(60, 70, -230); scene.add(astro);
   const ac = { espacio: '#ff9cf0', desierto: '#ffd36b', nieve: '#fff4c0', mar: '#bff4ff', selva: '#ffe27a', dulces: '#ffd36b', suenos: '#fff0b0', volcan: '#ff6a2a' }[mk];
   const am = toon(ac, { emissive: ac, ei: .8, rim: .2 }); am.fog = false; mesh(new THREE.SphereGeometry(16, 32, 20), am, astro); const halo = glowSprite(ac, 90, .55); astro.add(halo);
-  return { sets, stars, astro, tick(t) { for (const s of sets) s.tick(t); astro.rotation.y = t * .05; halo.material.opacity = .45 + Math.sin(t * .8) * .1; if (stars) stars.rotation.y = t * .004; } };
+  const clouds = sets.find(s => s.kind === 'nubeLejos');
+  return { sets, stars, astro, tick(t, camZ = 0) { for (const s of sets) s.tick(t); if (clouds) clouds.im.position.z = camZ * .9; // las nubes lejanas acompañan a la cámara (parallax): nunca saltan ni se cruzan de golpe
+    astro.rotation.y = t * .05; halo.material.opacity = .45 + Math.sin(t * .8) * .1; if (stars) stars.rotation.y = t * .004; } };
 }

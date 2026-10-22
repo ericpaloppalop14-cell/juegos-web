@@ -4,9 +4,9 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m10';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o4';
-import { mergedGeo, instSet } from './decor.js?v=o4';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o4';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o5';
+import { mergedGeo, instSet } from './decor.js?v=o5';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o5';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
