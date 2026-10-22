@@ -83,7 +83,7 @@ function goAll() { clearTimeout(readyTO); if (!E || E.phase !== 'wait') return; 
 async function begin(msg) {
   cur = msg; inGame = true; if (E) { E.stop(); E = null; }
   show('sWait'); $('wTitle').textContent = `${EVS.find(e => e.id === msg.ev).icon} ${EVS.find(e => e.id === msg.ev).name}` + (msg.total > 1 ? ` · ${msg.round + 1}/${msg.total}` : ''); $('wInfo').textContent = 'Esperando a los demás jugadores';
-  const mod = await import(`./ev-${msg.ev}.js?v=m10`);
+  const mod = await import(`./ev-${msg.ev}.js?v=m11`);
   if (cur !== msg) return;
   const racers = msg.racers.map(r => ({ ...r, me: r.id === net.myId }));
   // un jugador que se fue antes de cargar: lo lleva la IA
