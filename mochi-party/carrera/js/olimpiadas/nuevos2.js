@@ -4,10 +4,10 @@
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m14';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o9';
-import { mergedGeo } from './decor.js?v=o9';
-import { jungle } from './selva-lianas.js?v=o10';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o9';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o13';
+import { mergedGeo } from './decor.js?v=o13';
+import { jungle } from './selva-lianas.js?v=o13';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o13';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
@@ -394,7 +394,7 @@ export function lianas(cfg) {
   const SP = 3.4, NV = cfg.nv || 9, GAP = 6.5, PY = 9, LEN = 5.6, A = .72, W = 2.5;
   return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 70,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -NV * GAP - 30, half: 40 } }); this.J = jungle(E, { NV, GAP, SP, PY }); setButtons('m', { M: cfg.btn || '🐒' });
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 12, z1: -NV * GAP - 30, half: 40 }, noAmb: true }); this.J = jungle(E, { NV, GAP, SP, PY }); setButtons('m', { M: cfg.btn || '🐒' });
       const vineM = T('#4a9a3a'), barM = T('#8a5a3a'), leafM = T('#6ac85a'), flM = [T('#ff6fae'), T('#ffe27a'), T('#c9a2ff')];
       mesh(new THREE.PlaneGeometry(SP * 6 + 2, NV * GAP + 14), T('#8a6a3a', { rim: 0 }), sc, [0, .02, -NV * GAP / 2], [-Math.PI / 2, 0, 0]);
       for (let i = 0; i <= NV; i++) { const z = -i * GAP; const bar = mesh(CYL(), barM, sc, [0, PY + .1, z], [0, 0, Math.PI / 2], [.25, SP * 6 + 2, .25]); outline(bar, '#4a2a1a', 1.05);

@@ -2,7 +2,8 @@
 //  MOCHI PARTY · OLIMPIADAS — mundos (cielo, suelo, decorado) y objetos surrealistas
 // ======================================================================
 import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m14';
-import { richDecor } from './decor.js?v=o9';
+import { ambiente } from './ambiente.js?v=o13';
+import { richDecor } from './decor.js?v=o13';
 
 const G = {};
 const geo = (k, f) => G[k] || (G[k] = f());
@@ -125,6 +126,7 @@ export function buildWorld(E, mk, area) {
   const spots = new THREE.Group(); sc.add(spots);
   const deco = [];
   const rich = richDecor(sc, mk, area, M);
+  const amb2 = area.noAmb ? null : ambiente(E, mk, area);
   // partículas ambientales (estrellas, nieve, burbujas, chispas)
   let amb = null;
   if (M.stars || M.snow || M.bubbles || M.embers) {
@@ -134,7 +136,7 @@ export function buildWorld(E, mk, area) {
     amb.userData.kind = M.snow ? 'snow' : M.bubbles ? 'bub' : M.embers ? 'emb' : 'star'; amb.frustumCulled = false; sc.add(amb);
   }
   return { sky, ground, spots, deco, amb, M, rich, T: 0,
-    tick(dt, cam) { this.T += dt; rich.tick(this.T, cam.position.z); rich.astro.position.set(cam.position.x + 60, 70, cam.position.z - 230); sky.position.copy(cam.position); if (amb && amb.userData.kind !== 'star') { const p = amb.geometry.attributes.position, k = amb.userData.kind; for (let i = 0; i < p.count; i++) { let y = p.getY(i) + (k === 'snow' ? -2.5 : 2) * dt; if (y < 0) y = 30; if (y > 30) y = 0; p.setY(i, y); } p.needsUpdate = true; amb.position.z = cam.position.z * .0; } } };
+    tick(dt, cam) { this.T += dt; rich.tick(this.T, cam.position.z); if (amb2) amb2.tick(this.T, dt); rich.astro.position.set(cam.position.x + 60, 70, cam.position.z - 230); sky.position.copy(cam.position); if (amb && amb.userData.kind !== 'star') { const p = amb.geometry.attributes.position, k = amb.userData.kind; for (let i = 0; i < p.count; i++) { let y = p.getY(i) + (k === 'snow' ? -2.5 : 2) * dt; if (y < 0) y = 30; if (y > 30) y = 0; p.setY(i, y); } p.needsUpdate = true; amb.position.z = cam.position.z * .0; } } };
 }
 
 // arco de salida/meta con letrero
