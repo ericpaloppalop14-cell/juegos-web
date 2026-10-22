@@ -60,7 +60,7 @@ export function circuito(cfg) {
       for (const r of E.racers) {
         if (r.fin) { r.v = Math.max(4, r.v - 6 * dt); r.s += r.v * dt; continue; }
         let st = 0;
-        if (r.me && !E.AUTO) st = -steer(E); // d>0 es la izquierda del piloto (normal = izquierda de la tangente)
+        if (r.me && !E.AUTO) st = -steer(E); /* d>0 = izquierda del piloto */
         else { const sk0 = sk(E, r), ls0 = ((r.s % this.L) + this.L) % this.L;
           if (!r.tgt && r.tgt !== 0 || (r.rt -= dt) <= 0) { r.rt = .35 - sk0 * .15; const ahead = this.obs.filter(o => { const ds = o.s - ls0; return ds > 0 && ds < 9 + sk0 * 8; });
             const lanes = [-3.2, 0, 3.2].filter(l => !ahead.some(o => Math.abs(o.d - l) < 1.8)); const pad = this.pads.find(p => { const ds = p.s - ls0; return ds > 2 && ds < 16; });
