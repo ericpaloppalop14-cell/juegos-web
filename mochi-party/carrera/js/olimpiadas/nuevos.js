@@ -4,9 +4,9 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m16';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o17';
-import { mergedGeo, instSet } from './decor.js?v=o17';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o17';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o20';
+import { mergedGeo, instSet } from './decor.js?v=o20';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o20';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -41,7 +41,7 @@ export function circuito(cfg) {
       const q0 = this.at(0); const gate = arch(sc, 0, W / 2 + .5, '¡META!', '#ff6fae'); gate.position.set(q0.x, 0, q0.z); gate.rotation.y = Math.atan2(q0.tx, q0.tz);
       const inner = []; for (let i = 0; i < 90; i++) { const a = rnd(0, 6.28), k = rnd(0, .6); inner.push({ x: Math.cos(a) * A * k, z: Math.sin(a) * Bz * k, s: rnd(.8, 1.8), ry: rnd(0, 6.28), anim: Math.random() < .4 ? 'sway' : null, ph: rnd(0, 6) }); }
       this.inner = instSet(sc, cfg.innerDeco || MUNDOS[cfg.mundo].deco[0], inner);
-      const tribu = []; for (let i = 0; i < 40; i++) { const q = this.at(i / 40 * L); const sd = i % 2 ? 1 : -1; tribu.push({ x: q.x + q.nx * (W / 2 + 3) * sd, z: q.z + q.nz * (W / 2 + 3) * sd, s: .9, ry: Math.atan2(-q.nx * sd, -q.nz * sd), anim: 'hop', sp: 4, amp: .4, ph: rnd(0, 6) }); }
+      const tribu = []; for (let i = 0; i < 40; i++) { const q = this.at(i / 40 * L); const sd = i % 2 ? 1 : -1; tribu.push({ x: q.x + q.nx * (W / 2 + (cfg.fan === 'ovni' ? 8 : 3)) * sd, z: q.z + q.nz * (W / 2 + (cfg.fan === 'ovni' ? 8 : 3)) * sd, s: .9, ry: Math.atan2(-q.nx * sd, -q.nz * sd), anim: 'hop', sp: 4, amp: .4, ph: rnd(0, 6) }); }
       this.fans = instSet(sc, cfg.fan || 'pinguino', tribu);
       this.obs = []; this.pads = [];
       for (let s = 40; s < L - 15; s += rnd(16, 24)) { const d = pick([-3, 0, 3]) + rnd(-.6, .6); const m = prop(pick(cfg.obs)); m.scale.multiplyScalar(cfg.os || .8); sc.add(m); this.obs.push({ s, d, d0: d, m, mv: Math.random() < .35 ? rnd(.8, 1.6) : 0, ph: rnd(0, 6) }); }

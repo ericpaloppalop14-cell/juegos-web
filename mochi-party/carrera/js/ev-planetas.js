@@ -116,7 +116,7 @@ export default {
     const nx = P[Math.min(N - 1, me.idx + 1)];
     const tx = lerp(me.obj.position.x, nx.x, .35) * .55, ty = lerp(me.obj.position.y, nx.y, .45);
     this.camX = lerp(this.camX, tx, Math.min(1, dt * 2.5)); this.camY = lerp(this.camY, ty, Math.min(1, dt * 2.5));
-    camera.position.set(this.camX + Math.sin(t * .3) * 1.2, this.camY - 7, 25); camera.lookAt(this.camX, this.camY + 1, 0);
+    camera.position.set(this.camX + Math.sin(t * .3) * 1.2, this.camY - 5.5, 20); camera.lookAt(this.camX, this.camY + 1, 0);
     this.stars.position.y = this.camY * .85; this.big.position.y = 120 + this.camY * .7; this.big.rotation.y = t * .05;
     this.bigMoon.position.set(this.big.position.x + Math.cos(t * .2) * 75, this.big.position.y + Math.sin(t * .2) * 18, this.big.position.z + Math.sin(t * .2) * 30);
     for (const s of this.shoot) { s.t -= dt; if (s.t < 0) { s.t = rnd(3, 7); s.x0 = rnd(-60, 60); s.y0 = this.camY + rnd(20, 60); } const k = 1 - s.t / 1.2; s.s.visible = k > 0 && k < 1; if (s.s.visible) s.s.position.set(s.x0 + k * 60, s.y0 - k * 25, -80); }
