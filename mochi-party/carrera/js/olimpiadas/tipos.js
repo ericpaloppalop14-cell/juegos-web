@@ -178,7 +178,7 @@ export function machaca(cfg) {
         if (r.fin) { r.v = Math.max(0, r.v - 6 * dt); r.z += r.v * dt; continue; }
         let taps = [];
         if (r.me && !E.AUTO) taps = sideTaps(E);
-        else { r.tt -= dt; if (r.tt <= 0) { const s = sk(E, r); r.tt = 1 / (4.6 + 4.2 * s) * rnd(.8, 1.25); taps = [Math.random() < .1 * (1.1 - Math.min(1, s)) ? r.last || 'L' : (r.last === 'L' ? 'R' : 'L')]; } }
+        else { r.tt -= dt; if (r.tt <= 0) { const s = sk(E, r); r.tt = 1 / (3.6 + 3.4 * s) * rnd(.8, 1.3); taps = [Math.random() < .1 * (1.1 - Math.min(1, s)) ? r.last || 'L' : (r.last === 'L' ? 'R' : 'L')]; } }
         for (const s of taps) { const good = s !== r.last; const it = E.t - r.lt; r.lt = E.t; r.rhythm = good && it < .4 ? Math.min(1, r.rhythm + .12) : Math.max(0, r.rhythm - .3);
           r.v = Math.min(VM + (r.boost > 0 ? 4 : 0), r.v + (good ? GAIN : GAIN * .25)); r.last = s; r.tap = .15; if (r.me) Audio.sfxPlay(good ? 'tick' : 'bump'); if (!good && r.me) E.ui.toast('¡Alterna ⬅ ➡!', '#fff'); }
         r.v = Math.max(0, r.v - (1.6 + r.v * .22) * dt); if (r.boost > 0) r.boost -= dt;
