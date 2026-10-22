@@ -1,0 +1,64 @@
+// ======================================================================
+//  MOCHI PARTY · OLIMPIADAS — las 8 olimpiadas y sus 40 pruebas
+//  tipo: salto | esquiva | machaca | vuelo | punteria | recoge | superv | empuje | ritmo | base (prueba clásica 3D)
+// ======================================================================
+export const OLIMPIADAS = [
+  { id: 'espacio', name: 'Olimpiada Galáctica', icon: '🚀', color: ['#3b2a7a', '#8a5ad0'], lema: 'Sin gravedad y con mucha cara dura', pruebas: [
+    { id: 'planetas', base: 'planetas', name: 'Saltos Planetarios', icon: '🪐', desc: 'Salta de planeta en planeta hasta la estrella meta.' },
+    { id: 'meteoritos', tipo: 'superv', modo: 'lluvia', obj: 'meteoro', boom: '#ff9a4a', name: 'Lluvia de Meteoritos', icon: '☄️', desc: 'Caen meteoritos con cara de susto. Muévete y esquiva las sombras rojas. Tienes 3 vidas.', how: 'Arrastra el dedo para moverte. ¡Apártate de los círculos rojos!' },
+    { id: 'saturno', tipo: 'vuelo', grav: 7.5, flap: 4.4, ring: '#ffd84a', haz: 'meteoro', name: 'Anillos de Saturno', icon: '💫', desc: 'Flota en gravedad lunar y atraviesa los anillos para acelerar.', how: 'Toca para impulsarte hacia arriba. Cruza los aros dorados: ¡cada uno es un acelerón!' },
+    { id: 'cazaestrellas', tipo: 'recoge', item: 'estrella', ice: true, speed: 7.5, name: 'Cazaestrellas', icon: '⭐', desc: 'Patina en gravedad cero y caza más estrellas que nadie. Las doradas valen 3.', how: 'Arrastra el dedo para moverte (¡resbala, es el espacio!). Coge todas las estrellas que puedas.' },
+    { id: 'ovnis', tipo: 'punteria', proj: 'bola', target: 'ovni', ty: 3, dy: .3, move: 'lateral', ts: 1.2, dist: 12, name: 'Tiro al Ovni', icon: '🛸', desc: 'Lanza bolas de gelatina a los ovnis que se mueven. ¡Diana en la zona verde!', how: 'Toca cuando la aguja esté en la zona verde. En el centro, ¡DIANA!' },
+  ] },
+  { id: 'desierto', name: 'Olimpiada del Desierto', icon: '🏜️', color: ['#ff9a5a', '#ffd08a'], lema: 'Calor, dunas y cactus con muy mala uva', pruebas: [
+    { id: 'camellos', tipo: 'machaca', ride: 'camello', rs: .75, ry: 1.6, hop: .25, bl: '🐪', br: '🐪', name: 'Carrera de Camellos', icon: '🐪', desc: 'Monta en un camello que bota. Alterna izquierda y derecha para galopar.', how: 'Pulsa ⬅ y ➡ alternando (o toca izquierda y derecha de la pantalla). ¡Con ritmo vas más rápido!' },
+    { id: 'cactus', tipo: 'salto', obs: 'cactus', os: .55, h: 1.05, bob: .25, name: 'Cactus Saltarines', icon: '🌵', desc: 'Corre por la duna y salta los cactus que bailan.', how: 'Toca para saltar los cactus. Salta cerca para un ¡Perfecto! con acelerón.', ouch: ['¡Pincho! 🌵', '¡Auuu!'] },
+    { id: 'rodadoras', tipo: 'esquiva', obs: ['rodadora', 'rodadora', 'piramide'], os: .6, drift: .9, rollx: true, name: 'Tormenta de Rodadoras', icon: '🌪️', desc: 'Rodadoras que van de lado a lado y pirámides con ojos. ¡Esquívalas!', how: 'Pulsa ⬅ ➡ (o toca a los lados) para cambiar de carril. Coge las ⭐ para un turbo.' },
+    { id: 'duna', tipo: 'empuje', shrink: true, deco: 'cactus', R: 10, name: 'Sumo en la Duna', icon: '🏔️', desc: 'La duna se va hundiendo. Empuja a los demás fuera y aguanta el último.', how: 'Arrastra el dedo para moverte y pulsa 💨 para embestir. ¡No te caigas!' },
+    { id: 'oasis', tipo: 'ritmo', bpm: 104, note: 'cactus', side: 'palmera', floor: '#c8904a', name: 'Baile del Oasis', icon: '💃', desc: 'Fiesta en el oasis: pulsa los botones al ritmo de los cactus que caen.', how: 'Pulsa 🔴 🟡 🔵 cuando cada nota llegue a su platillo. ¡Encadena combos!' },
+  ] },
+  { id: 'nieve', name: 'Olimpiada de la Nieve', icon: '❄️', color: ['#8fc8ff', '#e8f4ff'], lema: 'Hielo resbaladizo y muñecos con carácter', pruebas: [
+    { id: 'munecos', tipo: 'punteria', proj: 'bola', target: 'muneco', wind: true, ts: .9, dy: 1.9, name: 'Bolas al Muñeco', icon: '☃️', desc: 'Guerra de bolas contra muñecos de nieve. ¡Ojo con el viento, que mueve la zona verde!', how: 'Toca cuando la aguja esté en la zona verde (el viento la mueve).' },
+    { id: 'trineo', tipo: 'esquiva', obs: ['pinguino', 'hielo', 'muneco'], os: .75, slide: 4.5, v0: 12, name: 'Trineo Pingüino', icon: '🛷', desc: 'Bajas en trineo por el hielo: resbala un poco, así que cambia de carril con tiempo.', how: 'Pulsa ⬅ ➡ con antelación: en el hielo cuesta girar. Coge las ⭐.' },
+    { id: 'hielo', tipo: 'superv', modo: 'baldosas', tile: '#8fc8ff', under: '#2a7ab0', name: 'Hielo que se Rompe', icon: '🧊', desc: 'Las baldosas de hielo se agrietan (se ponen rojas) y caen al agua helada.', how: 'Arrastra el dedo para moverte. Sal de las baldosas rojas antes de que caigan.' },
+    { id: 'iglus', tipo: 'salto', obs: 'iglu', os: .8, h: 1.15, double: true, gap: [16, 22], name: 'Saltos de Iglú', icon: '🏠', desc: 'Iglús gigantes en la pista: usa el doble salto para pasar por encima.', how: 'Toca para saltar y toca otra vez en el aire para el doble salto.' },
+    { id: 'copos', tipo: 'recoge', item: 'copo', fall: 6, name: 'Caza de Copos', icon: '❄️', desc: 'Caen copos mágicos del cielo. Ponte debajo de su sombra para cogerlos.', how: 'Arrastra el dedo para moverte. Ponte bajo las sombras para cazar los copos.' },
+  ] },
+  { id: 'mar', name: 'Olimpiada del Fondo del Mar', icon: '🐠', color: ['#2a7ab0', '#6ad0e0'], lema: 'Burbujas, medusas y ballenas cantarinas', pruebas: [
+    { id: 'nado', base: 'nado', name: 'Nado con Medusas', icon: '🪼', desc: 'Nada esquivando medusas brillantes.' },
+    { id: 'caballitos', tipo: 'machaca', ride: 'caballito', rs: .6, ry: 1.2, bl: '🌊', br: '🌊', trail: '#bff4ff', padTxt: '🫧 ¡Burbuja turbo!', name: 'Carrera de Caballitos', icon: '🐴', desc: 'Monta un caballito de mar. Alterna para nadar y pisa las burbujas turbo.', how: 'Pulsa ⬅ y ➡ alternando (o toca los lados de la pantalla). ¡Con ritmo vuelas!' },
+    { id: 'burbujas', tipo: 'vuelo', ride: 'burbuja', rs: .8, ry: .6, grav: 6, flap: 3.8, ring: '#7ee3c4', haz: 'erizo', name: 'Burbujas Voladoras', icon: '🫧', desc: 'Vas dentro de una burbuja: sube, cruza los aros y no toques los erizos.', how: 'Toca para subir con tu burbuja. Cruza los aros y esquiva los erizos.' },
+    { id: 'cangrejos', tipo: 'empuje', walker: 'cangrejo', deco: 'coral', R: 9.5, name: 'Empujones Cangrejeros', icon: '🦀', desc: 'Sumo en una roca con dos cangrejos que dan pinzazos a todo el mundo.', how: 'Arrastra para moverte, 💨 para embestir. ¡Cuidado con los cangrejos!' },
+    { id: 'ballenas', tipo: 'ritmo', bpm: 96, note: 'pez', side: 'ballena', floor: '#2a6ab0', name: 'Concierto de Ballenas', icon: '🐋', desc: 'Las ballenas cantan y los peces caen al ritmo. ¡A bailar bajo el agua!', how: 'Pulsa 🔴 🟡 🔵 cuando cada pez llegue a su platillo.' },
+  ] },
+  { id: 'selva', name: 'Olimpiada de la Selva', icon: '🌴', color: ['#3fa86a', '#b0f0a0'], lema: 'Ranas gigantes, monos y piñas en estampida', pruebas: [
+    { id: 'ranas', tipo: 'salto', obs: 'rana', os: .6, h: 1, bob: .5, name: 'Salto de Ranas', icon: '🐸', desc: 'Ranas gigantes botando por la pista. ¡Sáltalas a todas!', how: 'Toca para saltar las ranas. Salta cerca de ellas para un ¡Perfecto!' },
+    { id: 'pinas', tipo: 'esquiva', obs: ['pina', 'pina', 'totem'], os: .75, bounce: 1.2, name: 'Estampida de Piñas', icon: '🍍', desc: 'Una estampida de piñas saltarinas y tótems. Cambia de carril para esquivarlas.', how: 'Pulsa ⬅ ➡ (o toca a los lados) para cambiar de carril. Coge las ⭐.' },
+    { id: 'cocos', tipo: 'superv', modo: 'lluvia', obj: 'coco', boom: '#c8904a', os: 1.2, name: 'Lluvia de Cocos', icon: '🥥', desc: 'Los monos tiran cocos desde las palmeras. Aguanta con tus 3 vidas.', how: 'Arrastra el dedo para moverte y sal de las sombras rojas.' },
+    { id: 'monos', tipo: 'punteria', proj: 'platano', target: 'mono', move: 'updown', ts: 1.2, dy: 1.1, name: 'Plátanos al Mono', icon: '🐒', desc: 'Lánzale plátanos a los monos que suben y bajan. ¡Tienen hambre!', how: 'Toca cuando la aguja esté en la zona verde.' },
+    { id: 'caracoles', tipo: 'machaca', ride: 'caracol', rs: .9, ry: .9, bl: '🐌', br: '🐌', trail: '#7fd86a', vmax: 11, padTxt: '🍄 ¡Seta turbo!', name: 'Caracoles Turbo', icon: '🐌', desc: 'La carrera más lenta del mundo… hasta que pisas las setas turbo.', how: 'Pulsa ⬅ y ➡ alternando (o toca los lados de la pantalla).' },
+  ] },
+  { id: 'dulces', name: 'Olimpiada de los Dulces', icon: '🍭', color: ['#ff7fbf', '#ffd0e6'], lema: 'Todo es de azúcar… menos el brócoli', pruebas: [
+    { id: 'vallas', base: 'vallas', name: 'Vallas Serpiente', icon: '🐍', desc: 'Salta las serpientes de gominola que ondulan.' },
+    { id: 'anillos', base: 'anillos', name: 'Vuelo de Anillos', icon: '💫', desc: 'Vuela por el cielo de golosinas atravesando anillos.' },
+    { id: 'caramelos', tipo: 'recoge', item: 'caramelo', bad: 'brocoli', fall: 7, badTxt: '¡Brócoli! 🥦 −1', name: 'Lluvia de Caramelos', icon: '🍬', desc: 'Llueven caramelos… y brócolis. Coge los dulces y huye del brócoli.', how: 'Arrastra el dedo para moverte. Coge caramelos y evita el brócoli 🥦.' },
+    { id: 'tarta', tipo: 'empuje', spin: .35, floor: '#ffd6ec', deco: 'vela', R: 9.5, name: 'Sumo en la Tarta', icon: '🎂', desc: 'Una tarta giratoria gigante. Empuja a todos al plato y quédate encima.', how: 'Arrastra para moverte, 💨 para embestir. ¡La tarta gira!' },
+    { id: 'gominolas', tipo: 'ritmo', bpm: 116, note: 'osito', side: 'cupcake', floor: '#ff7fbf', name: 'Baile de Gominolas', icon: '🧸', desc: 'Ositos de gominola caen al ritmo de la música más dulce.', how: 'Pulsa 🔴 🟡 🔵 cuando cada osito llegue a su platillo.' },
+  ] },
+  { id: 'suenos', name: 'Olimpiada de los Sueños', icon: '☁️', color: ['#6a4ad0', '#ffc8e8'], lema: 'Ovejas que vuelan y relojes que se derriten', pruebas: [
+    { id: 'ovejas', tipo: 'salto', obs: 'oveja', os: .7, h: 1.1, grav: 9, jump: 5.6, double: true, name: 'Ovejas Saltarinas', icon: '🐑', desc: 'Para dormirte hay que saltar ovejas… con gravedad de sueño, ¡flotas!', how: 'Toca para saltar (flotas mucho). Toca otra vez en el aire para el doble salto.' },
+    { id: 'almohadas', tipo: 'esquiva', obs: ['almohada', 'nube', 'almohada'], os: .9, drift: .7, sky: false, bounce: .8, name: 'Lluvia de Almohadas', icon: '🛏️', desc: 'Almohadas y nubes flotan de lado a lado. Esquívalas sin despertarte.', how: 'Pulsa ⬅ ➡ (o toca a los lados) para cambiar de carril.' },
+    { id: 'suenos', tipo: 'recoge', item: 'luna', bad: 'reloj', ice: true, speed: 7, badTxt: '¡Despertador! ⏰ −1', name: 'Atrapasueños', icon: '🌙', desc: 'Coge lunas de sueño flotando entre nubes. ¡Ojo con los despertadores!', how: 'Arrastra el dedo para moverte. Coge lunas 🌙 y evita los despertadores ⏰.' },
+    { id: 'reloj', tipo: 'superv', modo: 'barrido', obj: 'reloj', armc: '#ff6fae', av: 1.2, name: 'El Reloj Derretido', icon: '⏰', desc: 'Las agujas de un reloj gigante barren el suelo. ¡Salta para que no te barran!', how: 'Toca (o pulsa ⤴) para saltar cuando llegue la aguja.' },
+    { id: 'mariposas', tipo: 'vuelo', ride: 'mariposa', rs: 1.4, ry: 1, grav: 9, flap: 4.6, ring: '#ff9cf0', haz: 'nube', name: 'Vuelo de Mariposa', icon: '🦋', desc: 'Te salen alas de mariposa: vuela entre aros de colores y nubes dormilonas.', how: 'Toca para aletear. Cruza los aros y no choques con las nubes.' },
+  ] },
+  { id: 'volcan', name: 'Olimpiada del Volcán', icon: '🌋', color: ['#8a2a2a', '#ff8a3a'], lema: 'Lava, chiles y un dragón con mucha hambre', pruebas: [
+    { id: 'caida', base: 'caida', name: 'Caída al Centro de la Tierra', icon: '🕳️', desc: 'Cae por el pozo esquivando rocas hasta el centro de la Tierra.' },
+    { id: 'lava', tipo: 'esquiva', obs: ['bolafuego', 'roca'], os: .8, sky: true, name: 'Lluvia de Fuego', icon: '🔥', desc: 'Caen bolas de fuego sobre la pista (mira las marcas rojas). ¡Esquívalas!', how: 'Pulsa ⬅ ➡ para cambiar de carril. Los círculos rojos avisan de dónde cae el fuego.' },
+    { id: 'rocas', tipo: 'salto', obs: 'roca', os: .6, h: 1, roll: 3, gap: [18, 24], name: 'Rocas Rodantes', icon: '🪨', desc: 'Rocas de lava ruedan hacia ti. Sáltalas a tiempo.', how: 'Toca para saltar. ¡Las rocas vienen hacia ti, salta antes!' },
+    { id: 'sueloLava', tipo: 'superv', modo: 'baldosas', tile: '#6a4a5a', under: '#ff6a2a', name: 'El Suelo es Lava', icon: '🟥', desc: 'Las baldosas se ponen rojas y se hunden en la lava. ¡No te quedes encima!', how: 'Arrastra el dedo para moverte. Sal de las baldosas rojas.' },
+    { id: 'dragon', tipo: 'punteria', proj: 'chile', target: 'dragon', mouth: true, ts: .8, dy: 1.1, name: 'Chiles al Dragón', icon: '🐉', desc: 'Lanza chiles a la boca del dragón. Si la tiene abierta, ¡puntos dobles!', how: 'Toca en la zona verde. Si el dragón abre la boca, ¡x2!' },
+  ] },
+];
+export const PTS = [10, 7, 5, 3, 2, 1];
+export function findEv(oid, eid) { const o = OLIMPIADAS.find(o => o.id === oid) || OLIMPIADAS[0]; const i = Math.max(0, o.pruebas.findIndex(p => p.id === eid)); return { o, i, p: o.pruebas[i] }; }
