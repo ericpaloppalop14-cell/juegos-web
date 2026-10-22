@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS } from './data.js';
 import { makeKart, animKart, toon, mesh, outline } from './gfx.js';
-import { Race } from './race.js?v=m9';
+import { Race } from './race.js?v=m10';
 import { buildTrack } from './track.js';
 import { Audio } from './audio.js';
 import { Net, netAvailable } from './net.js';

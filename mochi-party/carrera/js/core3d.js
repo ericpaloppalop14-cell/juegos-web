@@ -5,7 +5,7 @@
 // ======================================================================
 import * as THREE from 'three';
 import { CHARS } from './data.js';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js?v=m9';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js?v=m10';
 import { Audio } from './audio.js';
 
 const $ = id => document.getElementById(id);
@@ -209,6 +209,7 @@ function run(EV, opts = {}) {
     if (E.shake > 0) { E.shake -= dt; camera.position.x += rnd(-.15, .15) * E.shake * 4; camera.position.y += rnd(-.15, .15) * E.shake * 4; }
     updParts(dt);
     for (const r of racers) animCharacter(r.obj.userData.char, now / 1000 + r.k, 1, r.expr || '');
+    if (!EV.noFeet) feetFix(racers);
     if (E.celeb) E.shake = 0;
     renderer.render(scene, camera);
     if (EV.id !== 'anillos' && PR > 1.25) { const ft = (now - (E._fpsT0 || now)); E._fpsN = (E._fpsN || 0) + 1; if (!E._fpsT0) E._fpsT0 = now; else if (ft > 1500) { const fps = E._fpsN * 1000 / ft; E._fpsN = 0; E._fpsT0 = now; if (fps < 48 && E.t > 1) { PR = Math.max(1.25, PR - .5); renderer.setPixelRatio(PR); resize(); } } }
@@ -241,4 +242,7 @@ function run(EV, opts = {}) {
   window.__p3 = { E, get phase() { return E.phase; }, renderer };
   return E;
 }
+// pies siempre sobre el suelo: si el cuerpo (por inclinarse, aplastarse o girar) baja de la base, se sube lo justo
+const _fb = new THREE.Box3();
+function feetFix(rs) { for (const r of rs) { const o = r.obj, c = o && o.userData.char; if (!c || !o.visible || r.out || o.parent !== o.parent?.parent && false) continue; if (o.position.y > .6 || o.position.y < -.05 || o.parent.type !== 'Scene') continue; o.updateMatrixWorld(true); _fb.setFromObject(c); const d = _fb.min.y - o.position.y; if (d < -.02) o.position.y -= d + .02; } }
 export { THREE, run, camera, toon, outline, mesh, glowTex, glowSprite, starShape, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, PERS, OUCH, ui };

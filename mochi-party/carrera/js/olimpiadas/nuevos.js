@@ -3,10 +3,10 @@
 //  circuito (karts / trineo) · golf · laberinto · tirachinas · bolos · hockey · pesca · memoria ·
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m9';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o3';
-import { mergedGeo, instSet } from './decor.js?v=o3';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o3';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m10';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o4';
+import { mergedGeo, instSet } from './decor.js?v=o4';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o4';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -235,7 +235,7 @@ export function tirachinas(cfg) {
       const el = .62;
       for (const r of E.racers) { r.cd -= dt; if (r.shots <= 0 || r.cd > 0) continue;
         if (r.me && !E.AUTO) { const I = E.input; if (I.down && I.px != null) this.aim = this.aimFrom(E); if (E.ups.length && this.aim) { if (this.aim.ok) this.fire(E, r, this.aim.ang, this.aim.v); this.aim = null; } }
-        else { const s0 = sk(E, r), dz = -TZ, dy = 1.5 - 1.6; const v = Math.sqrt(G * dz * dz / (2 * Math.cos(el) ** 2 * (dz * Math.tan(el) - dy))); this.fire(E, r, rnd(-1, 1) * (1.15 - s0) * .06, v * (1 + rnd(-1, 1) * (1.15 - s0) * .1)); r.cd = rnd(2.4, 3.4); } }
+        else { const s0 = sk(E, r), dz = -TZ, dy = 1.5 - 1.6; const v = Math.sqrt(G * dz * dz / (2 * Math.cos(el) ** 2 * (dz * Math.tan(el) - dy))); this.fire(E, r, rnd(-1, 1) * (1.25 - s0) * .12, v * (1 + rnd(-1, 1) * (1.25 - s0) * .16)); r.cd = rnd(2.4, 3.4); } }
       for (let i = this.projs.length - 1; i >= 0; i--) { const p = this.projs[i]; p.t += dt; p.vy -= G * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
         for (const b of this.blocks) { const d = Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z); if (d < .85) { b.dyn = true; b.rest = false; b.vx += p.vx * .55 + rnd(-1, 1); b.vy += Math.abs(p.vy) * .3 + 2; b.vz += p.vz * .55; p.vx *= .6; p.vz *= .6; if (p.r.me) Audio.sfxPlay('box'); } }
         if (p.y < .35) { p.y = .35; p.vy = -p.vy * .3; p.vx *= .6; p.vz *= .6; }
@@ -281,7 +281,7 @@ export function bolos(cfg) {
       const t = E.t;
       for (const r of E.racers) {
         if (r.st === 'aim') { r.mx = r.lx + Math.sin((t + r.ph) * 2.2) * 1.05; r.bx = r.mx; r.bz = .5;
-          let go = false; if (r.me && !E.AUTO) go = tapped(E); else { const s0 = sk(E, r); if (r.err == null) r.err = rnd(-1, 1) * (1.15 - s0) * .55; go = (r.wait -= dt) < 0 && Math.abs(r.mx - r.lx - r.err) < .06; }
+          let go = false; if (r.me && !E.AUTO) go = tapped(E); else { const s0 = sk(E, r); if (r.err == null) r.err = rnd(-1, 1) * (1.3 - s0) * 1.5; go = (r.wait -= dt) < 0 && Math.abs(r.mx - r.lx - r.err) < .06; }
           if (go) { r.st = 'roll'; r.bv = cfg.speed || 12; r.err = null; r.curve = 0; if (r.me) Audio.sfxPlay('throw'); } }
         else if (r.st === 'roll') { r.bz -= r.bv * dt;
           if (r.me && !E.AUTO) r.curve = steer(E); r.bx = clamp(r.bx + r.curve * 1.2 * dt, r.lx - 1.25, r.lx + 1.25);
@@ -311,7 +311,7 @@ export function hockey(cfg) {
   const R = 11, AP = R * Math.cos(Math.PI / 6), GW = 2.6, SIDE = R;
   return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 75,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: R + 3 } }); setButtons('lr', { L: '⬅', R: '➡' });
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: R + 8 } }); setButtons('lr', { L: '⬅', R: '➡' });
       const fl = mesh(new THREE.CylinderGeometry(R, R, .4, 6), T(cfg.ice || '#d8f0ff', { rim: .4 }), sc, [0, -.2, 0], [0, Math.PI / 6, 0]); outline(fl, '#6a8ab0', 1.01);
       mesh(new THREE.RingGeometry(2, 2.2, 32), T('#ff6fae', { rim: 0 }), sc, [0, .02, 0], [-Math.PI / 2, 0, 0]);
       this.sides = []; racers(E, .5);
@@ -366,7 +366,7 @@ export function pesca(cfg) {
       const wg = new THREE.PlaneGeometry(220, 160, 44, 32); wg.rotateX(-Math.PI / 2); this.water = mesh(wg, T(cfg.water || '#3aa8d8', { rim: .4, opacity: .92 }), sc, [0, -.55, -70]); this.wy = Float32Array.from(wg.attributes.position.array);
       mesh(new THREE.BoxGeometry(6 * SP + 3, .5, 3.4), T('#c8904a', { rim: .2 }), sc, [0, -.25, 1]); for (let i = -9; i <= 9; i += 1.2) mesh(new THREE.BoxGeometry(.06, .52, 3.42), T('#8a5a3a'), sc, [i, -.24, 1]);
       for (let i = -8; i <= 8; i += 4) mesh(CYL(), T('#8a5a3a'), sc, [i, -1, -.5], null, [.25, 2, .25]);
-      this.fishes = []; const mtr = $('meter'); mtr.innerHTML = '<div class="mz"></div><i></i><b>🎣 Tensión</b><span></span>'; mtr.style.display = 'none'; this.mtr = mtr;
+      this.fishes = []; let mtr = $('meter'); if (!mtr) { mtr = document.createElement('div'); mtr.id = 'meter'; $('hud').appendChild(mtr); } mtr.innerHTML = '<div class="mz"></div><i></i><b>🎣 Tensión</b><span></span>'; mtr.style.display = 'none'; this.mtr = mtr;
       racers(E, .5); E.racers.forEach((r, k) => { r.lx = (k - 2.5) * SP; r.obj.position.set(r.lx, 0, 1.2); r.obj.rotation.y = Math.PI; r.score = 0; r.st = 'wait'; r.wait = rnd(1, 3); r.ten = .4; r.fp = 0; r.slack = 0; r.n = 0;
         const rod = new THREE.Group(); rod.position.set(.35, .7, -.2); r.obj.add(rod); mesh(CYL(), T('#a8784a'), rod, [0, .9, -.6], [-.6, 0, 0], [.05, 2.2, .05]); r.rod = rod;
         r.bob = mesh(SPH(), T('#ff4f6a', { rim: .5 }), sc, [r.lx, -.45, -6], null, .18); mesh(SPH(), T('#ffffff'), r.bob, [0, .6, 0], null, .7);
@@ -544,7 +544,7 @@ export function pinta(cfg) {
   const NC = 26, S = 20, CS = S / NC;
   return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 45, stick: true,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 15 } }); setButtons(null);
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 24 } }); setButtons(null);
       const p = mesh(new THREE.BoxGeometry(S + .8, 1, S + .8), T(cfg.cake || '#fff4fa', { rim: .2 }), sc, [0, -.5, 0]); outline(p, '#c05a8a', 1.01);
       for (let i = 0; i < 28; i++) { const a = i / 28 * 6.28, rr = S / 2 + .6; const c = prop('vela'); c.position.set(Math.max(-rr, Math.min(rr, Math.cos(a) * rr * 1.5)), 0, Math.max(-rr, Math.min(rr, Math.sin(a) * rr * 1.5))); c.scale.setScalar(.6); sc.add(c); }
       this.tiles = new THREE.InstancedMesh(new THREE.BoxGeometry(CS * .96, .06, CS * .96), T('#ffffff', { rim: 0 }), NC * NC); const o = new THREE.Object3D(); this.base = new THREE.Color(cfg.cake2 || '#ffe0ef');
@@ -582,7 +582,7 @@ export function futbol(cfg) {
   const FX = 13, FZ = 8, GW = 2.4;
   return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 60, stick: true,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 17 } }); setButtons('m', { M: '⚽' });
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 24 } }); setButtons('m', { M: '⚽' });
       mesh(new THREE.BoxGeometry(FX * 2 + 2, .4, FZ * 2 + 2), T(cfg.grass || '#7fd86a', { rim: 0 }), sc, [0, -.2, 0]);
       for (let i = -6; i <= 6; i++) mesh(new THREE.PlaneGeometry(2, FZ * 2), T(i % 2 ? '#8fe07a' : '#72cf62', { rim: 0 }), sc, [i * 2, .01, 0], [-Math.PI / 2, 0, 0]);
       mesh(new THREE.RingGeometry(2.2, 2.4, 40), T('#ffffff', { rim: 0 }), sc, [0, .02, 0], [-Math.PI / 2, 0, 0]); mesh(new THREE.PlaneGeometry(.15, FZ * 2), T('#ffffff', { rim: 0 }), sc, [0, .02, 0], [-Math.PI / 2, 0, 0]);
@@ -713,9 +713,9 @@ export function equilibrio(cfg) {
         const ball = mesh(SPH(), toon(cfg.ballC || '#ffe9a8', { emissive: '#ffe9a8', ei: .15, rim: .6 }), sc, [r.bx, BR, 0], null, BR); outline(ball, '#c0a050', 1.03); for (let i = 0; i < 6; i++) mesh(SPHL(), T('#e8c878'), ball, [Math.cos(i * 1.7) * .75, Math.sin(i * 2.3) * .75, Math.sin(i * 1.1) * .4 + .5], null, .18); r.ball = ball; r.fy = 0; r.fvy = 0; r.fx = 0; });
     },
     update(E, dt) {
-      const t = E.t; if ((this.gt -= dt) < 0) { this.gt = rnd(2, 3.5); this.gdir = Math.random() < .5 ? -1 : 1; this.gust = 0; } const gmax = .7 + t * .045; this.gust = lerp(this.gust, this.gdir * gmax * (this.gt > 1 ? 1 : this.gt), Math.min(1, dt * 1.5));
+      const t = E.t; if ((this.gt -= dt) < 0) { this.gt = rnd(2, 3.5); this.gdir = Math.random() < .5 ? -1 : 1; this.gust = 0; } const gmax = .9 + t * .07; this.gust = lerp(this.gust, this.gdir * gmax * (this.gt > 1 ? 1 : this.gt), Math.min(1, dt * 1.5));
       for (const r of E.racers) { if (r.out) { r.fvy -= 12 * dt; r.fy = Math.max(0, r.fy + r.fvy * dt); r.fx += Math.sign(r.th) * 2 * dt * (r.fy > 0 ? 1 : 0); continue; }
-        let u; if (r.me && !E.AUTO) u = steer(E); else { const s0 = sk(E, r); if ((r.rt = (r.rt || 0) - dt) <= 0) { r.rt = .05 + (1.15 - s0) * .2; r.u = clamp(-(r.th * 3.2 + r.om * 1.3) * (.7 + .5 * s0) - this.gust * .35 + rnd(-1, 1) * (1.15 - s0) * .5, -1, 1); } u = r.u; }
+        let u; if (r.me && !E.AUTO) u = steer(E); else { const s0 = sk(E, r); if ((r.rt = (r.rt || 0) - dt) <= 0) { r.rt = .05 + (1.15 - s0) * .2; r.u = clamp(-(r.th * 3.2 + r.om * 1.3) * (.6 + .5 * s0) - this.gust * .3 + rnd(-1, 1) * (1.2 - s0) * 1.1, -1, 1); } u = r.u; }
         const acc = 2.6 * Math.sin(r.th) + this.gust * .9 + u * 3.6 + Math.sin(t * 3.1 + r.k * 1.7) * .25; r.om += acc * dt; r.om *= Math.exp(-.8 * dt); r.th += r.om * dt; r.roll -= r.om * dt * .8; r.uu = u;
         if (Math.abs(r.th) > LIM) { r.out = true; r.outT = t; r.score = t; r.fy = BR * 2; r.fvy = 3; r.fx = 0; E.burst(v3(r.bx, BR * 2, 0), r.ch.color, 16, 4, .6, .5); if (r.me) { Audio.sfxPlay('boing'); E.ui.toast(`¡Te caíste a los ${t.toFixed(1)} s!`); } else say(E, r, '¡Uaaah!'); } }
       const alive = E.racers.filter(r => !r.out); for (const r of alive) r.score = t + 100 - Math.abs(r.th) * 10; for (const r of E.racers) r.prog = clamp((r.out ? r.outT : t) / 50, 0, .99);
