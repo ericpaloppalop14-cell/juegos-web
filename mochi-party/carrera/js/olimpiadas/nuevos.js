@@ -48,8 +48,8 @@ export function circuito(cfg) {
         const eg = new THREE.BufferGeometry(); eg.setAttribute('position', new THREE.Float32BufferAttribute(ep, 3)); eg.setIndex(ei); const em = new THREE.MeshBasicMaterial({ color: sd > 0 ? '#ff5ad8' : '#5ae8ff', side: THREE.DoubleSide }); mesh(eg, em, sc); (this.edges = this.edges || []).push(em); }
       // ---- arcos de neón sobre la pista
       this.arcs = []; for (let k = 1; k < 7; k++) { const q = this.at(k / 7 * L + 6), g = new THREE.Group(), c = ['#ff5ad8', '#5ae8ff', '#ffe27a', '#8a7aff'][k % 4];
-        const am = new THREE.MeshBasicMaterial({ color: c }); mesh(new THREE.TorusGeometry(W / 2 + 1.2, .16, 8, 32, Math.PI), am, g); mesh(new THREE.TorusGeometry(W / 2 + 1.2, .45, 8, 32, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .18, depthWrite: false }), g);
-        g.position.set(q.x, 0, q.z); g.rotation.y = Math.atan2(q.tx, q.tz) + Math.PI / 2; sc.add(g); this.arcs.push(am); }
+        const am = new THREE.MeshBasicMaterial({ color: c }); mesh(new THREE.TorusGeometry(W / 2 + 2, .16, 8, 32, Math.PI), am, g); mesh(new THREE.TorusGeometry(W / 2 + 2, .45, 8, 32, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .18, depthWrite: false }), g);
+        g.position.set(q.x, 0, q.z); g.rotation.y = Math.atan2(q.tx, q.tz); sc.add(g); this.arcs.push(am); }
       // ---- gradas con público alienígena que salta
       const al = [], seatM = T('#3a2a70', { rim: .2 }); this.stands = [];
       for (let k = 0; k < 6; k++) { const q = this.at((k + .5) / 6 * L), sd = k % 2 ? 1 : -1, off = W / 2 + 4.5, gx = q.x + q.nx * off * sd, gz = q.z + q.nz * off * sd, ry = Math.atan2(q.tx, q.tz), g = new THREE.Group(); g.position.set(gx, 0, gz); g.rotation.y = ry; sc.add(g);
