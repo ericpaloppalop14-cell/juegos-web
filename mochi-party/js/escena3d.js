@@ -76,7 +76,7 @@ function actor(id, scale = 1, role = 'dance', seed = 0) {
 }
 function pose(a, t, dt) {
   const u = a.userData, p = u.pivot, s = u.scale, T = t + u.seed * .37; let y = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, expr = '';
-  if (u.roles) { const k = Math.floor((t + u.seed * 2.3) / 5.5) % u.roles.length; if (k !== u.rk) { if (u.rk != null && t - u.enter > 1) burst(a.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 1.2 * s, 0)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][u.seed % 4], 8, 2.2); u.rk = k; u.role = u.roles[k]; } }
+  if (u.roles) { const k = Math.floor((t + u.seed * 2.3) / (u.per || 5.5)) % u.roles.length; if (k !== u.rk) { if (u.rk != null && t - u.enter > 1) burst(a.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 1.2 * s, 0)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][u.seed % 4], 8, 2.2); u.rk = k; u.role = u.roles[k]; } }
   switch (u.role) {
     case 'dance': { const b = Math.abs(Math.sin(T * 4.2)); y = b * .28; rz = Math.sin(T * 4.2) * .14; ry = Math.sin(T * 1.3) * .5; sy = 1 + b * .06 - (1 - b) * .05; sx = 2 - sy; if ((T % 5) < 1) { ry += (T % 5) * Math.PI * 2; y += Math.sin((T % 5) * Math.PI) * .7; expr = 'happy'; } break; }
     case 'wave': { y = Math.abs(Math.sin(T * 3)) * .12; rz = Math.sin(T * 2.4) * .22; ry = Math.sin(T * .8) * .3 - .2; if ((T % 4) < .8) expr = 'happy'; break; }
@@ -114,9 +114,20 @@ function build(m, d) {
     [[-1.55, .35], [1.55, .35], [-2.6, -.85], [2.6, -.85]].forEach(([x, z], i) => { const a = actor(others[i], 1, R[i][0], i + 1); a.userData.roles = R[i]; a.position.set(x, 0, z); a.rotation.y = -x * .14; a.userData.enter = .15 + i * .12; root.add(a); actors.push(a); });
     actors.push(hero); camT = { p: new THREE.Vector3(0, 3.1, 8), l: new THREE.Vector3(0, 1.2, 0), w: 7.4 };
   } else if (m === 'chars') {
-    deco = stage(1.9); root.add(deco); confAmt = .15;
-    const a = actor(d.pj, 1.55, 'spin', 0); a.userData.enter = 0; root.add(a); actors.push(a); extra.hero = a;
-    camT = { p: new THREE.Vector3(0, 2.2, 7.2), l: new THREE.Vector3(0, 1.25, 0), w: 4.4 };
+    // plató de presentación: pedestal con bombillas, focos, telón, estrellas, banderines, confeti y globos
+    deco = stage(1.9); root.add(deco); root.add(spots()); confAmt = .55; balOn = true;
+    const col = CH(d.pj).color;
+    const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18 }), root, [0, .17, 0]); outline(ped, '#d58ab8', 1.03);
+    mesh(new THREE.TorusGeometry(1.3, .06, 8, 48), toon(col, { emissive: col, ei: .5, rim: 0 }), root, [0, .35, 0], [Math.PI / 2, 0, 0]);
+    const ring = glow(col, 4.2, .55); ring.position.set(0, .5, -.2); root.add(ring); extra.ring = ring;
+    const cur = mesh(new THREE.CylinderGeometry(7.5, 7.5, 9, 40, 1, true, Math.PI * .62, Math.PI * .76), toon('#b06ad8', { rim: .2, side: THREE.BackSide }), root, [0, 3.2, 1.5]);
+    for (let i = 0; i < 15; i++) { const a = Math.PI * .66 + i / 14 * Math.PI * .68; mesh(new THREE.CylinderGeometry(.14, .14, 9, 6), toon(i % 2 ? '#c98af0' : '#9a52c8', { rim: 0 }), root, [Math.sin(a) * 7.3, 3.2, 1.5 + Math.cos(a) * 7.3]); }
+    const flags = []; for (let i = 0; i < 13; i++) { const x = (i - 6) * .75, y = 5.2 - Math.cos((i - 6) / 6 * 1.4) * .9; const f = mesh(new THREE.ConeGeometry(.2, .42, 3), toon(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7'][i % 5], { rim: .3 }), root, [x, y, -3.6], [Math.PI, 0, 0]); flags.push(f); } extra.flags = flags;
+    const stars = []; for (let i = 0; i < 18; i++) { const s0 = glow(['#ffe27a', '#ffffff', '#ff9cc8', '#8fd0ff'][i % 4], rnd(.3, .7), .9); s0.position.set(rnd(-5, 5), rnd(1, 6.5), rnd(-4.5, -3.2)); s0.userData.ph = rnd(0, 6); root.add(s0); stars.push(s0); } extra.stars = stars;
+    const a = actor(d.pj, 1.15, 'dance', 0); a.position.y = .35; a.userData.roles = ['dance', 'hop', 'spin', 'wave', 'cheer', 'wiggle']; a.userData.per = 2.6; a.userData.enter = .05; a.userData.sh.visible = false; root.add(a); actors.push(a); extra.hero = a;
+    if (d.prev) { burst(new THREE.Vector3(0, 1.4, 0), col, 26, 4); burst(new THREE.Vector3(0, 1.4, 0), '#ffffff', 14, 3); }
+    const tg = textSprite(CH(d.pj).name, col, true); tg.position.set(0, 3.55, 0); tg.scale.multiplyScalar(.85); root.add(tg); a.userData.tag = tg; extra.tagC = tg;
+    camT = { p: new THREE.Vector3(0, 2.6, 8.4), l: new THREE.Vector3(0, 1.5, 0), w: 7.4 };
   } else if (m === 'intro') {
     deco = stage(3.4); root.add(deco); root.add(spots()); confAmt = .2;
     const me = actor(d.pj, .95, 'hop', 0); me.position.set(0, 0, 1.7); root.add(me); actors.push(me);
@@ -160,6 +171,9 @@ function frame() {
   root.children.forEach(o => { if (o.userData.L) o.userData.L.forEach((c, i) => { c.rotation.z = Math.sin(t * .9 + i * 2) * .35; c.rotation.x = Math.cos(t * .7 + i) * .15; }); });
   if (extra.vs) extra.vs.scale.set(2 * (1 + Math.sin(t * 6) * .06), .5 * (1 + Math.sin(t * 6) * .06), 1);
   if (extra.trophy) extra.trophy.rotation.y = t * 1.2;
+  if (mode === 'chars') { if (extra.ring) extra.ring.material.opacity = .4 + Math.sin(t * 3) * .15; if (extra.stars) extra.stars.forEach(s0 => { s0.material.opacity = .45 + .45 * Math.sin(t * 3 + s0.userData.ph); }); if (extra.flags) extra.flags.forEach((f, i) => { f.rotation.z = Math.sin(t * 3 + i) * .15; });
+    if (t > 1 && Math.random() < dt * .8) burst(new THREE.Vector3(rnd(-3, 3), rnd(3, 4.5), rnd(-2.5, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][Math.random() * 4 | 0], 12, 2.4);
+    if (extra.sel != null) { const k = t - extra.sel; if (k < 1.1) { const h = extra.hero.userData; h.flip = extra.sel; confAmt = 1; } } }
   if (mode === 'menu' && t > 1 && Math.random() < dt * 1.2) burst(new THREE.Vector3(rnd(-4, 4), rnd(3.2, 4.6), rnd(-3, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff', '#b9a2f7'][Math.random() * 5 | 0], 16, 2.6);
   if (extra.podio) { confAmt = t > 1.6 ? 1 : 0; if (t > 1.8 && !extra.boom) { extra.boom = true; burst(new THREE.Vector3(0, 3.2, 0), '#ffe27a', 30, 4.5); burst(new THREE.Vector3(0, 3.2, 0), '#ff9cc8', 20, 3.5); } if (Math.random() < dt * 1.6 && t > 2) burst(new THREE.Vector3(rnd(-4, 4), rnd(3, 5), rnd(-2, 0)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][Math.random() * 4 | 0], 14, 3); }
   updConf(dt, t); updSparks(dt); updBal(dt, t);
@@ -174,5 +188,8 @@ function frame() {
 requestAnimationFrame(frame);
 // tocar el escenario: voltereta del protagonista
 addEventListener('pointerdown', e => { const el = document.querySelector('.scr.on .stage3d'); if (!el || !extra.hero) return; const r = el.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return; const u = extra.hero.userData; if (now() - t0 - u.flip > .9) { u.flip = now() - t0; burst(extra.hero.position.clone().add(new THREE.Vector3(0, 1.5, 0)), '#ff9cc8', 14, 3); } });
-window.MP3D = { ok: true, get mode() { return mode; } };
+window.MP3D = { ok: true, get mode() { return mode; },
+  // «¡Este!»: voltereta, explosión de confeti y chispas del color del mochi
+  select() { if (mode !== 'chars' || !extra.hero) return false; const t = now() - t0; extra.sel = t; const p = extra.hero.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+    burst(p, '#ffe27a', 34, 5); burst(p, '#ff9cc8', 24, 4.2); burst(p, '#7ee3c4', 20, 3.6); for (const q of confP) { q.y = rnd(3, 9); } return true; } };
 document.body.classList.add('has3d');

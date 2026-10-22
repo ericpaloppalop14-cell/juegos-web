@@ -40,10 +40,10 @@ $('bOnline').onclick = () => { location.href = 'carrera/online.html?pj=' + ((S &
 function chars() {
   show('sChars'); const G = $('charGrid'); G.innerHTML = '';
   CHARS.forEach(c => { const b = document.createElement('button'); b.className = c.id === pj ? 'on' : ''; b.innerHTML = `<canvas width="116" height="116" data-id="${c.id}"></canvas>`; b.onclick = () => { pj = c.id; localStorage.setItem('mr_pj', pj); chars(); }; G.appendChild(b); });
-  if (!G.dataset.pj || G.dataset.pj !== pj) { G.dataset.pj = pj; stage('charStage', { pj }); }
+  if (!G.dataset.pj || G.dataset.pj !== pj) { const prev = G.dataset.pj || ''; G.dataset.pj = pj; stage('charStage', { pj, prev }); }
   const c = CH(pj); $('charWho').innerHTML = `${c.name}<small>${c.pers} · «${c.lines[0]}»</small>`;
 }
-$('bCharOk').onclick = () => menu();
+$('bCharOk').onclick = () => { const b = $('bCharOk'); if (b.disabled) return; if (window.MP3D && MP3D.select && MP3D.select()) { b.disabled = true; setTimeout(() => { b.disabled = false; menu(); }, 1100); } else menu(); };
 
 // ---------- presentación de la prueba ----------
 function intro() {

@@ -1,0 +1,12 @@
+const { chromium } = require('/usr/local/lib/pnpm/5/.pnpm/playwright@1.63.0-alpha-2026-08-31/node_modules/playwright');
+const D = '/workspace/mp-totems-seleccion-capturas/';
+(async () => { const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+ try { for (const [w, h, o] of [[390, 844, 'v'], [844, 390, 'h']]) { const p = await (await b.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true })).newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+    await p.goto('http://localhost:8765/mochi-party/'); await p.waitForFunction(() => window.MP3D, null, { timeout: 60000 }); await p.waitForTimeout(1500);
+    await p.evaluate(() => document.getElementById('bPj').click()); await p.waitForTimeout(2200); await p.screenshot({ path: D + `seleccion-${o}-1.png` });
+    await p.waitForTimeout(3000); await p.screenshot({ path: D + `seleccion-${o}-2-baile.png` });
+    await p.evaluate(() => document.querySelectorAll('#charGrid button')[4].click()); await p.waitForTimeout(450); await p.screenshot({ path: D + `seleccion-${o}-3-cambio.png` });
+    await p.waitForTimeout(1600); await p.screenshot({ path: D + `seleccion-${o}-4-nuevo.png` });
+    await p.evaluate(() => document.getElementById('bCharOk').click()); await p.waitForTimeout(450); await p.screenshot({ path: D + `seleccion-${o}-5-elegido.png` });
+    await p.waitForTimeout(1200); const scr = await p.evaluate(() => document.querySelector('.scr.on').id);
+    console.log(o, 'pantalla tras ¡Este!:', scr, 'errores', errs); } } finally { await b.close(); } })();
