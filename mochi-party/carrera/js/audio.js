@@ -28,7 +28,8 @@ export const Audio = {
   midi: m => 440 * Math.pow(2, (m - 69) / 12),
   // ---------- music ----------
   playSong(cfg, seed = 1) {
-    this.stopSong(); if (!this.ctx) return;
+    this.stopSong(); if (window.MPMusica) { window.MPMusica.start(); return; } // música global continua (js/musica.js)
+    if (!this.ctx) return;
     let s = seed * 9301 + 49297; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280;
     const sc = SCALES[cfg.scale] || SCALES.major;
     const deg = d => cfg.root + sc[((d % 7) + 7) % 7] + 12 * Math.floor(d / 7);
