@@ -4,13 +4,14 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m18';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o32';
-import { espacioReal, asfaltoTex } from './espacio-real.js?v=o32';
-import { mergedGeo, instSet } from './decor.js?v=o32';
-import { chiles } from './chiles.js?v=o32';
-import { globo } from './globo.js?v=o32';
-import { addFace, setExpr, faceTick, particles, dropBounce, desertoExtra } from './tira-extra.js?v=o32';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o32';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o33';
+import { espacioReal, asfaltoTex } from './espacio-real.js?v=o33';
+import { mergedGeo, instSet } from './decor.js?v=o33';
+import { chiles } from './chiles.js?v=o33';
+import { globo } from './globo.js?v=o33';
+import { futbolExtra } from './futbol-extra.js?v=o33';
+import { addFace, setExpr, faceTick, particles, dropBounce, desertoExtra } from './tira-extra.js?v=o33';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o33';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -713,10 +714,11 @@ export function futbol(cfg) {
   const FX = 13, FZ = 8, GW = 2.4;
   return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 60, stick: true,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 24 } }); setButtons('m', { M: '⚽' });
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { arena: { r: 24 }, noAmb: true }); setButtons('m', { M: '⚽' });
+      // o33: el estadio sustituye al decorado suelto del mundo (así nada atraviesa las gradas)
+      for (const st of this.W.rich.sets || []) if (st.im && st.kind !== 'nubeLejos') st.im.visible = false;
       mesh(new THREE.BoxGeometry(FX * 2 + 2, .4, FZ * 2 + 2), T(cfg.grass || '#7fd86a', { rim: 0 }), sc, [0, -.2, 0]);
-      for (let i = -6; i <= 6; i++) mesh(new THREE.PlaneGeometry(2, FZ * 2), T(i % 2 ? '#8fe07a' : '#72cf62', { rim: 0 }), sc, [i * 2, .01, 0], [-Math.PI / 2, 0, 0]);
-      mesh(new THREE.RingGeometry(2.2, 2.4, 40), T('#ffffff', { rim: 0 }), sc, [0, .02, 0], [-Math.PI / 2, 0, 0]); mesh(new THREE.PlaneGeometry(.15, FZ * 2), T('#ffffff', { rim: 0 }), sc, [0, .02, 0], [-Math.PI / 2, 0, 0]);
+      this.X = futbolExtra(E, { FX, FZ, GW }); // FINAL DEL MUNDIAL: estadio, público, campo con líneas, red, banquillos…
       for (const s of [-1, 1]) { const c = s > 0 ? '#ff6fae' : '#5fa8ff'; for (const z of [-1, 1]) mesh(CYL(), T(z > 0 ? '#ffffff' : c), sc, [s * FX, .9, z * GW], null, [.18, 1.8, .18]); mesh(CYL(), T(c), sc, [s * FX, 1.8, 0], [Math.PI / 2, 0, 0], [.18, GW * 2, .18]); mesh(new THREE.PlaneGeometry(GW * 2, 1.8), T(c, { opacity: .3, side: THREE.DoubleSide }), sc, [s * (FX + .6), .9, 0], [0, Math.PI / 2, 0]);
         for (const z of [-1, 1]) mesh(new THREE.BoxGeometry(.4, .6, FZ - GW), T('#ffffff'), sc, [s * (FX + .2), .3, z * (GW + (FZ - GW) / 2)]); }
       for (const z of [-1, 1]) mesh(new THREE.BoxGeometry(FX * 2 + .8, .6, .4), T('#ffffff'), sc, [0, .3, z * (FZ + .2)]);
@@ -747,7 +749,7 @@ export function futbol(cfg) {
       if (!this.done && E.t > this.maxT - .5) { this.done = true; scoreEnd(E, r => `${this.goals[r.team]}-${this.goals[1 - r.team]}${r.g ? ` · ${r.g}⚽` : ''}`); }
       info(`⚽ <b style="color:#ff6fae">Tú ${this.goals[0]}</b> - <b style="color:#5fa8ff">${this.goals[1]} Ellos</b>`);
     },
-    render(E, dt) { const t = E.t, b = this.b; this.W.tick(dt, camera); this.ball.position.set(b.x, .45 + b.y, b.z); this.ball.rotation.z -= b.vx * dt / .45; this.ball.rotation.x += b.vz * dt / .45;
+    render(E, dt) { const t = E.t, b = this.b; this.W.tick(dt, camera); this.X && this.X.tick(dt, this.goals, this.maxT - E.t); this.ball.position.set(b.x, .45 + b.y, b.z); this.ball.rotation.z -= b.vx * dt / .45; this.ball.rotation.x += b.vz * dt / .45;
       for (const r of E.racers) { poseArena(E, r, t, dt); r.obj.userData.pivot.rotation.x = r.kc > 0 ? -.4 : 0; }
       const pr = port(); camTo(E, dt, v3(b.x * .55, pr ? 21 : 13, pr ? 15 : 12), v3(b.x * .6, 0, pr ? 0 : -.5), pr ? 62 : 55, 2.5); },
   });
