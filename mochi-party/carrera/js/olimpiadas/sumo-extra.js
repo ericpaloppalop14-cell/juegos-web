@@ -1,5 +1,5 @@
 // ======================================================================
-//  SUMO EN LA DUNA (o30) — suelo del ring con dos mochis luchando (textura canvas)
+//  SUMO EN LA DUNA (o31) — suelo del ring con dos mochis luchando (textura canvas)
 //  y grada llena de público animado: saltos, brazos, ola, banderas y confeti.
 // ======================================================================
 import { THREE, toon, outline } from '../core3d.js?v=m18';

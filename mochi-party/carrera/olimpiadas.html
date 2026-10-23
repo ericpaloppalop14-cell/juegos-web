@@ -50,6 +50,10 @@ h1 small{display:block;font-size:.42em;-webkit-text-stroke:1px #8b5cc2;text-shad
 .btns{display:flex;gap:8px;margin-top:12px}
 .btn{flex:1;border:none;border-radius:18px;padding:14px 10px;font:700 18px Fredoka;color:#fff;background:linear-gradient(#ff8fc4,#e8549a);box-shadow:0 5px 0 #b8407a,0 8px 16px rgba(160,50,120,.3);cursor:pointer}
 .btn.s{flex:.4;background:linear-gradient(#c9b2ff,#9b7ce6);box-shadow:0 5px 0 #6e52b8}
+.btns.top{position:sticky;top:-14px;z-index:2;margin:-14px -14px 10px;padding:12px 14px 10px;background:linear-gradient(#fff 80%,rgba(255,255,255,0))}
+.btn.big{font-size:20px;padding:16px 10px;line-height:1.15;animation:pulseB 1.6s ease-in-out infinite}
+@keyframes pulseB{50%{transform:scale(1.03)}}
+@media (orientation:landscape) and (max-height:500px){.btn.big{font-size:18px;padding:12px 10px}}
 .rv{font-size:13px;color:#8b5cc2;margin-top:8px;text-align:center}
 </style>
 </head>
@@ -62,8 +66,8 @@ h1 small{display:block;font-size:.42em;-webkit-text-stroke:1px #8b5cc2;text-shad
   <div class="grid" id="grid"></div>
 </div>
 <div id="sheet"><div class="sh" id="sh"></div></div>
-<script src="../js/musica.js?v=o30"></script>
+<script src="../js/musica.js?v=o31"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/olimpiadas/menu.js?v=o30"></script>
+<script type="module" src="js/olimpiadas/menu.js?v=o31"></script>
 </body>
 </html>

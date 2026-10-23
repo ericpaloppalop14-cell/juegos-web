@@ -4,10 +4,10 @@
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m18';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o30';
-import { mergedGeo } from './decor.js?v=o30';
-import { jungle } from './selva-lianas.js?v=o30';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o30';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o31';
+import { mergedGeo } from './decor.js?v=o31';
+import { jungle } from './selva-lianas.js?v=o31';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o31';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
@@ -476,10 +476,14 @@ export function parareloj(cfg) {
       board(E, r => r.score + ' pts'); info(`⏱️ Ronda ${Math.min(NR, this.round + 1)}/${NR}<br>Objetivo: <b>${this.tg} s</b>`);
     },
     render(E, dt) { const t = E.t; this.W.tick(dt, camera);
-      for (const r of E.racers) { const run = this.ph === 'run', el = run ? (r.stop != null ? r.stop : this.rt) : this.ph === 'rev' ? r.stop : 0, melt = run && r.stop == null ? clamp((this.rt - SEE) / .8, 0, 1) : this.ph === 'rev' ? 0 : 0;
-        r.hand.rotation.z = -el / 6 * Math.PI * 2; r.hand.visible = melt < .6;
-        r.face.scale.set(1, 1, 1 - melt * .45); r.face.position.y = 2.2 - melt * .35; r.drop.visible = melt > .2; r.drop.position.y = 1.2 - melt * .9 + Math.sin(t * 3) * .05; r.drop.scale.set(.3, .45 + melt * .4, .3);
+      // Progreso = tiempo transcurrido / objetivo (no incrementos por frame): la aguja da UNA vuelta
+      // completa y el reloj se derrite del todo justo al llegar al objetivo. Si core3d cierra la prueba, todo al 100 %.
+      const fin = this.done || E.phase === 'celebra' || E.phase === 'done';
+      for (const r of E.racers) { const run = this.ph === 'run', el = fin ? this.tg : run ? (r.stop != null ? r.stop : this.rt) : this.ph === 'rev' ? (r.stop ?? this.tg) : 0,
+          p = clamp(el / this.tg, 0, 1), melt = p * p * (3 - 2 * p); r.clkP = p;
+        r.hand.rotation.z = -p * Math.PI * 2; r.hand.visible = true;
+        r.face.scale.set(1 + melt * .12, 1, 1 - melt * .45); r.face.position.y = 2.2 - melt * .35; r.drop.visible = melt > .05; r.drop.position.y = 1.2 - melt * .9 + Math.sin(t * 3) * .05 * melt; r.drop.scale.set(.3, .2 + melt * .65, .3);
         r.obj.position.set(r.x - 1.5, hopY(r, dt), -1.2); r.obj.rotation.y = Math.PI * .85; squash(r, dt); }
-      const me = E.me, pr = port(); camTo(E, dt, v3(me.x - .6, pr ? 3.8 : 3, pr ? 8.5 : 6), v3(me.x - .6, 1.8, -2), pr ? 66 : 54, 3); },
+      const me = E.me, pr = port(); window.__reloj = { ph: this.ph, rt: this.rt, tg: this.tg, round: this.round, p: me.clkP, el: me.clkP * this.tg }; camTo(E, dt, v3(me.x - .6, pr ? 3.8 : 3, pr ? 8.5 : 6), v3(me.x - .6, 1.8, -2), pr ? 66 : 54, 3); },
   });
 }
