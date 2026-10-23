@@ -3,7 +3,7 @@
 //  y decorado extra del desierto. Nunca caras tristes: feliz, parpadeo, sorpresa y ojos en espiral.
 // ======================================================================
 import { THREE } from '../core3d.js?v=m18';
-import { prop, SPH, CYL, DOD } from './mundos.js?v=o31';
+import { prop, SPH, CYL, DOD } from './mundos.js?v=o32';
 
 const TEX = {};
 function faceTex(kind) {

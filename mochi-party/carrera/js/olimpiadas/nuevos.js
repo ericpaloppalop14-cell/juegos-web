@@ -4,12 +4,13 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m18';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o31';
-import { espacioReal, asfaltoTex } from './espacio-real.js?v=o31';
-import { mergedGeo, instSet } from './decor.js?v=o31';
-import { chiles } from './chiles.js?v=o31';
-import { addFace, setExpr, faceTick, particles, dropBounce, desertoExtra } from './tira-extra.js?v=o31';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o31';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o32';
+import { espacioReal, asfaltoTex } from './espacio-real.js?v=o32';
+import { mergedGeo, instSet } from './decor.js?v=o32';
+import { chiles } from './chiles.js?v=o32';
+import { globo } from './globo.js?v=o32';
+import { addFace, setExpr, faceTick, particles, dropBounce, desertoExtra } from './tira-extra.js?v=o32';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o32';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -752,46 +753,7 @@ export function futbol(cfg) {
   });
 }
 
-// =====================================================================
-//  GLOBO DE LOS SUEÑOS — mantén pulsado para calentar el aire y subir; suelta para bajar.
-//  Busca la corriente de viento rápida (las estelas brillantes) y esquiva las ovejas dormidas.
-// =====================================================================
-export function globo(cfg) {
-  const L = cfg.L || 300, TOP = 26;
-  return base(cfg, { mode: 'tiempo', maxT: cfg.maxT || 90,
-    init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 20, z1: -L - 40, half: 10 } }); setButtons('m', { M: '🔥' });
-      const g = arch(sc, -L, 12, '¡META!', '#ff6fae'); g.scale.setScalar(1.6);
-      this.streaks = []; const sg = new THREE.BoxGeometry(.12, .12, 4), sm = GL('#ffffff', .9); this.sm = sm;
-      this.stm = new THREE.InstancedMesh(sg, sm, 140); this.stm.frustumCulled = false; sc.add(this.stm); for (let i = 0; i < 140; i++) this.streaks.push({ z: rnd(-L, 10), x: rnd(-14, 14), o: rnd(-1.6, 1.6), sp: rnd(.8, 1.2) });
-      this.sheep = []; for (let z = -25; z > -L + 10; z -= rnd(9, 15)) { const m = prop(pick(['oveja', 'nube', 'almohada'])); m.scale.setScalar(1.3); sc.add(m); this.sheep.push({ m, x: rnd(-6, 6), z, y0: rnd(3, TOP - 3), ph: rnd(0, 6), amp: rnd(1, 3) }); }
-      racers(E, .45); E.racers.forEach((r, k) => { r.x = (k - 2.5) * 2.6; r.z = 0; r.y = 0; r.vy = 0; r.v = 0; r.stun = 0;
-        const b = new THREE.Group(); r.obj.add(b); const bal = mesh(SPH(), T(r.ch.color, { rim: .6 }), b, [0, 3.4, 0], null, [1.5, 1.7, 1.5]); outline(bal, '#3a2050', 1.04); for (let i = 0; i < 4; i++) mesh(SPH(), T('#ffffff', { rim: .4 }), b, [0, 3.4, 0], [0, i * .785, 0], [1.52, 1.72, .25]);
-        mesh(CYL(), T('#c8904a'), b, [0, .3, 0], null, [.75, .6, .75]); for (const [x, z] of [[-.6, -.6], [.6, -.6], [-.6, .6], [.6, .6]]) mesh(CYL(), T('#8a5a3a'), b, [x * .9, 1.3, z * .9], null, [.03, 1.6, .03]); r.flame = glowSprite('#ffb030', 1.6, 0); r.flame.position.y = 1.8; b.add(r.flame); r.obj.userData.pivot.position.y = .3; r.bal = b; });
-    },
-    cur(z, t) { return 6 + (TOP - 12) * (.5 + .5 * Math.sin(z * .021 + t * .12)); },
-    wind(y, z, t) { const c = this.cur(z, t); return 4 + 9 * Math.max(0, 1 - Math.abs(y - c) / 4); },
-    update(E, dt) {
-      const t = E.t, K = window.__keys || {};
-      for (const r of E.racers) { if (r.fin) { r.vy = lerp(r.vy, -1, dt); r.y = Math.max(0, r.y + r.vy * dt); r.z -= 3 * dt; continue; }
-        let heat; if (r.me && !E.AUTO) heat = E.input.down || held(E, 'M') || K.Space || K.ArrowUp;
-        else { const s0 = sk(E, r); if ((r.rt = (r.rt || 0) - dt) <= 0) { r.rt = .2 + (1.1 - s0) * .3; r.ty = this.cur(r.z - 10 * s0, t) + rnd(-1, 1) * (1.15 - s0) * 4; const ob = this.sheep.find(o => o.z < r.z && o.z > r.z - 10 && Math.abs(o.x - r.x) < 2.5 && Math.abs(o.y - r.ty) < 2.5); if (ob && Math.random() < s0) r.ty = ob.y + (r.y > ob.y ? 3.5 : -3.5); } heat = r.y < r.ty - r.vy * .6; }
-        r.heat = heat; if (r.stun > 0) { r.stun -= dt; heat = false; if (r.stun <= 0) r.expr = ''; }
-        r.vy += (heat ? 5.5 : -3.8) * dt; r.vy *= Math.exp(-.9 * dt); r.vy = clamp(r.vy, -4.5, 4.5); r.y += r.vy * dt; if (r.y < 0) { r.y = 0; r.vy = 0; } if (r.y > TOP) { r.y = TOP; r.vy = Math.min(0, r.vy); }
-        const w = r.y < .2 ? 2.5 : this.wind(r.y, r.z, t); r.v = lerp(r.v, w * (r.stun > 0 ? .4 : 1), Math.min(1, dt * 1.5)); r.z -= r.v * dt;
-        for (const o of this.sheep) if (Math.abs(o.z - r.z) < 1.4 && Math.abs(o.x - r.x) < 2 && Math.abs(o.y - (r.y + 2.2)) < 2.2 && r.stun <= 0) { r.stun = 1; r.vy = -3; hitFx(E, r, '#ffffff'); if (r.me) E.ui.toast('¡Choque con una oveja! 🐑'); }
-        r.prog = clamp(-r.z / L, 0, 1); if (r.z <= -L) E.finish(r); }
-      info(`🎈 Viento: ${'💨'.repeat(Math.round(this.wind(E.me.y, E.me.z, t) / 4))}`);
-    },
-    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
-      for (const o of this.sheep) { o.y = o.y0 + Math.sin(t * .8 + o.ph) * o.amp; o.m.position.set(o.x, o.y, o.z); o.m.rotation.y = Math.sin(t + o.ph) * .4; }
-      const ob = new THREE.Object3D(); this.streaks.forEach((s, i) => { s.z -= 14 * s.sp * dt; if (s.z < -L - 20) s.z = 15; const y = this.cur(s.z, t) + s.o; ob.position.set(s.x, y + 2.2, s.z); ob.updateMatrix(); this.stm.setMatrixAt(i, ob.matrix); }); this.stm.instanceMatrix.needsUpdate = true; this.sm.emissiveIntensity = .7 + Math.sin(t * 5) * .2;
-      for (const r of E.racers) { r.obj.position.set(r.x, r.y, r.z); r.obj.rotation.y = Math.PI; r.flame.material.opacity = r.heat ? .95 : 0; r.bal.rotation.z = Math.sin(t * 1.2 + r.k) * .05; }
-      const me = E.me, pr = port(); camTo(E, dt, v3(me.x * .5 + (pr ? 3 : 6), me.y + (pr ? 4.5 : 3), me.z + (pr ? 13 : 10)), v3(me.x * .5, me.y + 2.4, me.z - 8), pr ? 70 : 58, 4);
-    },
-  });
-}
-
+// GLOBO DE LOS SUEÑOS: rehecho en o32 → globo.js (lados + subir/bajar, corrientes visibles, tutorial)
 // =====================================================================
 //  CAZA DE MARIPOSAS — toca una mariposa: tu mochi salta con la red a por ella. Las doradas valen 3.
 // =====================================================================
