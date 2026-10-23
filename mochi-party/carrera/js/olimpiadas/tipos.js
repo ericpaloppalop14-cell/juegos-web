@@ -2,8 +2,8 @@
 //  MOCHI PARTY · OLIMPIADAS — los 8 tipos de prueba, configurables por cada olimpiada
 //  salto · esquiva · machaca · vuelo · punteria · recoge · ritmo · superv · empuje
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m17';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o25';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m18';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o30';
 
 const LW = 2.3;
 const lx = (l, n = 6) => (l - (n - 1) / 2) * LW;
@@ -461,7 +461,7 @@ export function empuje(cfg) {
       for (const r of E.racers) {
         if (r.out) { r.vy -= 20 * dt; r.y += r.vy * dt; r.x += r.vx * dt; r.z += r.vz * dt; continue; }
         r.cd -= dt; if (r.dash > 0) r.dash -= dt; let dir = { x: 0, z: 0 }, dash = false; const S = sk(E, r);
-        if (r.me && !E.AUTO) { dir = stickDir(E); dash = E.swipe || E.taps.length > 1; }
+        if (r.me && !E.AUTO) { dir = stickDir(E); dash = E.btnM; }
         else { r.rt = (r.rt || 0) - dt; if (r.rt <= 0) { r.rt = rnd(.4, 1.1); const others = alive.filter(o => o !== r); r.tgt = Math.random() < .55 ? pick(others) : null; }
           let gx = 0, gz = 0; if (r.tgt && !r.tgt.out) { gx = r.tgt.x; gz = r.tgt.z; }
           dir = { x: gx - r.x, z: gz - r.z }; const dg = Math.hypot(dir.x, dir.z) || 1; dir.x /= dg; dir.z /= dg;

@@ -2,8 +2,8 @@
 //  TIRACHINAS DE CACTUS (o29) — caras simpáticas de los bloques, partículas de montaje
 //  y decorado extra del desierto. Nunca caras tristes: feliz, parpadeo, sorpresa y ojos en espiral.
 // ======================================================================
-import { THREE } from '../core3d.js?v=m17';
-import { prop, SPH, CYL, DOD } from './mundos.js?v=o25';
+import { THREE } from '../core3d.js?v=m18';
+import { prop, SPH, CYL, DOD } from './mundos.js?v=o30';
 
 const TEX = {};
 function faceTex(kind) {

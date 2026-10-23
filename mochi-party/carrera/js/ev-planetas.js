@@ -1,5 +1,5 @@
 // 🪐 SALTOS PLANETARIOS (3D): planetas kawaii que giran, órbitas con lunas y fondo espacial
-import { THREE, camera, toon, outline, mesh, glowSprite, glowTex, starShape, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m17';
+import { THREE, camera, toon, outline, mesh, glowSprite, glowTex, starShape, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m18';
 const PAL = [['#ffb3d9', '#ff7fbf'], ['#a6f0d2', '#4fcfa4'], ['#c8b6ff', '#8f72e6'], ['#ffd59e', '#ffa64d'], ['#9fdcff', '#4fa8e8'], ['#fff09a', '#f2c73a'], ['#ffc2a8', '#ff8a6a']];
 const N = 12, JV = 34;
 export default {

@@ -83,14 +83,15 @@ const glowSprite = (color, s, op = 1) => { const sp = new THREE.Sprite(new THREE
 // ---------------- entrada ----------------
 const input = { taps: [], ups: [], down: false, px: null, swipe: false, swipeUp: false, side: [] };
 const cv = $('gl');
-cv.addEventListener('pointerdown', e => { Audio.init(); input.down = true; input.px = e.clientX; input.py = e.clientY; input.sy = e.clientY; input.sx = e.clientX; input.taps.push(e.clientX); });
-cv.addEventListener('pointermove', e => { if (input.down) { input.px = e.clientX; input.py = e.clientY; } });
-addEventListener('pointerup', e => { if (input.down) { const dy = e.clientY - input.sy, dx = e.clientX - input.sx; if (dy > 45 && Math.abs(dy) > Math.abs(dx)) input.swipe = true; else if (dy < -45 && Math.abs(dy) > Math.abs(dx)) input.swipeUp = true; else input.ups.push(e.clientX); } input.down = false; });
+cv.addEventListener('pointerdown', e => { Audio.init(); if (input.down && input.pid != null && input.pid !== e.pointerId) { input.taps.push(e.clientX); return; } input.pid = e.pointerId; input.down = true; input.px = e.clientX; input.py = e.clientY; input.sy = e.clientY; input.sx = e.clientX; input.taps.push(e.clientX); });
+cv.addEventListener('pointermove', e => { if (input.down && (input.pid == null || e.pointerId === input.pid)) { input.px = e.clientX; input.py = e.clientY; } });
+const upFn = e => { if (input.down && input.pid != null && e.pointerId !== input.pid) return; if (input.down && e.type === 'pointerup') { const dy = e.clientY - input.sy, dx = e.clientX - input.sx; if (dy > 45 && Math.abs(dy) > Math.abs(dx)) input.swipe = true; else if (dy < -45 && Math.abs(dy) > Math.abs(dx)) input.swipeUp = true; else input.ups.push(e.clientX); } input.down = false; input.pid = null; };
+addEventListener('pointerup', upFn); addEventListener('pointercancel', upFn);
 input.held = {}; // botones mantenidos (para pruebas de equilibrio / dirección continua)
 for (const [id, s] of [['bL', 'L'], ['bR', 'R'], ['bM', 'M']]) { const el = $(id);
-  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Audio.init(); input.held[s] = true; try { el.setPointerCapture(e.pointerId); } catch (_) {} if (s === 'M') input.swipe = true; else input.side.push(s); });
+  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Audio.init(); input.held[s] = true; try { el.setPointerCapture(e.pointerId); } catch (_) {} if (s === 'M') { input.swipe = true; input.btnM = true; } else input.side.push(s); });
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(ev, () => { input.held[s] = false; }); }
-addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') input.taps.push(innerWidth / 2); if (e.code === 'ArrowLeft') input.side.push('L'); if (e.code === 'ArrowRight') input.side.push('R'); if (e.code === 'ArrowDown') input.swipe = true; });
+addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') input.taps.push(innerWidth / 2); if (e.code === 'ArrowLeft') input.side.push('L'); if (e.code === 'ArrowRight') input.side.push('R'); if (e.code === 'ArrowDown') { input.swipe = true; input.btnM = true; } });
 
 // ======================================================================
 //  Marco común: cuenta atrás, simulación a paso fijo, cámara, HUD, meta y vuelta al torneo
@@ -259,10 +260,10 @@ function run(EV, opts = {}) {
     if (E.phase !== 'done' || (ON && !E.stopped) || (E.celeb && !E.stopped)) raf = requestAnimationFrame(frame);
   }
   function step(dt) {
-    if (E.phase === 'wait') { input.taps.length = 0; input.ups.length = 0; input.side.length = 0; input.swipe = input.swipeUp = false; EV.idle && EV.idle(E, dt); return; }
-    if (E.phase === 'count') { E.cnt -= dt; const c = Math.ceil(E.cnt); if (c !== cntShown && c <= 3) { cntShown = c; if (c > 0) { ui.count(String(c)); Audio.sfxPlay('beep'); } } if (E.cnt <= 0) { E.phase = 'run'; ui.count('¡YA!'); Audio.sfxPlay('go'); } input.taps.length = 0; input.ups.length = 0; input.side.length = 0; input.swipe = input.swipeUp = false; EV.idle && EV.idle(E, dt); return; }
+    if (E.phase === 'wait') { input.taps.length = 0; input.ups.length = 0; input.side.length = 0; input.swipe = input.swipeUp = input.btnM = false; EV.idle && EV.idle(E, dt); return; }
+    if (E.phase === 'count') { E.cnt -= dt; const c = Math.ceil(E.cnt); if (c !== cntShown && c <= 3) { cntShown = c; if (c > 0) { ui.count(String(c)); Audio.sfxPlay('beep'); } } if (E.cnt <= 0) { E.phase = 'run'; ui.count('¡YA!'); Audio.sfxPlay('go'); } input.taps.length = 0; input.ups.length = 0; input.side.length = 0; input.swipe = input.swipeUp = input.btnM = false; EV.idle && EV.idle(E, dt); return; }
     if (E.phase === 'run' || (ON && E.phase === 'watch')) {
-      E.taps = input.taps.splice(0); E.ups = input.ups.splice(0); E.side = input.side.splice(0); E.swipe = input.swipe; E.swipeUp = input.swipeUp; input.swipe = input.swipeUp = false;
+      E.taps = input.taps.splice(0); E.ups = input.ups.splice(0); E.side = input.side.splice(0); E.swipe = input.swipe; E.swipeUp = input.swipeUp; E.btnM = !!input.btnM; input.swipe = input.swipeUp = input.btnM = false;
       EV.update(E, dt); E.t += dt;
       if (ON) {
         if (++nstep % 4 === 0) { const mine = racers.filter(r => !r.remote); if (mine.length) opts.net.send({ t: 'st', s: mine.map(snap) }); }
