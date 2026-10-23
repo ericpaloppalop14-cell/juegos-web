@@ -7,8 +7,9 @@ import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp,
 import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o25';
 import { espacioReal, asfaltoTex } from './espacio-real.js?v=o25';
 import { mergedGeo, instSet } from './decor.js?v=o25';
-import { chiles } from './chiles.js?v=o28';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o28';
+import { chiles } from './chiles.js?v=o29';
+import { addFace, setExpr, faceTick, particles, dropBounce, desertoExtra } from './tira-extra.js?v=o29';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o29';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -325,26 +326,29 @@ export function tirachinas(cfg) {
     init(E) {
       const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 10, z1: -40, half: 22 } }); setButtons(null); window.__fireReq = false; this.fb = this.fireBtn();
       mesh(new THREE.BoxGeometry(46, .3, 34), T(cfg.floor || '#e8b064', { rim: 0 }), sc, [0, -.15, -9]);
-      this.blocks = []; this.projs = []; this.dots = [];
+      this.blocks = []; this.projs = []; this.dots = []; this.fx = particles(sc); this.deco = cfg.king === 'cactus' || cfg.mundo === 'desierto' ? desertoExtra(sc, T) : null;
       const bg = new THREE.BoxGeometry(.95, .95, .95), cols = cfg.cols || ['#ffcf8a', '#f2a65a', '#e88a5a', '#ffd36b'];
       racers(E, .5); E.racers.forEach((r, k) => {
         const lx = (k - 2.5) * SP; r.lx = lx; r.shots = SHOTS; r.score = 0; r.cd = 1 + k * .25; r.x = lx; r.z = 1.6;
         const sl = new THREE.Group(); sl.position.set(lx, 0, 0); sc.add(sl); for (const s of [-1, 1]) mesh(CYL(), T('#a8784a'), sl, [s * .45, 1, 0], [0, 0, -s * .25], [.12, 1.4, .12]); mesh(CYL(), T('#a8784a'), sl, [0, .35, 0], null, [.14, .7, .14]); r.band = mesh(new THREE.BoxGeometry(1, .06, .06), T('#ff6fae'), sl, [0, 1.6, 0]);
         const pyr = [[-1.5, 0], [-.5, 0], [.5, 0], [1.5, 0], [-1, 1], [0, 1], [1, 1], [-.5, 2], [.5, 2], [0, 3]];
-        for (const [x, y] of pyr) { const m = new THREE.Mesh(bg, T(pick(cols), { rim: .3 })); outline(m, '#5a3a2a', 1.04); m.position.set(lx + x, .48 + y, TZ); sc.add(m); this.blocks.push({ m, own: r, x: lx + x, x0: lx + x, y: .48 + y, z: TZ, y0: .48 + y, vx: 0, vy: 0, vz: 0, dyn: false, cnt: false, v: 1, rest: true }); }
-        const king = prop(cfg.king || 'cactus'); king.scale.setScalar(.45); sc.add(king); this.blocks.push({ m: king, own: r, x: lx, x0: lx, y: 4.41, z: TZ, y0: 4.41, vx: 0, vy: 0, vz: 0, dyn: false, cnt: false, v: 3, king: true, rest: true });
+        for (const [x, y] of pyr) { const m = new THREE.Mesh(bg, T(pick(cols), { rim: .3 })); outline(m, '#5a3a2a', 1.04); m.position.set(lx + x, .48 + y, TZ); sc.add(m); const bk = { face: addFace(m), m, own: r, x: lx + x, x0: lx + x, y: .48 + y, z: TZ, y0: .48 + y, vx: 0, vy: 0, vz: 0, dyn: false, cnt: false, v: 1, rest: true }; this.blocks.push(bk); }
+        const king = prop(cfg.king || 'cactus'); king.scale.setScalar(.45); sc.add(king); this.blocks.push({ m: king, own: r, x: lx, x0: lx, y: 4.41, z: TZ, y0: 4.41, vx: 0, vy: 0, vz: 0, dyn: false, cnt: false, v: 3, king: true, rest: true }); this.rebuild(E, r, 0);
         r.obj.position.set(lx, 0, 1.6); r.obj.rotation.y = Math.PI;
       });
       const dg = new THREE.SphereGeometry(.09, 6, 4), dm = GL('#ffffff', .6); for (let i = 0; i < 16; i++) { const d = new THREE.Mesh(dg, dm); d.visible = false; sc.add(d); this.dots.push(d); }
     },
-    fire(E, r, ang, v) { const m = mesh(SPH(), GL(cfg.ammoC || '#ff6fae', .3), E.scene, null, null, .35); outline(m, '#3a2050', 1.1); const el = .62; this.projs.push({ m, r, x: r.lx, y: 1.6, z: 0, vx: Math.sin(ang) * v * Math.cos(el), vy: Math.sin(el) * v, vz: -Math.cos(ang) * v * Math.cos(el), t: 0 }); r.shots--; r.cd = 2.6; if (r.me) Audio.sfxPlay('throw'); },
+    // vuelve a montar la pirámide entera: cada bloque cae desde arriba y rebota hasta su sitio, con chispas
+    rebuild(E, r, delay = 0) { for (let k = this.projs.length - 1; k >= 0; k--) if (this.projs[k].r === r) { this.fx.burst(this.projs[k].x, this.projs[k].y, this.projs[k].z, 5); E.scene.remove(this.projs[k].m); this.projs.splice(k, 1); } let i = 0; for (const b of this.blocks) { if (b.own !== r) continue; b.dyn = false; b.cnt = false; b.rest = true; b.vx = b.vy = b.vz = 0; b.x = b.x0; b.z = TZ; b.y = b.y0; b.m.rotation.set(0, 0, 0); b.hitT = 0; setExpr(b, 'happy');
+        const ord = b.king ? 11 : i; b.anim = { t0: E.t + delay + ord * .07, d: .75, h: 5 + ord * .25, land: false }; i++; } r.building = true; },
+    fire(E, r, ang, v) { const m = mesh(SPH(), GL(cfg.ammoC || '#ff6fae', .3), E.scene, null, null, .35); outline(m, '#3a2050', 1.1); const el = .62; this.projs.push({ m, r, x: r.lx, y: 1.6, z: 0, vx: Math.sin(ang) * v * Math.cos(el), vy: Math.sin(el) * v, vz: -Math.cos(ang) * v * Math.cos(el), t: 0 }); r.shots--; r.cd = 3.4; r.reb = r.shots > 0 ? 1.7 : 0; if (r.me) Audio.sfxPlay('throw'); },
     // puntería: arrastrar en la pantalla gira (izq/der) y tensa (abajo = más fuerza). Se queda fijada; dispara el botón 🎯.
     aimFrom(E) { const I = E.input, a = this.aimS; if (I.down && I.px != null) { if (!this._drag) this._drag = { ang: a.ang, pw: a.pw }; const dx = I.px - I.sx, dy = I.py - I.sy, M = Math.min(innerWidth, innerHeight);
         a.ang = clamp(this._drag.ang - dx / innerWidth * 1.6, -.6, .6); a.pw = clamp(this._drag.pw + dy / (M * .5), 0, 1); } else this._drag = null;
       return { ang: a.ang, v: this.vT * (.78 + a.pw * .44), pw: a.pw, ok: true }; },
     fireBtn() { let b = document.getElementById('bFire'); if (!b) { b = document.createElement('button'); b.id = 'bFire'; b.innerHTML = '🎯<small>¡DISPARA!</small>';
-        b.style.cssText = 'position:absolute;z-index:30;left:calc(18px + env(safe-area-inset-left));top:58%;transform:translateY(-50%);width:118px;height:118px;border-radius:50%;border:5px solid #fff;background:radial-gradient(circle at 35% 30%,#ffb3d6,#ff4f9a);color:#fff;font:700 44px Fredoka,system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;text-shadow:0 2px 0 #b03070;box-shadow:0 7px 0 #b8306f,0 12px 24px rgba(160,40,110,.4);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;padding:0;cursor:pointer';
-        b.querySelector('small').style.cssText = 'font-size:15px;margin-top:4px;letter-spacing:.5px';
+        b.style.cssText = 'position:absolute;z-index:30;left:calc(18px + env(safe-area-inset-left));top:58%;transform:translateY(-50%);width:92px;height:92px;border-radius:50%;border:5px solid #fff;background:radial-gradient(circle at 35% 30%,#ffb3d6,#ff4f9a);color:#fff;font:700 34px Fredoka,system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;text-shadow:0 2px 0 #b03070;box-shadow:0 7px 0 #b8306f,0 12px 24px rgba(160,40,110,.4);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;padding:0;cursor:pointer';
+        b.querySelector('small').style.cssText = 'font-size:12px;margin-top:2px;letter-spacing:.5px';
         const press = e => { e.preventDefault(); e.stopPropagation(); b.style.transform = (port() ? 'translateY(-50%)' : 'none') + ' scale(.9)'; window.__fireReq = true; };
         const rel = () => { b.style.transform = port() ? 'translateY(-50%)' : 'none'; };
         b.addEventListener('pointerdown', press); b.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false }); for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, rel);
@@ -356,15 +360,17 @@ export function tirachinas(cfg) {
       if (this.fb) { const pr = port(); if (this.fb._pr !== pr) { this.fb._pr = pr; Object.assign(this.fb.style, pr ? { top: '58%', bottom: 'auto', transform: 'translateY(-50%)' } : { top: 'auto', bottom: 'calc(14px + env(safe-area-inset-bottom))', transform: 'none' }); } const rdy = E.me.cd <= 0 && E.me.shots > 0 && !this.done; this.fb.style.opacity = rdy ? '1' : '.45'; if (this.done || E.me.shots <= 0) this.fb.style.display = 'none'; }
       for (const r of E.racers) { r.cd -= dt; if (r.shots <= 0 || r.cd > 0) continue;
         if (r.me && !E.AUTO) { this.aim = this.aimFrom(E); const K = window.__keys || {}; if (window.__fireReq || K.Space) { window.__fireReq = false; this.fire(E, r, this.aim.ang, this.aim.v); } }
-        else { const s0 = sk(E, r), dz = -TZ, dy = 1.5 - 1.6; const v = Math.sqrt(G * dz * dz / (2 * Math.cos(el) ** 2 * (dz * Math.tan(el) - dy))); this.fire(E, r, rnd(-1, 1) * (1.25 - s0) * .12, v * (1 + rnd(-1, 1) * (1.25 - s0) * .16)); r.cd = rnd(2.4, 3.4); } }
+        else { const s0 = sk(E, r), dz = -TZ, dy = 1.5 - 1.6; const v = Math.sqrt(G * dz * dz / (2 * Math.cos(el) ** 2 * (dz * Math.tan(el) - dy))); this.fire(E, r, rnd(-1, 1) * (1.25 - s0) * .12, v * (1 + rnd(-1, 1) * (1.25 - s0) * .16)); r.cd = Math.max(r.cd, rnd(3.3, 4)); } }
+      for (const r of E.racers) if (r.reb > 0 && (r.reb -= dt) <= 0) { this.rebuild(E, r); if (r.me) { E.ui.toast('¡Torre nueva! 🧱'); Audio.sfxPlay('boing'); } }
       for (let i = this.projs.length - 1; i >= 0; i--) { const p = this.projs[i]; p.t += dt; p.vy -= G * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
-        for (const b of this.blocks) { const d = Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z); if (d < .85) { b.dyn = true; b.rest = false; b.vx += p.vx * .55 + rnd(-1, 1); b.vy += Math.abs(p.vy) * .3 + 2; b.vz += p.vz * .55; p.vx *= .6; p.vz *= .6; if (p.r.me) Audio.sfxPlay('box'); } }
+        for (const b of this.blocks) { if (b.anim) continue; const d = Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z); if (d < .85) { b.hitT = .9; b.dyn = true; b.rest = false; b.vx += p.vx * .55 + rnd(-1, 1); b.vy += Math.abs(p.vy) * .3 + 2; b.vz += p.vz * .55; p.vx *= .6; p.vz *= .6; if (p.r.me) Audio.sfxPlay('box'); } }
         if (p.y < .35) { p.y = .35; p.vy = -p.vy * .3; p.vx *= .6; p.vz *= .6; }
         p.m.position.set(p.x, p.y, p.z); if (p.t > 3.5) { E.scene.remove(p.m); this.projs.splice(i, 1); } }
-      for (const b of this.blocks) {
-        if (!b.dyn && b.y > .6) { const sup = this.blocks.some(o => o !== b && !o.dyn && Math.abs(o.y - (b.y - 1)) < .3 && Math.abs(o.x - b.x) < .85 && Math.abs(o.z - b.z) < .85); if (!sup) { b.dyn = true; b.rest = false; } }
+      for (const b of this.blocks) { faceTick(b, E.t, dt);
+        if (b.anim) { const a = b.anim, u = (E.t - a.t0) / a.d; b.y = b.y0 + a.h * dropBounce(Math.max(0, u)); b.m.visible = u > -0.02; if (!a.land && u >= .36) { a.land = true; this.fx.burst(b.x, b.y0 - .4, b.z + .3, b.king ? 14 : 6); } if (u >= 1) { b.anim = null; b.y = b.y0; if (!this.blocks.some(o => o.own === b.own && o.anim)) b.own.building = false; } continue; }
+        if (!b.dyn && b.y > .6 && !b.own.building) { const sup = this.blocks.some(o => o !== b && !o.dyn && Math.abs(o.y - (b.y - 1)) < .3 && Math.abs(o.x - b.x) < .85 && Math.abs(o.z - b.z) < .85); if (!sup) { b.dyn = true; b.rest = false; } }
         if (!b.dyn) continue; b.vy -= G * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
-        for (const o of this.blocks) { if (o === b || o.own !== b.own) continue; const dx = o.x - b.x, dy = o.y - b.y, dz = o.z - b.z, d = Math.hypot(dx, dy, dz); if (d < .9 && d > 1e-4) { const sp = Math.hypot(b.vx, b.vy, b.vz); if (!o.dyn && sp > 2.5) { o.dyn = true; o.rest = false; o.vx += b.vx * .5; o.vz += b.vz * .5; o.vy += 1; } const k = (.9 - d) / 2 / d; b.x -= dx * k; b.y -= dy * k; b.z -= dz * k; if (o.dyn) { o.x += dx * k; o.y += dy * k; o.z += dz * k; } } }
+        for (const o of this.blocks) { if (o === b || o.own !== b.own) continue; if (o.anim) continue; const dx = o.x - b.x, dy = o.y - b.y, dz = o.z - b.z, d = Math.hypot(dx, dy, dz); if (d < .9 && d > 1e-4) { const sp = Math.hypot(b.vx, b.vy, b.vz); if (!o.dyn && sp > 2.5) { o.hitT = .9; o.dyn = true; o.rest = false; o.vx += b.vx * .5; o.vz += b.vz * .5; o.vy += 1; } const k = (.9 - d) / 2 / d; b.x -= dx * k; b.y -= dy * k; b.z -= dz * k; if (o.dyn) { o.x += dx * k; o.y += dy * k; o.z += dz * k; } } }
         if (b.y < .48) { b.y = .48; b.vy = Math.abs(b.vy) > 1.5 ? -b.vy * .3 : 0; b.vx *= .8; b.vz *= .8; if (Math.hypot(b.vx, b.vz) < .2) { b.vx = b.vz = 0; } }
         b.m.rotation.x += b.vz * dt * .8; b.m.rotation.z -= b.vx * dt * .8;
         if (!b.cnt && (b.y < b.y0 - .6 || Math.hypot(b.x - b.x0, b.z - TZ) > 1.2)) { b.cnt = true; b.own.score += b.v; if (b.own.me) { Audio.sfxPlay(b.king ? 'got' : 'pop'); if (b.king) E.ui.toast('¡El rey ha caído! +3 👑'); } } }
@@ -373,7 +379,8 @@ export function tirachinas(cfg) {
       if (!this.done && (allDone || E.t > this.maxT - 1)) { this.done = true; scoreEnd(E, r => r.score + ' pts'); }
       info(`🎯 Tiros: ${E.me.shots}/${SHOTS} · ${E.me.score} pts`);
     },
-    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
+    render(E, dt) { const t = E.t; this.W.tick(dt, camera); this.fx.tick(dt); if (this.deco) this.deco.tick(t, dt);
+      
       for (const b of this.blocks) b.m.position.set(b.x, b.king && !b.dyn ? b.y - .45 : b.y, b.z);
       for (const r of E.racers) { r.obj.position.y = Math.abs(Math.sin(t * 3 + r.k)) * (r.cd > 1.8 ? .3 : 0); r.band.scale.x = 1; }
       const a = this.aim, me = E.me; this.dots.forEach(d => d.visible = false);

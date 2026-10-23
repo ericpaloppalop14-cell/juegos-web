@@ -1,5 +1,5 @@
 // MOCHI PARTY · OLIMPIADAS — arranque de una prueba (o del podio final)
-import { OLIMPIADAS, findEv } from './catalogo.js?v=o28';
+import { OLIMPIADAS, findEv } from './catalogo.js?v=o29';
 const Q0 = new URLSearchParams(location.search);
 // el marco común (core3d) no debe volver al menú antiguo: «stay» le deja aquí para la celebración
 if (!Q0.has('stay')) history.replaceState(null, '', location.pathname + location.search + (location.search ? '&' : '?') + 'stay');
@@ -11,7 +11,7 @@ if (Q0.has('podio')) {
   const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true }); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(innerWidth, innerHeight, false);
   podioFinal(o, renderer, new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 500));
 } else {
-  const core = await import('../core3d.js?v=m17'); const { TIPOS } = await import('./tipos.js?v=o28'); const { NUEVOS } = await import('./nuevos.js?v=o28'); const { NUEVOS2 } = await import('./nuevos2.js?v=o25'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o25');
+  const core = await import('../core3d.js?v=m17'); const { TIPOS } = await import('./tipos.js?v=o29'); const { NUEVOS } = await import('./nuevos.js?v=o29'); const { NUEVOS2 } = await import('./nuevos2.js?v=o25'); Object.assign(TIPOS, NUEVOS, NUEVOS2); const { fiesta } = await import('./fiesta.js?v=o25');
   $('load').textContent = `${p.icon} ${p.name}…`;
   let EV; if (p.base) { EV = { ...(await import(`../ev-${p.base}.js?v=m17`)).default }; EV.mode = 'tiempo'; if (p.base === 'nado') EV.noFeet = true; } else EV = TIPOS[p.tipo]({ ...p, mundo: o.id });
   // cartel de presentación de la prueba (se ve durante la cuenta atrás)

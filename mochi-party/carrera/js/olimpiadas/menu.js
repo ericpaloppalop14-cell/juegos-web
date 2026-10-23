@@ -1,6 +1,6 @@
 // MOCHI PARTY · OLIMPIADAS — pantalla para elegir olimpiada (tarjetas) con tu mochi en 3D
 import { CHARS } from '../data.js';
-import { OLIMPIADAS } from './catalogo.js?v=o28';
+import { OLIMPIADAS } from './catalogo.js?v=o29';
 import { saveS, evURL } from './fiesta.js?v=o25';
 const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
 const PERS = { mochi: 'Optimista sin remedio', tiovivo: 'Mareado pero feliz', atomo: 'Hiperactivo y eléctrico', cosmo: 'Soñador galáctico', copito: 'Frío y calculador', burbuja: 'Escurridiza y bromista', lava: 'Competitiva y calentita', tictac: 'Puntual y gruñón', trueno: 'Ruidoso y dramático', disco: 'Fiestera y presumida' };
