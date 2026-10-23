@@ -7,7 +7,7 @@ import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick,
 import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o25';
 import { mergedGeo } from './decor.js?v=o25';
 import { jungle } from './selva-lianas.js?v=o25';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o25';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o28';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h

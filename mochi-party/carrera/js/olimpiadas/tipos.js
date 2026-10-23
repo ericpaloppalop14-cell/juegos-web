@@ -17,6 +17,7 @@ const sk = (E, r) => r.me ? (E.AUTO ? 1.3 : 1) : r.skill;
 // ---------- utilidades comunes ----------
 function info(html) { let d = $('perf'); if (!d) { d = document.createElement('div'); d.id = 'perf'; d.style.cssText = 'position:absolute;right:10px;top:calc(88px + env(safe-area-inset-top));background:rgba(110,60,150,.6);color:#fff;font:700 14px Fredoka;border-radius:14px;padding:5px 11px;text-align:right;line-height:1.3;border:1.5px solid rgba(255,255,255,.6)'; $('hud').appendChild(d); } if (d._h !== html) { d.innerHTML = html; d._h = html; } }
 function setButtons(mode, lab = {}) { // 'lr' | 'lmr' | 'm' | null; lab: {L,M,R} textos
+  { const f = document.getElementById('bFire'); if (f) f.style.display = 'none'; }
   const c = $('ctl'); c.classList.toggle('on', !!mode); if (!mode) return;
   $('bL').textContent = lab.L || '⬅'; $('bR').textContent = lab.R || '➡'; $('bM').textContent = lab.M || '🫧';
   $('bL').style.visibility = mode.includes('l') ? 'visible' : 'hidden'; $('bR').style.visibility = mode.includes('r') ? 'visible' : 'hidden'; $('bM').style.visibility = mode.includes('m') ? 'visible' : 'hidden';

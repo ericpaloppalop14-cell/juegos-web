@@ -7,7 +7,8 @@ import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp,
 import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o25';
 import { espacioReal, asfaltoTex } from './espacio-real.js?v=o25';
 import { mergedGeo, instSet } from './decor.js?v=o25';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o25';
+import { chiles } from './chiles.js?v=o28';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o28';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
@@ -316,13 +317,13 @@ export function laberinto(cfg) {
 }
 
 // =====================================================================
-//  TIRACHINAS — arrastra hacia atrás y suelta: derriba la torre de bloques (física sencilla). 5 tiros.
+//  TIRACHINAS — arrastra para apuntar/tensar y pulsa el botón 🎯: derriba la torre de bloques (física sencilla). 5 tiros.
 // =====================================================================
 export function tirachinas(cfg) {
   const SP = 7, TZ = -16, G = 12, SHOTS = 5;
   return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 75,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 10, z1: -40, half: 22 } }); setButtons(null);
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 10, z1: -40, half: 22 } }); setButtons(null); window.__fireReq = false; this.fb = this.fireBtn();
       mesh(new THREE.BoxGeometry(46, .3, 34), T(cfg.floor || '#e8b064', { rim: 0 }), sc, [0, -.15, -9]);
       this.blocks = []; this.projs = []; this.dots = [];
       const bg = new THREE.BoxGeometry(.95, .95, .95), cols = cfg.cols || ['#ffcf8a', '#f2a65a', '#e88a5a', '#ffd36b'];
@@ -337,11 +338,24 @@ export function tirachinas(cfg) {
       const dg = new THREE.SphereGeometry(.09, 6, 4), dm = GL('#ffffff', .6); for (let i = 0; i < 16; i++) { const d = new THREE.Mesh(dg, dm); d.visible = false; sc.add(d); this.dots.push(d); }
     },
     fire(E, r, ang, v) { const m = mesh(SPH(), GL(cfg.ammoC || '#ff6fae', .3), E.scene, null, null, .35); outline(m, '#3a2050', 1.1); const el = .62; this.projs.push({ m, r, x: r.lx, y: 1.6, z: 0, vx: Math.sin(ang) * v * Math.cos(el), vy: Math.sin(el) * v, vz: -Math.cos(ang) * v * Math.cos(el), t: 0 }); r.shots--; r.cd = 2.6; if (r.me) Audio.sfxPlay('throw'); },
-    aimFrom(E) { const I = E.input, dx = (I.px - I.sx), dy = (I.py - I.sy); const pw = clamp(Math.hypot(dx, dy) / (Math.min(innerWidth, innerHeight) * .35), 0, 1); return { ang: clamp(-dx / innerWidth * 1.6, -.6, .6), v: 7 + pw * 15, pw, ok: dy > 12 }; },
+    // puntería: arrastrar en la pantalla gira (izq/der) y tensa (abajo = más fuerza). Se queda fijada; dispara el botón 🎯.
+    aimFrom(E) { const I = E.input, a = this.aimS; if (I.down && I.px != null) { if (!this._drag) this._drag = { ang: a.ang, pw: a.pw }; const dx = I.px - I.sx, dy = I.py - I.sy, M = Math.min(innerWidth, innerHeight);
+        a.ang = clamp(this._drag.ang - dx / innerWidth * 1.6, -.6, .6); a.pw = clamp(this._drag.pw + dy / (M * .5), 0, 1); } else this._drag = null;
+      return { ang: a.ang, v: this.vT * (.78 + a.pw * .44), pw: a.pw, ok: true }; },
+    fireBtn() { let b = document.getElementById('bFire'); if (!b) { b = document.createElement('button'); b.id = 'bFire'; b.innerHTML = '🎯<small>¡DISPARA!</small>';
+        b.style.cssText = 'position:absolute;z-index:30;left:calc(18px + env(safe-area-inset-left));top:58%;transform:translateY(-50%);width:118px;height:118px;border-radius:50%;border:5px solid #fff;background:radial-gradient(circle at 35% 30%,#ffb3d6,#ff4f9a);color:#fff;font:700 44px Fredoka,system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;text-shadow:0 2px 0 #b03070;box-shadow:0 7px 0 #b8306f,0 12px 24px rgba(160,40,110,.4);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;padding:0;cursor:pointer';
+        b.querySelector('small').style.cssText = 'font-size:15px;margin-top:4px;letter-spacing:.5px';
+        const press = e => { e.preventDefault(); e.stopPropagation(); b.style.transform = (port() ? 'translateY(-50%)' : 'none') + ' scale(.9)'; window.__fireReq = true; };
+        const rel = () => { b.style.transform = port() ? 'translateY(-50%)' : 'none'; };
+        b.addEventListener('pointerdown', press); b.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false }); for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, rel);
+        document.body.appendChild(b); } b.style.display = 'flex'; return b; },
     update(E, dt) {
       const el = .62;
+      if (!this.aimS) { const dz = -TZ, dy = -.1; this.vT = Math.sqrt(G * dz * dz / (2 * Math.cos(el) ** 2 * (dz * Math.tan(el) - dy))); this.aimS = { ang: 0, pw: .5 }; }
+      if (E.me.cd > 0 || E.me.shots <= 0) window.__fireReq = false;
+      if (this.fb) { const pr = port(); if (this.fb._pr !== pr) { this.fb._pr = pr; Object.assign(this.fb.style, pr ? { top: '58%', bottom: 'auto', transform: 'translateY(-50%)' } : { top: 'auto', bottom: 'calc(14px + env(safe-area-inset-bottom))', transform: 'none' }); } const rdy = E.me.cd <= 0 && E.me.shots > 0 && !this.done; this.fb.style.opacity = rdy ? '1' : '.45'; if (this.done || E.me.shots <= 0) this.fb.style.display = 'none'; }
       for (const r of E.racers) { r.cd -= dt; if (r.shots <= 0 || r.cd > 0) continue;
-        if (r.me && !E.AUTO) { const I = E.input; if (I.down && I.px != null) this.aim = this.aimFrom(E); if (E.ups.length && this.aim) { if (this.aim.ok) this.fire(E, r, this.aim.ang, this.aim.v); this.aim = null; } }
+        if (r.me && !E.AUTO) { this.aim = this.aimFrom(E); const K = window.__keys || {}; if (window.__fireReq || K.Space) { window.__fireReq = false; this.fire(E, r, this.aim.ang, this.aim.v); } }
         else { const s0 = sk(E, r), dz = -TZ, dy = 1.5 - 1.6; const v = Math.sqrt(G * dz * dz / (2 * Math.cos(el) ** 2 * (dz * Math.tan(el) - dy))); this.fire(E, r, rnd(-1, 1) * (1.25 - s0) * .12, v * (1 + rnd(-1, 1) * (1.25 - s0) * .16)); r.cd = rnd(2.4, 3.4); } }
       for (let i = this.projs.length - 1; i >= 0; i--) { const p = this.projs[i]; p.t += dt; p.vy -= G * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
         for (const b of this.blocks) { const d = Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z); if (d < .85) { b.dyn = true; b.rest = false; b.vx += p.vx * .55 + rnd(-1, 1); b.vy += Math.abs(p.vy) * .3 + 2; b.vz += p.vz * .55; p.vx *= .6; p.vz *= .6; if (p.r.me) Audio.sfxPlay('box'); } }
@@ -363,7 +377,7 @@ export function tirachinas(cfg) {
       for (const b of this.blocks) b.m.position.set(b.x, b.king && !b.dyn ? b.y - .45 : b.y, b.z);
       for (const r of E.racers) { r.obj.position.y = Math.abs(Math.sin(t * 3 + r.k)) * (r.cd > 1.8 ? .3 : 0); r.band.scale.x = 1; }
       const a = this.aim, me = E.me; this.dots.forEach(d => d.visible = false);
-      if (a && a.ok && me.shots > 0) { let x = me.lx, y = 1.6, z = 0, vx = Math.sin(a.ang) * a.v * Math.cos(.62), vy = Math.sin(.62) * a.v, vz = -Math.cos(a.ang) * a.v * Math.cos(.62); for (let i = 0; i < this.dots.length; i++) { for (let k = 0; k < 4; k++) { const h = .025; vy -= G * h; x += vx * h; y += vy * h; z += vz * h; } if (y < 0) break; this.dots[i].position.set(x, y, z); this.dots[i].visible = true; } me.band.position.z = a.pw * .9; } else me.band.position.z = 0;
+      if (a && a.ok && me.shots > 0 && me.cd <= 0) { let x = me.lx, y = 1.6, z = 0, vx = Math.sin(a.ang) * a.v * Math.cos(.62), vy = Math.sin(.62) * a.v, vz = -Math.cos(a.ang) * a.v * Math.cos(.62); for (let i = 0; i < this.dots.length; i++) { for (let k = 0; k < 4; k++) { const h = .025; vy -= G * h; x += vx * h; y += vy * h; z += vz * h; } if (y < 0) break; this.dots[i].position.set(x, y, z); this.dots[i].visible = true; } me.band.position.z = a.pw * .9; } else me.band.position.z = 0;
       const pr = port(); camTo(E, dt, v3(me.lx, pr ? 6 : 4.2, pr ? 9 : 6.5), v3(me.lx, 1.5, TZ * .7), pr ? 70 : 55, 4);
     },
   });
@@ -838,4 +852,4 @@ export function equilibrio(cfg) {
       const me = E.me, pr = port(); camTo(E, dt, v3(me.bx * .6, pr ? 5 : 3.8, pr ? 13 : 9), v3(me.bx * .6, 2, 0), pr ? 70 : 55, 3); },
   });
 }
-export const NUEVOS = { circuito, golf, laberinto, tirachinas, bolos, hockey, pesca, memoria, rebanar, torre, pinta, futbol, globo, mariposas, equilibrio };
+export const NUEVOS = { chiles, circuito, golf, laberinto, tirachinas, bolos, hockey, pesca, memoria, rebanar, torre, pinta, futbol, globo, mariposas, equilibrio };
