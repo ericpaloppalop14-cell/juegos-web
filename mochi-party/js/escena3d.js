@@ -22,6 +22,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x00000
 const DPR = Math.min(devicePixelRatio || 1, innerWidth * innerHeight > 600000 ? 1.75 : 2.25); renderer.setPixelRatio(DPR);
 const size = () => renderer.setSize(innerWidth, innerHeight); addEventListener('resize', size); size();
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(36, 1, .1, 200);
+if (window.__fxNoche) window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: 0, env: .35 }); // noche 25-10: reflejos suaves
 scene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.15)); const sun = new THREE.DirectionalLight('#fff4e8', 1.9); sun.position.set(4, 9, 7); scene.add(sun);
 const back = new THREE.DirectionalLight('#ffd0f0', .9); back.position.set(-5, 6, -8); scene.add(back); const fillL = new THREE.PointLight('#fff0c8', 6, 14, 1.6); fillL.position.set(0, 3, 5); scene.add(fillL);
 
