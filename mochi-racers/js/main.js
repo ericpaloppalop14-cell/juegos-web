@@ -300,7 +300,7 @@ function applySettings() {
   $('fps').style.display = save.settings.fps === '1' ? 'block' : 'none';
   app.autoDrift = save.settings.autoDrift !== '0';
   const c = save.settings.controls;
-  $('bL').style.display = $('bR').style.display = 'none'; $('zone').style.display = c === 'botones' ? 'block' : 'none';
+  $('bL').style.display = $('bR').style.display = c === 'botones' ? 'flex' : 'none';
   $('stick').style.display = c === 'stick' ? 'flex' : 'none';
   $('tiltHint').style.display = c === 'tilt' ? 'block' : 'none';
 }
@@ -335,12 +335,6 @@ function holdBtn(id, name) {
   const up = () => { held[name] = false; el.classList.remove('down'); };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
 }
-// v16: tocar mitad izquierda/derecha gira (sin flechas); las dos a la vez = recto
-{ const z = $('zone'), ids = new Map();
-  const upd = () => { held.zl = [...ids.values()].includes('l'); held.zr = [...ids.values()].includes('r'); };
-  z.addEventListener('pointerdown', e => { e.preventDefault(); Audio.init(); z.setPointerCapture(e.pointerId); ids.set(e.pointerId, e.clientX < innerWidth / 2 ? 'l' : 'r'); upd(); });
-  const up = e => { ids.delete(e.pointerId); upd(); };
-  z.addEventListener('pointerup', up); z.addEventListener('pointercancel', up); z.addEventListener('lostpointercapture', up); }
 holdBtn('bL', 'left'); holdBtn('bR', 'right'); holdBtn('bD', 'drift'); holdBtn('bI', 'item'); holdBtn('bB', 'brake');
 // stick
 let stickX = 0; { const st = $('stick'), kn = $('knob'); let id = null;
@@ -359,7 +353,7 @@ function readInput() {
   let steer = 0;
   if (keys.ArrowLeft || keys.KeyA) steer -= 1; if (keys.ArrowRight || keys.KeyD) steer += 1;
   const c = save.settings.controls;
-  if (held.left) steer -= 1; if (held.right) steer += 1; if (held.zl) steer -= 1; if (held.zr) steer += 1;
+  if (held.left) steer -= 1; if (held.right) steer += 1;
   if (c === 'stick') steer += stickX; if (c === 'tilt' && isTouch) steer += tiltX;
   steer = Math.max(-1, Math.min(1, steer));
   // NOTE: three.js world: our "right" vector is (-fz,0,fx); yaw increases turning to the left visually -> invert
