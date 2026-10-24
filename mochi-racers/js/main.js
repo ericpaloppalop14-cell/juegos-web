@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS, RACES_PER_CUP } from './data.js';
 import { POWER } from './powerups.js';
 import './locos.js'; // v23: 8 objetos hiperlocos
+import './epic.js'; // v32: Taladrín, Dragón Colosal y Tobogán Arcoíris
 import { cupForRace, raceNames } from './tracks2.js';
 Object.assign(ITEMS, POWER); // v10: iconos y nombres de los potenciadores surrealistas
 import { makeKart, animKart, makeTrophy, toon, mesh, outline, makeSeta } from './gfx.js';
