@@ -9,7 +9,7 @@ import { toon } from './gfx.js';
 const V3 = THREE.Vector3, C = c => new THREE.Color(c);
 
 // --- fusiona geometrías con color por vértice (1 draw call por pieza)
-function mergeVC(parts) {
+export function mergeVC(parts) {
   const pos = [], nor = [], col = []; const nm = new THREE.Matrix3();
   for (const { g, m, c } of parts) { const gg = g.index ? g.toNonIndexed() : g.clone(); gg.applyMatrix4(m); const cc = C(c || '#ffffff');
     const p = gg.attributes.position.array, n = gg.attributes.normal.array; for (let i = 0; i < p.length; i++) { pos.push(p[i]); nor.push(n[i]); } for (let i = 0; i < p.length / 3; i++) col.push(cc.r, cc.g, cc.b); gg.dispose(); }
@@ -18,8 +18,8 @@ function mergeVC(parts) {
 const M = (x, y, z, sx = 1, sy = sx, sz = sx, rx = 0, ry = 0, rz = 0) => new THREE.Matrix4().compose(new V3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new V3(sx, sy, sz));
 
 // --- material animado en GPU: salto, aplastado, saludo de bracitos, baile, balanceo
-const TIME = { value: 0 };
-function animMat(color, o = {}, anim = {}) {
+export const TIME = { value: 0 };
+export function animMat(color, o = {}, anim = {}) {
   const m = toon(color, { ...o, nocache: true });
   const prev = m.onBeforeCompile; const A = { jump: 0.6, sq: 1, wave: 0, spin: 0, sway: 0, spd: 5, bob: 0, ...anim };
   m.onBeforeCompile = (sh, r) => { if (prev) prev(sh, r);
@@ -60,16 +60,16 @@ class Chunks {
 // --- piezas
 const SPH = new THREE.SphereGeometry(1, 12, 8), SPHl = new THREE.SphereGeometry(1, 7, 5), CYL = new THREE.CylinderGeometry(1, 1, 1, 10), CONE = new THREE.ConeGeometry(1, 1, 10), BOX = new THREE.BoxGeometry(1, 1, 1);
 // v12: cuerpo con degradado (vientre claro, base más oscura) para dar volumen
-const bodyGeo = () => { const g = new THREE.SphereGeometry(1, 16, 11); g.scale(1, 0.86, 1); g.translate(0, 0.86, 0); const p = g.attributes.position, c = [];
+export const bodyGeo = () => { const g = new THREE.SphereGeometry(1, 16, 11); g.scale(1, 0.86, 1); g.translate(0, 0.86, 0); const p = g.attributes.position, c = [];
   for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 1.72, z = p.getZ(i); const k = 0.78 + y * 0.26 + Math.max(0, z) * 0.06; c.push(Math.min(1, k), Math.min(1, k * 0.98), Math.min(1, k)); }
   g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); return g; };
 // v12: pompones de espumillón en las manos (siguen al saludo de los bracitos)
-const pomGeo = () => mergeVC([-1, 1].flatMap(s => [0, 1, 2, 3, 4, 5].map(k => ({ g: SPHl, m: M(s * 1.15 + Math.cos(k * 1.05) * 0.18, 0.66 + Math.sin(k * 1.05) * 0.18, 0.22 + (k % 2) * 0.1, 0.21), c: ['#ffe066', '#ff8fd8', '#7ff5ff', '#ffffff', '#b98aff', '#9dff7a'][(k + (s > 0 ? 3 : 0)) % 6] }))));
-const faceGeo = () => mergeVC([
+export const pomGeo = () => mergeVC([-1, 1].flatMap(s => [0, 1, 2, 3, 4, 5].map(k => ({ g: SPHl, m: M(s * 1.15 + Math.cos(k * 1.05) * 0.18, 0.66 + Math.sin(k * 1.05) * 0.18, 0.22 + (k % 2) * 0.1, 0.21), c: ['#ffe066', '#ff8fd8', '#7ff5ff', '#ffffff', '#b98aff', '#9dff7a'][(k + (s > 0 ? 3 : 0)) % 6] }))));
+export const faceGeo = () => mergeVC([
   ...[-1, 1].flatMap(s => [{ g: SPHl, m: M(s * 0.36, 1.0, 0.83, 0.14, 0.18, 0.09), c: '#2e1a36' }, { g: SPHl, m: M(s * 0.36 - 0.04, 1.07, 0.9, 0.055), c: '#ffffff' }, { g: SPHl, m: M(s * 0.6, 0.8, 0.72, 0.16, 0.08, 0.06), c: '#ff9ab8' }]),
   { g: SPHl, m: M(0, 0.8, 0.95, 0.07, 0.04, 0.03), c: '#5a2a40' }]);
-const armsGeo = () => mergeVC([-1, 1].map(s => ({ g: SPHl, m: M(s * 0.98, 0.7, 0.1, 0.2, 0.3, 0.2) })));
-function hatGeo(th) {
+export const armsGeo = () => mergeVC([-1, 1].map(s => ({ g: SPHl, m: M(s * 0.98, 0.7, 0.1, 0.2, 0.3, 0.2) })));
+export function hatGeo(th) {
   if (th === 'candy') return mergeVC([-1, 1].flatMap(s => [{ g: new THREE.CapsuleGeometry(0.17, 0.6, 4, 10), m: M(s * 0.36, 1.95, -0.05, 1, 1, 0.8, 0, 0, -s * 0.25), c: '#ffffff' }, { g: new THREE.CapsuleGeometry(0.08, 0.45, 4, 8), m: M(s * 0.36, 1.95, 0.08, 1, 1, 0.5, 0, 0, -s * 0.25), c: '#ffb3cf' }]));
   if (th === 'sunflower') return mergeVC([{ g: CYL, m: M(0, 1.62, 0, 1.05, 0.06, 1.05), c: '#f2d38a' }, { g: CYL, m: M(0, 1.82, 0, 0.55, 0.38, 0.55), c: '#f2d38a' }, { g: CYL, m: M(0, 1.7, 0, 0.57, 0.1, 0.57), c: '#ff7f9f' }, { g: SPHl, m: M(0.45, 1.75, 0.3, 0.14), c: '#ffc928' }]);
   if (th === 'ice') return mergeVC([{ g: new THREE.SphereGeometry(1, 16, 8, 0, 6.29, 0, Math.PI / 2), m: M(0, 1.4, 0, 0.78, 0.6, 0.78), c: '#ff8fc0' }, { g: new THREE.TorusGeometry(0.75, 0.12, 8, 24), m: M(0, 1.42, 0, 1, 1, 1, Math.PI / 2), c: '#ffffff' }, { g: SPHl, m: M(0, 2.05, 0, 0.18), c: '#ffffff' }]);

@@ -5,6 +5,7 @@
 // ======================================================================
 import * as THREE from 'three';
 import { monumentHalo } from './hd.js';
+import { MONU } from './props26.js';
 import { toon, mesh, outline, glowTex } from './gfx.js';
 const V3 = THREE.Vector3;
 const G = {}; const geo = (k, f) => G[k] || (G[k] = Object.assign(f(), { _shared: true }));
@@ -228,5 +229,8 @@ export function addXDeco(T, Q, rnd) {
   const Z = makeSpace(T, rnd), A = [];
   try { surround(T, Q, Z, rnd); } catch (e) { console.warn('surround', e); }
   const f = B[T.cup.xdeco]; if (f) f(T, Z, A);
+  else if (MONU[T.cup.id]) { const want = { gominola: 26, girasol: 22, helada: 14, galaxia: 30, tormenta: 18, cielo: 18, sueno: 18, ballena: 14, biblioteca: 14 }[T.cup.id]; try { let g = center(T, Z, want, g => MONU[T.cup.id](g, A));
+      if (!g) for (const sc of [1, 0.8, 0.62, 0.48]) { const p = Z.spot(want * sc * 0.55, 0, 380, 80); if (!p) continue; g = new THREE.Group(); g.position.copy(p); g.scale.setScalar(sc); let bd = 1e18, bs = null; for (let j = 0; j < T.N; j += 4) { const q = T.S[j], d = (q.p.x - p.x) ** 2 + (q.p.z - p.z) ** 2; if (d < bd) { bd = d; bs = q; } } g.rotation.y = Math.atan2(bs.p.x - p.x, bs.p.z - p.z); T.group.add(g); MONU[T.cup.id](g, A); try { monumentHalo(T, g, want * sc); } catch (e) {} break; }
+      T.monu = g ? { x: g.position.x, y: g.position.y, z: g.position.z, s: g.scale.x * want } : { none: Z.centerR }; } catch (e) { console.warn('monu', e); } } // v26: monumento de los circuitos originales
   if (A.length) T.anims.push((t, dt, race) => { for (const a of A) a(t, dt, race); });
 }

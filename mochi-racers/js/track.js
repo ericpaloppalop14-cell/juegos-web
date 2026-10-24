@@ -5,6 +5,7 @@ import { addDeco } from './deco.js';
 import { addSkyFloat } from './skyfloat.js';
 import { addXDeco } from './xdeco.js';
 import { addHD } from './hd.js';
+import { addProps26, stands26, lanterns26 } from './props26.js';
 import { makeCritter, animCritter, CRITTER_COUNT } from './critters.js';
 
 const V3 = THREE.Vector3;
@@ -229,7 +230,7 @@ function buildVisuals(T, Q) {
     const lt = document.createElement('canvas'); lt.width = 256; lt.height = 32; const y = lt.getContext('2d'); for (let i = 0; i < 16; i++) for (let j = 0; j < 2; j++) { y.fillStyle = (i + j) % 2 ? '#fff' : '#3a2050'; y.fillRect(i * 16, j * 16, 16, 16); }
     const lx = new THREE.CanvasTexture(lt); mesh(new THREE.PlaneGeometry(s.w * 2, 2), new THREE.MeshBasicMaterial({ map: lx }), a, [0, 0.09, 0], [-Math.PI / 2, 0, 0]);
   }
-  addLanterns(T);
+  try { lanterns26(T); } catch (e) { console.warn('lant26', e); addLanterns(T); } // v26: farolas con carita
   scenery(T, Q);
 }
 
@@ -423,12 +424,13 @@ function instProps(T, parts, count, minD, maxD, palette, scaleR = [0.8, 1.4], ex
 const M = (x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) => new THREE.Matrix4().compose(new V3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new V3(sx, sy, sz));
 const W = () => toon('#ffffff', { rim: 0.35 });
 function scenery(T, Q) {
-  edgeProps(T, Q); stands(T, Q);
+  edgeProps(T, Q); try { stands26(T, Q, off); } catch (e) { console.warn('stands26', e); stands(T, Q); } // v26: gradas + público instanciado
   if (!/nodeco/.test(location.search)) try { T.deco = addDeco(T, Q, { off, rnd }); } catch (e) { console.warn('deco', e); } // v2: decoración extra (solo visual)
   if (T.cup.theme !== 'space') try { addSkyFloat(T, Q); } catch (e) { console.warn('sky', e); } // v21: globos en el cielo
   if (T.cup.look) try { addDream(T, Q, rnd); } catch (e) { console.warn('dream', e); } // v7: mapas surrealistas
   if (!T.open) try { addXDeco(T, Q, rnd); } catch (e) { console.warn('xdeco', e); } // v23: circuitos nuevos + alrededores
   try { addHD(T, { ...Q, lod: Q.hi ? 1 : (typeof window !== 'undefined' && window.__mrLod) || 0.6 }, rnd); } catch (e) { console.warn('hd', e); } // v25: circuitos HD
+  try { if (addProps26(T, { ...Q, lod: Q.hi ? 1 : (typeof window !== 'undefined' && window.__mrLod) || 0.6 }, rnd, placeOut)) return; } catch (e) { console.warn('props26', e); } // v26: objetos «nivel personaje»
   const k = Q.hi ? 1 : 0.55; const n = x => Math.round(x * k);
   const sphG = new THREE.SphereGeometry(1, 14, 10), cylG = new THREE.CylinderGeometry(1, 1, 1, 12), coneG = new THREE.ConeGeometry(1, 1, 12);
   const th = T.theme;
