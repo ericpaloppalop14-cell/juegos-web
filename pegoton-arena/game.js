@@ -195,6 +195,7 @@ const FT = (navigator.hardwareConcurrency || 4) >= 6 ? 1024 : 768; let DPR = Mat
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xc9b6ff); scene.fog = new THREE.Fog(0xc9b6ff, 90, 260);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 1500);
+window.__fxNoche && window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: .3, env: .25, top: '#cfe0ff', mid: '#f3e8ff', bot: '#ffd6ec' }); // noche 25-10: reflejos suaves + luz de cielo
 const sun = new THREE.DirectionalLight(0xfff0e0, 2.4); sun.position.set(30, 60, 25); scene.add(sun); const fill = new THREE.DirectionalLight(0xbfe4ff, .7); fill.position.set(-40, 25, -30); scene.add(fill);
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
