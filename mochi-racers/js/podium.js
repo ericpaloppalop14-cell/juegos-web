@@ -157,8 +157,9 @@ export function buildPodium(cup, ranking, myPlace, tier) {
           c.position.x = X[0] + Math.sin(t * 2.1) * 0.18;
         } else if (i === 1) { // aplaude contento
           y += Math.abs(Math.sin(t * 5)) * 0.18; ry = 0.35 + Math.sin(t * 1.3) * 0.15; expr = (t % 3) < 2 ? 'happy' : '';
-        } else { // se lamenta con gracia: suspira, suda y mira al ganador
-          const cyc = t % 5; expr = cyc < 2.2 ? 'strain' : cyc < 3.4 ? 'look' : ''; ry = -0.45 + Math.sin(t * 0.9) * 0.1; y += cyc > 3.4 ? Math.abs(Math.sin(t * 3)) * 0.08 : 0;
+        } else { // v21: también celebra (nada de tristeza): baile de lado a lado con giro cada 3 s
+          const cyc = t % 3; expr = 'happy'; ry = -0.3 + Math.sin(t * 3) * 0.45 + (cyc > 2.4 ? (cyc - 2.4) / 0.6 * Math.PI * 2 : 0); y += Math.abs(Math.sin(t * 6)) * 0.14;
+          c.position.x = X[i] + Math.sin(t * 3) * 0.12; for (const a of c.userData.arms) a.p.rotation.z = a.s * (2.2 + Math.sin(t * 6 + a.s) * 0.5);
         }
         c.position.y = y; c.rotation.set(rx, ry, 0); animCharacter(c, t, 1, expr, 0);
         if (i === 1 && expr === 'happy') for (const a of c.userData.arms) a.p.rotation.z = a.s * (1.15 + Math.sin(t * 18) * 0.45); // palmas

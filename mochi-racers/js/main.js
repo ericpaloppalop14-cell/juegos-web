@@ -53,10 +53,11 @@ const app = { race: null, state: 'title', autopilot: params.has('auto'), skipInt
 let toastT = 0;
 app.ui = {
   toast(text, color = '#ffffff') { const t = $('toast'); t.textContent = text; t.style.color = color; t.style.opacity = 1; toastT = 1.6; },
-  countdown(txt) { const c = $('count'); c.textContent = txt; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); if (txt === '¡YA!') $('startHint').style.display = 'none'; },
+  countdown(txt) { const c = $('count'); c.textContent = txt; c.dataset.n = txt; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); if (txt === '¡YA!') $('startHint').style.display = 'none'; },
   finishBanner(place) { this.toast(place === 1 ? '¡HAS GANADO!' : `¡Meta! ${place}º`, place <= 3 ? '#ffd84a' : '#ffffff'); },
 };
 function show(id) {
+  fest(['results', 'podium', 'title', 'orient', 'modes'].includes(id) ? (id === 'results' || id === 'podium' ? 2 : 1) : 0);
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id);
   app.state = id || 'race';
   $('hud').classList.toggle('on', app.state === 'race');
@@ -64,6 +65,11 @@ function show(id) {
 }
 function btn(id, f) { $(id).addEventListener('click', e => { Audio.init(); Audio.sfxPlay('click'); f(e); }); }
 
+// v21: capa festiva (confeti y globos en HTML, ligera)
+let festN = -1; function fest(n) { if (n === festN) return; festN = n; const F = $('fest'); F.innerHTML = ''; if (!n) return;
+  const cols = ['#ff6fa8', '#ffd36b', '#7ee3c4', '#8fd8ff', '#b9a2f7', '#ff9f6a'];
+  for (let i = 0; i < (n > 1 ? 36 : 14); i++) { const d = document.createElement('i'); d.className = 'cf'; d.style.cssText = `left:${(i * 37) % 100}%;background:${cols[i % 6]};animation-delay:-${(i * 0.53) % 6}s;animation-duration:${4 + (i % 5)}s;width:${6 + i % 4}px;height:${10 + i % 6}px`; F.appendChild(d); }
+  for (let i = 0; i < (n > 1 ? 8 : 5); i++) { const d = document.createElement('b'); d.className = 'bl'; d.style.cssText = `left:${6 + i * 12}%;--c:${cols[i % 6]};animation-delay:-${i * 1.7}s;animation-duration:${9 + i % 4}s`; F.appendChild(d); } }
 // ---------------- menu stage (3D) ----------------
 const menuScene = new THREE.Scene();
 const menuCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 900);
@@ -179,7 +185,7 @@ function showEndResults(order, stats) {
   if (me && (!g || g.seed !== stats.seed || me.dist > g.dist)) { rec = true; try { localStorage.setItem(GKEY, JSON.stringify({ seed: stats.seed, dist: me.dist, ch: me.ch.id, path: stats.ghost })); } catch (e) {} }
   $('rTitle').textContent = (me && me.place === 1 ? '¡Has llegado más lejos que nadie!' : `Has quedado ${me ? me.place : '-'}º`) + (rec ? ' · ¡Nuevo récord!' : '');
   let h = '<tr><td></td><td>Piloto</td><td class="n">Distancia</td><td class="n"></td></tr>';
-  order.forEach((o, i) => { h += `<tr class="${o.isPlayer ? 'me' : ''}"><td>${i + 1}º</td><td><span class="dot" style="background:${o.ch.color}"></span>${esc(o.name)}${o.isPlayer ? ' (tú)' : ''}</td><td class="n">${Math.round(o.dist).toLocaleString('es-ES')} m</td><td class="n">${o.out ? '🍦 ' + fmtS(o.time) : '🏁'}</td></tr>`; });
+  order.forEach((o, i) => { h += `<tr class="${o.isPlayer ? 'me' : ''}" style="animation-delay:${(i * 0.07).toFixed(2)}s"><td>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</td><td><span class="dot" style="background:${o.ch.color}"></span>${esc(o.name)}${o.isPlayer ? ' (tú)' : ''}</td><td class="n">${Math.round(o.dist).toLocaleString('es-ES')} m</td><td class="n">${o.out ? '🍦 ' + fmtS(o.time) : '🏁'}</td></tr>`; });
   $('rTable').innerHTML = h; $('rNext').textContent = app.mode === 'online' ? '🌐 Otra online' : '🔁 Otra partida'; $('rMenu').style.display = '';
 }
 const fmtS = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;

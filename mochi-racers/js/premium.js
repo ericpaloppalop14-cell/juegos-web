@@ -326,3 +326,4 @@ export function premiumVehicle(V, g, wheel, anims, C, OL, H) {
     return 0.85; }
   return null;
 }
+export { face, puffs, tmat, T, rbox, capsule, lathe, torus, ctex, G as grp, gold };
