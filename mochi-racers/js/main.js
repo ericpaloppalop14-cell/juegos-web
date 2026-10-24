@@ -23,7 +23,7 @@ const save = Object.assign({ trophies: {}, char: 'mochi', settings: { sound: '1'
 save.settings = Object.assign({ sound: '1', music: '1', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' }, save.settings);
 const persist = () => localStorage.setItem(SKEY, JSON.stringify(save));
 const cupUnlocked = c => !c.unlock || c.unlock.needs.every(id => save.trophies[id] != null);
-const charUnlocked = ch => !ch.unlock || save.trophies[ch.unlock.cup] != null || DEBUG_ALL;
+const charUnlocked = ch => !ch.premium && (!ch.unlock || save.trophies[ch.unlock.cup] != null || DEBUG_ALL);
 const DEBUG_ALL = /[?&]debug=all/.test(location.search);
 if (DEBUG_ALL) CUPS.forEach(c => c.unlock = null);
 
@@ -110,22 +110,23 @@ function renderChars() {
   $('cName').textContent = ch.name; $('cName').style.color = ch.color === '#e8f4ff' ? '#7fb0e0' : '';
   $('cVeh').textContent = '🛞 ' + ch.vname; $('cDesc').textContent = ch.desc;
   for (const [k, id] of [['vel', 'sVel'], ['acel', 'sAcel'], ['man', 'sMan'], ['peso', 'sPeso']]) $(id).style.width = ch.stats[k] * 20 + '%';
-  $('cLock').textContent = un ? '' : '🔒 ' + ch.unlock.text;
-  $('cGo').textContent = un ? '¡Elegir a ' + ch.name + '!' : 'Bloqueado'; $('cGo').style.opacity = un ? 1 : 0.55;
+  $('cLock').textContent = un ? '' : ch.premium ? '⭐ Piloto premium · ' + ch.price + ' · muy pronto en la tienda' : '🔒 ' + ch.unlock.text;
+  $('cInfo').classList.toggle('prem', !!ch.premium); $('cGo').classList.toggle('prem', !!ch.premium);
+  $('cGo').textContent = un ? '¡Elegir a ' + ch.name + '!' : ch.premium ? '🔒 Premium · ' + ch.price : 'Bloqueado'; $('cGo').style.opacity = un ? 1 : 0.55;
   const L = $('cList'); L.innerHTML = '';
   CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip' + (i === cSel ? ' on' : '') + (charUnlocked(c) ? '' : ' lock'); b.innerHTML = `<b style="background:${c.color}"></b>${charUnlocked(c) ? c.name : '🔒 ' + c.name}`; b.onclick = () => { Audio.init(); Audio.sfxPlay('click'); cSel = i; renderChars(); }; L.appendChild(b); });
   const G = $('cGrid');
   if (!G.children.length) { if (!portraits) portraits = makePortraits(CHARS);
-    CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'cc a-' + ANIMS[i % ANIMS.length]; b.setAttribute('aria-label', c.name);
-      b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>';
-      b.onclick = () => { Audio.init(); Audio.sfxPlay('click'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
-  [...G.children].forEach((b, i) => { const un2 = charUnlocked(CHARS[i]); b.classList.toggle('on', i === cSel); b.classList.toggle('lock', !un2); b.querySelector('.lk').textContent = un2 ? '' : '🔒'; });
+    CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'cc a-' + ANIMS[i % ANIMS.length] + (c.premium ? ' pr' : ''); b.setAttribute('aria-label', c.name);
+      b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>' + (c.premium ? `<span class="pt">${c.price}</span>` : '');
+      b.onclick = () => { Audio.init(); Audio.sfxPlay(c.premium ? 'stars' : 'level'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
+  [...G.children].forEach((b, i) => { const un2 = charUnlocked(CHARS[i]); b.classList.toggle('on', i === cSel); b.classList.toggle('lock', !un2); b.querySelector('.lk').textContent = un2 ? '' : CHARS[i].premium ? '⭐' : '🔒'; });
   setPreview(ch);
 }
 btn('cPrev', () => { cSel = (cSel + CHARS.length - 1) % CHARS.length; renderChars(); });
 btn('cNext', () => { cSel = (cSel + 1) % CHARS.length; renderChars(); });
 btn('cBack', () => { show('title'); setTitleStage(); });
-btn('cGo', () => { const ch = CHARS[cSel]; if (!charUnlocked(ch)) return; save.char = ch.id; persist(); app.playerChar = ch; if (params.get('sala')) openModes(); else openCups(); });
+btn('cGo', () => { const ch = CHARS[cSel]; if (!charUnlocked(ch)) { const l = $('cLock'); l.classList.remove('shake'); void l.offsetWidth; l.classList.add('shake'); return; } save.char = ch.id; persist(); app.playerChar = ch; if (params.get('sala')) openModes(); else openCups(); });
 
 // ---------------- ONLINE: modos, sala de espera y partida sin fin ----------------
 const online = new Online(); app.online = online;
@@ -219,7 +220,7 @@ btn('uGo', () => { const c = CUPS[uSel]; if (cupBusy) return; if (!cupUnlocked(c
 // ---------------- cup flow ----------------
 function startCup(cup) {
   app.cup = cup; app.raceNo = 0; app.points = {}; app.lastOrder = null;
-  const others = CHARS.filter(c => c !== app.playerChar).sort(() => Math.random() - 0.5).slice(0, CONFIG.racers - 1);
+  const others = CHARS.filter(c => c !== app.playerChar && !c.premium).sort(() => Math.random() - 0.5).slice(0, CONFIG.racers - 1);
   app.rivals = others; for (const c of [app.playerChar, ...others]) app.points[c.id] = 0;
   startRace();
 }
@@ -488,7 +489,7 @@ function frame(now) {
   // menus
   if (app.state === 'title' || (app.state === 'settings' && setReturn === 'title')) {
     menuKarts.forEach((m, i) => { const a = m.a + t * 0.35; m.k.position.set(Math.cos(a) * 4.2, 0.8 + Math.abs(Math.sin(t * 3 + i)) * 0.15, Math.sin(a) * 4.2); m.k.rotation.y = -a; animKart(m.k, t, 20); });
-    if (innerWidth < innerHeight) { menuCam.position.set(Math.sin(t * 0.1) * 4, 4.2, 21); menuCam.lookAt(0, 4.2, 0); } else { menuCam.position.set(Math.sin(t * 0.1) * 4, 3.6, 15.5); menuCam.lookAt(0, 4.4, 0); } // v18: se ve el cielo, castillo, arcoíris y fuegos
+    if (innerWidth < innerHeight) { menuCam.position.set(Math.sin(t * 0.1) * 4, 4.2, 21); menuCam.lookAt(0, 4.2, 0); } else { menuCam.position.set(Math.sin(t * 0.1) * 4, 5.2, 17); menuCam.lookAt(0, 2.9, 0); } // v18: se ve el cielo, castillo, arcoíris y fuegos
   } else {
     if (previewKart && app.state === 'chars') { previewKart.rotation.y = Math.sin(t * 0.8) * 0.6 + 0.25; animKart(previewKart, t, 15, Math.sin(t * 1.3) > -0.2 ? 'happy' : ''); animPreview(previewKart, t, cSel); }
     else if (previewKart) { previewKart.rotation.y = 0.5 + Math.sin(t * 0.6) * 0.3; const pe = performance.now() / 1000 - charPopT; animKart(previewKart, t, 15, app.state === 'chars' && pe < 1.3 ? 'happy' : ''); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12 + (pe < 0.5 ? Math.sin(pe / 0.5 * Math.PI) * 0.6 : 0); }
@@ -496,7 +497,7 @@ function frame(now) {
     const w = innerWidth / innerHeight;
     if (app.state === 'cups' && w < 1) { menuCam.position.set(0.1, 3.4, 18); menuCam.lookAt(0.1, -2.2, 0); } // v6: vertical, piloto y trofeo arriba
     else if (app.state === 'chars' && w < 1) { menuCam.position.set(0, 3.2, 12); menuCam.lookAt(0, -2.6, 0); } // v5: vertical, piloto centrado sobre la ficha
-    else if (app.state === 'chars') { menuCam.position.set(-1.6, 4.6, 12.5); menuCam.lookAt(-1.6, -0.6, 0); }
+    else if (app.state === 'chars') { menuCam.position.set(-3.1, 4.6, 16.5); menuCam.lookAt(-3.1, 0.9, 0); }
     else { menuCam.position.set(0, 4.5, 13 / Math.min(1.3, w / 1.5)); menuCam.lookAt(0, 1.8, 0); }
   }
   titleFx.visible = app.state === 'title' || (app.state === 'settings' && setReturn === 'title'); if (titleFx.visible) animTitleFx(titleFx, t);
@@ -529,12 +530,13 @@ window.__kart = {
   app, CHARS, CUPS, save, renderer, get pr() { return renderer.getPixelRatio(); },
   get state() { return app.state; }, get pod() { return podData; }, get race() { return app.race; }, get fps() { return fps; },
   setSpeed(n) { app.speed = n; }, setAutopilot(v) { app.autopilot = v; },
+  sizes() { return CHARS.map(c => { const k = makeKart(c, 0), ch = k.userData.char; k.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(k), bc = new THREE.Box3().setFromObject(ch), v = new THREE.Vector3(), w = new THREE.Vector3(); b.getSize(v); bc.getSize(w); return { id: c.id, prem: !!c.premium, kart: [v.x, v.y, v.z].map(n => +n.toFixed(2)), piloto: [w.x, w.y, w.z].map(n => +n.toFixed(2)), escala: ch.scale.x }; }); },
   pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },
   give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, force(item) { app.race.forceItem = item; }, fx(item, who) { const R = app.race; const k = who == null ? R.player : R.karts[who]; return R.fx.use(k, item); }, use() { app.race.useItem(app.race.player); },
   forceFinish() { const R = app.race; for (const k of R.karts) { if (!k.finished) { k.finished = true; k.finishTime = R.raceT + k.place; } } },
   testPodium(place = 0, cupId = 'gominola', charId = 'mochi') { // modo de pruebas: fuerza el resultado de la copa
     app.playerChar = CHARS.find(c => c.id === charId); app.cup = CUPS.find(c => c.id === cupId); app.match = null; app.points = {};
-    const others = CHARS.filter(c => c !== app.playerChar).slice(0, CONFIG.racers - 1); const all = others.slice(); all.splice(Math.min(place, all.length), 0, app.playerChar);
+    const others = CHARS.filter(c => c !== app.playerChar && !c.premium).slice(0, CONFIG.racers - 1); const all = others.slice(); all.splice(Math.min(place, all.length), 0, app.playerChar);
     all.forEach((c, i) => app.points[c.id] = 40 - i * 4); showPodium(); },
   openChars, openCups, showPodium, pickOrient, openOrient, openModes, openLobby, startEndless, soloMatch, meInfo, get match() { return app.match; },
   trackShape(id, rev) { const T = buildTrack(CUPS.find(c => c.id === id), rev, { hi: false }); return { S: T.S.map(s => [s.p.x, s.p.z, s.w, s.wall, s.p.y]), sc: T.shortcuts.map(c => c.pts.map(p => [p.x, p.z])), feats: T.feats.map(f => [f.type, T.idxOf(f.t)]), L: T.L }; }, get quality() { return qualityHi ? 'alta' : 'baja'; },

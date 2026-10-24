@@ -31,6 +31,23 @@ export const CHARS = [
     stats: { vel: 4, acel: 3, man: 3, peso: 3 }, desc: 'Rápido y eléctrico. Truena al derrapar.', unlock: { cup: 'galaxia', text: 'Consigue la Copa Galaxia' } },
   { id: 'disco', name: 'Disco', color: '#ff8fd8', ears: 'cat', acc: 'shades', inner: 'disco', vehicle: 'discoball', vname: 'Bola de Discoteca',
     stats: { vel: 4, acel: 4, man: 3, peso: 2 }, desc: 'La fiesta sobre ruedas. ¡Que no pare!', unlock: { cup: 'tormenta', text: 'Consigue la Copa Tormenta' } },
+  // v19: pilotos premium (de pago; aún sin compra real)
+  { id: 'capitan', name: 'Capitán Aletas', color: '#ffb36b', ears: 'fins', inner: 'aquarium', vehicle: 'whale', vname: 'Ballenita de Montar', premium: true, price: '1,99 €',
+    stats: { vel: 4, acel: 3, man: 3, peso: 4 }, desc: 'Un pez muy elegante con chistera y monóculo que cabalga su ballenita.', unlock: null },
+  { id: 'tostadin', name: 'Sir Tostadín', color: '#ffd98a', ears: 'bear', inner: 'gears', vehicle: 'toaster', vname: 'Tostadora Voladora', premium: true, price: '1,99 €',
+    stats: { vel: 4, acel: 4, man: 2, peso: 3 }, desc: 'Rey del desayuno. Su tostadora aletea y lanza tostadas.', unlock: null },
+  { id: 'madame', name: 'Madame Llovizna', color: '#c9a0ff', ears: 'cat', inner: 'snow', vehicle: 'umbrella', vname: 'Paraguas Navegante', premium: true, price: '1,99 €',
+    stats: { vel: 3, acel: 4, man: 5, peso: 1 }, desc: 'Navega en un paraguas del revés sobre su propia nube de lluvia.', unlock: null },
+  { id: 'tecla', name: 'Maestro Tecla', color: '#9fc3ff', ears: 'antenna', inner: 'disco', vehicle: 'piano', vname: 'Piano Corredor', premium: true, price: '1,99 €',
+    stats: { vel: 3, acel: 3, man: 4, peso: 4 }, desc: 'Dirige la orquesta mientras su piano corre con patitas.', unlock: null },
+  { id: 'duquesa', name: 'Duquesa Espuma', color: '#ffb3d1', ears: 'bunny', inner: 'bubbles', vehicle: 'bathtub', vname: 'Bañera con Patas', premium: true, price: '1,99 €',
+    stats: { vel: 3, acel: 5, man: 3, peso: 2 }, desc: 'Corre dándose un baño de espuma con su patito de goma.', unlock: null },
+  { id: 'farito', name: 'Farito', color: '#9fe8a8', ears: 'antenna', inner: 'atom', vehicle: 'snailhouse', vname: 'Caracol Faro', premium: true, price: '1,99 €',
+    stats: { vel: 2, acel: 4, man: 5, peso: 3 }, desc: 'Su caracol lleva un faro de concha que ilumina la pista.', unlock: null },
+  { id: 'tarta', name: 'Tarta Feliz', color: '#ff9cc8', ears: 'bear', inner: 'lava', vehicle: 'cake', vname: 'Tarta sobre Patines', premium: true, price: '1,99 €',
+    stats: { vel: 4, acel: 3, man: 3, peso: 3 }, desc: 'Cada carrera es su cumpleaños. ¡Velas encendidas!', unlock: null },
+  { id: 'grullita', name: 'Grullita', color: '#8fe3f0', ears: 'bunny', inner: 'solar', vehicle: 'paperplane', vname: 'Avión de Papel Gigante', premium: true, price: '1,99 €',
+    stats: { vel: 5, acel: 3, man: 3, peso: 1 }, desc: 'Vuela bajito en un avión de papel que no se arruga nunca.', unlock: null },
 ];
 
 // Objetos
