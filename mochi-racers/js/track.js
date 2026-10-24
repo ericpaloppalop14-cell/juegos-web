@@ -206,6 +206,7 @@ function buildVisuals(T, Q) {
     if (f.type === 'ramp') T.ramps.push(makeRampAlong(T, i, T.cup.look ? 5 : 3, T.cup.look ? 3.2 : 1.5));
     if (f.type === 'obstacle') obsQ.push([f, i]);
   }
+  fixBoxRows(T);
   // v13: obstáculos colocados con coherencia: separación mínima entre ellos, nunca en curvas cerradas ni en la zona de
   // una rampa (entrada, rampa y aterrizaje), y cada uno patrulla solo medio carril (lado alterno) => siempre hay hueco.
   { const taken = [], MIN = 28; const dist = (a, b) => { const d = Math.abs(a - b); return OPEN ? d : Math.min(d, N - d); };
@@ -548,4 +549,52 @@ function addLanterns(T) {
     m4.compose(ps.set(x, y + 6.1, z), q, sc.set(1, 1, 1)); cap.setMatrixAt(j, m4);
     m4.compose(ps.set(x, y + 1.2, z), new THREE.Quaternion().setFromAxisAngle(new V3(1, 0, 0), Math.PI / 2), sc.set(1.6, 1.6, 1.6)); ring.setMatrixAt(j, m4); });
   for (const im of [pole, cap, bulb, ring]) { im.instanceMatrix.needsUpdate = true; T.group.add(im); }
+}
+
+// ---------------- v33: filas de cajas alcanzables también con turbo ----------------
+// Física real del salto (race.js rampCheck): vy = min(5.8 + 0.12·v, 11)·(look ? 1.5 : 1), gravedad 30·grav.
+// Velocidades: base máxima 48.6 (vel 5) × turbo 1.38 × dragón 1.9 / arcoíris 2.0 / mega 1.2.
+export const BOX_COL = { below: 4.5, above: 6.5 }; // ventana vertical de recogida respecto al centro de la caja
+export const BOX_SPEEDS = [14, 30, 48.6, 48.6 * 1.38, 48.6 * 1.25 * 1.38, 48.6 * 1.9 * 1.38, 48.6 * 2.0 * 1.38, 48.6 * 2.0 * 1.38 * 1.2];
+// trayectoria en índices de pista desde la cima de la rampa: [{idx (fraccional, relativo), h (altura sobre el suelo)}]
+export function jumpArc(T, r, v, dt = 1 / 60) {
+  const N = T.N, S = T.S, g = 30 * T.grav, look = T.cup.look;
+  let vy = Math.min(5.8 + Math.max(v, 14) * 0.12, 11) * (look ? 1.5 : 1), y = r.highY, d = 0; const out = [];
+  for (let n = 0; n < 2000; n++) {
+    d += v * dt; vy -= g * dt; y += vy * dt;
+    const fi = d / T.STEP, j = Math.floor(fi), a = S[((r.idx + j) % N + N) % N].p.y, b = S[((r.idx + j + 1) % N + N) % N].p.y, gy = a + (b - a) * (fi - j);
+    if (y <= gy) { out.push({ rel: fi, h: 0 }); break; }
+    out.push({ rel: fi, h: y - gy });
+  }
+  return out;
+}
+const relIdx = (T, from, to) => { const N = T.N; let d = to - from; if (!T.open) d = ((d % N) + N) % N; return d; };
+// altura del kart (sobre el suelo) al pasar por el índice de la fila, o 0 si va por el suelo
+export function heightAtRow(T, rowIdx, v, ramps = T.ramps) {
+  let best = 0;
+  for (const r of ramps) { const rel = relIdx(T, r.idx, rowIdx); if (rel < 0 || rel > 140) continue;
+    const arc = jumpArc(T, r, v); const last = arc[arc.length - 1]; if (rel > last.rel) continue;
+    let h = 0; for (const p of arc) { if (p.rel >= rel) { h = p.h; break; } } best = Math.max(best, h); }
+  return best;
+}
+// regla antigua: |caja.y - kart.y - 1| < 3.5 (caja a 1.6 del suelo)  => altura del kart < 4.1
+// regla nueva (columna): kart.y entre caja.y - 4.5 y caja.y + 6.5        => altura del kart < 8.1
+export const rowOkOld = h => Math.abs(1.6 - h - 1) < 3.5;
+export const rowOkNew = h => h - 1.6 < BOX_COL.above && 1.6 - h < BOX_COL.below;
+export function rowCatchable(T, idx, ok = rowOkNew) { return BOX_SPEEDS.every(v => ok(heightAtRow(T, idx, v))); }
+function fixBoxRows(T) {
+  const rows = new Map(); for (const b of T.boxes) { if (!rows.has(b.idx)) rows.set(b.idx, []); rows.get(b.idx).push(b); }
+  T.boxRowsOrig = [...rows.keys()]; T.boxMoves = [];
+  for (const [idx, bs] of rows) {
+    if (rowCatchable(T, idx)) continue;
+    // mover la fila hacia delante hasta que todas las velocidades la alcancen (aterrizaje del más rápido), si no hacia atrás
+    let ni = null;
+    for (let d = 1; d < 120 && ni == null; d++) for (const s of [d, -d]) { let j = idx + s; if (T.open) { if (j < 5 || j > T.N - 5) continue; } else j = ((j % T.N) + T.N) % T.N;
+      const nearRamp = T.ramps.some(r => { const a = relIdx(T, r.i0 - 3, j); return a >= 0 && a <= r.len + 6; });
+      if (!nearRamp && rowCatchable(T, j)) { ni = j; break; } }
+    if (ni == null) continue;
+    T.boxMoves.push([idx, ni]);
+    const s = T.S[ni];
+    for (const b of bs) { const lat = b.lat / (T.S[idx].w || 1) * s.w; const p = off(s, lat, 1.6); b.pos.copy(p); b.mesh.position.copy(p); b.idx = ni; b.lat = lat; }
+  }
 }

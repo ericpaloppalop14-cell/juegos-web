@@ -3,7 +3,9 @@ import * as THREE from 'three';
 const DAYLOOK = ['sky', 'ocean', 'book']; // v14: mapas flotantes con luz de día
 import { CONFIG, ITEMS, ITEM_KEYS, ITEM_W } from './data.js';
 import { makeKart, animKart, makeProjectile, makeSeta, toon, mesh } from './gfx.js';
-import { buildTrack } from './track.js';
+import { buildTrack, BOX_COL } from './track.js';
+const segD2 = (p, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, L = dx * dx + dz * dz; let t = L > 0 ? ((p.x - ax) * dx + (p.z - az) * dz) / L : 0; t = Math.max(0, Math.min(1, t)); const qx = ax + dx * t - p.x, qz = az + dz * t - p.z; return qx * qx + qz * qz; };
+import { drawFromBag } from './itembag.js';
 import { addSurreal } from './surreal.js';
 const DL = [0, 0.5, 1.0, 1.6]; const dlvl = t => t > DL[3] ? 3 : t > DL[2] ? 2 : t > DL[1] ? 1 : 0;
 import { Audio } from './audio.js';
@@ -355,7 +357,9 @@ export class Race {
     // pads
     for (const p of T.pads) { const dx = p.pos.x - k.pos.x, dz = p.pos.z - k.pos.z; if (!k.air && dx * dx + dz * dz < (p.r + 0.5) ** 2) { if (k.boostT < 0.9 && k.isPlayer) Audio.sfxPlay('boost'); k.boostT = Math.max(k.boostT, 1.0); } }
     // boxes
-    for (const b of T.boxes) { if (b.t > 0) continue; const dx = b.pos.x - k.pos.x, dz = b.pos.z - k.pos.z; const r = 2.2 * k.megaS; if (dx * dx + dz * dz < r * r && Math.abs(b.pos.y - k.y - 1) < 3.5) { b.t = 2.2; if (k.isPlayer) { Audio.sfxPlay('box'); Audio.sfxPlay('buf'); } for (let i = 0; i < 8; i++) this.emit(b.pos.clone(), ['#ff8fc0', '#ffe066', '#7ff5ff'][i % 3], 0.7, 0.5); if (!k.item && k.rollT <= 0) k.rollT = k.isPlayer ? 1.2 : 0.6; } }
+    if (k._bpx == null || (k._bpx - k.pos.x) ** 2 + (k._bpz - k.pos.z) ** 2 > 400) { k._bpx = k.pos.x; k._bpz = k.pos.z; } // teletransportes: sin barrido
+    for (const b of T.boxes) { if (b.t > 0) continue; const r = 2.4 * k.megaS; if (segD2(b.pos, k._bpx, k._bpz, k.pos.x, k.pos.z) < r * r && k.y > b.pos.y - BOX_COL.below && k.y < b.pos.y + BOX_COL.above) { b.t = 2.2; if (k.isPlayer) { Audio.sfxPlay('box'); Audio.sfxPlay('buf'); } for (let i = 0; i < 8; i++) this.emit(b.pos.clone(), ['#ff8fc0', '#ffe066', '#7ff5ff'][i % 3], 0.7, 0.5); if (!k.item && k.rollT <= 0) k.rollT = k.isPlayer ? 1.2 : 0.6; } }
+    k._bpx = k.pos.x; k._bpz = k.pos.z; // v33: test barrido (a mucha velocidad no se salta la caja entre fotogramas)
     // obstacles
     for (const o of T.obstacles) { if (!o.active) continue; const p = o.g.position; const dx = p.x - k.pos.x, dz = p.z - k.pos.z; const yy = o.kind === 'bee' ? Math.abs(p.y - k.y - 1.5) < 2.5 : o.kind === 'lightning' ? true : Math.abs(p.y - k.y) < 3;
       if (yy && dx * dx + dz * dz < (o.r + 1.1 * k.megaS) ** 2) { if ((k.megaT > 0 && o.kind !== 'lightning') || this.fx.immune(k)) continue; if (o.kind === 'lightning') { this.hitKart(k, 'rayo'); } else { this.hitKart(k, 'obst'); const d = Math.hypot(dx, dz) || 1; k.vx -= dx / d * 10; k.vz -= dz / d * 10; } } }
@@ -480,15 +484,9 @@ export class Race {
   // ---------------- items ----------------
   rollItem(k) {
     if (this.forceItem && k.isPlayer) { const f = this.forceItem; this.forceItem = null; return f; }
-    const f = (k.place - 1) / (this.karts.length - 1);
-    const KEYS = ITEM_KEYS.concat(Object.keys(POWER)); // v10: los clásicos pesan menos, los surrealistas mandan
-    const w = KEYS.map(key => { const [a, b, c] = POWER_W[key] || ITEM_W[key].map(x => x * 0.45); return f < 0.5 ? lerp(a, b, f * 2) : lerp(b, c, (f - 0.5) * 2); });
-    // no repetir tiburones/pianos en masa: si ya hay uno activo, peso casi nulo
-    if (this.karts.some(o => o.sharkT > 0)) w[KEYS.indexOf('tiburon')] *= 0.1;
-    if (this.fx.projs.some(p => p.type === 'piano')) w[KEYS.indexOf('piano')] *= 0.1;
-    let tot = w.reduce((a, b) => a + b, 0), r = R() * tot;
-    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return KEYS[i]; }
-    return 'turbo';
+    // v33: misma probabilidad para todos los objetos, sin importar la posición (bolsa barajada por kart)
+    const KEYS = ITEM_KEYS.concat(Object.keys(POWER));
+    return drawFromBag(k.bagSt || (k.bagSt = {}), KEYS);
   }
   useItem(k) {
     const it = k.item; k.item = null; const T = this.track;
