@@ -1,19 +1,19 @@
 // MOCHI PARTY · OLIMPIADAS — pantalla para elegir olimpiada (tarjetas) con tu mochi en 3D
 import { CHARS } from '../data.js';
-import { OLIMPIADAS } from './catalogo.js?v=o33';
-import { saveS, evURL } from './fiesta.js?v=o33';
+import { OLIMPIADAS } from './catalogo.js?v=o35';
+import { saveS, evURL } from './fiesta.js?v=o35';
 const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
 const PERS = { mochi: 'Optimista sin remedio', tiovivo: 'Mareado pero feliz', atomo: 'Hiperactivo y eléctrico', cosmo: 'Soñador galáctico', copito: 'Frío y calculador', burbuja: 'Escurridiza y bromista', lava: 'Competitiva y calentita', tictac: 'Puntual y gruñón', trueno: 'Ruidoso y dramático', disco: 'Fiestera y presumida' };
 const LIST = CHARS.filter(c => PERS[c.id]);
 let pj = localStorage.getItem('mr_pj') || 'mochi'; if (!LIST.find(c => c.id === pj)) pj = 'mochi';
 const med = (() => { try { return JSON.parse(localStorage.getItem('mo_medallas') || '{}'); } catch (e) { return {}; } })();
 // ---------- 3D: la misma vitrina del Torneo (js/escena3d.js) ----------
-import('../../../js/escena3d.js?v=m15').catch(() => document.body.classList.add('no3d'));
+import('../../../js/escena3d.js?v=m17').catch(() => document.body.classList.add('no3d'));
 let stK = 0, shownPj = '';
 function setHero() { const c = LIST.find(c => c.id === pj); $('who').innerHTML = `${c.name}<small>${PERS[c.id]}</small>`; const e = $('olStage'); const prev = shownPj; shownPj = pj; e.dataset.d = JSON.stringify({ pj, prev }); e.dataset.key = 'ol' + (++stK); }
 setHero();
 // ---------- personajes ----------
-function chars() { const C = $('chars'); C.innerHTML = ''; for (const c of LIST) { const b = document.createElement('button'); b.style.background = c.color; b.title = c.name; b.className = c.id === pj ? 'on' : ''; b.onclick = () => { pj = c.id; localStorage.setItem('mr_pj', pj); setHero(); chars(); }; C.appendChild(b); } }
+function chars() { const C = $('chars'); C.innerHTML = ''; for (const c of LIST) { const b = document.createElement('button'); b.style.setProperty('--c', c.color); b.title = c.name; b.innerHTML = `<canvas data-mini data-id="${c.id}" width="128" height="128"></canvas>`; b.className = c.id === pj ? 'on' : ''; b.onclick = () => { pj = c.id; localStorage.setItem('mr_pj', pj); setHero(); chars(); }; C.appendChild(b); } }
 chars();
 // ---------- tarjetas ----------
 const G = $('grid');

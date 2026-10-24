@@ -6,8 +6,8 @@
 //  el paisaje (islas, arcoíris, nubes) siempre fuera del pasillo de vuelo.
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m18';
-import { buildWorld, prop, arch, SPH, CYL } from './mundos.js?v=o33';
-import { T, GL, v3, $, sk, setButtons, racers, hitFx, base } from './tipos.js?v=o33';
+import { buildWorld, prop, arch, SPH, CYL } from './mundos.js?v=o35';
+import { T, GL, v3, $, sk, setButtons, racers, hitFx, base } from './tipos.js?v=o35';
 
 const L = 320, XW = 11, YMIN = 2.5, YMAX = 24, FR = 3.4; // largo, medio ancho, alturas, radio de la corriente
 const BASEV = 5, FAVV = 14, CONV = 2.2;

@@ -162,9 +162,9 @@ mScene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.25)); { const l = n
 const mAct = {}, MROLES = ['boing', 'wiggle', 'hop', 'wave', 'spin', 'taunt', 'dance', 'clap'];
 let mLast = 0;
 function thumbs(t) {
-  const sc = document.getElementById('sChars'); if (!sc || !sc.classList.contains('on')) return;
+  if (mode !== 'chars') return;
   const tt = now(); if (tt - mLast < 1 / 30) return; mLast = tt;
-  const cs = sc.querySelectorAll('#charGrid canvas'); if (!cs.length) return;
+  const cs = document.querySelectorAll('.scr.on #charGrid canvas, canvas[data-mini]'); if (!cs.length) return;
   const gl = renderer.domElement, S = Math.round(Math.min(160, 64 * DPR)), H = gl.height;
   renderer.setScissorTest(true);
   cs.forEach((c, i) => { const id = c.dataset.id; if (c.width !== S) { c.width = c.height = S; }

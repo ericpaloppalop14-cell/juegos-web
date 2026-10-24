@@ -4,14 +4,14 @@
 //  rebanar · torre · pintar · fútbol · globo · cazamariposas · equilibrio
 // ======================================================================
 import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=m18';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o33';
-import { espacioReal, asfaltoTex } from './espacio-real.js?v=o33';
-import { mergedGeo, instSet } from './decor.js?v=o33';
-import { chiles } from './chiles.js?v=o33';
-import { globo } from './globo.js?v=o33';
-import { futbolExtra } from './futbol-extra.js?v=o33';
-import { addFace, setExpr, faceTick, particles, dropBounce, desertoExtra } from './tira-extra.js?v=o33';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o33';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR, textTex } from './mundos.js?v=o35';
+import { espacioReal, asfaltoTex } from './espacio-real.js?v=o35';
+import { mergedGeo, instSet } from './decor.js?v=o35';
+import { chiles } from './chiles.js?v=o35';
+import { globo } from './globo.js?v=o35';
+import { futbolExtra } from './futbol-extra.js?v=o35';
+import { addFace, setExpr, faceTick, particles, dropBounce, desertoExtra } from './tira-extra.js?v=o35';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, stickDir, say, hitFx, scoreFinish, base, arena, arenaCam, moveRacer, separate, poseArena, initArenaRacers } from './tipos.js?v=o35';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 const pm = (kind, parent, pos, s = 1) => { const m = new THREE.Mesh(mergedGeo(kind), VCM()); if (pos) m.position.set(...pos); m.scale.setScalar(s); if (parent) parent.add(m); return m; };
