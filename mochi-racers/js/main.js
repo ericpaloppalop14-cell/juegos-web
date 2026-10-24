@@ -80,6 +80,7 @@ let festN = -1; function fest(n) { if (n === festN) return; festN = n; const F =
   for (let i = 0; i < (n > 1 ? 36 : 14); i++) { const d = document.createElement('i'); d.className = 'cf'; d.style.cssText = `left:${(i * 37) % 100}%;background:${cols[i % 6]};animation-delay:-${(i * 0.53) % 6}s;animation-duration:${4 + (i % 5)}s;width:${6 + i % 4}px;height:${10 + i % 6}px`; F.appendChild(d); }
   for (let i = 0; i < (n > 1 ? 8 : 5); i++) { const d = document.createElement('b'); d.className = 'bl'; d.style.cssText = `left:${6 + i * 12}%;--c:${cols[i % 6]};animation-delay:-${i * 1.7}s;animation-duration:${9 + i % 4}s`; F.appendChild(d); } }
 // ---------------- menu stage (3D) ----------------
+const fxEnv = sc => { if (sc && !sc.userData.fxEnv && window.__fxNoche) { sc.userData.fxEnv = 1; window.__fxNoche.mejora3D(THREE, renderer, sc, { hemi: 0, env: .3 }); } }; // noche 25-10: reflejos suaves
 const menuScene = new THREE.Scene();
 const menuCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 900);
 {
@@ -499,7 +500,7 @@ function step(now) {
     readInput();
     acc += dt * app.speed; let n = 0;
     while (acc >= STEP && n < 6 * app.speed) { app.race.update(STEP); acc -= STEP; n++; }
-    if (app.state === 'race' && app.race) { drawHUD(dt); renderer.render(app.race.scene, app.race.camera); }
+    if (app.state === 'race' && app.race) { drawHUD(dt); fxEnv(app.race.scene); renderer.render(app.race.scene, app.race.camera); }
     return;
   }
   if (app.state === 'podium' && podData) {
@@ -525,7 +526,7 @@ function step(now) {
   }
   titleFx.visible = app.state === 'title' || (app.state === 'settings' && setReturn === 'title'); if (titleFx.visible) animTitleFx(titleFx, t);
   selBg.visible = app.state === 'chars'; if (selBg.visible) animSelBg(selBg, t);
-  renderer.render(menuScene, menuCam);
+  fxEnv(menuScene); renderer.render(menuScene, menuCam);
 }
 
 // ---------------- orientation / fullscreen ----------------

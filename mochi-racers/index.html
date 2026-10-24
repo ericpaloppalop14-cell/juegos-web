@@ -604,11 +604,12 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 </div><div class="oS" style="font-size:13px;opacity:.8">Puedes cambiarlo luego en Ajustes</div></div>
 <div id="rotate"><div class="ph"><div class="oPh v"><b></b><i>🍡</i></div></div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div id="rotMsg">Has elegido jugar en horizontal.</div><button class="btn sec sm" id="rotAny">Cambiar orientación</button></div>
 
+<script>window.FX_NOCHE={z:2,n:16,vig:.14,rays:false}</script><script src="js/fx-noche.js?v=1"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script>
-<script type="module" src="js/main.js?v=33"></script>
+<script type="module" src="js/main.js?v=34"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=33', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=34', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>
 </body>
 </html>
