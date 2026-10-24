@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
 import { addDeco } from './deco.js';
 import { addSkyFloat } from './skyfloat.js';
+import { addXDeco } from './xdeco.js';
 import { makeCritter, animCritter, CRITTER_COUNT } from './critters.js';
 
 const V3 = THREE.Vector3;
@@ -205,7 +206,7 @@ function buildVisuals(T, Q) {
     for (const sd of [-1, 1]) { const p = mesh(new THREE.CylinderGeometry(0.8, 1, 9, 12), toon(cup.curbA), a, [sd * (s.w + 2), 4.5, 0]); outline(p, '#5a3a6e', 1.05); mesh(new THREE.SphereGeometry(1.3, 14, 10), toon(cup.curbB), a, [sd * (s.w + 2), 9.3, 0]); }
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 128; const x = cv.getContext('2d');
     for (let i = 0; i < 32; i++) for (let j = 0; j < 2; j++) { x.fillStyle = (i + j) % 2 ? '#ffffff' : '#3a2050'; x.fillRect(i * 32, j * 16, 32, 16); x.fillRect(i * 32, 96 + j * 16, 32, 16); }
-    x.fillStyle = cup.curbA; x.fillRect(0, 32, 1024, 64); x.fillStyle = '#ffffff'; x.font = '700 52px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(T.cup.name.toUpperCase() + '  ·  ¡A CORRER!', 512, 66);
+    x.fillStyle = cup.curbA; x.fillRect(0, 32, 1024, 64); x.fillStyle = '#ffffff'; x.font = '700 52px Fredoka, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText((T.cup.xdeco ? T.cup.track : T.cup.name).toUpperCase() + '  ·  ¡A CORRER!', 512, 66);
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
     const ban = mesh(new THREE.PlaneGeometry(s.w * 2 + 4, 2.8), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }), a, [0, 8, 0], [0, Math.PI, 0]);
     // start line on road
@@ -410,6 +411,7 @@ function scenery(T, Q) {
   if (!/nodeco/.test(location.search)) try { T.deco = addDeco(T, Q, { off, rnd }); } catch (e) { console.warn('deco', e); } // v2: decoración extra (solo visual)
   if (T.cup.theme !== 'space') try { addSkyFloat(T, Q); } catch (e) { console.warn('sky', e); } // v21: globos en el cielo
   if (T.cup.look) try { addDream(T, Q, rnd); } catch (e) { console.warn('dream', e); } // v7: mapas surrealistas
+  if (!T.open) try { addXDeco(T, Q, rnd); } catch (e) { console.warn('xdeco', e); } // v23: circuitos nuevos + alrededores
   const k = Q.hi ? 1 : 0.55; const n = x => Math.round(x * k);
   const sphG = new THREE.SphereGeometry(1, 14, 10), cylG = new THREE.CylinderGeometry(1, 1, 1, 12), coneG = new THREE.ConeGeometry(1, 1, 12);
   const th = T.theme;

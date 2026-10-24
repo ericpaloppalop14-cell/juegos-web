@@ -90,6 +90,20 @@ export function animSelBg(G, t) {
 }
 
 // ---------- RETRATOS (una sola vez, con un render pequeño aparte) ----------
+// v23: retratos en segundo plano (uno por tick mientras se ve el inicio) para que «¡Jugar!» pase a la selección al instante
+let pR = null;
+export function makePortraitsAsync(chars, out, done) {
+  let i = 0; const step = () => { if (i >= chars.length || out.__done) { finishP(out); done && done(); return; } const ch = chars[i++]; if (!out[ch.id]) portraitOne(ch, i, out); setTimeout(step, 30); };
+  setTimeout(step, 0);
+}
+function portraitOne(ch, i, out) {
+  if (!pR) { try { pR = { r: new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true }) }; } catch (e) { return; } pR.r.setSize(160, 160, false); pR.r.setClearColor(0x000000, 0);
+    pR.sc = new THREE.Scene(); pR.sc.add(new THREE.HemisphereLight('#ffffff', '#ffd6ea', 1.5)); const d = new THREE.DirectionalLight('#fff4e8', 1.4); d.position.set(3, 5, 6); pR.sc.add(d);
+    pR.cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50); pR.cam.position.set(0, 1.25, 5.2); pR.cam.lookAt(0, 0.95, 0); }
+  const c = makeCharacter(ch); c.rotation.y = -0.35; pR.sc.add(c); animCharacter(c, 0.4, 1, i % 2 ? 'happy' : '', 0); pR.r.render(pR.sc, pR.cam); out[ch.id] = pR.r.domElement.toDataURL('image/png'); pR.sc.remove(c);
+}
+function finishP(out) { out.__done = true; if (pR) { pR.r.dispose(); pR.r.forceContextLoss(); pR = null; } }
+export function finishPortraits(chars, out) { if (out.__done) return out; chars.forEach((ch, i) => { if (!out[ch.id]) portraitOne(ch, i + 1, out); }); finishP(out); return out; }
 export function makePortraits(chars) {
   const out = {}; let r;
   try { r = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true }); } catch (e) { return out; }

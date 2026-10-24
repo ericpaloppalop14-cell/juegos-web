@@ -138,4 +138,4 @@ CUPS.push(
     feats: floatyFeats() },
 );
 // Cada copa: 2 carreras (ida y vuelta, el mismo circuito en sentido contrario)
-export const RACES_PER_CUP = 2;
+export const RACES_PER_CUP = 4; // v23: ida, vuelta y dos circuitos nuevos (tracks2.js)

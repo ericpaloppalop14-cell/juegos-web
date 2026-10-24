@@ -2,6 +2,8 @@ import { mergeStatic } from './merge.js';
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS, RACES_PER_CUP } from './data.js';
 import { POWER } from './powerups.js';
+import './locos.js'; // v23: 8 objetos hiperlocos
+import { cupForRace, raceNames } from './tracks2.js';
 Object.assign(ITEMS, POWER); // v10: iconos y nombres de los potenciadores surrealistas
 import { makeKart, animKart, makeTrophy, toon, mesh, outline, makeSeta } from './gfx.js';
 import { Race } from './race.js';
@@ -11,7 +13,7 @@ import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
 import { Online, soloMatch, MAX_PLAYERS } from './online.js';
 import { createCupCarousel } from './cupsel.js';
 import { buildPodium } from './podium.js';
-import { buildTitleFx, animTitleFx, buildSelBg, animSelBg, setSelColor, makePortraits, ANIMS, animPreview } from './showcase.js';
+import { buildTitleFx, animTitleFx, buildSelBg, animSelBg, setSelColor, makePortraits, makePortraitsAsync, finishPortraits, ANIMS, animPreview } from './showcase.js';
 
 const $ = id => document.getElementById(id);
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
@@ -34,18 +36,20 @@ if (params.get('q') === 'low') qualityHi = false;
 const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 // v2: resolución por niveles (hasta 2×). Auto: arranca en 1,5× en móvil / 2× en PC, baja si va lento y vuelve a subir si sobra.
-const PRL = [2, 1.75, 1.5, 1.25, 1, 0.85]; let prLv = 0, prGood = 0, prWarned = false;
-function prBase() { const q = save.settings.quality; return q === 'alta' ? 0 : q === 'baja' ? (isTouch ? 5 : 4) : (isTouch ? 2 : 0); }
-prLv = prBase(); if (params.get('q') === 'low') prLv = 4;
+// v23: un punto más de nitidez (móvil arranca en 1,75×, PC en 2×; sigue bajando sola si va lento)
+const PRL = [2.25, 2, 1.75, 1.5, 1.25, 1, 0.85]; let prLv = 0, prGood = 0, prWarned = false;
+function prBase() { const q = save.settings.quality; return q === 'alta' ? 0 : q === 'baja' ? (isTouch ? 6 : 5) : (isTouch ? 2 : 1); }
+prLv = prBase(); if (params.get('q') === 'low') prLv = 5;
 renderer.debug.checkShaderErrors = params.has('debug'); // v13: comprobar errores de shader bloquea el primer uso de cada programa
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // v13: apagar/encender sombras recompila TODOS los materiales (tirón de cientos de ms). Durante una carrera solo se
 // permite apagarlas una vez; volver a encenderlas espera a la siguiente carrera (sin ir y venir en mitad de la partida).
 let shadowLock = false;
-function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio, PRL[prLv])); let sh = prLv <= 2 && !params.has('noshadows'); const racing = app.state === 'race' && app.race;
+function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio, PRL[prLv])); let sh = prLv <= 3 && !params.has('noshadows'); const racing = app.state === 'race' && app.race;
   if (racing && sh && !renderer.shadowMap.enabled && shadowLock) sh = false; if (racing && !sh && renderer.shadowMap.enabled) shadowLock = true;
   if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; try { app.race && app.race.scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); } catch (e) {} } resize(); }
-function resize() { renderer.setSize(innerWidth, innerHeight, false); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera, podCam]) if (c) { c.aspect = a; c.zoom = a < 1 ? Math.max(0.55, a / 1.05) : 1; c.updateProjectionMatrix(); } checkRotate(); }
+var booted = false;
+function resize() { renderer.setSize(innerWidth, innerHeight, false); if (booted) setTimeout(renderNow, 0); const a = innerWidth / innerHeight; for (const c of [menuCam, app.race && app.race.camera, podCam]) if (c) { c.aspect = a; c.zoom = a < 1 ? Math.max(0.55, a / 1.05) : 1; c.updateProjectionMatrix(); } checkRotate(); }
 addEventListener('resize', () => resize()); addEventListener('orientationchange', () => setTimeout(resize, 120));
 
 // ---------------- app / UI ----------------
@@ -91,7 +95,7 @@ const menuCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 9
     else { const b = mesh(new THREE.SphereGeometry(2.2, 16, 12), toon(cols[i % 5], { opacity: 0.9, rim: 0.6 }), g, [0, 1.4, 0], null, [1, 0.9, 1]); } }
   menuScene.fog = new THREE.Fog('#ffe3f1', 60, 300);
 }
-const titleFx = buildTitleFx(menuScene), selBg = buildSelBg(menuScene); let portraits = null; // v18
+const titleFx = buildTitleFx(menuScene), selBg = buildSelBg(menuScene); let portraits = Object.assign({ __done: true }, Object.fromEntries(CHARS.map(c => [c.id, 'icons/p/' + c.id + '.png?v=23']))); // v23: retratos ya horneados (sin trabajo al pulsar «¡Jugar!») // v18 (v23: se generan en segundo plano)
 const stage = new THREE.Group(); menuScene.add(stage);
 const menuKarts = []; let charPopT = -9; let previewKart = null, trophyPreview = null;
 function setTitleStage() {
@@ -110,7 +114,7 @@ btn('tSet', () => openSettings('title'));
 
 // ---------------- chars ----------------
 let cSel = Math.max(0, CHARS.findIndex(c => c.id === save.char));
-function openChars() { show('chars'); renderChars(); }
+function openChars() { finishPortraits(CHARS, portraits); show('chars'); renderChars(); renderNow(); }
 function renderChars() {
   const ch = CHARS[cSel], un = charUnlocked(ch);
   $('cName').textContent = ch.name; $('cName').style.color = ch.color === '#e8f4ff' ? '#7fb0e0' : '';
@@ -122,7 +126,7 @@ function renderChars() {
   const L = $('cList'); L.innerHTML = '';
   CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip' + (i === cSel ? ' on' : '') + (charUnlocked(c) ? '' : ' lock'); b.innerHTML = `<b style="background:${c.color}"></b>${charUnlocked(c) ? c.name : '🔒 ' + c.name}`; b.onclick = () => { Audio.init(); Audio.sfxPlay('click'); cSel = i; renderChars(); }; L.appendChild(b); });
   const G = $('cGrid');
-  if (!G.children.length) { if (!portraits) portraits = makePortraits(CHARS);
+  if (!G.children.length) { portraits = finishPortraits(CHARS, portraits);
     CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'cc a-' + ANIMS[i % ANIMS.length] + (c.premium ? ' pr' : ''); b.setAttribute('aria-label', c.name);
       b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>' + (c.premium ? `<span class="pt">Prueba gratis</span>` : '');
       b.onclick = () => { Audio.init(); Audio.sfxPlay(c.premium ? 'stars' : 'level'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
@@ -198,7 +202,7 @@ const TIER = ['🥇 Oro', '🥈 Plata', '🥉 Bronce'];
 let carousel = null, cupBusy = false;
 function cupInfo() { const c = CUPS[uSel], un = cupUnlocked(c), tr = save.trophies[c.id];
   $('cupName').textContent = c.name; $('cupName').style.setProperty('--cc', un ? c.color : '#b8a8d0');
-  $('cupTrack').innerHTML = '🏁 ' + c.track + ' · ' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
+  $('cupTrack').innerHTML = '<div class="rlist">' + raceNames(c).map((n, i) => `<span><b>${i + 1}</b>${n}</span>`).join('') + '</div>' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
   [...$('cupGrid').children].forEach((d, i) => d.classList.toggle('sel', i === uSel));
   $('uGo').classList.toggle('locked', !un); $('uGo').innerHTML = un ? '<span>¡A correr!</span>' : '<span>🔒 Bloqueada</span>';
   $('cupPanel').classList.remove('swap'); void $('cupPanel').offsetWidth; $('cupPanel').classList.add('swap');
@@ -236,12 +240,12 @@ function startRace() {
   let grid;
   if (!app.lastOrder) grid = [...app.rivals, app.playerChar]; // player starts last in race 1
   else grid = app.lastOrder.slice().reverse();
-  $('loading').style.display = 'flex'; $('loading').textContent = 'Preparando ' + app.cup.track + '…';
+  $('loading').style.display = 'flex'; const rc = cupForRace(app.cup, app.raceNo); $('loading').textContent = 'Preparando ' + rc.track + '…';
   setTimeout(() => {
-    app.race = new Race(app, { cup: app.cup, reverse: app.raceNo % 2 === 1, playerChar: app.playerChar, rivals: app.rivals, grid, cupIndex: CUPS.indexOf(app.cup), quality: { hi: qualityHi } });
+    app.race = new Race(app, { cup: rc, reverse: app.raceNo === 1, playerChar: app.playerChar, rivals: app.rivals, grid, cupIndex: CUPS.indexOf(app.cup), quality: { hi: qualityHi } });
     try { app.race.mergedMeshes = mergeStatic(app.race); } catch (e) {} shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
     show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>DERRAPE</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
-    app.ui.toast(app.cup.name + ' · Carrera ' + (app.raceNo + 1) + '/' + RACES_PER_CUP + (app.raceNo % 2 ? ' (vuelta)' : ''), '#ffffff');
+    app.ui.toast(app.cup.name + ' · Carrera ' + (app.raceNo + 1) + '/' + RACES_PER_CUP + ': ' + raceNames(app.cup)[app.raceNo], '#ffffff');
     Audio.init(); Audio.playSong(app.cup.music, CUPS.indexOf(app.cup) * 7 + app.raceNo + 1); Audio.engineStart();
     buildMinimap();
   }, 30);
@@ -470,11 +474,15 @@ function drawHUD(dt) {
 let last = performance.now(), acc = 0, fpsAcc = 0, fpsN = 0, fps = 60, lowFpsT = 0;
 const STEP = 1 / 60;
 function frame(now) {
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); step(now);
+}
+// v23: dibujar un fotograma YA (tras cambiar de pantalla o de tamaño) para que nunca se vea el lienzo en negro
+function renderNow() { try { step(performance.now()); } catch (e) {} }
+function step(now) {
   let dt = Math.min(0.1, (now - last) / 1000); last = now;
   fpsAcc += dt; fpsN++; if (fpsAcc >= 1) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; $('fps').textContent = fps.toFixed(0) + ' fps · ' + Math.min(devicePixelRatio, PRL[prLv]).toFixed(2) + '×';
     if (app.state === 'race' && save.settings.quality === 'auto' && app.race && app.race.state === 'race') { lowFpsT = fps < 42 ? lowFpsT + 1 : 0;
-      if (lowFpsT >= 3 && prLv < PRL.length - 1) { lowFpsT = 0; prGood = 0; prLv++; applyPR(); if (!prWarned && prLv >= 4) { prWarned = true; app.ui.toast('Calidad ajustada para ir más fluido'); } }
+      if (lowFpsT >= 3 && prLv < PRL.length - 1) { lowFpsT = 0; prGood = 0; prLv++; applyPR(); if (!prWarned && prLv >= 5) { prWarned = true; app.ui.toast('Calidad ajustada para ir más fluido'); } }
       else if (fps > 57) { if (++prGood >= 6 && prLv > (isTouch ? 1 : 0)) { prGood = 0; prLv--; applyPR(); } } else prGood = 0; } }
   const t = now / 1000;
   if (app.state === 'pause' && app.race && app.mode === 'online' && app.match) { acc += dt; let n = 0; app.race.input.steer = 0; app.race.input.drift = false; while (acc >= STEP && n < 6) { app.race.update(STEP); acc -= STEP; n++; } if (app.race) renderer.render(app.race.scene, app.race.camera); return; }
@@ -528,7 +536,11 @@ function tryFullscreen() { if (!isTouch) return; const d = document.documentElem
 // ---------------- boot ----------------
 document.fonts && document.fonts.load('700 20px Fredoka').finally(() => {
   applyPR(); applySettings(); setTitleStage(); show('title'); $('loading').style.display = 'none'; if (!save.settings.orient) openOrient();
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); booted = true;
+  // v23: mientras se ve el inicio, preparar retratos, piloto y fondo de la selección (sin tirones al pulsar «¡Jugar!»)
+  CHARS.forEach(c => { const im = new Image(); im.src = portraits[c.id]; im.decode && im.decode().catch(() => {}); });
+  setTimeout(() => { try { const k = makeKart(CHARS[cSel], 0); k.position.set(0, -50, 0); menuScene.add(k); const v = selBg.visible; selBg.visible = true; const end = () => { menuScene.remove(k); selBg.visible = v; };
+    if (renderer.compileAsync) renderer.compileAsync(menuScene, menuCam).then(end, end); else { renderer.compile(menuScene, menuCam); end(); } } catch (e) {} }, 500);
 });
 
 // test hooks
@@ -537,7 +549,7 @@ window.__kart = {
   get state() { return app.state; }, get pod() { return podData; }, get race() { return app.race; }, get fps() { return fps; },
   setSpeed(n) { app.speed = n; }, setAutopilot(v) { app.autopilot = v; },
   sizes() { return CHARS.map(c => { const k = makeKart(c, 0), ch = k.userData.char; k.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(k), bc = new THREE.Box3().setFromObject(ch), v = new THREE.Vector3(), w = new THREE.Vector3(); b.getSize(v); bc.getSize(w); return { id: c.id, prem: !!c.premium, kart: [v.x, v.y, v.z].map(n => +n.toFixed(2)), piloto: [w.x, w.y, w.z].map(n => +n.toFixed(2)), escala: ch.scale.x }; }); },
-  pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); },
+  pickChar(id) { app.playerChar = CHARS.find(c => c.id === id); }, startCup(id) { startCup(CUPS.find(c => c.id === id)); }, startRaceN(id, n) { const c = CUPS.find(c => c.id === id); app.cup = c; app.points = {}; app.lastOrder = null; app.rivals = CHARS.filter(x => x !== app.playerChar && !x.premium).slice(0, CONFIG.racers - 1); for (const x of [app.playerChar, ...app.rivals]) app.points[x.id] = 0; app.raceNo = n; startRace(); },
   give(item) { const P = app.race.player; P.item = item; P.rollT = 0; }, force(item) { app.race.forceItem = item; }, fx(item, who) { const R = app.race; const k = who == null ? R.player : R.karts[who]; return R.fx.use(k, item); }, use() { app.race.useItem(app.race.player); },
   forceFinish() { const R = app.race; for (const k of R.karts) { if (!k.finished) { k.finished = true; k.finishTime = R.raceT + k.place; } } },
   testPodium(place = 0, cupId = 'gominola', charId = 'mochi') { // modo de pruebas: fuerza el resultado de la copa

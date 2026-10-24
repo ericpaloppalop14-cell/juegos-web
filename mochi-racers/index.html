@@ -463,6 +463,13 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 #orient .card,#modes .card,#lobby .card,#settings .card{border-radius:28px!important}
 .seg button{transition:transform .15s cubic-bezier(.34,1.56,.64,1)}.seg button:active{transform:scale(.9)}
 @media (max-height:500px){#settings .card{padding:10px 22px!important;max-height:94vh;overflow:auto}#settings .keys{display:none}#settings .set{margin:4px 0!important}}
+/* v23: 4 carreras por copa */
+#cupTrack .rlist{display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;margin:4px 0 5px;text-align:left}
+#cupTrack .rlist span{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.2);border-radius:12px;padding:3px 7px;font-size:12px;line-height:1.15;animation:rpop .45s cubic-bezier(.3,1.6,.5,1) both}
+#cupTrack .rlist span:nth-child(2){animation-delay:.06s}#cupTrack .rlist span:nth-child(3){animation-delay:.12s}#cupTrack .rlist span:nth-child(4){animation-delay:.18s}
+#cupTrack .rlist b{flex:none;width:18px;height:18px;border-radius:50%;background:#fff;color:#c0509f;display:grid;place-items:center;font-size:11px}
+@keyframes rpop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@media (orientation:landscape) and (max-height:500px){#cupTrack .rlist span{font-size:10.5px;padding:2px 6px}#cupTrack .rlist{gap:3px 4px;margin:2px 0 3px}}
 </style>
 </head>
 <body>
@@ -574,7 +581,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script>
-<script type="module" src="js/main.js?v=22"></script>
+<script type="module" src="js/main.js?v=23"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>
