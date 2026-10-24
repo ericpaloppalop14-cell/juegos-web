@@ -589,6 +589,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
   <div class="set">Orientación<div class="seg" data-k="orient"><button data-v="v">📱 Vertical</button><button data-v="h">📱 Horizontal</button></div></div>
   <div class="set">Sonido<div class="seg" data-k="sound"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
   <div class="set">Música<div class="seg" data-k="music"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+  <div class="set">Motor<div class="seg" data-k="engine"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
   <div class="set">Controles<div class="seg" data-k="controls"><button data-v="botones">Botones</button><button data-v="stick">Joystick</button><button data-v="tilt">Inclinación</button></div></div>
   <div class="set">Calidad<div class="seg" data-k="quality"><button data-v="auto">Auto</button><button data-v="baja">Baja</button><button data-v="alta">Alta</button></div></div>
   <div class="set">Derrape automático<div class="seg" data-k="autoDrift"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
@@ -605,9 +606,9 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script>
-<script type="module" src="js/main.js?v=29"></script>
+<script type="module" src="js/main.js?v=30"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=30', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>
 </body>
 </html>

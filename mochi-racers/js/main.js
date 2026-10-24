@@ -21,8 +21,8 @@ document.title = CONFIG.title; $('logo').firstChild.textContent = CONFIG.title;
 
 // ---------------- save ----------------
 const SKEY = 'mracers_save_v1';
-const save = Object.assign({ trophies: {}, char: 'mochi', settings: { sound: '1', music: '1', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' } }, JSON.parse(localStorage.getItem(SKEY) || '{}'));
-save.settings = Object.assign({ sound: '1', music: '1', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' }, save.settings);
+const save = Object.assign({ trophies: {}, char: 'mochi', settings: { sound: '1', music: '1', engine: '0', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' } }, JSON.parse(localStorage.getItem(SKEY) || '{}'));
+save.settings = Object.assign({ sound: '1', music: '1', engine: '0', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' }, save.settings);
 const persist = () => localStorage.setItem(SKEY, JSON.stringify(save));
 const cupUnlocked = c => !c.unlock || c.unlock.needs.every(id => save.trophies[id] != null);
 const charUnlocked = ch => !!ch.premium || (!ch.unlock || save.trophies[ch.unlock.cup] != null || DEBUG_ALL);
@@ -323,7 +323,7 @@ for (const seg of document.querySelectorAll('.seg')) for (const b of seg.childre
   if (seg.dataset.k === 'quality') { qualityHi = b.dataset.v === 'alta' || (b.dataset.v === 'auto' && !isTouch); prLv = prBase(); applyPR(); }
 });
 function applySettings() {
-  Audio.on = save.settings.sound === '1'; Audio.musicOn = save.settings.music === '1'; Audio.apply(); if (window.__muteUpd) window.__muteUpd();
+  Audio.on = save.settings.sound === '1'; Audio.musicOn = save.settings.music === '1'; Audio.engineOn = save.settings.engine === '1'; if (!Audio.engineOn) Audio.engineStop(); else if (app.race && app.state === 'race') Audio.engineStart(); Audio.apply(); if (window.__muteUpd) window.__muteUpd();
   $('fps').style.display = save.settings.fps === '1' ? 'block' : 'none';
   app.autoDrift = save.settings.autoDrift !== '0';
   const c = save.settings.controls;
