@@ -4,6 +4,7 @@ import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
 import { addDeco } from './deco.js';
 import { addSkyFloat } from './skyfloat.js';
 import { addXDeco } from './xdeco.js';
+import { addHD } from './hd.js';
 import { makeCritter, animCritter, CRITTER_COUNT } from './critters.js';
 
 const V3 = THREE.Vector3;
@@ -85,16 +86,16 @@ export function buildTrack(cup, reverse, quality) {
 
 // ======================================================================
 function ribbon(S, N, fnL, fnR, colorFn, closed = true, yOff = 0) {
-  const pos = [], cols = [], idx = [], us = []; if (OPEN) closed = false;
+  const pos = [], cols = [], idx = [], us = [], vs = []; if (OPEN) closed = false; let acc = 0, lp = null;
   const n = closed ? N + 1 : N;
   for (let k = 0; k < n; k++) {
     const i = k % N, s = S[i];
     const l = fnL(s, i), r = fnR(s, i);
-    pos.push(l.x, l.y + yOff, l.z, r.x, r.y + yOff, r.z); us.push(0, 1);
+    pos.push(l.x, l.y + yOff, l.z, r.x, r.y + yOff, r.z); us.push(0, 1); if (lp) acc += Math.hypot(s.p.x - lp.x, s.p.z - lp.z); lp = s.p; vs.push(acc, acc);
     const c = colorFn(i, k); cols.push(c[0].r, c[0].g, c[0].b, c[1].r, c[1].g, c[1].b);
     if (k < n - 1) { const a = k * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
   }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.setAttribute('aU', new THREE.Float32BufferAttribute(us, 1)); g.setIndex(idx); g.computeVertexNormals(); return g;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.setAttribute('aU', new THREE.Float32BufferAttribute(us, 1)); g.setAttribute('aV', new THREE.Float32BufferAttribute(vs, 1)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
 const off = (s, d, dy = 0) => new V3(s.p.x + s.right.x * d, s.p.y + dy, s.p.z + s.right.z * d);
 
@@ -105,20 +106,35 @@ function surfMat(kind, extra = {}) {
   const c2 = new THREE.Color(extra.c2 || '#ffffff');
   m.onBeforeCompile = sh => {
     sh.uniforms.uC2 = { value: c2 };
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + (kind === 'ground' ? '' : 'attribute float aU; varying float vU;') + '\nvarying vec3 vWP;')
-      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;' + (kind === 'ground' ? '' : ' vU = aU;'));
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uC2; varying vec3 vWP;' + (kind === 'ground' ? '' : ' varying float vU;') + '\n' + HASH)
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + (kind === 'ground' ? '' : 'attribute float aU; attribute float aV; varying float vU; varying float vV;') + '\nvarying vec3 vWP;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;' + (kind === 'ground' ? '' : ' vU = aU; vV = aV;'));
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uC2; varying vec3 vWP;' + (kind === 'ground' ? '' : ' varying float vU; varying float vV;') + '\n' + HASH)
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + (kind === 'ground'
         ? ` { float pa = vn(vWP.xz * 0.045) * 0.65 + vn(vWP.xz * 0.21) * 0.35; diffuseColor.rgb = mix(diffuseColor.rgb, uC2, smoothstep(0.42, 0.78, pa) * 0.55);
             diffuseColor.rgb *= 0.93 + vn(vWP.xz * 1.7) * 0.12;
             vec2 cl = floor(vWP.xz * 0.9); float fl = step(0.965, h12(cl)); vec2 fc = fract(vWP.xz * 0.9) - 0.5; float dd = length(fc);
-            diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(1.0, 0.82, 0.92), vec3(1.0, 0.97, 0.75), h12(cl + 7.0)), fl * smoothstep(0.2, 0.12, dd)); }`
-        : ` { float e = abs(vU * 2.0 - 1.0); diffuseColor.rgb *= 1.0 - smoothstep(0.72, 1.0, e) * 0.15;
-            diffuseColor.rgb *= 0.955 + vn(vWP.xz * 0.06) * 0.06 + (h12(floor(vWP.xz * 4.0)) - 0.5) * 0.05;
-            float sp = step(0.988, h12(floor(vWP.xz * 7.0))); diffuseColor.rgb += sp * 0.22; }`))
-      .replace('#include <opaque_fragment>', '{ float shn = pow(max(0.0, 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)))), 5.0); outgoingLight += vec3(1.0, 0.96, 1.0) * shn * ' + (kind === 'ground' ? '0.0' : '0.12') + '; }\n#include <opaque_fragment>');
+            diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(1.0, 0.82, 0.92), vec3(1.0, 0.97, 0.75), h12(cl + 7.0)), fl * smoothstep(0.2, 0.12, dd)); 
+            float gb = vn(vec2(vWP.x * 2.7 + vWP.z * 0.5, vWP.z * 2.7 - vWP.x * 0.3)); diffuseColor.rgb *= 0.95 + smoothstep(0.55, 0.85, gb) * 0.08 - smoothstep(0.45, 0.15, gb) * 0.04;
+            float big = vn(vWP.xz * 0.012); diffuseColor.rgb *= 0.94 + big * 0.1;
+            vec2 sc2 = floor(vWP.xz * 0.6); float stn = step(0.985, h12(sc2 + 13.0)); float sd2 = length(fract(vWP.xz * 0.6) - 0.5); diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.78 + vec3(0.12), stn * smoothstep(0.3, 0.22, sd2)); }`
+        : kind === 'curb' ? ` { float bk = fract(vV / 4.0); float gr = smoothstep(0.0, 0.05, bk) * smoothstep(1.0, 0.95, bk); diffuseColor.rgb *= 0.74 + 0.26 * gr;
+            float bv = sin(clamp(vU, 0.0, 1.0) * 3.14159); diffuseColor.rgb *= 0.84 + 0.22 * bv; diffuseColor.rgb += pow(bv, 6.0) * 0.06 * gr;
+            diffuseColor.rgb *= 0.95 + h12(floor(vWP.xz * 6.0)) * 0.07 - step(0.93, vn(vWP.xz * 0.8)) * 0.05; }`
+        : kind === 'shoulder' ? ` { float g = vn(vWP.xz * 0.5) * 0.6 + vn(vWP.xz * 2.3) * 0.4; float tr = smoothstep(0.0, 0.32 + g * 0.25, vU);
+            vec3 dirt = diffuseColor.rgb * vec3(0.86, 0.8, 0.76) + vec3(0.05, 0.03, 0.0); diffuseColor.rgb = mix(dirt, diffuseColor.rgb, tr);
+            diffuseColor.rgb *= 0.9 + h12(floor(vWP.xz * 3.0)) * 0.1 + (1.0 - tr) * (h12(floor(vWP.xz * 9.0)) - 0.5) * 0.12;
+            float bl = vn(vec2(vWP.x * 3.1 + vWP.z * 0.4, vWP.z * 3.1)); diffuseColor.rgb *= 1.0 - tr * smoothstep(0.6, 0.9, bl) * 0.08; }`
+        : ` { float e = abs(vU * 2.0 - 1.0); diffuseColor.rgb *= 1.0 - smoothstep(0.7, 1.0, e) * 0.17;
+            diffuseColor.rgb *= 0.9 + vn(vWP.xz * 0.06) * 0.1 + vn(vWP.xz * 0.9) * 0.07 + vn(vWP.xz * 3.5) * 0.04 + (h12(floor(vWP.xz * 9.0)) - 0.5) * 0.09;
+            float sp = step(0.986, h12(floor(vWP.xz * 7.0))); diffuseColor.rgb += sp * 0.2; diffuseColor.rgb *= 1.0 - step(0.975, h12(floor(vWP.xz * 5.0) + 3.1)) * 0.07;
+            float rl = 0.5 + (vn(vec2(vV * 0.011, 1.7)) - 0.5) * 0.55; float wl = exp(-pow((vU - rl) / 0.1, 2.0)); float st = vn(vec2(vV * 0.3, vU * 40.0));
+            diffuseColor.rgb *= 1.0 - wl * (0.06 + st * 0.1);
+            float ln = smoothstep(0.855, 0.87, e) * (1.0 - smoothstep(0.9, 0.915, e)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.99, 0.97), ln * (0.55 + vn(vec2(vV * 0.25, vU * 5.0)) * 0.3));
+            float cr = abs(vn(vWP.xz * 0.33) - 0.5); diffuseColor.rgb *= 1.0 - (1.0 - smoothstep(0.0, 0.014, cr)) * 0.17 * step(0.55, vn(vWP.xz * 0.04 + 9.0));
+            float pa = step(0.78, vn(vWP.xz * 0.025 + 3.0)); diffuseColor.rgb *= 1.0 - pa * 0.06; }`))
+      .replace('#include <opaque_fragment>', '{ float shn = pow(max(0.0, 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)))), 5.0); outgoingLight += vec3(1.0, 0.96, 1.0) * shn * ' + (kind === 'ground' || kind === 'shoulder' ? '0.0' : '0.12') + '; }\n#include <opaque_fragment>');
   };
-  m.customProgramCacheKey = () => 'surf-' + kind;
+  m.customProgramCacheKey = () => 'surf25-' + kind;
   return m;
 }
 
@@ -127,18 +143,18 @@ function buildVisuals(T, Q) {
   const road = C(cup.road), roadB = C(cup.road).lerp(C('#c090c0'), 0.07), cA = C(cup.curbA), cB = C(cup.curbB);
   const vmat = toon('#ffffff', { vc: true, rim: 0, side: THREE.DoubleSide });
   // road with soft lane stripes
-  const rmat = surfMat('road');
+  const rmat = surfMat('road'), cmat = surfMat('curb'), smat = surfMat('shoulder');
   group.add(new THREE.Mesh(ribbon(S, N, s => off(s, -s.w), s => off(s, s.w), i => { const c = (i >> 3) % 2 ? road : roadB; return [c, c]; }, true, 0.05), rmat));
   // centre dashes
   const dash = C(cup.curbB).lerp(road, 0.5);
   group.add(new THREE.Mesh(ribbon(S, N, s => off(s, -0.25), s => off(s, 0.25), i => { const c = (i >> 2) % 3 === 0 ? dash : road; return [c, c]; }, true, 0.07), vmat));
   // curbs
-  for (const sd of [-1, 1]) group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * s.w, 0), s => off(s, sd * (s.w + 1.4), 0.25), i => { const c = (i >> 1) % 2 ? cA : cB; return [c, c]; }, true, 0.06), rmat));
+  for (const sd of [-1, 1]) group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * s.w, 0), s => off(s, sd * (s.w + 1.4), 0.25), i => { const c = (i >> 1) % 2 ? cA : cB; return [c, c]; }, true, 0.06), cmat));
   // shoulders (offroad) + embankment skirts
   const g1 = C(cup.ground || '#2a1858'), g2 = C(cup.ground2 || cup.ground || '#3a2a6a');
   if (!space) {
     for (const sd of [-1, 1]) {
-      group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * (s.w + 1.4), 0.25), s => off(s, sd * (s.wall + 2)), i => { const c = (i >> 4) % 2 ? g1 : g1.clone().lerp(g2, 0.25); return [c, c]; }, true, 0.0), vmat));
+      group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * (s.w + 1.4), 0.25), s => off(s, sd * (s.wall + 2)), i => { const c = (i >> 4) % 2 ? g1 : g1.clone().lerp(g2, 0.25); return [c, c]; }, true, 0.0), smat));
       group.add(new THREE.Mesh(ribbon(S, N, s => off(s, sd * (s.wall + 2)), s => { const q = off(s, sd * (s.wall + 6 + s.p.y * 2.5)); q.y = -0.6; return q; }, i => [g1, g1.clone().lerp(g2, 0.5)], true), vmat));
     }
     // ground plane
@@ -412,6 +428,7 @@ function scenery(T, Q) {
   if (T.cup.theme !== 'space') try { addSkyFloat(T, Q); } catch (e) { console.warn('sky', e); } // v21: globos en el cielo
   if (T.cup.look) try { addDream(T, Q, rnd); } catch (e) { console.warn('dream', e); } // v7: mapas surrealistas
   if (!T.open) try { addXDeco(T, Q, rnd); } catch (e) { console.warn('xdeco', e); } // v23: circuitos nuevos + alrededores
+  try { addHD(T, { ...Q, lod: Q.hi ? 1 : (typeof window !== 'undefined' && window.__mrLod) || 0.6 }, rnd); } catch (e) { console.warn('hd', e); } // v25: circuitos HD
   const k = Q.hi ? 1 : 0.55; const n = x => Math.round(x * k);
   const sphG = new THREE.SphereGeometry(1, 14, 10), cylG = new THREE.CylinderGeometry(1, 1, 1, 12), coneG = new THREE.ConeGeometry(1, 1, 12);
   const th = T.theme;

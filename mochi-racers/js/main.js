@@ -242,7 +242,7 @@ function startRace() {
   else grid = app.lastOrder.slice().reverse();
   $('loading').style.display = 'flex'; const rc = cupForRace(app.cup, app.raceNo); $('loading').textContent = 'Preparando ' + rc.track + '…';
   setTimeout(() => {
-    app.race = new Race(app, { cup: rc, reverse: app.raceNo === 1, playerChar: app.playerChar, rivals: app.rivals, grid, cupIndex: CUPS.indexOf(app.cup), quality: { hi: qualityHi } });
+    window.__mrLod = prLv >= 5 ? 0.35 : prLv >= 3 ? 0.55 : prLv >= 2 ? 0.7 : 0.85; app.race = new Race(app, { cup: rc, reverse: app.raceNo === 1, playerChar: app.playerChar, rivals: app.rivals, grid, cupIndex: CUPS.indexOf(app.cup), quality: { hi: qualityHi } });
     try { app.race.mergedMeshes = mergeStatic(app.race); } catch (e) {} shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
     show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>DERRAPE</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
     app.ui.toast(app.cup.name + ' · Carrera ' + (app.raceNo + 1) + '/' + RACES_PER_CUP + ': ' + raceNames(app.cup)[app.raceNo], '#ffffff');

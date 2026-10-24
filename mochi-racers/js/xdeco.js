@@ -4,6 +4,7 @@
 //  ni tapa la vista. Geometrías y materiales compartidos; lo que se mueve se anima en T.anims.
 // ======================================================================
 import * as THREE from 'three';
+import { monumentHalo } from './hd.js';
 import { toon, mesh, outline, glowTex } from './gfx.js';
 const V3 = THREE.Vector3;
 const G = {}; const geo = (k, f) => G[k] || (G[k] = Object.assign(f(), { _shared: true }));
@@ -43,7 +44,7 @@ function makeSpace(T, rnd) {
   return { clear, spot, cx, cz, baseY, ay, centerR, space };
 }
 function scatter(T, Z, n, rad, r0, r1, build) { const out = []; for (let i = 0; i < n; i++) { const p = Z.spot(rad, r0, r1); if (!p) continue; const g = new THREE.Group(); g.position.copy(p); T.group.add(g); build(g, i); out.push(g); } return out; }
-function center(T, Z, want, build) { const s = Math.min(1, Z.centerR / want); if (s < 0.35) return null; const g = new THREE.Group(); g.position.set(Z.cx, Z.baseY, Z.cz); g.scale.setScalar(s); T.group.add(g); build(g); return g; }
+function center(T, Z, want, build) { const s = Math.min(1, Z.centerR / want); if (s < 0.35) return null; const g = new THREE.Group(); g.position.set(Z.cx, Z.baseY, Z.cz); g.scale.setScalar(s); T.group.add(g); build(g); try { monumentHalo(T, g, Math.min(Z.centerR * 0.8, want * s)); } catch (e) {} return g; }
 
 // ---------- 18 escenarios ----------
 const B = {};

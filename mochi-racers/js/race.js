@@ -56,7 +56,7 @@ export class Race {
     const sky = new THREE.Mesh(new THREE.SphereGeometry(1300, 24, 12), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: { top: { value: top }, bot: { value: bot }, flash: { value: 0 } },
       vertexShader: 'varying vec3 vp; void main(){ vp = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);} ',
-      fragmentShader: 'uniform vec3 top; uniform vec3 bot; uniform float flash; varying vec3 vp; void main(){ float h = clamp(normalize(vp).y*1.6+0.25,0.0,1.0); vec3 c = mix(bot, top, h); gl_FragColor = vec4(c + flash*vec3(0.6,0.6,0.8), 1.0);} ' }));
+      fragmentShader: 'uniform vec3 top; uniform vec3 bot; uniform float flash; varying vec3 vp; float hh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5); } float nn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(hh(i), hh(i+vec2(1,0)), f.x), mix(hh(i+vec2(0,1)), hh(i+vec2(1,1)), f.x), f.y); } void main(){ vec3 d = normalize(vp); float h = clamp(d.y*1.6+0.25,0.0,1.0); vec3 c = mix(bot, top, pow(h, 0.85)); vec3 sd = normalize(vec3(0.45, 0.55, 0.33)); float s = max(0.0, dot(d, sd)); c += vec3(1.0, 0.92, 0.8) * (pow(s, 12.0) * 0.28 + pow(s, 400.0) * 0.6) * __DAY; c = mix(c, mix(bot, vec3(1.0), 0.35), (1.0 - smoothstep(0.0, 0.16, d.y)) * 0.35 * __DAY); vec2 uv = d.xz / max(0.12, d.y + 0.25); float w = nn(uv * 1.6) * 0.6 + nn(uv * 4.1) * 0.4; c = mix(c, vec3(1.0), smoothstep(0.62, 0.9, w) * smoothstep(0.05, 0.35, d.y) * 0.22 * __DAY); gl_FragColor = vec4(c + flash*vec3(0.6,0.6,0.8), 1.0);} '.replace(/__DAY/g, (c.theme === 'storm' || (c.theme === 'space' && !DAYLOOK.includes(c.look))) ? '0.25' : '1.0') }));
     sky.renderOrder = -10; sc.add(sky); this.sky = sky;
     sc.fog = new THREE.Fog(c.fog, this.quality.hi ? 180 : 130, this.quality.hi ? 750 : 520);
     sc.add(new THREE.HemisphereLight((c.theme === 'space' && !DAYLOOK.includes(c.look)) || c.theme === 'storm' ? '#c9b8ff' : '#ffffff', (c.theme === 'space' && !DAYLOOK.includes(c.look)) || c.theme === 'storm' ? '#4a3080' : '#ffd6ea', c.theme === 'storm' ? 1.25 : 0.95));
@@ -71,8 +71,10 @@ export class Race {
       sc.add(new THREE.Points(g, new THREE.PointsMaterial({ color: '#ffffff', size: 2.2, sizeAttenuation: false, fog: false })));
     }
     if (!(c.theme === 'space' && !DAYLOOK.includes(c.look)) && c.theme !== 'storm') { // soft clouds
-      const cl = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), toon('#ffffff', { rim: 0.3, opacity: 0.92 }), 60); const m = new THREE.Matrix4();
-      for (let i = 0; i < 20; i++) { const a = R() * 6.28, r = 500 + R() * 300, y = 120 + R() * 120; for (let j = 0; j < 3; j++) { m.compose(new V3(Math.cos(a) * r + j * 25, y + (j === 1 ? 12 : 0), Math.sin(a) * r), new THREE.Quaternion(), new V3(30, 18, 24)); cl.setMatrixAt(i * 3 + j, m); } }
+      const NCL = this.quality.hi ? 26 : 16, PER = 7, cl = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), toon('#ffffff', { rim: 0.45, nocache: true }), NCL * PER); const m = new THREE.Matrix4(), qq = new THREE.Quaternion(); let ci = 0; // v25: nubes con volumen (racimos de bolas, base plana y sombreado)
+      for (let i = 0; i < NCL; i++) { const a = R() * 6.28, r = 480 + R() * 340, y = 110 + R() * 130, sz = 0.8 + R() * 0.7, yaw = R() * 6.28; for (let j = 0; j < PER; j++) { const u = (j / (PER - 1) - 0.5) * 2, lx = u * 48 * sz, lz = (R() - 0.5) * 22 * sz, big = (1 - Math.abs(u) * 0.55) * (0.8 + R() * 0.4); const px = Math.cos(a) * r + Math.cos(yaw) * lx - Math.sin(yaw) * lz, pz = Math.sin(a) * r + Math.sin(yaw) * lx + Math.cos(yaw) * lz;
+        m.compose(new V3(px, y + big * 10 * sz, pz), qq, new V3(26 * sz * big, 17 * sz * big, 22 * sz * big)); cl.setMatrixAt(ci, m); cl.setColorAt(ci, new THREE.Color(j % 3 ? '#ffffff' : '#f4ecff')); ci++; } }
+      cl.count = ci; cl.material.emissive = new THREE.Color('#ffffff'); cl.material.emissiveIntensity = 0.12;
       cl.material.fog = false; sc.add(cl);
     }
   }
