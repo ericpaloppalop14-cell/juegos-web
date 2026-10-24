@@ -45,24 +45,35 @@ const sph = () => geo('s', () => new THREE.SphereGeometry(1, 16, 12)), cyl = () 
 const cap = () => geo('cap', () => new THREE.CapsuleGeometry(0.5, 1, 4, 10));
 const eyes = (p, y, z, s = 1) => { for (const sd of [-1, 1]) { mesh(sph(), toon('#ffffff', { rim: 0 }), p, [sd * 0.3 * s, y, z], null, 0.17 * s); mesh(sph(), toon('#1a1030', { rim: 0 }), p, [sd * 0.3 * s, y, z + 0.12 * s], null, 0.09 * s); } };
 const glow = (c, s, op = 0.8) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: op })); sp.scale.setScalar(s); return sp; };
-function makeHand() { // v24: guante blanco de marionetista + cruceta de madera + 4 hilos al kart (sin mover el kart)
-  const g = new THREE.Group(), u = g.userData, glove = toon('#ffffff', { rim: 0.35 }), seam = toon('#c9c3e6', { rim: 0 }), OL = '#4a3a7a';
+function makeHand() { // v31: manita kawaii (mochi pastel con carita, mejillas y dedos gorditos) + varita arcoíris + hilos de colores
+  const g = new THREE.Group(), u = g.userData, skin = toon('#ffe3f0', { rim: 0.55 }), OL = '#f2a7c9';
   const rig = new THREE.Group(); rig.position.set(0, 7.2, -0.6); g.add(rig); u.rig = rig;
-  const hand = new THREE.Group(); hand.position.set(0, 1.25, 0.2); hand.rotation.y = Math.PI; rig.add(hand); u.hand = hand; // dedos hacia la cámara: se lee como un guante
-  const palm = mesh(sph(), glove, hand, [0, 0, 0], null, [1.5, 0.75, 1.7]); outline(palm, OL, 1.07);
-  for (let i = 0; i < 3; i++) mesh(box(), seam, hand, [(i - 1) * 0.5, 0.7, -0.1], null, [0.09, 0.05, 1.3]); // costuras del dorso
-  u.f = []; for (let i = 0; i < 4; i++) { const f = new THREE.Group(); f.position.set((i - 1.5) * 0.72, -0.1, 1.35); hand.add(f);
-    const L = i === 1 || i === 2 ? 1.0 : 0.85; const a = mesh(cap(), glove, f, [0, -0.1, 0.45], [Math.PI / 2 - 0.25, 0, 0], [0.62, L, 0.62]); outline(a, OL, 1.08);
-    const tip = new THREE.Group(); tip.position.set(0, -0.35, 1.05); f.add(tip); const b2 = mesh(cap(), glove, tip, [0, -0.45, 0.05], [0.15, 0, 0], [0.58, 0.7, 0.58]); outline(b2, OL, 1.08); f.userData.tip = tip; u.f.push(f); }
-  const th = new THREE.Group(); th.position.set(1.35, -0.25, 0.5); hand.add(th); const tb = mesh(cap(), glove, th, [0.35, -0.3, 0.35], [0.5, 0, -0.9], [0.66, 0.9, 0.66]); outline(tb, OL, 1.08);
-  const cuff = mesh(cyl(), toon('#ffffff', { rim: 0.2 }), hand, [0, 0.3, -1.6], [-1.15, 0, 0], [1.0, 0.8, 0.85]); outline(cuff, OL, 1.06);
-  mesh(cyl(), toon('#ff6fb0', { rim: 0.4 }), hand, [0, 0.5, -1.95], [-1.15, 0, 0], [1.05, 0.14, 0.9]); // ribete rosa del puño
-  const bar = new THREE.Group(); rig.add(bar); u.bar = bar; const wood = toon('#c98d55', { rim: 0.35 }), dark = '#6a3f1f';
-  const p1 = mesh(box(), wood, bar, [0, 0, 0], null, [5.2, 0.38, 0.42]); outline(p1, dark, 1.06); const p2 = mesh(box(), wood, bar, [0, 0.05, 0.2], null, [0.42, 0.38, 4.6]); outline(p2, dark, 1.06);
-  u.ends = [[-2.55, 0], [2.55, 0], [0, 2.45], [0, -2.05]]; for (const [x, z] of u.ends) { const kn = mesh(sph(), toon('#ff8fc0', { rim: 0.5 }), bar, [x, 0, z], null, 0.32); outline(kn, '#a03a6a', 1.08); }
-  u.str = []; const sm = new THREE.MeshBasicMaterial({ color: '#fff4c2' }); u.att = [[-1.0, 1.5, -0.2], [1.0, 1.5, -0.2], [0, 1.6, 1.1], [0, 1.7, -1.1]];
-  for (let i = 0; i < 4; i++) { const s = mesh(cyl(), sm, g, [0, 0, 0], null, [0.06, 1, 0.06]); u.str.push(s); const gl = glow('#fff2a0', 0.5, 0.6); g.add(gl); s.userData.gl = gl; }
-  const halo = glow('#ffe58a', 5, 0.22); halo.position.set(0, 1.4, 0); rig.add(halo);
+  const hand = new THREE.Group(); hand.position.set(0, 1.55, 0); rig.add(hand); u.hand = hand;
+  const palm = mesh(sph(), skin, hand, [0, 0, 0], null, [1.45, 1.3, 1.0]); outline(palm, OL, 1.05);
+  u.f = []; for (let i = 0; i < 4; i++) { const f = new THREE.Group(); f.position.set((i - 1.5) * 0.62, 1.0 - Math.abs(i - 1.5) * 0.12, 0); hand.add(f);
+    const tip = new THREE.Group(); f.add(tip); const fb = mesh(sph(), skin, tip, [0, 0.28, 0], null, [0.36, 0.46, 0.36]); outline(fb, OL, 1.08); f.userData.tip = tip; u.f.push(f); }
+  const th = new THREE.Group(); th.position.set(1.35, 0.15, 0); hand.add(th); u.th = th; const tb = mesh(sph(), skin, th, [0.25, 0.1, 0], null, [0.45, 0.38, 0.38]); outline(tb, OL, 1.08);
+  // carita mirando a la cámara (detrás del kart = -z)
+  const face = new THREE.Group(); face.position.set(0, -0.05, -0.93); hand.add(face); u.eyes = [];
+  for (const sd of [-1, 1]) { const e = new THREE.Group(); e.position.set(sd * 0.48, 0.15, 0); face.add(e); u.eyes.push(e);
+    mesh(sph(), toon('#3a2050', { rim: 0 }), e, [0, 0, 0], null, [0.24, 0.3, 0.12]);
+    mesh(sph(), new THREE.MeshBasicMaterial({ color: '#ffffff' }), e, [-0.08 * sd, 0.1, -0.08], null, 0.09);
+    mesh(sph(), new THREE.MeshBasicMaterial({ color: '#ffffff' }), e, [0.07 * sd, -0.08, -0.08], null, 0.045);
+    mesh(sph(), new THREE.MeshBasicMaterial({ color: '#ff9cc4', transparent: true, opacity: 0.85 }), face, [sd * 0.85, -0.22, 0.06], null, [0.24, 0.14, 0.08]); }
+  const smile = mesh(geo('smile', () => new THREE.TorusGeometry(0.2, 0.05, 6, 14, Math.PI)), toon('#c2427e', { rim: 0 }), face, [0, -0.2, -0.02], [0, 0, Math.PI], 1); u.smile = smile;
+  mesh(sph(), toon('#ff7fa8', { rim: 0 }), face, [0, -0.32, -0.02], null, [0.09, 0.07, 0.05]); // lengüita
+  // pulsera con corazón
+  mesh(cyl(), toon('#bfe9ff', { rim: 0.5 }), hand, [0, -1.18, 0], null, [0.95, 0.3, 0.75]);
+  const hrt = mesh(sph(), toon('#ff6fa8', { rim: 0.6 }), hand, [0, -1.18, -0.78], null, [0.18, 0.16, 0.1]); hrt.userData.h = 1;
+  // varita arcoíris en lugar de cruceta, con estrellitas en las puntas
+  const bar = new THREE.Group(); rig.add(bar); u.bar = bar; const cols = ['#ffb3d1', '#ffe08a', '#b8f5c8', '#b3dcff', '#d9c2ff'];
+  const p1 = mesh(cap(), toon('#fff6fb', { rim: 0.5 }), bar, [0, 0, 0], [0, 0, Math.PI / 2], [0.32, 4.9, 0.32]); outline(p1, OL, 1.06);
+  const p2 = mesh(cap(), toon('#fff6fb', { rim: 0.5 }), bar, [0, 0.03, 0.2], [Math.PI / 2, 0, 0], [0.32, 4.3, 0.32]); outline(p2, OL, 1.06);
+  u.ends = [[-2.55, 0], [2.55, 0], [0, 2.45], [0, -2.05]]; u.ends.forEach(([x, z], i) => { const kn = mesh(geo('oct', () => new THREE.OctahedronGeometry(1, 0)), toon(cols[i], { rim: 0.7, emissive: cols[i], ei: 0.25 }), bar, [x, 0, z], null, 0.36); outline(kn, '#ffffff', 1.1); });
+  u.str = []; u.att = [[-1.0, 1.5, -0.2], [1.0, 1.5, -0.2], [0, 1.6, 1.1], [0, 1.7, -1.1]];
+  for (let i = 0; i < 4; i++) { const s = mesh(cyl(), new THREE.MeshBasicMaterial({ color: cols[i], transparent: true, opacity: 0.9 }), g, [0, 0, 0], null, [0.04, 1, 0.04]); u.str.push(s); const gl = glow(cols[i], 0.55, 0.8); g.add(gl); s.userData.gl = gl;
+    s.userData.beads = [0, 1].map(j => { const bd = glow(j ? '#ffffff' : cols[(i + 2) % 5], 0.4, 0.9); g.add(bd); return bd; }); }
+  const halo = glow('#ffd6ec', 5.5, 0.25); halo.position.set(0, 1.5, 0); rig.add(halo);
   return g;
 }
 function makeNose() { const g = new THREE.Group(); const n = mesh(cone(), toon('#e0a070', { rim: 0.5 }), g, [0, 0, 0.5], [Math.PI / 2, 0, 0], [0.22, 1, 0.22]); g.userData.n = n; mesh(sph(), toon('#7fd67a'), g, [0, 0.25, 0.9], null, [0.25, 0.1, 0.4]); return g; }
@@ -162,10 +173,12 @@ P0.update = function (dt) {
     if (k.puppetT > 0 || u.fx_hand) { const h = this.attach(k, 'hand', makeHand); h.visible = k.puppetT > 0;
       if (h.visible) { const q = h.userData, a = k.puppetAge, e = Math.min(1, a / 0.45, k.puppetT / 0.35), ee = e * e * (3 - 2 * e); h.scale.setScalar(1);
         const wide = RC.camera && RC.camera.aspect > 1.2; q.rig.position.y = (wide ? 3.7 : 4.9) + (1 - ee) * 9 + Math.sin(t * 3) * 0.15; q.rig.scale.setScalar(Math.max(0.01, (0.4 + ee * 0.6) * (wide ? 1.25 : 1.5)));
-        q.bar.rotation.z = Math.sin(t * 3.2) * 0.1; q.bar.rotation.x = Math.cos(t * 2.7) * 0.07; q.hand.rotation.z = -q.bar.rotation.z;
-        q.f.forEach((f, i) => { f.rotation.x = 0.1 + Math.sin(t * 6 + i * 1.1) * 0.12; f.userData.tip.rotation.x = 0.5 + Math.sin(t * 6 + i * 1.1) * 0.15; });
+        q.bar.rotation.z = Math.sin(t * 1.8) * 0.08; q.bar.rotation.x = Math.cos(t * 1.5) * 0.05; // mecerse suave
+        q.hand.rotation.z = Math.sin(t * 4) * 0.28; q.hand.position.y = 1.55 + Math.abs(Math.sin(t * 2)) * 0.2; q.hand.scale.set(1 + Math.sin(t * 4) * 0.03, 1 - Math.sin(t * 4) * 0.03, 1); // saludar y botar blandito
+        q.f.forEach((f, i) => { f.rotation.z = Math.sin(t * 6 + i * 0.9) * 0.18; f.userData.tip.scale.y = 1 + Math.sin(t * 6 + i * 0.9) * 0.1; }); q.th.rotation.z = Math.sin(t * 5) * 0.2;
+        const bl = (t % 3.2) < 0.13 ? 0.12 : 1; q.eyes.forEach(e => e.scale.y = bl); q.smile.scale.setScalar(1 + Math.sin(t * 3) * 0.08);
         h.updateMatrixWorld(true); const UP = new V3(0, 1, 0), inv = new THREE.Matrix4().copy(h.matrixWorld).invert();
-        q.str.forEach((s, i) => { const top = new V3(q.ends[i][0], 0, q.ends[i][1]).applyMatrix4(q.bar.matrixWorld).applyMatrix4(inv), bot = new V3(...q.att[i]); const d = top.clone().sub(bot); s.position.copy(bot).addScaledVector(d, 0.5); s.scale.set(0.07, d.length(), 0.07); s.quaternion.setFromUnitVectors(UP, d.normalize()); s.visible = ee > 0.6; s.userData.gl.position.copy(bot); s.userData.gl.visible = s.visible; });
+        q.str.forEach((s, i) => { const top = new V3(q.ends[i][0], 0, q.ends[i][1]).applyMatrix4(q.bar.matrixWorld).applyMatrix4(inv), bot = new V3(...q.att[i]); const d = top.clone().sub(bot); s.position.copy(bot).addScaledVector(d, 0.5); s.scale.set(0.045, d.length(), 0.045); s.quaternion.setFromUnitVectors(UP, d.normalize()); s.visible = ee > 0.6; s.userData.gl.position.copy(bot); s.userData.gl.visible = s.visible; s.userData.beads.forEach((bd, j) => { const uu = (t * 0.6 + j * 0.5 + i * 0.13) % 1; bd.position.copy(bot).addScaledVector(d, uu * top.distanceTo(bot)); bd.visible = s.visible; }); });
         if (k.isPlayer || R() < 0.3) RC.emit(k.pos.clone().add(new V3(-Math.sin(k.yaw) * 2.2, 0.8, -Math.cos(k.yaw) * 2.2)), ['#ffd24a', '#ff8fd8', '#7ff5ff'][Math.floor(R() * 3)], 0.35, 0.45, new V3((R() - 0.5) * 2, 1 + R(), (R() - 0.5) * 2)); } }
     if (k.duckT > 0 || u.fx_duck) { const d = this.attach(k, 'duck', makeDuck); d.visible = k.duckT > 0; if (d.visible) { const q = d.userData, e = Math.min(1, k.duckAge / 0.35, k.duckT / 0.3); d.scale.setScalar(Math.max(0.01, e) * 1.1); d.position.y = -0.3; d.rotation.z = Math.sin(t * 5) * 0.08;
         q.beak.scale.y = 0.3 + Math.abs(Math.sin(t * 6)) * 0.25; q.wings.forEach((w, i) => w.rotation.z = (i ? -1 : 1) * Math.sin(t * 10) * 0.4); q.bub.forEach((b, i) => { const uu = (t * 0.8 + i / 6) % 1; b.position.set(Math.sin(i * 2) * 2.5, uu * 4, -3 - uu * 2); b.scale.setScalar(0.25 + uu * 0.4); });
