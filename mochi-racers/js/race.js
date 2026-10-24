@@ -159,7 +159,7 @@ export class Race {
     if (this.player) Audio.engineSet(Math.abs(this.player.fs), this.player.boostT > 0 || this.player.megaT > 0);
     if (this.player) { const pl = this.player; Audio.setIntensity(this.state !== 'race' ? 0.15 : 0.3 + Math.min(pl.lap, 2) * 0.22 + (pl.lap >= CONFIG.laps - 1 ? 0.15 : 0) + (pl.boostT > 0 || pl.megaT > 0 ? 0.25 : 0)); }
     // v27: sonidos de ambiente (adelantar, pasar junto a objetos y público, chispas del derrape)
-    if (this.player && this.state === 'race') { const pl = this.player; if (pl.driftDir) Audio.driftTick(dlvl(pl.driftT));
+    if (this.player && this.state === 'race') { const pl = this.player; Audio.finalLap = pl.lap >= CONFIG.laps - 1; const dl = pl.driftDir ? dlvl(pl.driftT) : 0; if (pl.driftDir) Audio.driftTick(dl); if (dl > (this._dl || 0)) Audio.sfxPlay('sparklvl', dl); this._dl = dl;
       this.sndT = (this.sndT || 0) - dt; if (this.sndT <= 0) { this.sndT = 0.2;
         if (this.lastPlace && pl.place !== this.lastPlace) Audio.sfxPlay(pl.place < this.lastPlace ? 'passup' : 'passdown'); this.lastPlace = pl.place;
         const obs = this.track.obstacles || []; this.nearCD = (this.nearCD || 0) - 0.2; if (this.nearCD <= 0) for (const o of obs) { const g = o.g; if (!g) continue; const dx = g.position.x - pl.pos.x, dz = g.position.z - pl.pos.z; if (dx * dx + dz * dz < 90) { Audio.sfxPlay(o.kind === 'critter' ? 'boing' : 'whoosh', 1); this.nearCD = 1.2; break; } }
