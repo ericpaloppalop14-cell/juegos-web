@@ -3,10 +3,10 @@
 //  partida en solitario con bots y salas multijugador con código (PeerJS).
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS, chOf } from './chars.js?v=v14';
-import { makeCharacter, animCharacter } from './gfx.js?v=v14';
-import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v14';
-import { Sfx } from './sfx.js?v=v14';
+import { CHARS, chOf } from './chars.js?v=v15';
+import { makeCharacter, animCharacter } from './gfx.js?v=v15';
+import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v15';
+import { Sfx } from './sfx.js?v=v15';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
@@ -138,7 +138,7 @@ export function createShell(G) {
   function launch(cfg) { lastCfg = cfg; inGame = true; show(null); G.start(cfg, api); }
   $('bSolo').onclick = () => { Sfx.init(); Sfx.go(); mode = 'solo';
     const roster = [{ id: 'h', name: myName() === 'Jugador' ? 'Tú' : myName(), ch: myCh, bot: false }, ...bots(nBots, new Set([myCh]))];
-    launch({ roster, seed: Math.random() * 1e9 | 0, online: false, map: MAPL ? realMap() : null }); };
+    launch({ roster, seed: Math.random() * 1e9 | 0, online: false, map: MAPL ? realMap() : null, mode: G.getMode ? G.getMode() : undefined }); };
   $('bQuit').onclick = () => { if (!inGame) return; if (!confirm('¿Salir de la partida?')) return; G.stop(); inGame = false; if (net) { net.close(); net = null; } show('sHome'); refreshMe(); };
 
   // ---------- multijugador ----------
@@ -185,7 +185,7 @@ export function createShell(G) {
     Sfx.init(); Sfx.go(); net.started = true;
     const humans = net.players.map(p => ({ id: p.id, name: p.name, ch: p.ch, bot: false }));
     const nb = Math.max(0, roomBots + 1 - humans.length);
-    const cfg = { roster: [...humans, ...bots(nb, new Set(humans.map(h => h.ch)))], seed: Math.random() * 1e9 | 0, online: true, map: MAPL ? realMap() : null };
+    const cfg = { roster: [...humans, ...bots(nb, new Set(humans.map(h => h.ch)))], seed: Math.random() * 1e9 | 0, online: true, map: MAPL ? realMap() : null, mode: G.getMode ? G.getMode() : undefined };
     net.send({ t: 'gstart', cfg }); launch(cfg);
   };
   $('bAgain').onclick = () => { Sfx.tap(); if (mode === 'solo') { $('bSolo').click(); return; }
