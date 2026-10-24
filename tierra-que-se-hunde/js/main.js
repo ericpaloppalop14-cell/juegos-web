@@ -6,12 +6,12 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v12';
-import { makeCharacter, animCharacter } from './gfx.js?v=v12';
-import { chOf } from './chars.js?v=v12';
-import { createShell } from './shell.js?v=v12';
-import { Sfx } from './sfx.js?v=v12';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v12';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v13';
+import { makeCharacter, animCharacter } from './gfx.js?v=v13';
+import { chOf } from './chars.js?v=v13';
+import { createShell } from './shell.js?v=v13';
+import { Sfx } from './sfx.js?v=v13';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v13';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -559,6 +559,8 @@ createShell({
   },
   onLeft(id) { if (sim) { const p = sim.P.find(p => p.id === id); if (p && p.alive) { p.ai = { goal: null, gt: 0, atk: 3, react: 0 }; p.skill = 0.6; p.bot = true; } } },
 });
+// v13: acceso al nuevo modo Carrera en las alturas desde el menú
+{ const r = document.querySelector('#sHome #bSolo'); if (r) { const row = document.createElement('div'); row.className = 'row'; row.innerHTML = '<button class="btn mint" id="bCarrera">🏔️ ¡NUEVO! Carrera en las alturas</button>'; r.parentElement.after(row); $('bCarrera').onclick = () => { Sfx.init(); Sfx.tap(); location.href = './carrera.html'; }; } }
 setShowcase(localStorage.getItem('ms_ch') || 'mochi'); { const m0 = localStorage.getItem('hunde_map'); buildMap(MAPS[m0] ? m0 : 'tiovivo'); } resetBoard();
 frame();
 window.__rend = () => { const c = chars.get(me); return c ? [c.root.position.x, c.root.position.z, c.root.rotation.y, c.alive ? 1 : 0] : null; };
