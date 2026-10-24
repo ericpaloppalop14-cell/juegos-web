@@ -19,16 +19,17 @@ try {
   renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'high-performance' });
 } catch (e) { document.body.classList.add('no3d'); throw e; }
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+const DPR = Math.min(devicePixelRatio || 1, innerWidth * innerHeight > 600000 ? 1.75 : 2.25); renderer.setPixelRatio(DPR);
 const size = () => renderer.setSize(innerWidth, innerHeight); addEventListener('resize', size); size();
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(36, 1, .1, 200);
 scene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.15)); const sun = new THREE.DirectionalLight('#fff4e8', 1.9); sun.position.set(4, 9, 7); scene.add(sun);
+const back = new THREE.DirectionalLight('#ffd0f0', .9); back.position.set(-5, 6, -8); scene.add(back); const fillL = new THREE.PointLight('#fff0c8', 6, 14, 1.6); fillL.position.set(0, 3, 5); scene.add(fillL);
 
 // ---------- piezas comunes ----------
 const root = new THREE.Group(); scene.add(root);
 const glow = (c, s, op = 1) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(c), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.setScalar(s); return sp; };
 function textSprite(text, color, me) {
-  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const x = cv.getContext('2d'); x.font = '700 64px Fredoka, sans-serif';
+  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const x = cv.getContext('2d'); x.scale(2, 2); x.font = '700 64px Fredoka, sans-serif';
   const w = Math.min(500, x.measureText(text).width + 70), l = (512 - w) / 2; x.fillStyle = me ? '#f0609f' : 'rgba(90,50,130,.85)'; x.beginPath(); x.roundRect(l, 16, w, 92, 46); x.fill();
   x.strokeStyle = '#fff'; x.lineWidth = 6; x.stroke(); x.fillStyle = color; x.beginPath(); x.arc(l + 40, 62, 16, 0, 7); x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 4; x.stroke();
   x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 256 + 16, 64);
@@ -121,9 +122,7 @@ function build(m, d) {
     const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18 }), root, [0, .17, 0]); outline(ped, '#d58ab8', 1.03);
     mesh(new THREE.TorusGeometry(1.3, .06, 8, 48), toon(col, { emissive: col, ei: .5, rim: 0 }), root, [0, .35, 0], [Math.PI / 2, 0, 0]);
     const ring = glow(col, 4.2, .55); ring.position.set(0, .5, -.2); root.add(ring); extra.ring = ring;
-    const cur = mesh(new THREE.CylinderGeometry(7.5, 7.5, 9, 40, 1, true, Math.PI * .62, Math.PI * .76), toon('#b06ad8', { rim: .2, side: THREE.BackSide }), root, [0, 3.2, 1.5]);
-    for (let i = 0; i < 15; i++) { const a = Math.PI * .66 + i / 14 * Math.PI * .68; mesh(new THREE.CylinderGeometry(.14, .14, 9, 6), toon(i % 2 ? '#c98af0' : '#9a52c8', { rim: 0 }), root, [Math.sin(a) * 7.3, 3.2, 1.5 + Math.cos(a) * 7.3]); }
-    const flags = []; for (let i = 0; i < 13; i++) { const x = (i - 6) * .75, y = 5.2 - Math.cos((i - 6) / 6 * 1.4) * .9; const f = mesh(new THREE.ConeGeometry(.2, .42, 3), toon(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7'][i % 5], { rim: .3 }), root, [x, y, -3.6], [Math.PI, 0, 0]); flags.push(f); } extra.flags = flags;
+        const flags = []; for (let i = 0; i < 13; i++) { const x = (i - 6) * .75, y = 5.2 - Math.cos((i - 6) / 6 * 1.4) * .9; const f = mesh(new THREE.ConeGeometry(.2, .42, 3), toon(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7'][i % 5], { rim: .3 }), root, [x, y, -3.6], [Math.PI, 0, 0]); flags.push(f); } extra.flags = flags;
     const stars = []; for (let i = 0; i < 18; i++) { const s0 = glow(['#ffe27a', '#ffffff', '#ff9cc8', '#8fd0ff'][i % 4], rnd(.3, .7), .9); s0.position.set(rnd(-5, 5), rnd(1, 6.5), rnd(-4.5, -3.2)); s0.userData.ph = rnd(0, 6); root.add(s0); stars.push(s0); } extra.stars = stars;
     const a = actor(d.pj, 1.15, 'dance', 0, true); a.position.y = .35; a.userData.roles = ['dance', 'hop', 'spin', 'wave', 'cheer', 'wiggle']; a.userData.per = 2.6; a.userData.enter = .05; a.userData.sh.visible = false; root.add(a); actors.push(a); extra.hero = a;
     if (d.prev) { burst(new THREE.Vector3(0, 1.4, 0), col, 26, 4); burst(new THREE.Vector3(0, 1.4, 0), '#ffffff', 14, 3); }
@@ -157,6 +156,26 @@ function build(m, d) {
   }
   extra.cam = camT.p.clone().multiplyScalar(1.5); // la cámara entra desde lejos
 }
+// ---------- miniaturas 3D de la selección (cada mochi en su recuadro, con su propia animación) ----------
+const mScene = new THREE.Scene(), mCam = new THREE.PerspectiveCamera(30, 1, .1, 50); mCam.position.set(0, 1.35, 6.6); mCam.lookAt(0, 1.0, 0);
+mScene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.25)); { const l = new THREE.DirectionalLight('#fff4e8', 1.9); l.position.set(3, 6, 6); mScene.add(l); const b2 = new THREE.DirectionalLight('#ffd0f0', 1); b2.position.set(-4, 4, -6); mScene.add(b2); }
+const mAct = {}, MROLES = ['boing', 'wiggle', 'hop', 'wave', 'spin', 'taunt', 'dance', 'clap'];
+let mLast = 0;
+function thumbs(t) {
+  const sc = document.getElementById('sChars'); if (!sc || !sc.classList.contains('on')) return;
+  const tt = now(); if (tt - mLast < 1 / 30) return; mLast = tt;
+  const cs = sc.querySelectorAll('#charGrid canvas'); if (!cs.length) return;
+  const gl = renderer.domElement, S = Math.round(Math.min(160, 64 * DPR)), H = gl.height;
+  renderer.setScissorTest(true);
+  cs.forEach((c, i) => { const id = c.dataset.id; if (c.width !== S) { c.width = c.height = S; }
+    let a = mAct[id]; if (!a) { a = mAct[id] = actor(id, 1, MROLES[i % MROLES.length], i * 3 + 1, true); a.userData.landed = true; a.userData.enter = -5; mScene.add(a); }
+    const on = c.parentElement.classList.contains('on'); a.userData.role = on ? 'dance' : MROLES[i % MROLES.length];
+    for (const k in mAct) mAct[k].visible = false; pose(a, tt, 0); a.visible = true; a.userData.sh.visible = true;
+    renderer.setViewport(0, 0, S / DPR, S / DPR); renderer.setScissor(0, 0, S / DPR, S / DPR); renderer.setClearColor(0, 0); renderer.clear(); renderer.render(mScene, mCam);
+    const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, 0, H - S, S, S, 0, 0, S, S); });
+  for (const k in mAct) mAct[k].visible = false;
+  renderer.setScissorTest(false);
+}
 // ---------- bucle ----------
 let last = now(), shown = true;
 function frame() {
@@ -183,13 +202,23 @@ function frame() {
   const fit = camT.w / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1.25, asp), dir = camT.p.clone().sub(camT.l).normalize();
   const want3 = camT.l.clone().add(dir.multiplyScalar(Math.max(fit, 6))); want3.x += Math.sin(t * .35) * .6; want3.y += Math.sin(t * .5) * .15;
   extra.cam.lerp(want3, Math.min(1, dt * 2.6)); camera.position.copy(extra.cam); camera.lookAt(camT.l); camera.updateProjectionMatrix();
-  const y = innerHeight - r.bottom; renderer.setScissorTest(false); renderer.clear(); renderer.setScissorTest(true); renderer.setScissor(r.left, y, r.width, r.height); renderer.setViewport(r.left, y, r.width, r.height);
+  thumbs(t);
+  const free = mode === 'menu' || mode === 'chars', cv = renderer.domElement;
+  renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
+  if (free) { // sin marco: la escena se sale del hueco y se funde con el fondo
+    camera.setViewOffset(r.width, r.height, -r.left, -r.top, innerWidth, innerHeight); camera.updateProjectionMatrix();
+    const m = `radial-gradient(ellipse ${Math.round(r.width * .78)}px ${Math.round(r.height * .82)}px at ${Math.round(r.left + r.width / 2)}px ${Math.round(r.top + r.height * .46)}px, #000 62%, transparent 100%)`;
+    if (cv._m !== m) { cv._m = m; cv.style.webkitMaskImage = cv.style.maskImage = m; }
+    const cx = r.left + r.width / 2, cy = r.top + r.height * .46, ex = r.width * .78, ey = r.height * .82, x0 = Math.max(0, cx - ex), x1 = Math.min(innerWidth, cx + ex), y0 = Math.max(0, cy - ey), y1 = Math.min(innerHeight, cy + ey);
+    renderer.setScissorTest(true); renderer.setScissor(x0, innerHeight - y1, x1 - x0, y1 - y0); // solo se pinta la zona visible de la máscara
+  } else { camera.clearViewOffset(); camera.updateProjectionMatrix(); if (cv._m) { cv._m = ''; cv.style.webkitMaskImage = cv.style.maskImage = ''; }
+    const y = innerHeight - r.bottom; renderer.setScissorTest(true); renderer.setScissor(r.left, y, r.width, r.height); renderer.setViewport(r.left, y, r.width, r.height); }
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
 // tocar el escenario: voltereta del protagonista
 addEventListener('pointerdown', e => { const el = document.querySelector('.scr.on .stage3d'); if (!el || !extra.hero) return; const r = el.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return; const u = extra.hero.userData; if (now() - t0 - u.flip > .9) { u.flip = now() - t0; burst(extra.hero.position.clone().add(new THREE.Vector3(0, 1.5, 0)), '#ff9cc8', 14, 3); } });
-window.MP3D = { ok: true, get mode() { return mode; },
+window.MP3D = { ok: true, thumbs3d: true, get mode() { return mode; },
   // «¡Este!»: voltereta, explosión de confeti y chispas del color del mochi
   select() { if (mode !== 'chars' || !extra.hero) return false; const t = now() - t0; extra.sel = t; const p = extra.hero.position.clone().add(new THREE.Vector3(0, 1.6, 0));
     burst(p, '#ffe27a', 34, 5); burst(p, '#ff9cc8', 24, 4.2); burst(p, '#7ee3c4', 20, 3.6); for (const q of confP) { q.y = rnd(3, 9); } return true; } };

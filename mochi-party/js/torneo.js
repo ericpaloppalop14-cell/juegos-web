@@ -33,7 +33,7 @@ function menu() {
   const L = $('evList'); L.innerHTML = '';
   EV.forEach((e, i) => { const b = document.createElement('button'); b.className = 'ev'; b.style.animationDelay = (.25 + i * .07) + 's'; b.innerHTML = `<b>${e.icon}</b>${e.name}<small>Prueba suelta</small>`; b.onclick = () => { newSession('suelta', i); intro(); }; L.appendChild(b); });
 }
-(function anim() { if ($('sChars').classList.contains('on')) document.querySelectorAll('#charGrid canvas').forEach(c => mini(c, CH(c.dataset.id))); requestAnimationFrame(anim); })();
+(function anim() { if ($('sChars').classList.contains('on') && !(window.MP3D && MP3D.thumbs3d)) document.querySelectorAll('#charGrid canvas').forEach(c => mini(c, CH(c.dataset.id))); requestAnimationFrame(anim); })();
 $('bTorneo').onclick = () => { newSession('torneo', 0); intro(); };
 $('bPj').onclick = () => chars();
 $('bOnline').onclick = () => { location.href = 'carrera/online.html?pj=' + ((S && S.pj) || 'mochi') + (Q.has('auto') ? '&auto' : ''); };
