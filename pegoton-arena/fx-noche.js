@@ -34,7 +34,7 @@
   requestAnimationFrame(frame);
   // Ayuda 3D: entorno de cielo degradado (reflejos suaves) + luz hemisférica
   Q.mejora3D = function (THREE, renderer, scene, o) { o = o || {}; try {
-    if (!scene.userData.fxHemi) { const h = new THREE.HemisphereLight(o.sky || 0xdff0ff, o.ground || 0xffd9c2, o.hemi ?? .55); scene.add(h); scene.userData.fxHemi = h; }
+    if (o.hemi !== 0 && !scene.userData.fxHemi) { const h = new THREE.HemisphereLight(o.sky || 0xdff0ff, o.ground || 0xffd9c2, o.hemi ?? .55); scene.add(h); scene.userData.fxHemi = h; }
     if (!scene.environment && THREE.PMREMGenerator) { const pm = new THREE.PMREMGenerator(renderer); const es = new THREE.Scene();
       const geo = new THREE.SphereGeometry(10, 32, 16); const c = document.createElement('canvas'); c.width = 4; c.height = 128; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 128);
       gr.addColorStop(0, o.top || '#bfe3ff'); gr.addColorStop(.5, o.mid || '#fff4fb'); gr.addColorStop(1, o.bot || '#ffd1e6'); g.fillStyle = gr; g.fillRect(0, 0, 4, 128);

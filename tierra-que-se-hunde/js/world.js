@@ -39,6 +39,7 @@ export function createRenderer(canvas) {
     camera.aspect = w / h; camera.updateProjectionMatrix();
   };
   addEventListener('resize', resize); resize();
+  if (window.__fxNoche) window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: 0, env: .3 }); // noche 25-10: reflejos suaves
   return { renderer, scene, camera, composer, bloom, resize };
 }
 
