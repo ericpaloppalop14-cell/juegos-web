@@ -23,7 +23,7 @@ const save = Object.assign({ trophies: {}, char: 'mochi', settings: { sound: '1'
 save.settings = Object.assign({ sound: '1', music: '1', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' }, save.settings);
 const persist = () => localStorage.setItem(SKEY, JSON.stringify(save));
 const cupUnlocked = c => !c.unlock || c.unlock.needs.every(id => save.trophies[id] != null);
-const charUnlocked = ch => !ch.premium && (!ch.unlock || save.trophies[ch.unlock.cup] != null || DEBUG_ALL);
+const charUnlocked = ch => !!ch.premium || (!ch.unlock || save.trophies[ch.unlock.cup] != null || DEBUG_ALL);
 const DEBUG_ALL = /[?&]debug=all/.test(location.search);
 if (DEBUG_ALL) CUPS.forEach(c => c.unlock = null);
 
@@ -110,17 +110,17 @@ function renderChars() {
   $('cName').textContent = ch.name; $('cName').style.color = ch.color === '#e8f4ff' ? '#7fb0e0' : '';
   $('cVeh').textContent = '🛞 ' + ch.vname; $('cDesc').textContent = ch.desc;
   for (const [k, id] of [['vel', 'sVel'], ['acel', 'sAcel'], ['man', 'sMan'], ['peso', 'sPeso']]) $(id).style.width = ch.stats[k] * 20 + '%';
-  $('cLock').textContent = un ? '' : ch.premium ? '⭐ Piloto premium · ' + ch.price + ' · muy pronto en la tienda' : '🔒 ' + ch.unlock.text;
+  $('cLock').textContent = ch.premium ? '⭐ Premium · 🎁 Prueba gratis (sin pagar nada)' : un ? '' : ch.premium ? '⭐ Piloto premium · ' + ch.price + ' · muy pronto en la tienda' : '🔒 ' + ch.unlock.text;
   $('cInfo').classList.toggle('prem', !!ch.premium); $('cGo').classList.toggle('prem', !!ch.premium);
-  $('cGo').textContent = un ? '¡Elegir a ' + ch.name + '!' : ch.premium ? '🔒 Premium · ' + ch.price : 'Bloqueado'; $('cGo').style.opacity = un ? 1 : 0.55;
+  $('cGo').textContent = ch.premium ? '🎁 ¡Probar a ' + ch.name + ' gratis!' : un ? '¡Elegir a ' + ch.name + '!' : ch.premium ? '🔒 Premium · ' + ch.price : 'Bloqueado'; $('cGo').style.opacity = un ? 1 : 0.55;
   const L = $('cList'); L.innerHTML = '';
   CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip' + (i === cSel ? ' on' : '') + (charUnlocked(c) ? '' : ' lock'); b.innerHTML = `<b style="background:${c.color}"></b>${charUnlocked(c) ? c.name : '🔒 ' + c.name}`; b.onclick = () => { Audio.init(); Audio.sfxPlay('click'); cSel = i; renderChars(); }; L.appendChild(b); });
   const G = $('cGrid');
   if (!G.children.length) { if (!portraits) portraits = makePortraits(CHARS);
     CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'cc a-' + ANIMS[i % ANIMS.length] + (c.premium ? ' pr' : ''); b.setAttribute('aria-label', c.name);
-      b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>' + (c.premium ? `<span class="pt">${c.price}</span>` : '');
+      b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>' + (c.premium ? `<span class="pt">Prueba gratis</span>` : '');
       b.onclick = () => { Audio.init(); Audio.sfxPlay(c.premium ? 'stars' : 'level'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
-  [...G.children].forEach((b, i) => { const un2 = charUnlocked(CHARS[i]); b.classList.toggle('on', i === cSel); b.classList.toggle('lock', !un2); b.querySelector('.lk').textContent = un2 ? '' : CHARS[i].premium ? '⭐' : '🔒'; });
+  [...G.children].forEach((b, i) => { const un2 = charUnlocked(CHARS[i]); b.classList.toggle('on', i === cSel); b.classList.toggle('lock', !un2); b.querySelector('.lk').textContent = CHARS[i].premium ? '⭐' : un2 ? '' : '🔒'; });
   setPreview(ch);
 }
 btn('cPrev', () => { cSel = (cSel + CHARS.length - 1) % CHARS.length; renderChars(); });

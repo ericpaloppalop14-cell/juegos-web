@@ -538,4 +538,4 @@ export function makeTrophy(color, tier = 0) {
   return g;
 }
 
-const H = { mesh, toon, outline, sph, cyl, cone, tor, box, basic, starGeoS: () => starGeoS() };
+const H = { mesh, toon, outline, sph, cyl, cone, tor, box, basic, starGeoS: () => starGeoS(), dropGeo: () => dropGeo() };
