@@ -1,3 +1,4 @@
+import { DriftFX } from './driftfx.js';
 import * as THREE from 'three';
 const DAYLOOK = ['sky', 'ocean', 'book']; // v14: mapas flotantes con luz de día
 import { CONFIG, ITEMS, ITEM_KEYS, ITEM_W } from './data.js';
@@ -139,6 +140,7 @@ export class Race {
       this.fx.update(dt);
       this.rank();
     } else for (const k of this.karts) this.placeKartMesh(k, dt);
+    if (this.dfx) this.dfx.step(dt);
     // finish handling
     if (this.state === 'race' && this.player.finished) { this.state = 'finish'; this.finishT = 0; }
     if (this.state === 'finish') { this.finishT += dt; if (this.karts.every(k => k.finished) || this.finishT > 9) this.endRace(); }
@@ -421,6 +423,7 @@ export class Race {
     const fl = u.flame; fl.visible = k.boostT > 0 || k.megaT > 0;
     if (fl.visible) { const f = 0.8 + R() * 0.4 + (k.isPlayer ? this.kick * 0.5 : 0); fl.scale.set(f, f, f * (1 + Math.min(0.6, k.boostT * 0.4))); }
     this.fx.place(k);
+    (this.dfx ||= new DriftFX(this.scene)).update(k, dt, k.driftDir ? dlvl(k.driftT) : 0, k.isPlayer || k.pos.distanceToSquared(this.player.pos) < 3600);
     animKart(m, this.time, Math.abs(k.fs), expr);
     // squash stars
     if (k.squashT > 0 && R() < 0.3) this.emit(k.pos.clone().add(new V3((R() - 0.5) * 2, 1.2, (R() - 0.5) * 2)), '#ffe066', 0.5, 0.5);

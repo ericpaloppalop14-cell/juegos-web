@@ -2,6 +2,7 @@ import { addDream } from './dreamdeco.js';
 import * as THREE from 'three';
 import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
 import { addDeco } from './deco.js';
+import { addSkyFloat } from './skyfloat.js';
 import { makeCritter, animCritter, CRITTER_COUNT } from './critters.js';
 
 const V3 = THREE.Vector3;
@@ -407,6 +408,7 @@ const W = () => toon('#ffffff', { rim: 0.35 });
 function scenery(T, Q) {
   edgeProps(T, Q); stands(T, Q);
   if (!/nodeco/.test(location.search)) try { T.deco = addDeco(T, Q, { off, rnd }); } catch (e) { console.warn('deco', e); } // v2: decoración extra (solo visual)
+  if (T.cup.theme !== 'space') try { addSkyFloat(T, Q); } catch (e) { console.warn('sky', e); } // v21: globos en el cielo
   if (T.cup.look) try { addDream(T, Q, rnd); } catch (e) { console.warn('dream', e); } // v7: mapas surrealistas
   const k = Q.hi ? 1 : 0.55; const n = x => Math.round(x * k);
   const sphG = new THREE.SphereGeometry(1, 14, 10), cylG = new THREE.CylinderGeometry(1, 1, 1, 12), coneG = new THREE.ConeGeometry(1, 1, 12);
