@@ -7,7 +7,7 @@
 <title>Tierra que se hunde · Carrera en las alturas</title><link rel="manifest" href="manifest.json"><meta property="og:title" content="Tierra que se hunde"><meta property="og:site_name" content="Tierra que se hunde"><meta name="application-name" content="Tierra que se hunde"><meta name="apple-mobile-web-app-title" content="Tierra que se hunde">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="js/style.css?v=v13">
+<link rel="stylesheet" href="js/style.css?v=v14">
 <style>
 #hud{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:5}
 #hud.on{display:flex}
@@ -82,6 +82,7 @@ body.zurdo #hopB{right:auto!important;left:calc(env(safe-area-inset-left) + 132p
 #pushB small{font-size:11px;font-weight:700;margin-top:0;text-shadow:0 1px 2px rgba(130,50,120,.45);pointer-events:none}
 #pushB.press{transform:translateY(3px) scale(.9,.86)}#pushB.cd{filter:saturate(.5) brightness(.97)}
 #pushB.big{animation:pulse .6s ease-in-out infinite;box-shadow:0 0 0 4px rgba(255,80,110,.6),0 5px 0 #e0866a,0 10px 24px rgba(255,60,100,.45)}
+#joy.act{opacity:1;background:rgba(255,255,255,.3)!important}
 body.zurdo #pushB{left:auto;right:calc(env(safe-area-inset-right) + 16px)}
 #hud .pill{font-size:14px}
 </style>
@@ -98,6 +99,6 @@ body.zurdo #pushB{left:auto;right:calc(env(safe-area-inset-right) + 16px)}
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="lib/peerjs.min.js"></script>
 <script>if (/localnet/.test(location.search)) document.write('<script src="lib/fakepeer.js"><\/script>');</script>
-<script type="module" src="js/carrera.js?v=v13"></script>
+<script type="module" src="js/carrera.js?v=v14"></script>
 </body>
 </html>

@@ -6,11 +6,11 @@
 //  detrás de vosotros cada vez más rápido. ¡Gana quien llegue más lejos!
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, addLights, Particles } from './world.js?v=v13';
-import { makeCharacter, animCharacter } from './gfx.js?v=v13';
-import { chOf } from './chars.js?v=v13';
-import { createShell } from './shell.js?v=v13';
-import { Sfx } from './sfx.js?v=v13';
+import { createRenderer, addLights, Particles } from './world.js?v=v14';
+import { makeCharacter, animCharacter } from './gfx.js?v=v14';
+import { chOf } from './chars.js?v=v14';
+import { createShell } from './shell.js?v=v14';
+import { Sfx } from './sfx.js?v=v14';
 
 const $ = id => document.getElementById(id);
 const RL = 2, COLS = 4, CW = 2.5, TW = COLS * CW, HW = TW / 2; // filas de 2 m, 4 carriles de 2,5 m
@@ -279,11 +279,11 @@ let keyL = false, keyR = false, keyU = false, keyD = false, joyX = 0, joyY = 0, 
 function send(d) { if (!playing) return; if (online && !shell.isHost) shell.send({ t: 'gin', ...d }); else sim && sim.input(me, d); }
 const joy = $('joy'), knob = $('joyK'); let drag = null;
 joy.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!playing || drag) return; Sfx.init(); const r = joy.getBoundingClientRect(); drag = { id: e.pointerId, x0: r.left + r.width / 2, y0: r.top + r.height / 2 };
-  try { joy.setPointerCapture(e.pointerId); } catch (x) { } joy.classList.add('on'); joyMove(e); });
+  try { joy.setPointerCapture(e.pointerId); } catch (x) { } joy.classList.add('act'); joyMove(e); });
 function joyMove(e) { if (!drag || e.pointerId !== drag.id) return; let dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; const R = 52, d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; }
   knob.style.transform = `translate(calc(-50% + ${dx * 0.77}px),calc(-50% + ${dy * 0.77}px))`; const dz = d > 6 ? 1 : 0; joyX = dz * clamp(dx / 40, -1, 1); joyY = dz * clamp(-dy / 40, -1, 1); }
 joy.addEventListener('pointermove', joyMove);
-const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyX = joyY = 0; joy.classList.remove('on'); knob.style.transform = 'translate(-50%,-50%)'; };
+const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyX = joyY = 0; joy.classList.remove('act'); knob.style.transform = 'translate(-50%,-50%)'; };
 joy.addEventListener('pointerup', endDrag); joy.addEventListener('pointercancel', endDrag); joy.addEventListener('lostpointercapture', endDrag);
 function hop() { const c = chars.get(me); if (playing && c && c.alive) send({ k: 'jump' }); }
 function shove() { const c = chars.get(me); if (playing && c && c.alive) send({ k: 'push' }); }
