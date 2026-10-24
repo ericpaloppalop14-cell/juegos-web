@@ -157,6 +157,12 @@ export class Race {
     { const pl = this.player, fh = pl ? (pl.flyH || 0) : 0; if (fh) pl.y += fh; this.placeCamera(false, dt); if (fh) pl.y -= fh; }
     if (this.sun && this.player) { const p = this.player.pos; this.sun.target.position.set(p.x, this.player.y, p.z); this.sun.position.set(p.x + 60, this.player.y + 120, p.z + 45); }
     if (this.player) Audio.engineSet(Math.abs(this.player.fs), this.player.boostT > 0 || this.player.megaT > 0);
+    // v27: sonidos de ambiente (adelantar, pasar junto a objetos y público, chispas del derrape)
+    if (this.player && this.state === 'race') { const pl = this.player; if (pl.driftDir) Audio.driftTick(dlvl(pl.driftT));
+      this.sndT = (this.sndT || 0) - dt; if (this.sndT <= 0) { this.sndT = 0.2;
+        if (this.lastPlace && pl.place !== this.lastPlace) Audio.sfxPlay(pl.place < this.lastPlace ? 'passup' : 'passdown'); this.lastPlace = pl.place;
+        const obs = this.track.obstacles || []; this.nearCD = (this.nearCD || 0) - 0.2; if (this.nearCD <= 0) for (const o of obs) { const g = o.g; if (!g) continue; const dx = g.position.x - pl.pos.x, dz = g.position.z - pl.pos.z; if (dx * dx + dz * dz < 90) { Audio.sfxPlay(o.kind === 'critter' ? 'boing' : 'whoosh', 1); this.nearCD = 1.2; break; } }
+        this.crowdT = (this.crowdT || 4) - 0.2; if (this.crowdT <= 0) { this.crowdT = 5 + Math.random() * 5; if (Math.abs(pl.fs) > 10) Audio.sfxPlay('crowd'); } } }
   }
   startBoosts() {
     const GO = 3; // relative cdT
@@ -348,7 +354,7 @@ export class Race {
     // pads
     for (const p of T.pads) { const dx = p.pos.x - k.pos.x, dz = p.pos.z - k.pos.z; if (!k.air && dx * dx + dz * dz < (p.r + 0.5) ** 2) { if (k.boostT < 0.9 && k.isPlayer) Audio.sfxPlay('boost'); k.boostT = Math.max(k.boostT, 1.0); } }
     // boxes
-    for (const b of T.boxes) { if (b.t > 0) continue; const dx = b.pos.x - k.pos.x, dz = b.pos.z - k.pos.z; const r = 2.2 * k.megaS; if (dx * dx + dz * dz < r * r && Math.abs(b.pos.y - k.y - 1) < 3.5) { b.t = 2.2; if (k.isPlayer) Audio.sfxPlay('box'); for (let i = 0; i < 8; i++) this.emit(b.pos.clone(), ['#ff8fc0', '#ffe066', '#7ff5ff'][i % 3], 0.7, 0.5); if (!k.item && k.rollT <= 0) k.rollT = k.isPlayer ? 1.2 : 0.6; } }
+    for (const b of T.boxes) { if (b.t > 0) continue; const dx = b.pos.x - k.pos.x, dz = b.pos.z - k.pos.z; const r = 2.2 * k.megaS; if (dx * dx + dz * dz < r * r && Math.abs(b.pos.y - k.y - 1) < 3.5) { b.t = 2.2; if (k.isPlayer) { Audio.sfxPlay('box'); Audio.sfxPlay('buf'); } for (let i = 0; i < 8; i++) this.emit(b.pos.clone(), ['#ff8fc0', '#ffe066', '#7ff5ff'][i % 3], 0.7, 0.5); if (!k.item && k.rollT <= 0) k.rollT = k.isPlayer ? 1.2 : 0.6; } }
     // obstacles
     for (const o of T.obstacles) { if (!o.active) continue; const p = o.g.position; const dx = p.x - k.pos.x, dz = p.z - k.pos.z; const yy = o.kind === 'bee' ? Math.abs(p.y - k.y - 1.5) < 2.5 : o.kind === 'lightning' ? true : Math.abs(p.y - k.y) < 3;
       if (yy && dx * dx + dz * dz < (o.r + 1.1 * k.megaS) ** 2) { if ((k.megaT > 0 && o.kind !== 'lightning') || this.fx.immune(k)) continue; if (o.kind === 'lightning') { this.hitKart(k, 'rayo'); } else { this.hitKart(k, 'obst'); const d = Math.hypot(dx, dz) || 1; k.vx -= dx / d * 10; k.vz -= dz / d * 10; } } }

@@ -66,8 +66,12 @@ function show(id) {
   app.state = id || 'race';
   $('hud').classList.toggle('on', app.state === 'race');
   $('ctl').classList.toggle('on', app.state === 'race' && isTouch);
+  Audio.screen(id); const mb = document.getElementById('muteB'); if (mb) mb.style.display = app.state === 'race' ? 'none' : '';
 }
-function btn(id, f) { $(id).addEventListener('click', e => { Audio.init(); Audio.sfxPlay('click'); f(e); }); }
+function btn(id, f) { $(id).addEventListener('click', e => { Audio.unlock(); Audio.uiSound(id); f(e); }); }
+// v27: el primer toque desbloquea el audio y arranca la música de la pantalla
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, () => Audio.unlock(), { capture: true, passive: true });
+{ const mb = document.createElement('button'); mb.id = 'muteB'; mb.setAttribute('aria-label', 'Silenciar'); const upd = () => { mb.textContent = Audio.on ? '🔊' : '🔇'; }; mb.addEventListener('click', e => { e.stopPropagation(); Audio.unlock(); Audio.on = !Audio.on; Audio.apply(); if (typeof save !== 'undefined') { save.settings.sound = Audio.on ? '1' : '0'; save.settings.music = Audio.on ? '1' : '0'; Audio.musicOn = Audio.on; Audio.apply(); persist(); } upd(); if (Audio.on) Audio.sfxPlay('select', 7); }); document.body.appendChild(mb); window.__muteUpd = upd; setTimeout(upd, 0); }
 
 // v21: capa festiva (confeti y globos en HTML, ligera)
 let festN = -1; function fest(n) { if (n === festN) return; festN = n; const F = $('fest'); F.innerHTML = ''; if (!n) return;
@@ -124,12 +128,12 @@ function renderChars() {
   $('cInfo').classList.toggle('prem', !!ch.premium); $('cGo').classList.toggle('prem', !!ch.premium);
   $('cGo').textContent = ch.premium ? '🎁 ¡Probar a ' + ch.name + ' gratis!' : un ? '¡Elegir a ' + ch.name + '!' : ch.premium ? '🔒 Premium · ' + ch.price : 'Bloqueado'; $('cGo').style.opacity = un ? 1 : 0.55;
   const L = $('cList'); L.innerHTML = '';
-  CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip' + (i === cSel ? ' on' : '') + (charUnlocked(c) ? '' : ' lock'); b.innerHTML = `<b style="background:${c.color}"></b>${charUnlocked(c) ? c.name : '🔒 ' + c.name}`; b.onclick = () => { Audio.init(); Audio.sfxPlay('click'); cSel = i; renderChars(); }; L.appendChild(b); });
+  CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip' + (i === cSel ? ' on' : '') + (charUnlocked(c) ? '' : ' lock'); b.innerHTML = `<b style="background:${c.color}"></b>${charUnlocked(c) ? c.name : '🔒 ' + c.name}`; b.onclick = () => { Audio.init(); Audio.sfxPlay('select', i * 2); cSel = i; renderChars(); }; L.appendChild(b); });
   const G = $('cGrid');
   if (!G.children.length) { portraits = finishPortraits(CHARS, portraits);
     CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'cc a-' + ANIMS[i % ANIMS.length] + (c.premium ? ' pr' : ''); b.setAttribute('aria-label', c.name);
       b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>' + (c.premium ? `<span class="pt">Prueba gratis</span>` : '');
-      b.onclick = () => { Audio.init(); Audio.sfxPlay(c.premium ? 'stars' : 'level'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
+      b.onclick = () => { Audio.init(); Audio.sfxPlay(c.premium ? 'stars' : 'select', i * 3); Audio.sfxPlay('boing'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
   [...G.children].forEach((b, i) => { const un2 = charUnlocked(CHARS[i]); b.classList.toggle('on', i === cSel); b.classList.toggle('lock', !un2); b.querySelector('.lk').textContent = CHARS[i].premium ? '⭐' : un2 ? '' : '🔒'; });
   setPreview(ch);
 }
@@ -184,7 +188,7 @@ function startEndless(match) {
   }, 30);
 }
 function showEndResults(order, stats) {
-  show('results'); Audio.stopSong();
+  Audio.stopSong(); show('results');
   const me = order.find(o => o.isPlayer), g = ghostLoad(); let rec = false;
   if (me && (!g || g.seed !== stats.seed || me.dist > g.dist)) { rec = true; try { localStorage.setItem(GKEY, JSON.stringify({ seed: stats.seed, dist: me.dist, ch: me.ch.id, path: stats.ghost })); } catch (e) {} }
   $('rTitle').textContent = (me && me.place === 1 ? '¡Has llegado más lejos que nadie!' : `Has quedado ${me ? me.place : '-'}º`) + (rec ? ' · ¡Nuevo récord!' : '');
@@ -217,7 +221,7 @@ function openCups() {
   CUPS.forEach((c, i) => { const un = cupUnlocked(c), tr = save.trophies[c.id];
     const d = document.createElement('button'); d.className = 'ccard' + (un ? '' : ' lock'); d.style.setProperty('--cc', c.color); d.style.animationDelay = (i * 0.05) + 's';
     d.innerHTML = `<div class="cic">${trophySVG(un ? c.trophy : '#8f80ad', !un)}${un ? '' : '<b class="lki">🔒</b>'}${un && tr != null ? `<b class="md">${['🥇', '🥈', '🥉'][tr]}</b>` : ''}</div><div class="cn">${c.name.replace('Copa ', '')}</div>`;
-    d.addEventListener('click', () => { Audio.init(); Audio.sfxPlay('click'); setCup(i); }); G.appendChild(d); });
+    d.addEventListener('click', () => { Audio.init(); Audio.sfxPlay('select', i * 4); Audio.sfxPlay('swoosh'); setCup(i); }); G.appendChild(d); });
   carousel.setChar(app.playerChar || CHARS[0]);
   carousel.setState(uSel, c => ({ unlocked: cupUnlocked(c), tier: save.trophies[c.id] }));
   cupInfo();
@@ -259,7 +263,7 @@ app.onRaceEnd = (order, stats) => {
 };
 const fmtT = t => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
 function showResults(order) {
-  show('results'); Audio.stopSong();
+  Audio.stopSong(); show('results');
   const last = app.raceNo >= RACES_PER_CUP - 1;
   $('rTitle').textContent = `${app.cup.name} · Carrera ${app.raceNo + 1}/${RACES_PER_CUP}`;
   const byPts = Object.entries(app.points).sort((a, b) => b[1] - a[1]);
@@ -315,7 +319,7 @@ for (const seg of document.querySelectorAll('.seg')) for (const b of seg.childre
   if (seg.dataset.k === 'quality') { qualityHi = b.dataset.v === 'alta' || (b.dataset.v === 'auto' && !isTouch); prLv = prBase(); applyPR(); }
 });
 function applySettings() {
-  Audio.on = save.settings.sound === '1'; Audio.musicOn = save.settings.music === '1'; Audio.apply();
+  Audio.on = save.settings.sound === '1'; Audio.musicOn = save.settings.music === '1'; Audio.apply(); if (window.__muteUpd) window.__muteUpd();
   $('fps').style.display = save.settings.fps === '1' ? 'block' : 'none';
   app.autoDrift = save.settings.autoDrift !== '0';
   const c = save.settings.controls;
