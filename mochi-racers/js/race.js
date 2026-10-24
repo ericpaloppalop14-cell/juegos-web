@@ -157,6 +157,7 @@ export class Race {
     { const pl = this.player, fh = pl ? (pl.flyH || 0) : 0; if (fh) pl.y += fh; this.placeCamera(false, dt); if (fh) pl.y -= fh; }
     if (this.sun && this.player) { const p = this.player.pos; this.sun.target.position.set(p.x, this.player.y, p.z); this.sun.position.set(p.x + 60, this.player.y + 120, p.z + 45); }
     if (this.player) Audio.engineSet(Math.abs(this.player.fs), this.player.boostT > 0 || this.player.megaT > 0);
+    if (this.player) { const pl = this.player; Audio.setIntensity(this.state !== 'race' ? 0.15 : 0.3 + Math.min(pl.lap, 2) * 0.22 + (pl.lap >= CONFIG.laps - 1 ? 0.15 : 0) + (pl.boostT > 0 || pl.megaT > 0 ? 0.25 : 0)); }
     // v27: sonidos de ambiente (adelantar, pasar junto a objetos y público, chispas del derrape)
     if (this.player && this.state === 'race') { const pl = this.player; if (pl.driftDir) Audio.driftTick(dlvl(pl.driftT));
       this.sndT = (this.sndT || 0) - dt; if (this.sndT <= 0) { this.sndT = 0.2;
@@ -575,7 +576,7 @@ export class Race {
       cam.lookAt(k.pos.x, k.y + 1.6, k.pos.z); return;
     }
     const s = k.megaS, sf = clamp(k.fs / 45, 0, 1.4), back = 6.5 * (1 + (s - 1) * 0.9) + (k.boostT > 0 ? 0.9 : 0) + sf * 0.6 + this.kick * 0.8 + (k.flip && k.air ? 3.5 : 0), up = 2.85 * (1 + (s - 1) * 0.85) + (k.flip && k.air ? 2.2 : 0);
-    const pv = cam.aspect < 1, pB = pv ? 1.12 : 1, pU = pv ? 2.3 : 1, pA = pv ? 1.2 : 1; // v5: cámara vertical más alta y mirando más lejos (horizontal intacta)
+    const pv = cam.aspect < 1, pB = pv ? 1.0 : 0.92, pU = pv ? 3.0 : 1.85, pA = pv ? 1.35 : 1.25; // v28: cámara más alta, mirando más desde arriba, aún cerca // v5: cámara vertical más alta y mirando más lejos (horizontal intacta)
     const yaw = k.yaw + k.driftDir * 0.12;
     if (snap || this._cy == null) this._cy = yaw;
     this._cy += angDiff(this._cy, yaw) * (1 - Math.exp(-dt * 7));

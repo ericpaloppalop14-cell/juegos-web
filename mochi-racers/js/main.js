@@ -112,8 +112,12 @@ function setPreview(ch) {
 }
 
 // ---------------- title ----------------
-$('tHint').textContent = isTouch ? 'Toca ¡Jugar! · en vertical u horizontal' : 'Teclado: ← → girar · Espacio derrapar · X objeto · se acelera solo';
+$('tHint').textContent = isTouch ? 'Elige cómo quieres jugar · podrás cambiarlo en Ajustes' : 'Teclado: ← → girar · Espacio derrapar · X objeto · se acelera solo';
 btn('tPlay', () => { tryFullscreen(); openChars(); });
+// v28: elegir orientación desde el inicio (bloquea si se puede; si no, pide girar)
+function playIn(o) { save.settings.orient = o; persist(); syncSettings(); tryFullscreen(); lockOrient(); checkRotate(); openChars(); }
+btn('tV', () => playIn('v')); btn('tH', () => playIn('h'));
+function markOri() { for (const k of ['v', 'h']) { const e = $('t' + k.toUpperCase()); if (e) e.classList.toggle('sel', save.settings.orient === k); } }
 btn('tSet', () => openSettings('title'));
 
 // ---------------- chars ----------------
@@ -132,7 +136,7 @@ function renderChars() {
   const G = $('cGrid');
   if (!G.children.length) { portraits = finishPortraits(CHARS, portraits);
     CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'cc a-' + ANIMS[i % ANIMS.length] + (c.premium ? ' pr' : ''); b.setAttribute('aria-label', c.name);
-      b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>' + (c.premium ? `<span class="pt">Prueba gratis</span>` : '');
+      b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>' + (c.premium ? `<span class="pt">Gratis</span>` : '');
       b.onclick = () => { Audio.init(); Audio.sfxPlay(c.premium ? 'stars' : 'select', i * 3); Audio.sfxPlay('boing'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
   [...G.children].forEach((b, i) => { const un2 = charUnlocked(CHARS[i]); b.classList.toggle('on', i === cSel); b.classList.toggle('lock', !un2); b.querySelector('.lk').textContent = CHARS[i].premium ? '⭐' : un2 ? '' : '🔒'; });
   setPreview(ch);
@@ -515,7 +519,7 @@ function step(now) {
     const w = innerWidth / innerHeight;
     if (app.state === 'cups' && w < 1) { menuCam.position.set(0.1, 3.4, 18); menuCam.lookAt(0.1, -2.2, 0); } // v6: vertical, piloto y trofeo arriba
     else if (app.state === 'chars' && w < 1) { menuCam.position.set(0, 3.2, 12); menuCam.lookAt(0, -2.6, 0); } // v5: vertical, piloto centrado sobre la ficha
-    else if (app.state === 'chars') { menuCam.position.set(-3.1, 4.6, 16.5); menuCam.lookAt(-3.1, 0.9, 0); }
+    else if (app.state === 'chars') { const D = 12.5, L = -(0.565 - 0.5) * 2 * Math.tan(21 * Math.PI / 180) * D * w; menuCam.position.set(L, 3.6, D); menuCam.lookAt(L, 2.35, 0); } // v28: piloto grande en el hueco central, sin taparlo
     else { menuCam.position.set(0, 4.5, 13 / Math.min(1.3, w / 1.5)); menuCam.lookAt(0, 1.8, 0); }
   }
   titleFx.visible = app.state === 'title' || (app.state === 'settings' && setReturn === 'title'); if (titleFx.visible) animTitleFx(titleFx, t);
@@ -535,11 +539,11 @@ function pickOrient(o) { save.settings.orient = o; persist(); $('orient').classL
 btn('oV', () => pickOrient('v')); btn('oH', () => pickOrient('h'));
 function openOrient() { $('orient').classList.add('on'); for (const k of ['v', 'h']) $('o' + k.toUpperCase()).classList.toggle('sel', save.settings.orient === k); checkRotate(); }
 btn('rotAny', () => openOrient());
-function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.then) p.then(lockOrient).catch(() => {}); else lockOrient(); }
+function tryFullscreen() { if (!isTouch) return; const d = document.documentElement; const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null; if (p && p.then) p.then(() => { lockOrient(); setTimeout(checkRotate, 400); }).catch(() => {}); else lockOrient(); }
 
 // ---------------- boot ----------------
 document.fonts && document.fonts.load('700 20px Fredoka').finally(() => {
-  applyPR(); applySettings(); setTitleStage(); show('title'); $('loading').style.display = 'none'; if (!save.settings.orient) openOrient();
+  applyPR(); applySettings(); setTitleStage(); show('title'); $('loading').style.display = 'none'; markOri();
   requestAnimationFrame(frame); booted = true;
   // v23: mientras se ve el inicio, preparar retratos, piloto y fondo de la selección (sin tirones al pulsar «¡Jugar!»)
   CHARS.forEach(c => { const im = new Image(); im.src = portraits[c.id]; im.decode && im.decode().catch(() => {}); });

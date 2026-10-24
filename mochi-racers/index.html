@@ -471,6 +471,29 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 @keyframes rpop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
 @media (orientation:landscape) and (max-height:500px){#cupTrack .rlist span{font-size:10.5px;padding:2px 6px}#cupTrack .rlist{gap:3px 4px;margin:2px 0 3px}}
 #muteB{position:fixed;left:calc(10px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));z-index:60;width:42px;height:42px;border-radius:50%;border:2px solid #fff;background:rgba(255,255,255,.85);font-size:19px;box-shadow:0 4px 12px rgba(120,60,150,.25);padding:0;cursor:pointer}
+/* v28: selección en horizontal: cuadrícula a la izquierda, ficha a la derecha, piloto grande en el centro */
+@media (orientation:landscape){
+ #cGrid{position:absolute!important;left:calc(10px + env(safe-area-inset-left))!important;top:auto!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;transform:none!important;width:min(38vw,calc((100vh - 84px) * 1.85),440px)!important;margin:0!important}
+ #cInfo{position:absolute!important;right:calc(10px + env(safe-area-inset-right))!important;left:auto!important;top:auto!important;transform:none!important;bottom:calc(64px + env(safe-area-inset-bottom))!important;width:min(27vw,280px)!important;max-height:calc(100vh - 140px)!important;overflow:auto!important}
+ #cGo{position:absolute!important;right:calc(10px + env(safe-area-inset-right))!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;width:min(27vw,280px)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #chars #muteB{display:none}
+}
+/* v28: inicio con dos botones de orientación */
+#title .tOri{gap:14px;flex-wrap:nowrap}
+#title .oOpt{width:clamp(140px,34vmin,200px);padding:12px 10px;gap:10px}
+#title .oPh.v{width:52px;height:90px}#title .oPh.h{width:90px;height:52px;margin:19px 0}#title .oPh i{font-size:20px}
+#title .oOpt .oL{font-size:clamp(14px,3.6vmin,18px);padding:7px 12px}
+@media (orientation:landscape) and (max-height:500px){#title .oOpt{flex-direction:row;width:auto;padding:8px 12px;gap:10px}#title .oPh.v{width:30px;height:52px;border-width:4px}#title .oPh.h{width:52px;height:30px;margin:11px 0;border-width:4px}#title .oPh i{font-size:13px}#title .oPh.v::before{width:12px;height:3px;margin-left:-6px;top:3px}#title .oPh.h::before{width:3px;height:12px;margin-top:-6px;left:3px}#title>div:last-child{padding:8px 12px 6px!important}}
+#muteB{left:auto!important;bottom:auto!important;right:calc(16px + env(safe-area-inset-right));top:calc(12px + env(safe-area-inset-top))}
+/* v28: copas en horizontal bajo: panel debajo de la barra y botones en fila (nada cortado) */
+@media (orientation:landscape) and (max-height:500px){
+ #cups #cupSide{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(54px + env(safe-area-inset-top));bottom:calc(8px + env(safe-area-inset-bottom));gap:6px!important;justify-content:space-between;width:min(50vw,420px)}
+ #cups #cupPanel{padding:5px 10px!important}#cups #cupName{font-size:18px!important}
+ #cups #cupBtns{flex-direction:row;gap:8px}#cups #cupBtns .btn{flex:1;min-width:0;margin:0;padding:7px 8px!important;font-size:16px!important;white-space:nowrap}
+ #cups #cupBtns .btn em{display:none}
+ #cups .ccard .cic{height:24px!important}#cups .ccard svg{width:24px!important;height:24px!important}
+}
+#cGrid .pt{transform:none!important;font-size:clamp(7px,1.6vmin,10px)!important;white-space:nowrap;overflow:hidden;letter-spacing:-.3px;left:0!important;right:0!important;padding:1px 0!important;text-align:center}
 </style>
 </head>
 <body>
@@ -481,7 +504,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 <div id="title" class="screen">
   <h1 class="logo" id="logo">Mochi Racers<small>¡Carreras de gelatina!</small></h1>
   <div>
-    <div class="row"><button class="btn" id="tPlay">¡Jugar!</button><button class="btn sec" id="tSet">Ajustes</button></div>
+    <div class="row tOri"><button class="oOpt v" id="tV"><div class="oPh v"><b></b><i>🍡</i></div><div class="oL">Jugar en vertical</div></button><button class="oOpt h" id="tH"><div class="oPh h"><b></b><i>🍡</i></div><div class="oL">Jugar en horizontal</div></button></div><div class="row" style="margin-top:8px!important"><button class="btn" id="tPlay" hidden>¡Jugar!</button><button class="btn sec sm" id="tSet">Ajustes</button></div>
     <div id="tHint" style="margin-top:12px"></div>
   </div>
 </div>
@@ -578,11 +601,11 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 <button class="oOpt v" id="oV"><div class="oPh v"><b></b><i>🍡</i></div><div class="oL">Jugar en vertical</div></button>
 <button class="oOpt h" id="oH"><div class="oPh h"><b></b><i>🍡</i></div><div class="oL">Jugar en horizontal</div></button>
 </div><div class="oS" style="font-size:13px;opacity:.8">Puedes cambiarlo luego en Ajustes</div></div>
-<div id="rotate"><div class="ph">📱</div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div id="rotMsg">Has elegido jugar en horizontal.</div><button class="btn sec sm" id="rotAny">Cambiar orientación</button></div>
+<div id="rotate"><div class="ph"><div class="oPh v"><b></b><i>🍡</i></div></div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div id="rotMsg">Has elegido jugar en horizontal.</div><button class="btn sec sm" id="rotAny">Cambiar orientación</button></div>
 
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script>
-<script type="module" src="js/main.js?v=27"></script>
+<script type="module" src="js/main.js?v=28"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>

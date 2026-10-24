@@ -53,7 +53,7 @@ export const Audio = {
     const prog = [[0, 5, 3, 4], [0, 3, 4, 4], [5, 3, 0, 4], [0, 4, 5, 3]][Math.floor(r() * 4)];
     const mel = []; let cur = 4;
     for (let i = 0; i < 64; i++) { if (r() < 0.3) { mel.push(null); continue; } cur += [-2, -1, -1, 0, 1, 1, 2, 3][Math.floor(r() * 8)]; cur = Math.max(0, Math.min(11, cur)); mel.push(cur); }
-    this.song = { cfg, deg, prog, mel, spb: 60 / cfg.bpm / 2, bus, lead: cfg.lead || (r() < 0.5 ? 'bell' : 'pluck'), pad: cfg.pad };
+    this.song = { race: !cfg.lead, cfg, deg, prog, mel, spb: 60 / cfg.bpm / 2, bus, lead: cfg.lead || (r() < 0.5 ? 'bell' : 'pluck'), pad: cfg.pad };
     this.step = 0; this.seqT = this.ctx.currentTime + 0.1;
     this.timer = setInterval(() => this.tick(), 50);
   },
@@ -62,6 +62,7 @@ export const Audio = {
   bell(f, t, dur, vol, dest) { this.tone(f, t, dur, 'sine', vol, dest); this.tone(f * 2.01, t, dur * 0.5, 'sine', vol * 0.35, dest); this.tone(f * 3.99, t, dur * 0.25, 'sine', vol * 0.12, dest); },
   tick() {
     const c = this.ctx, S = this.song; if (!S || !c) return;
+    if (S.race) return this.tickRace();
     while (this.seqT < c.currentTime + 0.25) {
       const st = this.step, t = this.seqT, bar = Math.floor(st / 16) % 4, chord = S.prog[bar], d = S.bus;
       if (st % 4 === 0) this.tone(this.midi(S.deg(chord) - 24), t, S.spb * 1.8, 'triangle', 0.2, d);
@@ -76,26 +77,60 @@ export const Audio = {
       this.seqT += S.spb; this.step++;
     }
   },
-  // ---------- motor mágico v27: zumbido suave + tintineo de estrellitas ----------
+  // ---------- v28: música de carrera ambiental (synthwave espacial) ----------
+  intensity: 0, intT: 0,
+  setIntensity(x) { this.intT = Math.max(0, Math.min(1, x)); },
+  raceFx(S) { if (S.fx) return S.fx; const c = this.ctx; const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 0.7; lp.connect(S.bus);
+    const dl = c.createDelay(1.5); dl.delayTime.value = S.spb * 3; const fb = c.createGain(); fb.gain.value = 0.42; const df = c.createBiquadFilter(); df.type = 'lowpass'; df.frequency.value = 2200; const wet = c.createGain(); wet.gain.value = 0.5;
+    dl.connect(df); df.connect(fb); fb.connect(dl); df.connect(wet); wet.connect(S.bus);
+    return (S.fx = { lp, dl }); },
+  padNote(f, t, dur, vol, dest) { const c = this.ctx; const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + dur * 0.35); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.linearRampToValueAtTime(0.0001, t + dur * 1.05); g.connect(dest);
+    for (const dt of [-7, 0, 7]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = dt; o.connect(g); o.start(t); o.stop(t + dur * 1.1); } },
+  tickRace() {
+    const c = this.ctx, S = this.song, fx = this.raceFx(S);
+    while (this.seqT < c.currentTime + 0.3) {
+      const st = this.step, t = this.seqT, bar = Math.floor(st / 32) % 4, chord = S.prog[bar];
+      this.intensity += (this.intT - this.intensity) * 0.06; const I = this.intensity;
+      fx.lp.frequency.setTargetAtTime(700 + I * 1900 + Math.sin(st * 0.02) * 300, t, 0.8);
+      if (st % 32 === 0) [0, 2, 4, 6].forEach(k => this.padNote(this.midi(S.deg(chord + k) - 12), t, S.spb * 34, 0.018, fx.lp));
+      if (st % 32 === 0) this.padNote(this.midi(S.deg(chord) - 24), t, S.spb * 34, 0.03, fx.lp);
+      // arpegio suave que evoluciona (patrón cambia cada 4 compases, con eco)
+      const pat = [[0, 2, 4, 7, 4, 2], [0, 4, 7, 9, 7, 4], [2, 4, 6, 9, 11, 9], [0, 7, 4, 9, 2, 11]][Math.floor(st / 128) % 4];
+      if (st % 2 === 0 || I > 0.55) { const n = this.midi(S.deg(chord + pat[(st >> (I > 0.55 ? 0 : 1)) % pat.length])); const o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.value = n; const v = 0.022 + I * 0.012; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + S.spb * 1.8); o.connect(g); g.connect(S.bus); g.connect(fx.dl); o.start(t); o.stop(t + S.spb * 2); }
+      // pulso que crece con la intensidad
+      if (st % 4 === 0 && I > 0.2) this.tone(58, t, 0.22, 'sine', 0.12 + I * 0.14, S.bus, 40);
+      if (st % 2 === 1 && I > 0.35) this.tone(this.midi(S.deg(chord) - 24), t, S.spb * 0.8, 'triangle', 0.05 * I, fx.lp);
+      if (st % 8 === 4 && I > 0.6) this.hit(t, 0.18, 0.04 * I, 1800, fx.lp);
+      if (st % 2 === 1 && I > 0.75) this.hit(t, 0.02, 0.02, 9000, S.bus);
+      if (st % 64 === 60) this.bell(this.midi(S.deg(chord + 9) + 12), t, 2.5, 0.012, fx.dl);
+      this.seqT += S.spb; this.step++;
+    }
+  },
+  // ---------- motor v28: zumbido de nave cálido y grave, filtrado, con chorus y shimmer ----------
   engineStart() {
     if (!this.ctx || this.engine) return; const c = this.ctx;
-    const o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter(), lfo = c.createOscillator(), lg = c.createGain();
-    o.type = 'sine'; o2.type = 'triangle'; f.type = 'lowpass'; f.frequency.value = 900; g.gain.value = 0;
-    lfo.frequency.value = 7; lg.gain.value = 6; lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
-    o.connect(f); o2.connect(f); f.connect(g); g.connect(this.sfx); o.start(); o2.start(); lfo.start();
-    this.engine = { o, o2, g, f, lfo, sp: 0, boost: false, twT: 0, step: 0 };
+    const o = c.createOscillator(), o2 = c.createOscillator(), sub = c.createOscillator(), sh = c.createOscillator();
+    o.type = 'sawtooth'; o2.type = 'sawtooth'; sub.type = 'sine'; sh.type = 'sine'; o2.detune.value = 12;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220; f.Q.value = 2.5;
+    const g = c.createGain(); g.gain.value = 0; const sg = c.createGain(); sg.gain.value = 0;
+    // chorus: retardo corto modulado
+    const cd = c.createDelay(0.05); cd.delayTime.value = 0.018; const cl = c.createOscillator(), clg = c.createGain(); cl.frequency.value = 0.35; clg.gain.value = 0.004; cl.connect(clg); clg.connect(cd.delayTime); const cw = c.createGain(); cw.gain.value = 0.7;
+    o.connect(f); o2.connect(f); sub.connect(f); f.connect(g); g.connect(this.sfx); g.connect(cd); cd.connect(cw); cw.connect(this.sfx);
+    const shf = c.createBiquadFilter(); shf.type = 'bandpass'; shf.Q.value = 6; shf.frequency.value = 1200; sh.connect(shf); shf.connect(sg); sg.connect(cd); sg.connect(this.sfx);
+    for (const x of [o, o2, sub, sh, cl]) x.start();
+    this.engine = { o, o2, sub, sh, cl, f, g, sg, shf };
   },
-  engineSet(sp, boost) { const e = this.engine; if (!e) return; const c = this.ctx, t = c.currentTime; e.sp = sp; e.boost = boost;
-    const f = 180 + Math.min(sp, 70) * 4 + (boost ? 80 : 0);
-    e.o.frequency.setTargetAtTime(f, t, 0.12); e.o2.frequency.setTargetAtTime(f * 1.5, t, 0.12); e.lfo.frequency.setTargetAtTime(5 + sp * 0.12, t, 0.2);
-    e.g.gain.setTargetAtTime(sp > 1 ? 0.012 + Math.min(sp, 60) * 0.00035 : 0.004, t, 0.15);
-    // tintineo: notas pentatónicas que suben con la velocidad
-    if (sp > 4 && t > e.twT) { const P = [0, 2, 4, 7, 9]; const base = 76 + Math.min(12, Math.floor(sp / 6)); const n = base + P[e.step++ % 5] + (Math.random() < 0.3 ? 12 : 0);
-      this.tone(this.midi(n), t + 0.01, 0.22, 'sine', boost ? 0.02 : 0.012); e.twT = t + Math.max(0.07, 0.32 - sp * 0.004) * (boost ? 0.6 : 1); }
+  engineSet(sp, boost) { const e = this.engine; if (!e) return; const t = this.ctx.currentTime, v = Math.min(sp, 70);
+    const base = 46 + v * 0.75 + (boost ? 10 : 0);
+    e.o.frequency.setTargetAtTime(base, t, 0.25); e.o2.frequency.setTargetAtTime(base * 1.5, t, 0.25); e.sub.frequency.setTargetAtTime(base / 2, t, 0.25);
+    e.sh.frequency.setTargetAtTime(base * 8, t, 0.3); e.shf.frequency.setTargetAtTime(base * 8, t, 0.3);
+    e.f.frequency.setTargetAtTime(180 + v * 9 + (boost ? 500 : 0), t, 0.3);
+    e.g.gain.setTargetAtTime(sp > 1 ? 0.035 + v * 0.0005 : 0.018, t, 0.3);
+    e.sg.gain.setTargetAtTime(boost ? 0.012 : 0.003 + v * 0.00006, t, 0.3);
   },
-  engineStop() { const e = this.engine; if (!e) return; e.g.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05); setTimeout(() => { try { e.o.stop(); e.o2.stop(); e.lfo.stop(); } catch (_) {} }, 300); this.engine = null; },
+  engineStop() { const e = this.engine; if (!e) return; e.g.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1); e.sg.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1); setTimeout(() => { for (const x of [e.o, e.o2, e.sub, e.sh, e.cl]) try { x.stop(); } catch (_) {} }, 500); this.engine = null; },
   driftT: 0,
-  driftTick(lvl) { const c = this.ctx; if (!c || !this.on || c.currentTime < this.driftT) return; const t = c.currentTime; const base = [1800, 2200, 2700, 3300][lvl] || 1800; this.tone(base + Math.random() * 500, t, 0.06, 'sine', 0.018); this.hit(t, 0.04, 0.012, 6000); this.driftT = t + 0.09; },
+  driftTick(lvl) { const c = this.ctx; if (!c || !this.on || c.currentTime < this.driftT) return; const t = c.currentTime; this.hit(t, 0.12, 0.012 + lvl * 0.004, [2500, 3200, 4000, 5000][lvl] || 2500); this.driftT = t + 0.1; },
   uiSound(key) { // un sonido distinto para cada botón (por su id o texto)
     let h = 0; for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const c = this.ctx; if (!c || !this.on) return; const t = c.currentTime, P = [0, 2, 4, 7, 9, 12, 14, 16];
