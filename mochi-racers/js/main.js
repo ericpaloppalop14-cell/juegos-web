@@ -11,6 +11,7 @@ import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
 import { Online, soloMatch, MAX_PLAYERS } from './online.js';
 import { createCupCarousel } from './cupsel.js';
 import { buildPodium } from './podium.js';
+import { buildTitleFx, animTitleFx, buildSelBg, animSelBg, setSelColor, makePortraits, ANIMS, animPreview } from './showcase.js';
 
 const $ = id => document.getElementById(id);
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
@@ -84,6 +85,7 @@ const menuCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 9
     else { const b = mesh(new THREE.SphereGeometry(2.2, 16, 12), toon(cols[i % 5], { opacity: 0.9, rim: 0.6 }), g, [0, 1.4, 0], null, [1, 0.9, 1]); } }
   menuScene.fog = new THREE.Fog('#ffe3f1', 60, 300);
 }
+const titleFx = buildTitleFx(menuScene), selBg = buildSelBg(menuScene); let portraits = null; // v18
 const stage = new THREE.Group(); menuScene.add(stage);
 const menuKarts = []; let charPopT = -9; let previewKart = null, trophyPreview = null;
 function setTitleStage() {
@@ -92,7 +94,7 @@ function setTitleStage() {
 }
 function setPreview(ch) {
   stage.clear(); menuKarts.length = 0;
-  previewKart = makeKart(ch, 0); previewKart.position.y = 0.8; previewKart.scale.setScalar(1.25); stage.add(previewKart); charPopT = performance.now() / 1000;
+  previewKart = makeKart(ch, 0); previewKart.position.y = 0.8; previewKart.scale.setScalar(1.25); stage.add(previewKart); charPopT = performance.now() / 1000; setSelColor(selBg, ch.color === '#e8f4ff' ? '#9fd0ff' : ch.color);
 }
 
 // ---------------- title ----------------
@@ -112,6 +114,12 @@ function renderChars() {
   $('cGo').textContent = un ? '¡Elegir a ' + ch.name + '!' : 'Bloqueado'; $('cGo').style.opacity = un ? 1 : 0.55;
   const L = $('cList'); L.innerHTML = '';
   CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip' + (i === cSel ? ' on' : '') + (charUnlocked(c) ? '' : ' lock'); b.innerHTML = `<b style="background:${c.color}"></b>${charUnlocked(c) ? c.name : '🔒 ' + c.name}`; b.onclick = () => { Audio.init(); Audio.sfxPlay('click'); cSel = i; renderChars(); }; L.appendChild(b); });
+  const G = $('cGrid');
+  if (!G.children.length) { if (!portraits) portraits = makePortraits(CHARS);
+    CHARS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'cc a-' + ANIMS[i % ANIMS.length]; b.setAttribute('aria-label', c.name);
+      b.innerHTML = (portraits[c.id] ? `<img alt="" src="${portraits[c.id]}" style="animation-delay:-${(i * 0.37).toFixed(2)}s">` : `<b style="display:block;margin:22%;aspect-ratio:1;border-radius:50%;background:${c.color}"></b>`) + '<span class="lk"></span>';
+      b.onclick = () => { Audio.init(); Audio.sfxPlay('click'); if (cSel === i && charUnlocked(c)) { $('cGo').click(); return; } cSel = i; renderChars(); }; G.appendChild(b); }); }
+  [...G.children].forEach((b, i) => { const un2 = charUnlocked(CHARS[i]); b.classList.toggle('on', i === cSel); b.classList.toggle('lock', !un2); b.querySelector('.lk').textContent = un2 ? '' : '🔒'; });
   setPreview(ch);
 }
 btn('cPrev', () => { cSel = (cSel + CHARS.length - 1) % CHARS.length; renderChars(); });
@@ -480,16 +488,19 @@ function frame(now) {
   // menus
   if (app.state === 'title' || (app.state === 'settings' && setReturn === 'title')) {
     menuKarts.forEach((m, i) => { const a = m.a + t * 0.35; m.k.position.set(Math.cos(a) * 4.2, 0.8 + Math.abs(Math.sin(t * 3 + i)) * 0.15, Math.sin(a) * 4.2); m.k.rotation.y = -a; animKart(m.k, t, 20); });
-    menuCam.position.set(Math.sin(t * 0.1) * 4, 6.5, 15); menuCam.lookAt(0, 1.2, 0);
+    if (innerWidth < innerHeight) { menuCam.position.set(Math.sin(t * 0.1) * 4, 4.2, 21); menuCam.lookAt(0, 4.2, 0); } else { menuCam.position.set(Math.sin(t * 0.1) * 4, 3.6, 15.5); menuCam.lookAt(0, 4.4, 0); } // v18: se ve el cielo, castillo, arcoíris y fuegos
   } else {
-    if (previewKart) { previewKart.rotation.y = app.state === 'chars' ? t * 0.7 : 0.5 + Math.sin(t * 0.6) * 0.3; const pe = performance.now() / 1000 - charPopT; animKart(previewKart, t, 15, app.state === 'chars' && pe < 1.3 ? 'happy' : ''); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12 + (pe < 0.5 ? Math.sin(pe / 0.5 * Math.PI) * 0.6 : 0); }
+    if (previewKart && app.state === 'chars') { previewKart.rotation.y = Math.sin(t * 0.8) * 0.6 + 0.25; animKart(previewKart, t, 15, Math.sin(t * 1.3) > -0.2 ? 'happy' : ''); animPreview(previewKart, t, cSel); }
+    else if (previewKart) { previewKart.rotation.y = 0.5 + Math.sin(t * 0.6) * 0.3; const pe = performance.now() / 1000 - charPopT; animKart(previewKart, t, 15, app.state === 'chars' && pe < 1.3 ? 'happy' : ''); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12 + (pe < 0.5 ? Math.sin(pe / 0.5 * Math.PI) * 0.6 : 0); }
     if (trophyPreview && app.state === 'cups') trophyPreview.rotation.y = t * 0.8;
     const w = innerWidth / innerHeight;
     if (app.state === 'cups' && w < 1) { menuCam.position.set(0.1, 3.4, 18); menuCam.lookAt(0.1, -2.2, 0); } // v6: vertical, piloto y trofeo arriba
-    else if (app.state === 'chars' && w < 1) { menuCam.position.set(0, 3.6, 13.5); menuCam.lookAt(0, -0.3, 0); } // v5: vertical, piloto centrado sobre la ficha
-    else if (app.state === 'chars') { menuCam.position.set(2.4, 4.2, 13.5); menuCam.lookAt(2.4, 1.6, 0); }
+    else if (app.state === 'chars' && w < 1) { menuCam.position.set(0, 3.2, 12); menuCam.lookAt(0, -2.6, 0); } // v5: vertical, piloto centrado sobre la ficha
+    else if (app.state === 'chars') { menuCam.position.set(-1.6, 4.6, 12.5); menuCam.lookAt(-1.6, -0.6, 0); }
     else { menuCam.position.set(0, 4.5, 13 / Math.min(1.3, w / 1.5)); menuCam.lookAt(0, 1.8, 0); }
   }
+  titleFx.visible = app.state === 'title' || (app.state === 'settings' && setReturn === 'title'); if (titleFx.visible) animTitleFx(titleFx, t);
+  selBg.visible = app.state === 'chars'; if (selBg.visible) animSelBg(selBg, t);
   renderer.render(menuScene, menuCam);
 }
 
