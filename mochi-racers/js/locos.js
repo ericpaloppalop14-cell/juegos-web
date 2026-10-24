@@ -45,20 +45,24 @@ const sph = () => geo('s', () => new THREE.SphereGeometry(1, 16, 12)), cyl = () 
 const cap = () => geo('cap', () => new THREE.CapsuleGeometry(0.5, 1, 4, 10));
 const eyes = (p, y, z, s = 1) => { for (const sd of [-1, 1]) { mesh(sph(), toon('#ffffff', { rim: 0 }), p, [sd * 0.3 * s, y, z], null, 0.17 * s); mesh(sph(), toon('#1a1030', { rim: 0 }), p, [sd * 0.3 * s, y, z + 0.12 * s], null, 0.09 * s); } };
 const glow = (c, s, op = 0.8) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: op })); sp.scale.setScalar(s); return sp; };
-function makeHand() { // mano gigante de marionetista (dorso hacia arriba, dedos que mueven los hilos) con cruceta e hilos
-  const g = new THREE.Group(), skin = toon('#ffc9a6', { rim: 0.7 }), nail = toon('#ffeef2', { rim: 0.3 }), u = g.userData;
-  const hand = new THREE.Group(); hand.position.set(0, 6, 3); hand.scale.setScalar(0.72); g.add(hand); u.hand = hand;
-  const palm = mesh(sph(), skin, hand, [0, 0, 0], null, [2.3, 1.0, 2.5]); outline(palm, '#8a4a4a', 1.05);
-  u.f = []; for (let i = 0; i < 4; i++) { const f = new THREE.Group(); f.position.set((i - 1.5) * 1.08, -0.1, 2.0); f.rotation.y = (i - 1.5) * -0.08; hand.add(f);
-    const a = mesh(cap(), skin, f, [0, -0.15, 0.75], [Math.PI / 2 - 0.35, 0, 0], [0.78, 0.95 + (i === 1 || i === 2 ? 0.2 : 0), 0.78]); outline(a, '#8a4a4a', 1.06);
-    const tip = new THREE.Group(); tip.position.set(0, -0.6, 1.45); f.add(tip); const b2 = mesh(cap(), skin, tip, [0, -0.45, 0.2], [0.35, 0, 0], [0.72, 0.8, 0.72]); outline(b2, '#8a4a4a', 1.06); mesh(sph(), nail, tip, [0, -0.6, 0.5], [0.4, 0, 0], [0.26, 0.1, 0.3]); f.userData.tip = tip; u.f.push(f); }
-  const th = new THREE.Group(); th.position.set(2.0, -0.2, 0.7); hand.add(th); const tb = mesh(cap(), skin, th, [0.5, -0.3, 0.4], [0.3, 0, -1.0], [0.85, 1.1, 0.85]); outline(tb, '#8a4a4a', 1.06);
-  for (let i = 0; i < 4; i++) mesh(sph(), toon('#f0a888', { rim: 0 }), hand, [(i - 1.5) * 1.08, 0.82, 1.35], null, [0.28, 0.12, 0.2]); // nudillos
-  const sl = mesh(cyl(), toon('#7f5fff', { rim: 0.5 }), hand, [0, 3.4, -1.2], [-0.5, 0, 0], [1.7, 5, 1.7]); outline(sl, '#3a2070', 1.04); mesh(cyl(), toon('#ffffff'), hand, [0, 1.0, -0.2], [-0.5, 0, 0], [1.85, 0.5, 1.85]); for (const y of [2.6, 4]) mesh(sph(), toon('#ffd24a', { emissive: '#ffb020', ei: 0.3 }), hand, [0, y, -0.95 - (y - 2.6) * 0.55 + 1.75], null, 0.25);
-  mesh(cyl(), toon('#ffd24a', { emissive: '#ffb020', ei: 0.3 }), hand, [-1.6, -0.25, 2.25], [0, 0, 0], [0.45, 0.25, 0.45]); // anillo
-  const bar = new THREE.Group(); bar.position.y = -1.3; hand.add(bar); u.bar = bar; const wood = toon('#c08a5a', { rim: 0.4 }); mesh(box(), wood, bar, [0, 0, 0], null, [4.8, 0.32, 0.32]); mesh(box(), wood, bar, [0, 0, 0], null, [0.32, 0.32, 4.4]); for (const [x, z] of [[-2.4, 0], [2.4, 0], [0, 2.2], [0, -2.2]]) mesh(sph(), toon('#ff8fc0'), bar, [x, 0, z], null, 0.3);
-  u.str = []; const sm = new THREE.MeshBasicMaterial({ color: '#fff8e0' }); for (const [x, z] of [[-2.2, 0], [2.2, 0], [0, 2], [0, -2]]) { const s = mesh(cyl(), sm, g, [0, 0, 0], null, [0.05, 1, 0.05]); s.userData.a = new V3(x, 0, z); u.str.push(s); }
-  u.spark = []; for (let i = 0; i < 6; i++) { const s = glow(['#ffe066', '#ff8fd8', '#7ff5ff'][i % 3], 1.4); g.add(s); u.spark.push(s); }
+function makeHand() { // v24: guante blanco de marionetista + cruceta de madera + 4 hilos al kart (sin mover el kart)
+  const g = new THREE.Group(), u = g.userData, glove = toon('#ffffff', { rim: 0.35 }), seam = toon('#c9c3e6', { rim: 0 }), OL = '#4a3a7a';
+  const rig = new THREE.Group(); rig.position.set(0, 7.2, -0.6); g.add(rig); u.rig = rig;
+  const hand = new THREE.Group(); hand.position.set(0, 1.25, 0.2); hand.rotation.y = Math.PI; rig.add(hand); u.hand = hand; // dedos hacia la cámara: se lee como un guante
+  const palm = mesh(sph(), glove, hand, [0, 0, 0], null, [1.5, 0.75, 1.7]); outline(palm, OL, 1.07);
+  for (let i = 0; i < 3; i++) mesh(box(), seam, hand, [(i - 1) * 0.5, 0.7, -0.1], null, [0.09, 0.05, 1.3]); // costuras del dorso
+  u.f = []; for (let i = 0; i < 4; i++) { const f = new THREE.Group(); f.position.set((i - 1.5) * 0.72, -0.1, 1.35); hand.add(f);
+    const L = i === 1 || i === 2 ? 1.0 : 0.85; const a = mesh(cap(), glove, f, [0, -0.1, 0.45], [Math.PI / 2 - 0.25, 0, 0], [0.62, L, 0.62]); outline(a, OL, 1.08);
+    const tip = new THREE.Group(); tip.position.set(0, -0.35, 1.05); f.add(tip); const b2 = mesh(cap(), glove, tip, [0, -0.45, 0.05], [0.15, 0, 0], [0.58, 0.7, 0.58]); outline(b2, OL, 1.08); f.userData.tip = tip; u.f.push(f); }
+  const th = new THREE.Group(); th.position.set(1.35, -0.25, 0.5); hand.add(th); const tb = mesh(cap(), glove, th, [0.35, -0.3, 0.35], [0.5, 0, -0.9], [0.66, 0.9, 0.66]); outline(tb, OL, 1.08);
+  const cuff = mesh(cyl(), toon('#ffffff', { rim: 0.2 }), hand, [0, 0.3, -1.6], [-1.15, 0, 0], [1.0, 0.8, 0.85]); outline(cuff, OL, 1.06);
+  mesh(cyl(), toon('#ff6fb0', { rim: 0.4 }), hand, [0, 0.5, -1.95], [-1.15, 0, 0], [1.05, 0.14, 0.9]); // ribete rosa del puño
+  const bar = new THREE.Group(); rig.add(bar); u.bar = bar; const wood = toon('#c98d55', { rim: 0.35 }), dark = '#6a3f1f';
+  const p1 = mesh(box(), wood, bar, [0, 0, 0], null, [5.2, 0.38, 0.42]); outline(p1, dark, 1.06); const p2 = mesh(box(), wood, bar, [0, 0.05, 0.2], null, [0.42, 0.38, 4.6]); outline(p2, dark, 1.06);
+  u.ends = [[-2.55, 0], [2.55, 0], [0, 2.45], [0, -2.05]]; for (const [x, z] of u.ends) { const kn = mesh(sph(), toon('#ff8fc0', { rim: 0.5 }), bar, [x, 0, z], null, 0.32); outline(kn, '#a03a6a', 1.08); }
+  u.str = []; const sm = new THREE.MeshBasicMaterial({ color: '#fff4c2' }); u.att = [[-1.0, 1.5, -0.2], [1.0, 1.5, -0.2], [0, 1.6, 1.1], [0, 1.7, -1.1]];
+  for (let i = 0; i < 4; i++) { const s = mesh(cyl(), sm, g, [0, 0, 0], null, [0.06, 1, 0.06]); u.str.push(s); const gl = glow('#fff2a0', 0.5, 0.6); g.add(gl); s.userData.gl = gl; }
+  const halo = glow('#ffe58a', 5, 0.22); halo.position.set(0, 1.4, 0); rig.add(halo);
   return g;
 }
 function makeNose() { const g = new THREE.Group(); const n = mesh(cone(), toon('#e0a070', { rim: 0.5 }), g, [0, 0, 0.5], [Math.PI / 2, 0, 0], [0.22, 1, 0.22]); g.userData.n = n; mesh(sph(), toon('#7fd67a'), g, [0, 0.25, 0.9], null, [0.25, 0.1, 0.4]); return g; }
@@ -92,7 +96,7 @@ P0.use = function (k, it) {
   const ahead = RC.karts.filter(x => x !== k && !x.finished && !x.out && !x.remote && x.place < k.place).sort((a, b) => b.place - a.place);
   const burst = (cols, n = 18, up = 8) => { for (let i = 0; i < n; i++) RC.emit(k.pos.clone().add(new V3(0, 1.2, 0)), cols[i % cols.length], 0.9, 0.7, new V3((R() - 0.5) * 10, 3 + R() * up, (R() - 0.5) * 10)); };
   switch (it) {
-    case 'mentiruco': k.puppetT = 5; k.puppetAge = 0; k.spinT = 0; k.squashT = 0; if (P) { RC.msg('¡EL MENTIRUCO! ¡Te manejan los hilos!', k, '#ffb36b'); RC.shakeT = 0.2; } burst(['#ffe066', '#ff8fd8', '#ffffff']); if (near) Audio.sfxPlay('puppet'); break;
+    case 'mentiruco': k.puppetT = 5; k.puppetAge = 0; k.spinT = 0; k.squashT = 0; if (P) { RC.msg('🫳 ¡MENTIRUCO! Turbo 5 s', k, '#ffb36b'); RC.shakeT = 0.2; } burst(['#ffe066', '#ff8fd8', '#ffffff']); if (near) Audio.sfxPlay('puppet'); break;
     case 'chistera': { const tgs = ahead.length ? ahead : RC.karts.filter(x => x !== k && !x.finished && !x.out && !x.remote).sort((a, b) => a.pos.distanceTo(k.pos) - b.pos.distanceTo(k.pos)).slice(0, 3).reverse(); const hat = this.take2('hat', makeHat); hat.position.copy(k.pos); hat.rotation.y = k.yaw; L.projs.push({ type: 'hat', mesh: hat, t: 0, life: 1.6 });
       for (let i = 0; i < 3; i++) { const b = this.take2('bunny', makeBunny); b.position.copy(k.pos).add(new V3((i - 1) * 1.6, 1, 0)); L.projs.push({ type: 'bunny', mesh: b, owner: k, target: tgs[tgs.length - 1 - i] || tgs[0] || null, t: 0, life: 6, ph: i, dir: new V3(Math.sin(k.yaw), 0, Math.cos(k.yaw)), idx: k.idx }); }
       if (P) RC.msg('¡Chistera de conejos!', k, '#ffffff'); if (near) Audio.sfxPlay('hat'); break; }
@@ -109,6 +113,9 @@ P0.use = function (k, it) {
   return true;
 };
 P0.input = function (k, inp, dt) {
+  { const RC = this.race, T = RC.track, sv = T && T.S && T.S[k.idx]; // v24: salvaguarda general fuera de pista
+    if (sv && !T.open && RC.state === 'race' && !k.finished && !(k.cannonT > 0) && !(k.flyH > 0.5) && !(k.morphT > 0)) { const lat = Math.abs((k.pos.x - sv.p.x) * sv.right.x + (k.pos.z - sv.p.z) * sv.right.z), off = lat > sv.w * 0.5 + 14 || k.y < sv.p.y - 10 || !isFinite(k.pos.x + k.pos.z + k.y);
+      k.offT = off ? (k.offT || 0) + dt : 0; if (k.offT > 1.2) { k.offT = 0; k.puppetT = k.duckT = k.cannonT = k.octoT = 0; RC.respawn(k); if (k.isPlayer) RC.msg('¡De vuelta a la pista!', k, '#7ff5ff'); } } }
   inp = o.input.call(this, k, inp, dt); if (k.remote) return inp;
   let v = k.fxV || 1;
   if (k.puppetT > 0) { k.puppetT -= dt; k.puppetAge += dt; v = Math.max(v, k.puppetAge < 0.4 ? 1.3 : 1.75); k.boostT = Math.max(k.boostT, 0.25); inp = this.auto(k, inp, dt); if (k.puppetT <= 0 && k.isPlayer) this.race.msg('¡Gracias, Mentiruco!', k, '#ffb36b'); }
@@ -152,14 +159,14 @@ P0.update = function (dt) {
   for (const k of RC.karts) {
     const u = k.mesh.userData;
     // Mentiruco: mano con hilos encima del kart + nariz que crece
-    if (k.puppetT > 0 || u.fx_hand) { const h = this.attach(k, 'hand', makeHand), nz = this.attach(k, 'nose', makeNose); h.visible = nz.visible = k.puppetT > 0;
-      if (h.visible) { const q = h.userData, a = k.puppetAge, e = Math.min(1, a / 0.5, k.puppetT / 0.4); h.scale.setScalar(Math.max(0.01, e));
-        q.hand.position.set(0, 6 + Math.sin(t * 4) * 0.4 + (1 - e) * 4, 3); q.hand.rotation.z = Math.sin(t * 2.5) * 0.15; q.hand.rotation.x = 0.3 + Math.sin(t * 3.1) * 0.1; q.f.forEach((f, i) => { f.rotation.x = Math.sin(t * 7 + i * 1.3) * 0.3; f.userData.tip.rotation.x = Math.max(0, Math.sin(t * 7 + i * 1.3)) * 0.5; });
-        q.bar.rotation.z = Math.sin(t * 4) * 0.25; q.bar.rotation.x = Math.cos(t * 3.3) * 0.2; q.hand.updateMatrixWorld(true);
-        const UP = new V3(0, 1, 0); q.str.forEach((s, i) => { const a = s.userData.a, top = new V3(a.x * 0.6, q.hand.position.y - 0.95 + (i < 2 ? (i ? -1 : 1) * Math.sin(t * 4) * 0.3 : 0), a.z * 0.6 + 3), bot = new V3(a.x * 0.55, 1.4 + Math.abs(Math.sin(t * 4)) * 0.9, a.z * 0.55); const d = top.clone().sub(bot); s.position.copy(bot).addScaledVector(d, 0.5); s.scale.set(1, d.length(), 1); s.quaternion.setFromUnitVectors(UP, d.normalize()); });
-        q.spark.forEach((s, i) => { const an = t * 3 + i * 1.26; s.position.set(Math.cos(an) * 3.4, 4.6 + Math.sin(t * 5 + i), 2.2 + Math.sin(an) * 3.4); });
-        nz.position.set(0, 2.7, 1.0); nz.userData.n.scale.set(0.22, 0.6 + Math.min(1, a / 2) * 2.2, 0.22); nz.userData.n.position.z = 0.3 + Math.min(1, a / 2) * 1.1;
-        if (R() < 0.4) RC.emit(k.pos.clone().add(new V3((R() - 0.5) * 2, 6 + R() * 3, (R() - 0.5) * 2)), ['#ffe066', '#ffffff', '#ff8fd8'][Math.floor(R() * 3)], 0.4, 0.6, new V3(0, -2, 0)); } }
+    if (k.puppetT > 0 || u.fx_hand) { const h = this.attach(k, 'hand', makeHand); h.visible = k.puppetT > 0;
+      if (h.visible) { const q = h.userData, a = k.puppetAge, e = Math.min(1, a / 0.45, k.puppetT / 0.35), ee = e * e * (3 - 2 * e); h.scale.setScalar(1);
+        const wide = RC.camera && RC.camera.aspect > 1.2; q.rig.position.y = (wide ? 3.7 : 4.9) + (1 - ee) * 9 + Math.sin(t * 3) * 0.15; q.rig.scale.setScalar(Math.max(0.01, (0.4 + ee * 0.6) * (wide ? 1.25 : 1.5)));
+        q.bar.rotation.z = Math.sin(t * 3.2) * 0.1; q.bar.rotation.x = Math.cos(t * 2.7) * 0.07; q.hand.rotation.z = -q.bar.rotation.z;
+        q.f.forEach((f, i) => { f.rotation.x = 0.1 + Math.sin(t * 6 + i * 1.1) * 0.12; f.userData.tip.rotation.x = 0.5 + Math.sin(t * 6 + i * 1.1) * 0.15; });
+        h.updateMatrixWorld(true); const UP = new V3(0, 1, 0), inv = new THREE.Matrix4().copy(h.matrixWorld).invert();
+        q.str.forEach((s, i) => { const top = new V3(q.ends[i][0], 0, q.ends[i][1]).applyMatrix4(q.bar.matrixWorld).applyMatrix4(inv), bot = new V3(...q.att[i]); const d = top.clone().sub(bot); s.position.copy(bot).addScaledVector(d, 0.5); s.scale.set(0.07, d.length(), 0.07); s.quaternion.setFromUnitVectors(UP, d.normalize()); s.visible = ee > 0.6; s.userData.gl.position.copy(bot); s.userData.gl.visible = s.visible; });
+        if (k.isPlayer || R() < 0.3) RC.emit(k.pos.clone().add(new V3(-Math.sin(k.yaw) * 2.2, 0.8, -Math.cos(k.yaw) * 2.2)), ['#ffd24a', '#ff8fd8', '#7ff5ff'][Math.floor(R() * 3)], 0.35, 0.45, new V3((R() - 0.5) * 2, 1 + R(), (R() - 0.5) * 2)); } }
     if (k.duckT > 0 || u.fx_duck) { const d = this.attach(k, 'duck', makeDuck); d.visible = k.duckT > 0; if (d.visible) { const q = d.userData, e = Math.min(1, k.duckAge / 0.35, k.duckT / 0.3); d.scale.setScalar(Math.max(0.01, e) * 1.1); d.position.y = -0.3; d.rotation.z = Math.sin(t * 5) * 0.08;
         q.beak.scale.y = 0.3 + Math.abs(Math.sin(t * 6)) * 0.25; q.wings.forEach((w, i) => w.rotation.z = (i ? -1 : 1) * Math.sin(t * 10) * 0.4); q.bub.forEach((b, i) => { const uu = (t * 0.8 + i / 6) % 1; b.position.set(Math.sin(i * 2) * 2.5, uu * 4, -3 - uu * 2); b.scale.setScalar(0.25 + uu * 0.4); });
         if (R() < 0.5) RC.emit(k.pos.clone().add(new V3((R() - 0.5) * 4, 0.3, (R() - 0.5) * 4)), '#bfefff', 0.6, 0.5, new V3((R() - 0.5) * 4, 3, (R() - 0.5) * 4)); if (k.isPlayer && Math.floor(k.duckAge / 1.5) !== k.duckQ) { k.duckQ = Math.floor(k.duckAge / 1.5); Audio.sfxPlay('cuac'); } } }
@@ -202,9 +209,10 @@ P0.update = function (dt) {
 P0.cannonH = function (k) { if (!(k.cannonT > 0)) return 0; const u = k.cannonAge / (k.cannonAge + k.cannonT); return Math.sin(u * Math.PI) * 14; };
 P0.place = function (k) {
   o.place.call(this, k); const t = this.race.time, m = k.mesh;
-  if (k.puppetT > 0) { m.position.y += 0.4 + Math.abs(Math.sin(t * 4)) * 0.9; m.rotation.z += Math.sin(t * 4) * 0.18; m.rotation.x += Math.sin(t * 8) * 0.05; }
   if (k.duckT > 0) m.position.y += 1.6 + Math.sin(t * 5) * 0.2;
-  if (k.cannonT > 0) { const h = this.cannonH(k); m.position.y += h; m.rotation.x -= Math.cos(k.cannonAge / (k.cannonAge + k.cannonT) * Math.PI) * 0.4; const u = m.userData; if (u.shadow) u.shadow.position.y -= h / k.megaS; }
+  if (k.cannonT > 0) { const h = this.cannonH(k); m.position.y += h; if (m.userData.tilt) m.userData.tilt.rotation.x -= Math.cos(k.cannonAge / (k.cannonAge + k.cannonT) * Math.PI) * 0.4; const u = m.userData; if (u.shadow) u.shadow.position.y -= h / k.megaS; }
   if (k.danceT > 0) { m.rotation.y += Math.sin(t * 8) * 0.6; m.position.y += Math.abs(Math.sin(t * 10)) * 0.5; }
   if (k.popT > 0) m.rotation.y += k.popT * 8;
+  // v24 salvaguarda: el kart siempre de pie (sin inclinaciones residuales)
+  m.rotation.x = 0; m.rotation.z = 0; const tl = m.userData.tilt; if (tl && !k.trick && !(k.flip && k.air)) { tl.rotation.x = Math.max(-0.45, Math.min(0.45, tl.rotation.x)); tl.rotation.z = Math.max(-0.45, Math.min(0.45, tl.rotation.z)); }
 };
