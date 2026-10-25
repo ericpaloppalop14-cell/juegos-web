@@ -740,7 +740,7 @@ export function futbol(cfg) {
     kickoff(E) { const pos = [[-2, 0], [-6, 3.5], [-9, -2]]; E.racers.forEach(r => { const p = pos[r.role], s = r.team === 0 ? 1 : -1; r.x = p[0] * s; r.z = p[1] * s; r.vx = r.vz = 0; r.kbuf = 0; r.dash = 0; r.face = r.team === 0 ? Math.PI / 2 : -Math.PI / 2; }); Object.assign(this.b, { x: 0, z: 0, vx: 0, vz: 0, y: 0, vy: 0 }); this.pause = 1; this.corner = 0; },
     kick(E, r, power = 13) { const b = this.b, gx = r.team === 0 ? FX + 1 : -FX - 1;
       // ayuda para apuntar: el jugador apunta al hueco de la portería (más ayuda para ti)
-      const help = r.me ? .85 : .7; let dx = gx - b.x, dz = (r.me ? clamp(b.z * .3, -1, 1) * GW * .35 + rnd(-.3, .3) : rnd(-1, 1) * GW * .6) - b.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
+      const help = r.me ? .75 : .65; let dx = gx - b.x, dz = (r.me ? clamp(b.z * .3, -1, 1) * GW * .35 + rnd(-.8, .8) : rnd(-1, 1) * GW * .6) - b.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
       const fx = Math.sin(r.face), fz = Math.cos(r.face); let kx = dx * help + fx * (1 - help), kz = dz * help + fz * (1 - help); const k = Math.hypot(kx, kz) || 1;
       b.vx = kx / k * power; b.vz = kz / k * power; b.vy = r.me ? 2.2 : 3; r.touch++; r.kc = .45; r.kbuf = 0; r.dash = 0; b.last = r; b.hot = r.me ? .9 : .5;
       E.burst(v3(b.x, .5, b.z), '#ffffff', 10, 5, .35, .35); if (r.me) { Audio.sfxPlay('kick'); E.shake = Math.max(E.shake || 0, .18); r.expr = 'happy'; setTimeout(() => { if (r.expr === 'happy' && !this.celeb) r.expr = ''; }, 500); } },
@@ -753,22 +753,32 @@ export function futbol(cfg) {
           // al pulsar CHUTAR lejos del balón, el mochi acelera hacia él (si no estás moviendo el dedo)
           if (r.dash > 0 && Math.hypot(dir.x, dir.z) < .2) { const dx = b.x - r.x, dz = b.z - r.z, d = Math.hypot(dx, dz) || 1; dir = { x: dx / d, z: dz / d }; } }
         else { const mates = E.racers.filter(o => o.team === r.team), chaser = mates.reduce((a, o) => Math.hypot(b.x - o.x, b.z - o.z) < Math.hypot(b.x - a.x, b.z - a.z) ? o : a);
-          let tx, tz; if (chaser === r || (r.me && E.AUTO)) { const gx = r.team === 0 ? FX : -FX; const bx = b.x - Math.sign(gx - b.x) * .6; tx = bx; tz = b.z; } else if (r.role === 2) { tx = own * .7 + (b.x - own) * .25; tz = b.z * .5; } else { tx = b.x * .5 + (r.team === 0 ? 2 : -2); tz = (r.role ? 3 : -3); }
+          let tx, tz; if (chaser === r || (r.me && E.AUTO)) { const gx = r.team === 0 ? FX : -FX; const bx = b.x - Math.sign(gx - b.x) * .6; tx = bx; tz = b.z; } else if (r.role === 2) { tx = own * .88 + (b.x - own) * .08; tz = clamp(b.z * .8 + b.vz * .12, -GW + .4, GW - .4); } else { tx = b.x * .5 + (r.team === 0 ? 2 : -2); tz = (r.role ? 3 : -3); }
           // los rivales no se pegan encima de ti: guardan un poco de distancia cuando llevas el balón
           if (r.team !== me.team && !E.AUTO && Math.hypot(me.x - r.x, me.z - r.z) < 1.4 && Math.hypot(b.x - me.x, b.z - me.z) < 1.3) { const ax = r.x - me.x, az = r.z - me.z, ad = Math.hypot(ax, az) || 1; tx = r.x + ax / ad * 2; tz = r.z + az / ad * 2; }
           const dx = tx - r.x, dz = tz - r.z, d = Math.hypot(dx, dz); dir = d > .3 ? { x: dx / d, z: dz / d } : { x: 0, z: 0 }; wantKick = db < 1.2 && Math.random() < dt * (2 + 4 * sk(E, r)); }
         const sp = (r.me ? (r.dash > 0 ? 8.6 : 6.8) : 4.8 + 1.4 * r.skill); moveRacer(r, dir, dt, sp, r.me ? 12 : 9); r.x = clamp(r.x, -LIMX, LIMX); r.z = clamp(r.z, -LIMZ, LIMZ);
         const kr = r.me ? 1.9 : 1.3;
-        if (wantKick && db < kr && r.kc <= 0 && !(b.hot > .3 && b.last && b.last.me && !r.me)) this.kick(E, r, r.me ? 19 : 11 + 3 * r.skill);
+        if (wantKick && db < kr && r.kc <= 0) this.kick(E, r, r.me ? 17 : 11 + 3 * r.skill);
         else if (r.me && !E.AUTO && db < 1.5 && b.y < .6 && r.kc <= 0) { // IMÁN: el balón se queda delante de tus pies al conducir
           const fx = Math.sin(r.face), fz = Math.cos(r.face), tx = r.x + fx * .85, tz = r.z + fz * .85, k = Math.min(1, dt * 10);
           b.vx = lerp(b.vx, r.vx * 1.05 + (tx - b.x) * 6, k); b.vz = lerp(b.vz, r.vz * 1.05 + (tz - b.z) * 6, k); b.last = r; }
-        else if (db < .95 && !(b.hot > .3 && b.last && b.last.me && !r.me)) { const nx = (b.x - r.x) / (db || 1), nz = (b.z - r.z) / (db || 1); b.vx = b.vx * .5 + nx * 3 + r.vx * .8; b.vz = b.vz * .5 + nz * 3 + r.vz * .8; b.x = r.x + nx * .96; b.z = r.z + nz * .96; b.last = r; } }
+        else if (db < .95 && Math.hypot(b.vx, b.vz) < 5) { const nx = (b.x - r.x) / (db || 1), nz = (b.z - r.z) / (db || 1); b.vx = b.vx * .5 + nx * 3 + r.vx * .8; b.vz = b.vz * .5 + nz * 3 + r.vz * .8; b.x = r.x + nx * .96; b.z = r.z + nz * .96; b.last = r; } }
       // separación: tú tienes prioridad (los demás se apartan) y después todos vuelven dentro del campo
-      const rs = E.racers; for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) { const a = rs[i], c = rs[j], dx = c.x - a.x, dz = c.z - a.z, d = Math.hypot(dx, dz); if (d < .9 && d > 1e-4) { const o = (.9 - d) / d, wa = a.me && !E.AUTO ? 0 : c.me && !E.AUTO ? 1 : .5; a.x -= dx * o * wa; a.z -= dz * o * wa; c.x += dx * o * (1 - wa); c.z += dz * o * (1 - wa); } }
+      const rs = E.racers; for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) { const a = rs[i], c = rs[j], dx = c.x - a.x, dz = c.z - a.z, d = Math.hypot(dx, dz); if (d < 1.0 && d > 1e-4) { const o = (1.0 - d) / d, wa = a.me && !E.AUTO ? .3 : c.me && !E.AUTO ? .7 : .5; a.x -= dx * o * wa; a.z -= dz * o * wa; c.x += dx * o * (1 - wa); c.z += dz * o * (1 - wa); } }
       for (const r of rs) { r.x = clamp(r.x, -LIMX, LIMX); r.z = clamp(r.z, -LIMZ, LIMZ); r.lean = lerp(r.lean, Math.min(1, Math.hypot(r.vx, r.vz) / 7), Math.min(1, dt * 8)); }
       $('bM').classList.toggle('cerca', Math.hypot(b.x - me.x, b.z - me.z) < 1.9);
-      b.x += b.vx * dt; b.z += b.vz * dt; const f = Math.exp(-1.1 * dt); b.vx *= f; b.vz *= f; b.vy -= 14 * dt; b.y = Math.max(0, b.y + b.vy * dt); if (b.y === 0) b.vy = Math.abs(b.vy) > 2 ? -b.vy * .45 : 0; b.hot = Math.max(0, (b.hot || 0) - dt);
+      // o38: el balón rebota SIEMPRE contra cualquier mochi (subpasos para que a gran velocidad no atraviese)
+      { const RS = .95, n = Math.max(1, Math.ceil(Math.hypot(b.vx, b.vz) * dt / .15)), h = dt / n;
+        for (let s = 0; s < n; s++) { b.x += b.vx * h; b.z += b.vz * h;
+          for (const r of rs) { if (b.y > 1.4) continue; if (r === b.last && r.kc > .3) continue; // el que acaba de chutar no se lo come
+            const dx = b.x - r.x, dz = b.z - r.z, d = Math.hypot(dx, dz); if (d >= RS || d < 1e-5) continue;
+            const nx = dx / d, nz = dz / d, rvx = b.vx - r.vx, rvz = b.vz - r.vz, vn = rvx * nx + rvz * nz;
+            b.x = r.x + nx * RS; b.z = r.z + nz * RS;
+            if (vn < 0) { const e = .5; b.vx -= (1 + e) * vn * nx; b.vz -= (1 + e) * vn * nz; b.vx *= .85; b.vz *= .85; // reflexión con pérdida de energía
+              if (-vn > 6) { b.vy = Math.max(b.vy, 2); b.hot = 0; E.burst(v3(b.x, .6, b.z), '#ffffff', 8, 4, .3, .3); if (r.me || (b.last && b.last.me)) Audio.sfxPlay('boing'); if (r.role === 2 && b.last && b.last.team !== r.team && r.me === false && !E.AUTO && b.last.me) say(E, r, '¡Parada!'); }
+              b.last = r; } } } }
+      const f = Math.exp(-1.1 * dt); b.vx *= f; b.vz *= f; b.vy -= 14 * dt; b.y = Math.max(0, b.y + b.vy * dt); if (b.y === 0) b.vy = Math.abs(b.vy) > 2 ? -b.vy * .45 : 0; b.hot = Math.max(0, (b.hot || 0) - dt);
       if (Math.abs(b.z) > FZ - .45) { b.z = Math.sign(b.z) * (FZ - .45); b.vz = -b.vz * .8; }
       if (Math.abs(b.x) > FX - .45) { if (Math.abs(b.z) < GW - .3) { if (Math.abs(b.x) > FX + .3) { const tm = b.x > 0 ? 0 : 1; this.goals[tm]++; const sc0 = b.last; if (sc0 && sc0.team === tm) sc0.g++; E.burst(v3(b.x, 1, b.z), tm === 0 ? '#ff6fae' : '#5fa8ff', 50, 9, 1, .7); E.burst(v3(b.x, 2.5, b.z), '#ffe27a', 30, 7, 1.2, .5); E.shake = .5; Audio.sfxPlay(tm === E.me.team ? 'cheer' : 'boing'); E.ui.toast(tm === E.me.team ? `¡GOOOL! ⚽ ${this.goals[0]}-${this.goals[1]}` : `Gol rival… ${this.goals[0]}-${this.goals[1]}`); E.racers.forEach(r => r.expr = r.team === tm ? 'happy' : ''); setTimeout(() => E.racers.forEach(r => r.expr = ''), 2000); this.celeb = 2; this.celebTeam = tm; this.goalX = b.x; this.kickoff(E); this.pause = 2; } }
         else { b.x = Math.sign(b.x) * (FX - .45); b.vx = -b.vx * .8; } }
