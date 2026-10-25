@@ -500,7 +500,7 @@ function step(now) {
     readInput();
     acc += dt * app.speed; let n = 0;
     while (acc >= STEP && n < 6 * app.speed) { app.race.update(STEP); acc -= STEP; n++; }
-    if (app.state === 'race' && app.race) { drawHUD(dt); fxEnv(app.race.scene); renderer.render(app.race.scene, app.race.camera); }
+    if (app.state === 'race' && app.race) { drawHUD(dt); if (document.body.dataset.st !== 'race') document.body.dataset.st = 'race'; renderer.render(app.race.scene, app.race.camera); }
     return;
   }
   if (app.state === 'podium' && podData) {
@@ -526,7 +526,7 @@ function step(now) {
   }
   titleFx.visible = app.state === 'title' || (app.state === 'settings' && setReturn === 'title'); if (titleFx.visible) animTitleFx(titleFx, t);
   selBg.visible = app.state === 'chars'; if (selBg.visible) animSelBg(selBg, t);
-  fxEnv(menuScene); renderer.render(menuScene, menuCam);
+  if (document.body.dataset.st !== 'menu') document.body.dataset.st = 'menu'; fxEnv(menuScene); renderer.render(menuScene, menuCam);
 }
 
 // ---------------- orientation / fullscreen ----------------

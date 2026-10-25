@@ -495,7 +495,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 }
 #cGrid .pt{transform:none!important;font-size:clamp(7px,1.6vmin,10px)!important;white-space:nowrap;overflow:hidden;letter-spacing:-.3px;left:0!important;right:0!important;padding:1px 0!important;text-align:center}
 </style>
-<style>/* noche 25-10: color más vivo (GPU) */canvas{filter:saturate(1.1) contrast(1.04)}</style>
+<style>/* noche 25-10: color más vivo (GPU) */canvas#gl{filter:saturate(1.1) contrast(1.04)} body[data-st=race] canvas#gl{filter:saturate(1.22) contrast(1.1) brightness(.98)} body[data-st=race] #fxNoche,body[data-st=race] #fxVig{display:none!important}</style>
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -608,9 +608,9 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 <script>window.FX_NOCHE={z:2,n:16,vig:.14,rays:false}</script><script src="js/fx-noche.js?v=2"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script>
-<script type="module" src="js/main.js?v=35"></script>
+<script type="module" src="js/main.js?v=36"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=35', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=36', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>
 </body>
 </html>

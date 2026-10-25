@@ -125,7 +125,7 @@ function surfMat(kind, extra = {}) {
             vec3 dirt = diffuseColor.rgb * vec3(0.86, 0.8, 0.76) + vec3(0.05, 0.03, 0.0); diffuseColor.rgb = mix(dirt, diffuseColor.rgb, tr);
             diffuseColor.rgb *= 0.9 + h12(floor(vWP.xz * 3.0)) * 0.1 + (1.0 - tr) * (h12(floor(vWP.xz * 9.0)) - 0.5) * 0.12;
             float bl = vn(vec2(vWP.x * 3.1 + vWP.z * 0.4, vWP.z * 3.1)); diffuseColor.rgb *= 1.0 - tr * smoothstep(0.6, 0.9, bl) * 0.08; }`
-        : ` { float e = abs(vU * 2.0 - 1.0); diffuseColor.rgb *= 1.0 - smoothstep(0.7, 1.0, e) * 0.17;
+        : ` { float e = abs(vU * 2.0 - 1.0); diffuseColor.rgb *= 0.87 - smoothstep(0.62, 1.0, e) * 0.26; { float lr = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = mix(vec3(lr), diffuseColor.rgb, 1.25); } diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.9, 0.86, 0.95), smoothstep(0.35, 0.75, vn(vWP.xz * 0.025)) * 0.5); { float tk = abs(fract(vU * 3.0) - 0.5); diffuseColor.rgb *= 1.0 - smoothstep(0.12, 0.0, abs(tk - 0.33)) * 0.06; }
             diffuseColor.rgb *= 0.9 + vn(vWP.xz * 0.06) * 0.1 + vn(vWP.xz * 0.9) * 0.07 + vn(vWP.xz * 3.5) * 0.04 + (h12(floor(vWP.xz * 9.0)) - 0.5) * 0.09;
             float sp = step(0.986, h12(floor(vWP.xz * 7.0))); diffuseColor.rgb += sp * 0.2; diffuseColor.rgb *= 1.0 - step(0.975, h12(floor(vWP.xz * 5.0) + 3.1)) * 0.07;
             float rl = 0.5 + (vn(vec2(vV * 0.011, 1.7)) - 0.5) * 0.55; float wl = exp(-pow((vU - rl) / 0.1, 2.0)); float st = vn(vec2(vV * 0.3, vU * 40.0));
