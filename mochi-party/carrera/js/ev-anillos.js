@@ -3,7 +3,7 @@
 //  combos con multiplicador, anillos que se mueven en la segunda mitad, nubes de tormenta que frenan,
 //  túnel turbo de anillos dorados, retícula de puntería, estela, líneas de velocidad, resolución adaptativa.
 //  Reglas justas: misma velocidad base y mismas reglas para todos; la ventaja se gana atravesando anillos.
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m19';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m19n3';
 const L = 440, V0 = 13, XM = 6, YMIN = 1.2, YMAX = 8.5, BSTEP = .55, BMAX = 7;
 const RCOL = ['#ff9cc8', '#ffc38a', '#ffe27a', '#8fe8cf', '#9fd0ff', '#c9b2ff'];
 const SENS = 0.034; // unidades de mundo por píxel CSS de arrastre
@@ -15,7 +15,7 @@ export default {
   dispose() { const tt = document.getElementById('toast'); if (tt) tt.style.cssText = this._tcss || ''; for (const id of ['perf', 'anRet', 'anCombo', 'anVig']) { const d = document.getElementById(id); if (d) d.remove(); } },
   init(E) {
     const sc = E.scene; this.E = E; sc.fog = new THREE.Fog('#ffe3f1', 55, 170);
-    this.sky = skyDome(sc, '#7fbcff', '#ffcfe6', '#fff2dc'); this.sky.renderOrder = -1;
+    this.sky = skyDome(sc, '#7fbcff', '#ffcfe6', '#fff2dc', 'dream'); this.sky.renderOrder = -1;
     const lt = lights(sc, '#ffffff', '#ffd6ea', 1.0, 2.0); lt.d.position.set(-60, 120, -200);
     // sol con halo (luz de contra) y destellos
     this.sun = new THREE.Group(); this.sun.add(glowSprite('#fff3c4', 28, .7)); this.sun.add(glowSprite('#ffd27a', 70, .22)); sc.add(this.sun);

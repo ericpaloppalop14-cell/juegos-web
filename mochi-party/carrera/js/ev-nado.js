@@ -1,5 +1,5 @@
 // 🫧 NADO EN GELATINA (3D): piscina translúcida de gelatina con medusas, montañas de flan y arcoíris
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m19';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m19n3';
 const L = 240, LW = 2, VM = 13, V0 = 9.5, BSTEP = .35, BMAX = 2.2, ACT = .8, Z0 = 26; // tanda 4: más rápido y trepidante
 // posiciones FIJAS: medusa ARRIBA flota en el aire (bucea), medusa ABAJO está en el fondo (salta). Nunca a medias.
 const YUP = 1.25, YDN = -1.35, WARN = 2.2;
@@ -16,14 +16,14 @@ export default {
   dispose() { const d = document.getElementById('perf'); if (d) d.remove(); const L0 = document.getElementById('bL'), R0 = document.getElementById('bR'), M0 = document.getElementById('bM'); L0.innerHTML = '⬅'; R0.innerHTML = '➡'; M0.style.display = ''; L0.style.cssText = R0.style.cssText = ''; },
   init(E) {
     E.REACT = new URLSearchParams(location.search).has('react');
-    const sc = E.scene; sc.fog = new THREE.Fog('#ffe0f0', 50, 190); this.sky = skyDome(sc, '#8fd0ff', '#ffd6ec', '#fff2dc'); this.sky.renderOrder = -1; lights(sc, '#ffffff', '#ffc6e2', 1.0, 2.0);
+    const sc = E.scene; sc.fog = new THREE.Fog('#ffd0e8', 50, 190); this.sky = skyDome(sc, '#8fd0ff', '#ffd6ec', '#fff2dc', 'dream'); this.sky.renderOrder = -1; lights(sc, '#ffffff', '#ffc6e2', 1.0, 2.0);
     // fondo de azulejos y paredes
     const W = LW * 6 + 1;
     mesh(new THREE.PlaneGeometry(W, L + 30), new THREE.MeshToonMaterial({ map: tiles() }), sc, [0, -2.2, -L / 2], [-Math.PI / 2, 0, 0]);
     for (const s of [-1, 1]) { const w = mesh(new THREE.BoxGeometry(1.2, 3.2, L + 30), toon('#ffffff', { rim: .3 }), sc, [s * (W / 2 + .6), -.7, -L / 2]); outline(w, '#c98ab0', 1.01); mesh(new THREE.BoxGeometry(8, .4, L + 60), toon('#bff0dc'), sc, [s * (W / 2 + 5), .7, -L / 2]); }
     // superficie de gelatina ondulante (translúcida)
     const sg = new THREE.PlaneGeometry(W, L + 30, 16, 160); sg.rotateX(-Math.PI / 2); this.sg = sg; this.base = sg.attributes.position.array.slice();
-    const jm = new THREE.MeshPhongMaterial({ color: '#ff8fc8', transparent: true, opacity: .55, shininess: 120, specular: '#ffffff', depthWrite: false, side: THREE.DoubleSide });
+    const jm = new THREE.MeshPhongMaterial({ color: '#ff7fbf', transparent: true, opacity: .6, shininess: 70, specular: '#ffb8dc', depthWrite: false, side: THREE.DoubleSide });
     const surf = mesh(sg, jm, sc, [0, 0, -L / 2]); surf.renderOrder = 2;
     mesh(new THREE.BoxGeometry(W, 2.1, L + 30), new THREE.MeshPhongMaterial({ color: '#ff6fb2', transparent: true, opacity: .22, depthWrite: false }), sc, [0, -1.15, -L / 2]).renderOrder = 1;
     // corcheras

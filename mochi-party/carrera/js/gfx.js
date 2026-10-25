@@ -20,14 +20,21 @@ export function toon(color, o = {}) {
   const rim = o.rim ?? 0.35;
   if (rim > 0) {
     m.onBeforeCompile = sh => {
-      sh.uniforms.rimStr = { value: rim };
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float rimStr;')
+      sh.uniforms.rimStr = { value: rim }; sh.uniforms.glossStr = { value: rim >= 0.5 ? 0.55 : 0.0 };
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float rimStr; uniform float glossStr;')
         .replace('#include <opaque_fragment>', `
-          { float fr = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
-            outgoingLight += vec3(1.0, 0.97, 1.0) * smoothstep(0.55, 1.0, fr) * rimStr; }
+          { vec3 nn = normalize(normal), vv = normalize(vViewPosition);
+            float fr = 1.0 - clamp(dot(nn, vv), 0.0, 1.0);
+            float up = 0.55 + 0.45 * clamp(nn.y * 0.8 + 0.35, 0.0, 1.0);
+            // contraluz: borde brillante algo cálido arriba y lila abajo (noche 3)
+            vec3 rc = mix(vec3(0.85, 0.8, 1.0), vec3(1.0, 0.97, 0.9), clamp(nn.y * 0.5 + 0.5, 0.0, 1.0));
+            outgoingLight += rc * smoothstep(0.5, 1.0, fr) * rimStr * up * 1.35;
+            // brillo de gelatina
+            vec3 hh = normalize(normalize(vec3(-0.45, 0.65, 0.6)) + vv);
+            outgoingLight += vec3(1.0) * pow(max(dot(nn, hh), 0.0), 48.0) * glossStr; }
           #include <opaque_fragment>`);
     };
-    m.customProgramCacheKey = () => 'rim' + rim;
+    m.customProgramCacheKey = () => 'rim3' + rim;
   }
   if (!o.nocache) matCache.set(key, m);
   return m;
@@ -322,7 +329,7 @@ let _shadowMat;
 export function shadowMat() {
   if (_shadowMat) return _shadowMat;
   const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d');
-  const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(40,20,60,0.62)'); gr.addColorStop(1, 'rgba(60,30,80,0)');
+  const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(35,15,55,0.78)'); gr.addColorStop(0.35, 'rgba(45,20,70,0.5)'); gr.addColorStop(0.7, 'rgba(60,30,90,0.16)'); gr.addColorStop(1, 'rgba(60,30,80,0)');
   x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
   _shadowMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false });
   return _shadowMat;

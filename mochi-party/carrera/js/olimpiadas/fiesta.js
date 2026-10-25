@@ -4,9 +4,10 @@
 // ======================================================================
 import * as THREE from 'three';
 import { CHARS } from '../data.js';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, makeTrophy } from '../gfx.js?v=m10';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, makeTrophy } from '../gfx.js?v=m10n3';
 import { Audio } from '../audio.js';
-import { OLIMPIADAS, PTS } from './catalogo.js?v=o35';
+import { makePost } from '../post.js?v=n3';
+import { OLIMPIADAS, PTS } from './catalogo.js?v=o35n3';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
@@ -99,6 +100,7 @@ function tabla(S, o, idx, EV, res, before) {
 
 // ---------------- podio final de la olimpiada ----------------
 export function podioFinal(o, renderer, camera) {
+  const post = makePost(renderer);
   const S = loadS() || { pts: { me: 0 }, pj: 'mochi', rv: [] };
   const order = Object.entries(S.pts).sort((a, b) => b[1] - a[1]).map(([id, p]) => ({ id, p }));
   const meP = order.findIndex(r => r.id === 'me') + 1;
@@ -132,7 +134,7 @@ export function podioFinal(o, renderer, camera) {
     if (Math.random() < .05) F.confetti(new THREE.Vector3(0, 7, 0), 14); F.tick(dt);
     const port = innerHeight > innerWidth; camera.fov = port ? 74 : 48; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
     const a = Math.sin(t * .2) * .25, dist = port ? 19 : 12.5; const ox = port ? 0 : 4.5; camera.position.set(Math.sin(a) * dist + ox, port ? 4 : 4.4, Math.cos(a) * dist); camera.lookAt(ox, port ? -1.5 : 2.6, 0);
-    renderer.setSize(innerWidth, innerHeight, false); renderer.render(sc, camera); requestAnimationFrame(loop); }
+    renderer.setSize(innerWidth, innerHeight, false); post.render(sc, camera); requestAnimationFrame(loop); }
   requestAnimationFrame(loop);
   window.__podio = { order };
 }

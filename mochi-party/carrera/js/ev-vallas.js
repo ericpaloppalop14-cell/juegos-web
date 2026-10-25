@@ -1,5 +1,5 @@
 // 🐍 VALLAS SERPIENTE (3D): pista de atletismo con serpientes que ondulan, público de gelatina y meta
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m19';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=m19n3';
 const L = 300, LW = 1.7, SEG = 14, V0 = 9.5, BSTEP = .35, BMAX = 2.1;
 const laneX = l => (l - 2.5) * LW;
 function checker() { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d'); for (let i = 0; i < 16; i++) for (let j = 0; j < 4; j++) { x.fillStyle = (i + j) % 2 ? '#ffffff' : '#5a3a6e'; x.fillRect(i * 16, j * 16, 16, 16); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -9,7 +9,7 @@ export default {
   how: 'Toca para saltar (puedes tocar un poco antes, el salto se guarda). Las serpientes empiezan bajitas y van creciendo. Coge 🛡️ escudo, 🦘 supersalto y ⚡ turbo. ¡Encadena Perfectos!',
   dispose() { const d = document.getElementById('perf'); if (d) d.remove(); },
   init(E) {
-    const sc = E.scene; sc.fog = new THREE.Fog('#ffe3f1', 60, 170); this.sky = skyDome(sc, '#ff9ec7', '#ffd0e6', '#fff0dd'); this.sky.renderOrder = -1; lights(sc, '#ffffff', '#ffd6ea', 1.0, 2.0);
+    const sc = E.scene; sc.fog = new THREE.Fog('#ffe3f1', 60, 170); this.sky = skyDome(sc, '#ff9ec7', '#ffd0e6', '#fff0dd', 'candy'); this.sky.renderOrder = -1; lights(sc, '#ffffff', '#ffd6ea', 1.0, 2.0);
     // sol con cara
     const sun = new THREE.Group(); sun.position.set(30, 55, -150); sc.add(sun); const sm = toon('#ffd36b', { emissive: '#ffb030', ei: .5 }); sm.fog = false;
     mesh(new THREE.SphereGeometry(12, 32, 20), sm, sun); sun.add(glowSprite('#ffe27a', 70, .7));

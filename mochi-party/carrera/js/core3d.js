@@ -5,8 +5,10 @@
 // ======================================================================
 import * as THREE from 'three';
 import { CHARS } from './data.js';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js?v=m10';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js?v=m10n3';
 import { Audio } from './audio.js';
+import { makePost } from './post.js?v=n3';
+import { horizonte } from './horizonte.js?v=n3';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
@@ -22,6 +24,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 // nitidez: hasta x3 en móviles con pantalla densa; baja sola si el móvil no llega a ~48 fps (ver frame())
 const PR_MAX = Math.min(devicePixelRatio || 1, Q.get('q') === 'low' ? 1 : 3); let PR = PR_MAX;
 renderer.setPixelRatio(PR);
+const post = makePost(renderer);
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.3, 900);
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -42,13 +45,23 @@ const parts = [];
 function burst(scene, p, color, n = 14, sp = 6, life = 0.8, size = 0.5, grav = -6) {
   const mat = new THREE.SpriteMaterial({ map: glowTex(color), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   for (let i = 0; i < n; i++) { const s = new THREE.Sprite(mat.clone()); s.position.copy(p); const a = Math.random() * 6.28, b = Math.random() * 3.14 - 1.57; s.userData = { v: new THREE.Vector3(Math.cos(a) * Math.cos(b), Math.sin(b) * 0.8 + 0.6, Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.4, 1)), t: 0, life: life * rnd(.6, 1.2), size: size * rnd(.6, 1.3), grav }; s.scale.setScalar(s.userData.size); scene.add(s); parts.push(s); }
+  if (n >= 10 && parts.length < 300) { sparkle(scene, p, color, Math.min(8, n >> 1), sp * .8, life * 1.2, size * 1.1); shock(scene, p, color, 1.5 + sp * .3); }
 }
+// noche 3: estrellitas de 4 puntas y onda expansiva en las acciones; lluvia de estrellas en las victorias
+let _starTex; function starTex() { if (_starTex) return _starTex; const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'); const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.25, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.moveTo(32, 0); x.quadraticCurveTo(36, 28, 64, 32); x.quadraticCurveTo(36, 36, 32, 64); x.quadraticCurveTo(28, 36, 0, 32); x.quadraticCurveTo(28, 28, 32, 0); x.fill(); _starTex = new THREE.CanvasTexture(cv); return _starTex; }
+let _ringGeo, _ringTex; function ringTex() { if (_ringTex) return _ringTex; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'); const g = x.createRadialGradient(64, 64, 30, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.75, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); _ringTex = new THREE.CanvasTexture(cv); return _ringTex; }
+function sparkle(scene, p, color, n, sp, life, size) { if (parts.length > 360) return; const mat = new THREE.SpriteMaterial({ map: starTex(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  for (let i = 0; i < n; i++) { const s = new THREE.Sprite(mat.clone()); s.position.copy(p); const a = Math.random() * 6.28; s.userData = { v: new THREE.Vector3(Math.cos(a), rnd(.4, 1.3), Math.sin(a)).multiplyScalar(sp * rnd(.5, 1)), t: 0, life: life * rnd(.7, 1.3), size: size * rnd(.7, 1.4), grav: -3, star: true, rot: rnd(-4, 4) }; s.scale.setScalar(s.userData.size); scene.add(s); parts.push(s); } }
+function shock(scene, p, color, r = 2.5, life = .45) { if (parts.length > 360) return; _ringGeo = _ringGeo || new THREE.PlaneGeometry(2, 2); const m = new THREE.Mesh(_ringGeo, new THREE.MeshBasicMaterial({ map: ringTex(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  m.rotation.x = -Math.PI / 2; m.position.copy(p); m.position.y = Math.max(.08, p.y - .9); m.userData = { t: 0, life, ring: r, v: new THREE.Vector3() }; m.scale.setScalar(.2); scene.add(m); parts.push(m); }
 const confM = ['#ff9cc8', '#7ee3c4', '#ffe27a', '#b9a2f7', '#8fd0ff'].map(c => toon(c, { rim: 0.3 }));
-function confetti(scene, p, n = 40) { for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.4), confM[i % 5]); m.material.side = THREE.DoubleSide; m.position.copy(p).add(new THREE.Vector3(rnd(-3, 3), rnd(0, 2), rnd(-3, 3))); m.userData = { v: new THREE.Vector3(rnd(-3, 3), rnd(4, 9), rnd(-3, 3)), t: 0, life: 2.5, conf: true, spin: rnd(4, 9) }; scene.add(m); parts.push(m); } }
+function confetti(scene, p, n = 40) { for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.4), confM[i % 5]); m.material.side = THREE.DoubleSide; m.position.copy(p).add(new THREE.Vector3(rnd(-3, 3), rnd(0, 2), rnd(-3, 3))); m.userData = { v: new THREE.Vector3(rnd(-3, 3), rnd(4, 9), rnd(-3, 3)), t: 0, life: 2.5, conf: true, spin: rnd(4, 9) }; scene.add(m); parts.push(m); }
+  sparkle(scene, p, '#ffe27a', 22, 7, 1.6, .9); sparkle(scene, p, '#ffffff', 12, 5, 1.2, .6); shock(scene, p, '#ffe9a8', 5, .7); }
 function updParts(dt) {
   for (let i = parts.length - 1; i >= 0; i--) { const s = parts[i], u = s.userData; u.t += dt; if (u.t > u.life) { s.parent && s.parent.remove(s); parts.splice(i, 1); continue; }
     if (u.conf) { u.v.y -= 9 * dt; u.v.multiplyScalar(0.98); s.position.addScaledVector(u.v, dt); s.rotation.x += u.spin * dt; s.rotation.y += u.spin * .7 * dt; continue; }
-    u.v.y += u.grav * dt; s.position.addScaledVector(u.v, dt); const k = u.t / u.life; s.material.opacity = 1 - k; s.scale.setScalar(u.size * (1 - k * .5)); }
+    if (u.ring) { const k = u.t / u.life; s.scale.setScalar(.2 + u.ring * (1 - (1 - k) ** 3)); s.material.opacity = (1 - k) * .9; continue; }
+    u.v.y += u.grav * dt; s.position.addScaledVector(u.v, dt); const k = u.t / u.life; s.material.opacity = 1 - k; s.scale.setScalar(u.size * (u.star ? (k < .2 ? k * 5 : 1 - (k - .2) * .9) : (1 - k * .5))); if (u.star) s.material.rotation += u.rot * dt; }
 }
 
 // ---------------- personajes ----------------
@@ -70,10 +83,10 @@ function nameSprite(text, color, me) {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(3.2, 0.8, 1); s.renderOrder = 10; return s;
 }
-function skyDome(scene, top, mid, bot) {
+function skyDome(scene, top, mid, bot, mk) {
   const cv = document.createElement('canvas'); cv.width = 4; cv.height = 512; const x = cv.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, top); g.addColorStop(.5, mid); g.addColorStop(1, bot); x.fillStyle = g; x.fillRect(0, 0, 4, 512);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.SphereGeometry(600, 48, 24), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false })); scene.add(m); return m;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(600, 48, 24), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false })); scene.add(m); try { horizonte(scene, m, top, mid, bot, mk); } catch (e) { console.warn('horizonte', e); } return m;
 }
 function lights(scene, sky = '#ffffff', ground = '#ffd6ea', hi = 0.95, sun = 2.0) {
   const h = new THREE.HemisphereLight(sky, ground, hi); scene.add(h); const d = new THREE.DirectionalLight('#fff4e8', sun); d.position.set(80, 160, 60); scene.add(d); return { h, d };
@@ -254,7 +267,7 @@ function run(EV, opts = {}) {
       animCharacter(c, T, 1, ex); }
     if (!EV.noFeet) feetFix(racers);
     if (E.celeb) E.shake = 0;
-    renderer.render(scene, camera);
+    post.render(scene, camera);
     if (EV.id !== 'anillos' && PR > 1.25) { const ft = (now - (E._fpsT0 || now)); E._fpsN = (E._fpsN || 0) + 1; if (!E._fpsT0) E._fpsT0 = now; else if (ft > 1500) { const fps = E._fpsN * 1000 / ft; E._fpsN = 0; E._fpsT0 = now; if (fps < 48 && E.t > 1) { PR = Math.max(1.25, PR - .5); renderer.setPixelRatio(PR); resize(); } } }
     hud(dt);
     if (E.phase !== 'done' || (ON && !E.stopped) || (E.celeb && !E.stopped)) raf = requestAnimationFrame(frame);

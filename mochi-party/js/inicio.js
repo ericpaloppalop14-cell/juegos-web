@@ -24,7 +24,56 @@ const bokeh = Array.from({ length: 16 }, () => ({ x: Math.random(), y: Math.rand
 const stars = Array.from({ length: 22 }, () => ({ x: Math.random(), y: Math.random() * .75, s: rnd(2, 5), p: Math.random() * 7, v: rnd(1.5, 3.5) }));
 const minis = Array.from({ length: 5 }, (_, i) => ({ x: (i + .5) / 5 + rnd(-.06, .06), y: rnd(.12, .5), r: rnd(9, 16), p: Math.random() * 7, c: ['#ff9cc8', '#9fd8ff', '#ffd98a', '#b7f0a8', '#cdb8ff'][i] }));
 
-function hill(y0, amp, freq, ph, c1, c2, t) {
+// ---------- noche 3: decorado animado del menú ----------
+const PX = { x: 0, y: 0, tx: 0, ty: 0 };
+addEventListener('pointermove', e => { PX.tx = (e.clientX / innerWidth - .5) * -2; PX.ty = (e.clientY / innerHeight - .5) * -2; }, { passive: true });
+addEventListener('deviceorientation', e => { if (e.gamma == null) return; PX.tx = Math.max(-1, Math.min(1, e.gamma / 30)) * -1; PX.ty = Math.max(-1, Math.min(1, (e.beta - 45) / 30)) * -1; }, { passive: true });
+const balloons = Array.from({ length: 4 }, (_, i) => ({ x: [.16, .8, .62, .3][i], y: [.3, .2, .52, .6][i], s: [16, 12, 9, 7][i], p: i * 1.7, c: [['#ff7fb0', '#ffd36b'], ['#8fd0ff', '#ffffff'], ['#b39bff', '#ffe27a'], ['#7ee3c4', '#ff9cc8']][i] }));
+const fw = []; let fwT = 1.5;
+function feria(t) {
+  PX.x += (PX.tx - PX.x) * .05; PX.y += (PX.ty - PX.y) * .05;
+  const k = 4, ox = PX.x * k, oy = PX.y * k * .5; const st = document.getElementById('menuStage'), sr = st && st.getBoundingClientRect(); const gy = sr && sr.height ? sr.top + sr.height * .62 : H * .4; const sc = W > H ? .8 : 1;
+  // halo y rayos giratorios detrás del escenario (debajo del 3D)
+  if (sr && sr.height) { const hx0 = sr.left + sr.width / 2, hy0 = sr.top + sr.height * .45, RR = Math.max(sr.width, sr.height) * .85;
+    bx.save(); bx.translate(hx0, hy0); bx.rotate(t * .12); for (let i = 0; i < 16; i++) { bx.rotate(Math.PI / 8); const g = bx.createLinearGradient(0, 0, RR, 0); g.addColorStop(0, 'rgba(255,255,255,.32)'); g.addColorStop(1, 'rgba(255,255,255,0)'); bx.fillStyle = g; bx.beginPath(); bx.moveTo(0, 0); bx.lineTo(RR, -RR * .12); bx.lineTo(RR, RR * .12); bx.fill(); } bx.restore();
+    const hg = bx.createRadialGradient(hx0, hy0, 0, hx0, hy0, RR * .6); hg.addColorStop(0, `rgba(255,246,252,${.75 + Math.sin(t * 2) * .1})`); hg.addColorStop(.5, 'rgba(255,200,232,.35)'); hg.addColorStop(1, 'rgba(255,200,232,0)'); bx.fillStyle = hg; bx.fillRect(hx0 - RR, hy0 - RR, RR * 2, RR * 2); }
+  bx.save(); bx.translate(ox, oy);
+  // noria
+  const cx = W > H ? W * .8 : W * .86, R = Math.min(W, H) * (W > H ? .2 : .16), cy = gy - R * 1.15;
+  bx.strokeStyle = 'rgba(190,150,230,.55)'; bx.lineWidth = 3; bx.beginPath(); bx.moveTo(cx - R * .7, gy + 4); bx.lineTo(cx, cy); bx.lineTo(cx + R * .7, gy + 4); bx.stroke();
+  bx.lineWidth = 2.5; bx.beginPath(); bx.arc(cx, cy, R, 0, 7); bx.stroke(); bx.lineWidth = 1.5; bx.beginPath(); bx.arc(cx, cy, R * .55, 0, 7); bx.stroke();
+  const a0 = t * .25;
+  for (let i = 0; i < 10; i++) { const a = a0 + i * Math.PI / 5, px = cx + Math.cos(a) * R, py = cy + Math.sin(a) * R; bx.strokeStyle = 'rgba(190,150,230,.45)'; bx.beginPath(); bx.moveTo(cx, cy); bx.lineTo(px, py); bx.stroke();
+    bx.fillStyle = ['#ff9cc8', '#9fd8ff', '#ffd98a', '#b7f0a8', '#cdb8ff'][i % 5]; bx.globalAlpha = .75; bx.beginPath(); bx.roundRect ? bx.roundRect(px - 6, py, 12, 10, 4) : bx.rect(px - 6, py, 12, 10); bx.fill(); bx.globalAlpha = 1;
+    const tw = .5 + .5 * Math.sin(t * 4 + i); bx.fillStyle = `rgba(255,250,220,${.5 + tw * .5})`; bx.beginPath(); bx.arc(px, py, 2.2, 0, 7); bx.fill(); }
+  bx.fillStyle = 'rgba(255,255,255,.8)'; bx.beginPath(); bx.arc(cx, cy, 4, 0, 7); bx.fill();
+  // carpas de feria
+  for (const [fx, s, c] of (W > H ? [[.1, 1, '#ff9cc8'], [.24, .75, '#b9a2f7'], [.66, .85, '#8fd0ff']] : [[.08, .9, '#ff9cc8'], [.2, .65, '#b9a2f7']])) { const px = W * fx, w = 34 * s * sc * Math.min(1.3, W / 390), h = 30 * s * sc * Math.min(1.3, W / 390);
+    bx.fillStyle = 'rgba(255,255,255,.7)'; bx.fillRect(px - w, gy - h * .9, w * 2, h * .9);
+    for (let j = 0; j < 4; j++) { bx.fillStyle = j % 2 ? 'rgba(255,255,255,.75)' : c; bx.beginPath(); bx.moveTo(px, gy - h * 1.8); bx.lineTo(px - w + j * w / 2, gy - h * .9); bx.lineTo(px - w + (j + 1) * w / 2, gy - h * .9); bx.fill(); }
+    bx.strokeStyle = c; bx.lineWidth = 2; bx.beginPath(); bx.moveTo(px, gy - h * 1.8); bx.lineTo(px, gy - h * 2.2); bx.stroke();
+    const fl = Math.sin(t * 3 + fx * 9) * 3; bx.fillStyle = '#ffe27a'; bx.beginPath(); bx.moveTo(px, gy - h * 2.2); bx.lineTo(px + 10, gy - h * 2.1 + fl); bx.lineTo(px, gy - h * 2); bx.fill(); }
+  // guirnalda de bombillas que parpadean
+  bx.strokeStyle = 'rgba(180,140,220,.45)'; bx.lineWidth = 1; bx.beginPath(); for (let x = 0; x <= W; x += 6) { const y = gy - 52 * (W / 390) + Math.abs(Math.sin(x / W * Math.PI * 3)) * -14 + 14; x ? bx.lineTo(x, y) : bx.moveTo(x, y); } bx.stroke();
+  for (let i = 0; i < 24; i++) { const x = (i + .5) / 24 * W, y = gy - 52 * (W / 390) + Math.abs(Math.sin(x / W * Math.PI * 3)) * -14 + 16, on = .4 + .6 * (Math.sin(t * 3 + i * 1.3) > 0 ? 1 : .3);
+    const g = bx.createRadialGradient(x, y, 0, x, y, 7); const c = ['255,200,90', '255,140,200', '150,210,255'][i % 3]; g.addColorStop(0, `rgba(${c},${on})`); g.addColorStop(1, `rgba(${c},0)`); bx.fillStyle = g; bx.beginPath(); bx.arc(x, y, 7, 0, 7); bx.fill(); }
+  bx.restore();
+  // globos aerostáticos (capa intermedia, más parallax)
+  for (const b of balloons) { const x = ((b.x + t * .004 * b.s / 10) % 1.2 - .1) * W + PX.x * b.s * .6, y = b.y * H + Math.sin(t * .8 + b.p) * 8 + PX.y * b.s * .3, r = b.s * (W / 390);
+    bx.save(); bx.translate(x, y); bx.rotate(Math.sin(t + b.p) * .05);
+    const g = bx.createLinearGradient(-r, 0, r, 0); g.addColorStop(0, b.c[0]); g.addColorStop(.5, b.c[1]); g.addColorStop(1, b.c[0]); bx.fillStyle = g; bx.globalAlpha = .85;
+    bx.beginPath(); bx.moveTo(0, r * 1.25); bx.bezierCurveTo(-r * 1.3, r * .2, -r * 1.1, -r * 1.2, 0, -r * 1.2); bx.bezierCurveTo(r * 1.1, -r * 1.2, r * 1.3, r * .2, 0, r * 1.25); bx.fill();
+    bx.fillStyle = 'rgba(255,255,255,.55)'; bx.beginPath(); bx.ellipse(-r * .4, -r * .5, r * .22, r * .4, -.4, 0, 7); bx.fill();
+    bx.strokeStyle = 'rgba(140,90,120,.6)'; bx.lineWidth = 1; bx.beginPath(); bx.moveTo(-r * .3, r * 1.15); bx.lineTo(-r * .25, r * 1.6); bx.moveTo(r * .3, r * 1.15); bx.lineTo(r * .25, r * 1.6); bx.stroke();
+    bx.fillStyle = '#c8905a'; bx.fillRect(-r * .3, r * 1.6, r * .6, r * .4); bx.restore(); bx.globalAlpha = 1; }
+  // fuegos artificiales suaves de vez en cuando
+  fwT -= 1 / 60; if (fwT <= 0) { fwT = 1.8 + Math.random() * 2.2; const c = ['255,120,190', '255,220,110', '150,200,255', '190,160,255'][Math.random() * 4 | 0]; fw.push({ x: W * (.15 + Math.random() * .7), y: H * (.08 + Math.random() * .22), t: 0, c, n: 14 + (Math.random() * 6 | 0) }); }
+  for (let i = fw.length - 1; i >= 0; i--) { const f = fw[i]; f.t += 1 / 60; if (f.t > 1.6) { fw.splice(i, 1); continue; } const e = 1 - (1 - Math.min(1, f.t / .9)) ** 3, a = Math.max(0, 1 - f.t / 1.6), rr = 46 * (W / 390) * e;
+    for (let j = 0; j < f.n; j++) { const an = j / f.n * 6.283, px = f.x + Math.cos(an) * rr, py = f.y + Math.sin(an) * rr + f.t * f.t * 12;
+      bx.fillStyle = `rgba(${f.c},${a})`; bx.beginPath(); bx.arc(px, py, 2.4 * (1 - e * .4), 0, 7); bx.fill(); bx.fillStyle = `rgba(255,255,255,${a * .8})`; bx.beginPath(); bx.arc(px, py, 1, 0, 7); bx.fill(); } }
+}
+function hill(y0, amp, freq, ph, c1, c2, t, pk = 0) {
+  bx.save(); bx.translate(PX.x * pk, PX.y * pk * .5);
   const g = bx.createLinearGradient(0, H * y0 - amp, 0, H); g.addColorStop(0, c1); g.addColorStop(1, c2);
   bx.fillStyle = g; bx.beginPath(); bx.moveTo(0, H);
   for (let x = 0; x <= W + 10; x += 10) bx.lineTo(x, H * y0 + Math.sin(x * freq + ph + t) * amp + Math.sin(x * freq * 2.3 + ph) * amp * .35);
@@ -32,7 +81,7 @@ function hill(y0, amp, freq, ph, c1, c2, t) {
   // borde iluminado (la luz viene de arriba)
   bx.strokeStyle = 'rgba(255,255,255,.55)'; bx.lineWidth = 2; bx.beginPath();
   for (let x = 0; x <= W + 10; x += 10) bx.lineTo(x, H * y0 + Math.sin(x * freq + ph + t) * amp + Math.sin(x * freq * 2.3 + ph) * amp * .35 + 1);
-  bx.stroke();
+  bx.stroke(); bx.restore();
 }
 function drawBg(t) {
   bx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -48,10 +97,12 @@ function drawBg(t) {
     const g = bx.createRadialGradient(x, y, 0, x, y, b.r); g.addColorStop(0, rgba(b.c, .0)); g.addColorStop(.7, rgba(b.c, .22 * b.z)); g.addColorStop(1, rgba(b.c, 0)); bx.fillStyle = g; bx.beginPath(); bx.arc(x, y, b.r, 0, 7); bx.fill(); }
   // mochis lejanos flotando (siluetas suaves, perspectiva atmosférica)
   for (const m of minis) { const x = m.x * W, y = m.y * H + Math.sin(t * 1.2 + m.p) * 6; bx.globalAlpha = .35; bx.fillStyle = m.c; bx.beginPath(); bx.ellipse(x, y, m.r * 1.08, m.r * .9, 0, 0, 7); bx.fill(); bx.fillStyle = '#fff'; bx.beginPath(); bx.ellipse(x - m.r * .35, y - m.r * .4, m.r * .3, m.r * .18, -.5, 0, 7); bx.fill(); bx.globalAlpha = 1; }
+  // noche 3: feria lejana con noria que gira, carpas y globos aerostáticos (parallax con el móvil / el dedo)
+  feria(t);
   // colinas en 3 capas (de lejos a cerca: más pálidas y azuladas arriba)
-  hill(.74, 14, .012, 1, 'rgba(214,200,255,.75)', 'rgba(200,225,255,.9)', t * .05);
-  hill(.82, 18, .009, 3, 'rgba(255,190,222,.85)', 'rgba(255,214,232,.95)', t * .08);
-  hill(.9, 12, .015, 5, '#ffd0e4', '#ffe9f1', t * .12);
+  hill(.74, 14, .012, 1, 'rgba(214,200,255,.75)', 'rgba(200,225,255,.9)', t * .05, 6);
+  hill(.82, 18, .009, 3, 'rgba(255,190,222,.85)', 'rgba(255,214,232,.95)', t * .08, 12);
+  hill(.9, 12, .015, 5, '#ffd0e4', '#ffe9f1', t * .12, 20);
   // destellos
   for (const s of stars) { const a = Math.max(0, Math.sin(t * s.v + s.p)); if (a < .05) continue; const x = s.x * W, y = s.y * H, r = s.s * a;
     bx.fillStyle = `rgba(255,255,255,${.85 * a})`; bx.beginPath(); bx.moveTo(x, y - r * 2); bx.quadraticCurveTo(x, y, x + r * 2, y); bx.quadraticCurveTo(x, y, x, y + r * 2); bx.quadraticCurveTo(x, y, x - r * 2, y); bx.quadraticCurveTo(x, y, x, y - r * 2); bx.fill(); }

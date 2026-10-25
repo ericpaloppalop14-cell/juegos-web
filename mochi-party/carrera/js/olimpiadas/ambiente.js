@@ -2,8 +2,8 @@
 //  AMBIENTE por mundo (capa extra al estilo de Lianas): capas de fondo, criaturas animadas,
 //  partículas y luz. Todo fuera de la zona de juego, apoyado en el suelo o en el aire. Barato: instanciado + Points.
 // ======================================================================
-import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m19';
-import { instSet } from './decor.js?v=o35';
+import { THREE, toon, mesh, glowSprite, rnd, pick } from '../core3d.js?v=m19n3';
+import { instSet } from './decor.js?v=o35n3';
 
 const lo = () => innerWidth * innerHeight < 500000;
 // punto aleatorio fuera de la zona de juego

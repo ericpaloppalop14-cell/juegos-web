@@ -1,9 +1,9 @@
 // ======================================================================
 //  MOCHI PARTY · OLIMPIADAS — mundos (cielo, suelo, decorado) y objetos surrealistas
 // ======================================================================
-import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m19';
-import { ambiente } from './ambiente.js?v=o35';
-import { richDecor } from './decor.js?v=o35';
+import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m19n3';
+import { ambiente } from './ambiente.js?v=o35n3';
+import { richDecor } from './decor.js?v=o35n3';
 
 const G = {};
 const geo = (k, f) => G[k] || (G[k] = f());
@@ -113,7 +113,7 @@ export const MUNDOS = {
 export function buildWorld(E, mk, area) {
   const M = MUNDOS[mk], sc = E.scene;
   sc.fog = new THREE.Fog(M.fog, 55, 190);
-  const sky = skyDome(sc, ...M.sky); sky.renderOrder = -1;
+  const sky = skyDome(sc, ...M.sky, mk); sky.renderOrder = -1;
   lights(sc, M.hemi[0], M.hemi[1], 1, M.sun);
   // cámara: plano cercano más lejos = sin parpadeos (z-fighting) entre capas del suelo a distancia
   camera.near = .35; camera.updateProjectionMatrix();

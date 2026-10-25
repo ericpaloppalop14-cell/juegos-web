@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS } from './data.js';
-import { makeKart, animKart, toon, mesh, outline } from './gfx.js';
-import { Race } from './race.js?v=m10';
+import { makeKart, animKart, toon, mesh, outline } from './gfx.js?v=pn3';
+import { Race } from './race.js?v=m10n3';
 import { buildTrack } from './track.js';
 import { Audio } from './audio.js';
+import { makePost } from './post.js?v=n3';
 import { Net, netAvailable } from './net.js';
 
 const $ = id => document.getElementById(id);
@@ -32,6 +33,7 @@ let qLevel = save.settings.quality in QPR ? save.settings.quality : 'alta';
 if (params.get('q') === 'low') qLevel = 'baja';
 let qualityHi = qLevel !== 'baja', prCap = QPR[qLevel];
 const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
+const post = makePost(renderer, { bloom: .45 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 // densidad de píxeles limitada: 1,5 en alta, 1,0 en baja (los móviles de gama media van sobrados)
 function applyPR() { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, prCap)); resize(); }
@@ -443,10 +445,10 @@ function frame(now) {
     while (acc >= STEP && n < 6 * app.speed) { app.race.update(STEP); acc -= STEP; n++; }
     if (acc > STEP * 6) acc = 0;
     if (app.race && app.race.interp) app.race.interp(acc / STEP);
-    if (app.race) { if (app.state === 'race') drawHUD(dt); renderer.render(app.race.scene, topCam || app.race.camera); }
+    if (app.race) { if (app.state === 'race') drawHUD(dt); post.render(app.race.scene, topCam || app.race.camera); }
     return;
   }
-  if (app.state === 'results' && app.race) { acc += dt; let n = 0; while (acc >= STEP && n < 4) { app.race.update(STEP); acc -= STEP; n++; } renderer.render(app.race.scene, app.race.camera); return; }
+  if (app.state === 'results' && app.race) { acc += dt; let n = 0; while (acc >= STEP && n < 4) { app.race.update(STEP); acc -= STEP; n++; } post.render(app.race.scene, app.race.camera); return; }
   const por = innerWidth < innerHeight;
   if (app.state === 'title' || (app.state === 'settings' && setReturn === 'title') || app.state === 'records') {
     menuKarts.forEach((m, i) => { const a = m.a + t * 0.35; m.k.position.set(Math.cos(a) * 3.8, 0.6 + Math.abs(Math.sin(t * 3 + i)) * 0.15, Math.sin(a) * 3.8); m.k.rotation.y = -a; animKart(m.k, t, 20); });
@@ -455,7 +457,7 @@ function frame(now) {
     if (previewKart) { previewKart.rotation.y = t * 0.7; animKart(previewKart, t, 15); previewKart.userData.tilt.position.y = Math.abs(Math.sin(t * 3)) * 0.12; }
     menuCam.position.set(0, por ? 5.5 : 4.2, por ? 15 : 13); menuCam.lookAt(0, por ? -2.2 : 1.6, 0);
   }
-  renderer.render(menuScene, menuCam);
+  post.render(menuScene, menuCam);
 }
 
 // ---------------- orientación / pantalla completa ----------------
