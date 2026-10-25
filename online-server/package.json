@@ -1,0 +1,28 @@
+{
+  "name": "juegos-online",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "test": "node test/sim.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "node": "^22.23.4",
+    "wrangler": "^4.152.0",
+    "ws": "^8.22.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261019.1": true,
+    "node@22.23.4": true
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}

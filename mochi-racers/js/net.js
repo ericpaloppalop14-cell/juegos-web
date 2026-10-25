@@ -19,6 +19,19 @@ export class Net {
   constructor() { this.id = Math.random().toString(36).slice(2, 10); this.rooms = []; this.h = {}; this.seq = 0; this.seen = new Map(); this.peers = new Set(); this.on = (t, f) => (this.h[t] = f); }
   async join(room) {
     const ice = await iceServers(); const cfg = { appId: APP_ID, rtcConfig: { iceServers: ice } };
+    // Servidor Cloudflare propio (si está configurado y responde): más fiable que el P2P
+    const CF = window.OnlineCF;
+    if (CF && CF.base() && await CF.check()) {
+      try {
+        const r = new CF.Room({ game: 'mochi-racers', room: String(room).replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 64), id: this.id, max: 8 });
+        r.on('msg', d => this.recv(d));
+        r.on('join', m => { this.peers.add('cf' + m.id); this.h.peer && this.h.peer(this.peers.size); });
+        r.on('open', w => { for (const p of w.peers) this.peers.add('cf' + p.id); this.h.peer && this.h.peer(this.peers.size); });
+        r.on('leave', m => { this.peers.delete('cf' + m.id); this.h.peer && this.h.peer(this.peers.size); });
+        this.rooms.push({ name: 'cf', r: { leave: async () => r.close() }, send: d => r.send(d) });
+        return;
+      } catch (e) { console.warn('online cf', e.message); }
+    }
     const strategies = [['torrent', joinTorrent], ['nostr', joinNostr]];
     if (/[?&]net=(torrent|nostr)/.test(location.search)) { const only = location.search.match(/net=(\w+)/)[1]; strategies.splice(0, 2, ...strategies.filter(s => s[0] === only)); }
     for (const [name, J] of strategies) {

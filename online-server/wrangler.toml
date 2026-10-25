@@ -1,0 +1,25 @@
+# Servidor online de los juegos de Eric (Cloudflare Worker + Durable Objects)
+name = "juegos-online"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+[[durable_objects.bindings]]
+name = "BOARD"
+class_name = "Board"
+
+# SQLite = funciona en el plan GRATIS de Cloudflare
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room", "Lobby", "Board"]
+
+[vars]
+# Webs que pueden conectarse (separadas por comas). "*" = cualquiera.
+ALLOWED_ORIGINS = "https://ericpaloppalop14-cell.github.io,http://localhost,http://127.0.0.1,capacitor://localhost,https://localhost"

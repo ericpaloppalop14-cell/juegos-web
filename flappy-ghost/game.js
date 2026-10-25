@@ -105,6 +105,7 @@
       localStorage.setItem(BEST_KEY, String(n));
     } catch {
     }
+    try { if (window.OnlineCF && window.OnlineCF.base()) window.OnlineCF.submitScore('flappy-ghost', 'Fantasma', n); } catch (e) {}
   }
   function loadPlayTimeSeconds() {
     try {
