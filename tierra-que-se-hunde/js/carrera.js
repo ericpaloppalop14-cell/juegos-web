@@ -5,12 +5,13 @@
 //  demás al vacío, salta los huecos, coge regalos… y el suelo se hunde
 //  detrás de vosotros cada vez más rápido. ¡Gana quien llegue más lejos!
 // ======================================================================
+import { floatJoy } from './joy.js?v=v21';
 import * as THREE from 'three';
-import { createRenderer, addLights, Particles } from './world.js?v=v20';
-import { makeCharacter, animCharacter } from './gfx.js?v=v20';
-import { chOf } from './chars.js?v=v20';
-import { createShell } from './shell.js?v=v20';
-import { Sfx } from './sfx.js?v=v20';
+import { createRenderer, addLights, Particles } from './world.js?v=v21';
+import { makeCharacter, animCharacter } from './gfx.js?v=v21';
+import { chOf } from './chars.js?v=v21';
+import { createShell } from './shell.js?v=v21';
+import { Sfx } from './sfx.js?v=v21';
 
 const $ = id => document.getElementById(id);
 const RL = 2, COLS = 4, CW = 2.5, TW = COLS * CW, HW = TW / 2; // filas de 2 m, 4 carriles de 2,5 m
@@ -341,14 +342,8 @@ function onEvents(evs) {
 // ---------------------------------------------------------------- CONTROLES (joystick abajo a la derecha, Salto al lado, Empujón a la izquierda; espejo en modo zurdo)
 let keyL = false, keyR = false, keyU = false, keyD = false, joyX = 0, joyY = 0, sentX = 9, sentY = 9;
 function send(d) { if (!playing) return; if (online && !shell.isHost) shell.send({ t: 'gin', ...d }); else sim && sim.input(me, d); }
-const joy = $('joy'), knob = $('joyK'); let drag = null;
-joy.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!playing || drag) return; Sfx.init(); const r = joy.getBoundingClientRect(); drag = { id: e.pointerId, x0: r.left + r.width / 2, y0: r.top + r.height / 2 };
-  try { joy.setPointerCapture(e.pointerId); } catch (x) { } joy.classList.add('act'); joyMove(e); });
-function joyMove(e) { if (!drag || e.pointerId !== drag.id) return; let dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; const R = 52, d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; }
-  knob.style.transform = `translate(calc(-50% + ${dx * 0.77}px),calc(-50% + ${dy * 0.77}px))`; const dz = d > 6 ? 1 : 0; joyX = dz * clamp(dx / 40, -1, 1); joyY = dz * clamp(-dy / 40, -1, 1); }
-joy.addEventListener('pointermove', joyMove);
-const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyX = joyY = 0; joy.classList.remove('act'); knob.style.transform = 'translate(-50%,-50%)'; };
-joy.addEventListener('pointerup', endDrag); joy.addEventListener('pointercancel', endDrag); joy.addEventListener('lostpointercapture', endDrag);
+const joy = $('joy'), knob = $('joyK'); 
+const J = floatJoy({ joy, knob, active: () => playing, onStart: () => Sfx.init() }); window.__joy = J;
 function hop() { const c = chars.get(me); if (playing && c && c.alive) send({ k: 'jump' }); }
 function shove() { const c = chars.get(me); if (playing && c && c.alive) send({ k: 'push' }); }
 for (const [id, fn] of [['hopB', hop], ['pushB', shove]]) { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sfx.init(); fn(); b.classList.add('press'); b.classList.remove('boing'); void b.offsetWidth; b.classList.add('boing'); });
@@ -397,7 +392,7 @@ function drawTrack(camZ, now) {
 }
 function frame() {
   const rdt = Math.min(0.25, clock.getDelta()), dt = Math.min(0.05, rdt); t += dt;
-  { let x = joyX, y = joyY; const kx = (keyR ? 1 : 0) - (keyL ? 1 : 0), ky = (keyU ? 1 : 0) - (keyD ? 1 : 0); if (kx || ky) { x = kx; y = ky; }
+  { let x = J.x, y = J.y; const kx = (keyR ? 1 : 0) - (keyL ? 1 : 0), ky = (keyU ? 1 : 0) - (keyD ? 1 : 0); if (kx || ky) { x = kx; y = ky; }
     if (playing && (Math.abs(x - sentX) > 0.05 || Math.abs(y - sentY) > 0.05)) { sentX = x; sentY = y; send({ k: 'mv', x: +x.toFixed(2), y: +y.toFixed(2) }); } }
   if (sim && (playing || (sim.over && !endSent))) {
     simAcc = Math.min(0.3, simAcc + rdt * SPD * ff); while (simAcc >= STEP) { sim.step(STEP); simAcc -= STEP; }
@@ -479,7 +474,7 @@ function finish(res) { HUDIDS.forEach(id => $(id).classList.remove('on')); const
     $('oSub').textContent += res.carry ? ` · 🐢 ${mine} m con la tortuga` : ` · ${mine} m${mine > rec ? ' 🏆 ¡RÉCORD!' : ` · Récord ${Math.max(rec, mine)} m`}`; }, 1500); }
 function start(cfg, api) {
   TT = null; CR = null;
-  shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; sentX = sentY = 9; joyX = joyY = 0; specId = null; simAcc = 0; ff = 1; snapBuf.length = 0; fallT.clear();
+  shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; sentX = sentY = 9; J.cancel(); specId = null; simAcc = 0; ff = 1; snapBuf.length = 0; fallT.clear();
   rowSeed = cfg.seed | 0; rowCache.clear(); if (showcase) { scene.remove(showcase); showcase = null; }
   buildChars(); $('spect').classList.remove('on');
   sim = (!online || api.isHost) ? new Sim(cfg) : null; if (sim) applySnap(sim.snap(), true);
@@ -524,5 +519,5 @@ setShowcase(localStorage.getItem('ms_ch') || 'mochi');
 frame();
 // v16: desde la pantalla de modos del menú principal se entra directo a jugar
 if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell && window.__shell.solo(), 400); }
-fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 20 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 21 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
 window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, blockType, get chars() { return chars; } };

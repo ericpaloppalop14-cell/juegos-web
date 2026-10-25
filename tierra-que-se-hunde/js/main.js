@@ -5,14 +5,15 @@
 //  encima). La sala se va quedando sin suelo: ¡sé el último en pie!
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
+import { floatJoy } from './joy.js?v=v21';
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v20';
-import { createEscenarios } from './escenarios.js?v=v20';
-import { makeCharacter, animCharacter } from './gfx.js?v=v20';
-import { chOf } from './chars.js?v=v20';
-import { createShell } from './shell.js?v=v20';
-import { Sfx } from './sfx.js?v=v20';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v20';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v21';
+import { createEscenarios } from './escenarios.js?v=v21';
+import { makeCharacter, animCharacter } from './gfx.js?v=v21';
+import { chOf } from './chars.js?v=v21';
+import { createShell } from './shell.js?v=v21';
+import { Sfx } from './sfx.js?v=v21';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v21';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -44,7 +45,7 @@ export const MODE_MAPS = {
 const MODE_MAP = { patata: 'acantilado', rey: 'cima', fresas: 'huerto', pinta: 'paleta', reves: 'reves' };
 const ALLMAPS = { ...MAPS, ...MODE_MAPS };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 20;
+export const VERSION = 21;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
@@ -146,7 +147,7 @@ class Sim {
       if (p.ai) { p.w += (-p.turn * TURN * 1.15 - p.w) * Math.min(1, dt * 14); p.h = wrap(p.h + p.w * dt); dx0 = Math.sin(p.h); dz0 = Math.cos(p.h); m = 1; }
       else { dx0 = p.wx; dz0 = p.wz; m = p.mag; }
       // 2º orden: la entrada se suaviza un pelín (50 ms) y la velocidad la sigue (~90 ms): rápido pero sin tirones
-      const sp = (m > 0 ? SPEED * Math.min(1, 0.45 + m * 0.85) : 0) * (p.air > 0 ? 1.2 : 1) * (this.crown && this.crown.by === p.id ? 0.86 : 1), ki = 1 - Math.exp(-dt / 0.07), kv = 1 - Math.exp(-dt / 0.09);
+      const sp = (m > 0 ? SPEED * Math.min(1, 0.22 + m * 0.88) : 0) * (p.air > 0 ? 1.2 : 1) * (this.crown && this.crown.by === p.id ? 0.86 : 1), ki = 1 - Math.exp(-dt / 0.07), kv = 1 - Math.exp(-dt / 0.09);
       p.tvx = (p.tvx ?? p.vx) + (dx0 * sp - (p.tvx ?? p.vx)) * ki; p.tvz = (p.tvz ?? p.vz) + (dz0 * sp - (p.tvz ?? p.vz)) * ki;
       p.vx += (p.tvx - p.vx) * kv; p.vz += (p.tvz - p.vz) * kv;
       if (!p.ai) { if (Math.hypot(p.tvx, p.tvz) > 0.4) { const th = Math.atan2(p.tvx, p.tvz); p.h = wrap(p.h + wrap(th - p.h) * (1 - Math.exp(-dt * 13))); } p.w = wrap(p.h - p.ph) / dt; }
@@ -477,18 +478,11 @@ function onEvents(evs) {
 let keyL = false, keyR = false, keyU = false, keyD = false, joyM = 1, sentM = 1; const numBusy = new Array(11).fill(false);
 function send(d) { if (!playing) return; if (online && !shell.isHost) shell.send({ t: 'gin', ...d }); else sim && sim.input(me, d); }
 // v10: joystick fijo abajo a la derecha (mano derecha); números a la izquierda. Multitouch: cada dedo va por su pointerId.
-const cv3 = $('c3d'); let drag = null, joyA = null, sentHd = undefined; const joy = $('joy'), knob = $('joyK');
-joy.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!playing || drag) return; Sfx.init(); const r = joy.getBoundingClientRect(); drag = { id: e.pointerId, x0: r.left + r.width / 2, y0: r.top + r.height / 2, ref: camYaw };
-  try { joy.setPointerCapture(e.pointerId); } catch (x) { } knob.style.transform = 'translate(-50%,-50%)'; joy.classList.add('on'); joyMove(e); });
-function joyMove(e) { if (!drag || e.pointerId !== drag.id) return; let dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; const R = 52, d = Math.hypot(dx, dy);
-  if (d > R) { dx *= R / d; dy *= R / d; } const v = Math.min(1, 40 / R); knob.style.transform = `translate(calc(-50% + ${dx * v}px),calc(-50% + ${dy * v}px))`;
-  joyA = d > 7 ? Math.atan2(dx, -dy) : null; joyM = Math.max(0, Math.min(1, (Math.min(d, R) - 7) / (R - 22))); }
-joy.addEventListener('pointermove', joyMove);
-const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; drag = null; joyA = null; joy.classList.remove('on'); knob.style.transform = 'translate(-50%,-50%)'; };
+const cv3 = $('c3d'); let joyA = null, refYaw = null, sentHd = undefined; const joy = $('joy'), knob = $('joyK');
+const J = floatJoy({ joy, knob, active: () => playing, onStart: () => Sfx.init() }); window.__joy = J;
 function hop() { if (!playing) return; const c = chars.get(me); if (!c || !c.alive) return; send({ k: 'jump' }); }
 { const hb = $('hopB'); hb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sfx.init(); hop(); hb.classList.add('press'); hb.classList.remove('boing'); void hb.offsetWidth; hb.classList.add('boing'); });
   const up = () => hb.classList.remove('press'); ['pointerup', 'pointercancel', 'pointerleave'].forEach(k => hb.addEventListener(k, up)); }
-joy.addEventListener('pointerup', endDrag); joy.addEventListener('pointercancel', endDrag); joy.addEventListener('lostpointercapture', endDrag);
 const KMAP = { ArrowLeft: 'L', a: 'L', A: 'L', ArrowRight: 'R', d: 'R', D: 'R', ArrowUp: 'U', w: 'U', W: 'U', ArrowDown: 'D', s: 'D', S: 'D' };
 const setKey = (k, v) => { if (k === 'L') keyL = v; if (k === 'R') keyR = v; if (k === 'U') keyU = v; if (k === 'D') keyD = v; };
 addEventListener('keydown', e => { if (!playing) return; if (KMAP[e.key]) { e.preventDefault(); setKey(KMAP[e.key], true); }
@@ -505,8 +499,10 @@ const clock = new THREE.Clock(); let t = 0; const NORENDER = /norender/.test(loc
 function frame() {
   const rdt = Math.min(0.25, clock.getDelta()), dt = Math.min(0.05, rdt); t += dt;
   { // dirección relativa a la cámara, recalculada cada frame (como Stumble Guys); teclado: WASD/flechas
-    let ja = joyA, m = joyM; const kx = (keyR ? 1 : 0) - (keyL ? 1 : 0), ky = (keyU ? 1 : 0) - (keyD ? 1 : 0); if (kx || ky) { ja = Math.atan2(kx, ky); m = 1; }
-    const hd = ja == null ? null : wrap(camYaw - ja);
+    let ja = J.m > 0 ? Math.atan2(J.x, J.y) : null, m = J.m; const kx = (keyR ? 1 : 0) - (keyL ? 1 : 0), ky = (keyU ? 1 : 0) - (keyD ? 1 : 0); if (kx || ky) { ja = Math.atan2(kx, ky); m = 1; }
+    // v21: la referencia de cámara se congela mientras mantienes la dirección (antes la cámara giraba detrás del mochi y la dirección se iba torciendo → daba vueltas)
+    if (ja == null || refYaw == null) refYaw = camYaw; else refYaw = wrap(refYaw + wrap(camYaw - refYaw) * (1 - Math.exp(-dt * 0.6)));
+    const hd = ja == null ? null : wrap(refYaw - ja);
     if (playing && (hd === null ? sentHd !== null : (sentHd == null || Math.abs(wrap(hd - sentHd)) > 0.025 || Math.abs(m - sentM) > 0.06))) { sentHd = hd; sentM = m; send({ k: 'mv', v: hd == null ? null : +hd.toFixed(3), m: +m.toFixed(2) }); } }
   if (sim && (playing || (sim.over && !endSent))) {
     { simAcc = Math.min(0.25, simAcc + rdt * SPD); while (simAcc >= STEP) { sim.step(STEP); simAcc -= STEP; } }
@@ -659,7 +655,7 @@ function start(cfg, api) {
   room.visible = decoG.visible = !OPEN[cfg.mode]; MD = null; tiles.forEach(T => T.mk = -1);
   if (MODE_MAP[cfg.mode]) cfg.map = MODE_MAP[cfg.mode]; // v19: escenario propio del modo
   buildMap(cfg.map || 'tiovivo'); setEscena(MODE_MAP[cfg.mode]);
-  shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; joyA = null; sentHd = undefined; camInit = false; specId = null; myCd = 0; myJcd = 0; simAcc = 0; snapBuf.length = 0;
+  shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; joyA = null; refYaw = null; J.cancel(); sentHd = undefined; camInit = false; specId = null; myCd = 0; myJcd = 0; simAcc = 0; snapBuf.length = 0;
   if (showcase) { scene.remove(showcase); showcase = null; }
   resetBoard(); buildChars(); $('spect').classList.remove('on');
   sim = (!online || api.isHost) ? new Sim(cfg) : null; if (sim) applySnap(sim.snap(), true);
