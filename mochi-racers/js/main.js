@@ -1,4 +1,5 @@
 import { mergeStatic } from './merge.js';
+import { noche4, noche4Podium } from './noche4.js'; // v37: gran mejora gráfica
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS, RACES_PER_CUP } from './data.js';
 import { POWER } from './powerups.js';
@@ -253,7 +254,7 @@ function startRace() {
   $('loading').style.display = 'flex'; const rc = cupForRace(app.cup, app.raceNo); $('loading').textContent = 'Preparando ' + rc.track + '…';
   setTimeout(() => {
     window.__mrLod = prLv >= 5 ? 0.35 : prLv >= 3 ? 0.55 : prLv >= 2 ? 0.7 : 0.85; app.race = new Race(app, { cup: rc, reverse: app.raceNo === 1, playerChar: app.playerChar, rivals: app.rivals, grid, cupIndex: CUPS.indexOf(app.cup), quality: { hi: qualityHi } });
-    try { app.race.mergedMeshes = mergeStatic(app.race); } catch (e) {} shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
+    try { app.race.mergedMeshes = mergeStatic(app.race); } catch (e) {} try { noche4(app.race); } catch (e) { console.warn('n4', e); } shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
     show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>DERRAPE</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
     app.ui.toast(app.cup.name + ' · Carrera ' + (app.raceNo + 1) + '/' + RACES_PER_CUP + ': ' + raceNames(app.cup)[app.raceNo], '#ffffff');
     Audio.init(); Audio.playSong(app.cup.music, CUPS.indexOf(app.cup) * 7 + app.raceNo + 1); Audio.engineStart();
@@ -290,7 +291,7 @@ function showPodium() {
   const myPlace = ranking.findIndex(r => r.ch === app.playerChar);
   const cup = app.cup;
   const tier = myPlace <= 2 ? myPlace : -1;
-  podData = { p: buildPodium(cup, ranking, myPlace, tier) };
+  podData = { p: buildPodium(cup, ranking, myPlace, tier) }; try { noche4Podium(podData.p); } catch (e) {}
   podCam.aspect = innerWidth / innerHeight;
   $('podium').classList.toggle('win', tier === 0); $('podium').classList.toggle('lose', tier < 0);
   $('podBadge').textContent = tier === 0 ? '¡VICTORIA!' : tier > 0 ? '¡AL PODIO!' : '¡BUENA CARRERA!';

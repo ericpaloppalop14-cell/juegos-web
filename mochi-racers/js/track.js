@@ -132,7 +132,15 @@ function surfMat(kind, extra = {}) {
             diffuseColor.rgb *= 1.0 - wl * (0.06 + st * 0.1);
             float ln = smoothstep(0.855, 0.87, e) * (1.0 - smoothstep(0.9, 0.915, e)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.99, 0.97), ln * (0.55 + vn(vec2(vV * 0.25, vU * 5.0)) * 0.3));
             float cr = abs(vn(vWP.xz * 0.33) - 0.5); diffuseColor.rgb *= 1.0 - (1.0 - smoothstep(0.0, 0.014, cr)) * 0.17 * step(0.55, vn(vWP.xz * 0.04 + 9.0));
-            float pa = step(0.78, vn(vWP.xz * 0.025 + 3.0)); diffuseColor.rgb *= 1.0 - pa * 0.06; }`))
+            float pa = step(0.78, vn(vWP.xz * 0.025 + 3.0)); diffuseColor.rgb *= 1.0 - pa * 0.06;
+            /* v37: huellas de neumático, virutas de colores y brillo central */
+            diffuseColor.rgb *= 1.0 - (exp(-pow((vU - 0.36) / 0.045, 2.0)) + exp(-pow((vU - 0.64) / 0.045, 2.0))) * (0.07 + vn(vec2(vV * 0.2, 3.0)) * 0.06);
+            { vec2 cc = floor(vWP.xz * 0.95); float r = h12(cc + 21.0); vec2 f = fract(vWP.xz * 0.95) - 0.5; float an = h12(cc + 9.0) * 6.283; vec2 d = vec2(cos(an) * f.x + sin(an) * f.y, -sin(an) * f.x + cos(an) * f.y);
+              float spr = step(0.8, r) * (1.0 - smoothstep(0.045, 0.07, abs(d.y))) * (1.0 - smoothstep(0.2, 0.25, abs(d.x))) * (1.0 - smoothstep(0.78, 0.84, e));
+              vec3 scol = 0.6 + 0.4 * cos(6.283 * (h12(cc + 5.0) + vec3(0.0, 0.33, 0.67))); diffuseColor.rgb = mix(diffuseColor.rgb, scol, spr * 0.8); }
+            { float bnd = fract(vV / 9.0); diffuseColor.rgb *= 0.93 + 0.07 * smoothstep(0.0, 0.08, bnd) * smoothstep(1.0, 0.92, bnd) - step(0.5, bnd) * 0.025; }
+            { float lr = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb *= mix(1.0, 0.86, smoothstep(0.75, 0.95, lr)); diffuseColor.rgb = mix(vec3(lr), diffuseColor.rgb, 1.18); }
+            diffuseColor.rgb *= 0.97 + (1.0 - smoothstep(0.0, 0.5, e)) * 0.06; }`))
       .replace('#include <opaque_fragment>', '{ float shn = pow(max(0.0, 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)))), 5.0); outgoingLight += vec3(1.0, 0.96, 1.0) * shn * ' + (kind === 'ground' || kind === 'shoulder' ? '0.0' : '0.12') + '; }\n#include <opaque_fragment>');
   };
   m.customProgramCacheKey = () => 'surf25-' + kind;
