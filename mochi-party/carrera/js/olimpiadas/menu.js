@@ -8,7 +8,7 @@ const LIST = CHARS.filter(c => PERS[c.id]);
 let pj = localStorage.getItem('mr_pj') || 'mochi'; if (!LIST.find(c => c.id === pj)) pj = 'mochi';
 const med = (() => { try { return JSON.parse(localStorage.getItem('mo_medallas') || '{}'); } catch (e) { return {}; } })();
 // ---------- 3D: la misma vitrina del Torneo (js/escena3d.js) ----------
-import('../../../js/escena3d.js?v=m17n4').catch(() => document.body.classList.add('no3d'));
+import('../../../js/escena3d.js?v=m19').catch(() => document.body.classList.add('no3d'));
 let stK = 0, shownPj = '';
 function setHero() { const c = LIST.find(c => c.id === pj); $('who').innerHTML = `${c.name}<small>${PERS[c.id]}</small>`; const e = $('olStage'); const prev = shownPj; shownPj = pj; e.dataset.d = JSON.stringify({ pj, prev }); e.dataset.key = 'ol' + (++stK); }
 setHero();

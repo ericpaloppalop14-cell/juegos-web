@@ -19,7 +19,7 @@ try {
   renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'high-performance' });
 } catch (e) { document.body.classList.add('no3d'); throw e; }
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
-const DPR = Math.min(devicePixelRatio || 1, innerWidth * innerHeight > 600000 ? 1.75 : 2.25); renderer.setPixelRatio(DPR);
+let DPR = Math.min(devicePixelRatio || 1, innerWidth * innerHeight > 600000 ? 1.5 : 2); renderer.setPixelRatio(DPR);
 const size = () => renderer.setSize(innerWidth, innerHeight); addEventListener('resize', size); size();
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(36, 1, .1, 200);
 if (window.__fxNoche) window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: 0, env: .35 }); // noche 25-10: reflejos suaves
@@ -161,27 +161,27 @@ function build(m, d) {
 const mScene = new THREE.Scene(), mCam = new THREE.PerspectiveCamera(30, 1, .1, 50); mCam.position.set(0, 1.35, 6.6); mCam.lookAt(0, 1.0, 0);
 mScene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.25)); { const l = new THREE.DirectionalLight('#fff4e8', 1.9); l.position.set(3, 6, 6); mScene.add(l); const b2 = new THREE.DirectionalLight('#ffd0f0', 1); b2.position.set(-4, 4, -6); mScene.add(b2); }
 const mAct = {}, MROLES = ['boing', 'wiggle', 'hop', 'wave', 'spin', 'taunt', 'dance', 'clap'];
-let mLast = 0;
+// fluido: todos los recuadros se pintan en el mismo fotograma, en una sola pasada (viewports en fila) y se copian de golpe
 function thumbs(t) {
   if (mode !== 'chars') return;
-  const tt = now(); if (tt - mLast < 1 / 30) return; mLast = tt;
   const cs = document.querySelectorAll('.scr.on #charGrid canvas, canvas[data-mini]'); if (!cs.length) return;
-  const gl = renderer.domElement, S = Math.round(Math.min(160, 64 * DPR)), H = gl.height;
-  renderer.setScissorTest(true);
-  cs.forEach((c, i) => { const id = c.dataset.id; if (c.width !== S) { c.width = c.height = S; }
+  const tt = now(), gl = renderer.domElement, pr = renderer.getPixelRatio(), Sc = Math.floor(Math.min(64, gl.width / pr / cs.length)), S = Math.round(Sc * pr), H = gl.height;
+  renderer.setScissorTest(true); renderer.setClearColor(0, 0);
+  for (const k in mAct) mAct[k].visible = false;
+  cs.forEach((c, i) => { const id = c.dataset.id;
     let a = mAct[id]; if (!a) { a = mAct[id] = actor(id, 1, MROLES[i % MROLES.length], i * 3 + 1, true); a.userData.landed = true; a.userData.enter = -5; mScene.add(a); }
     const on = c.parentElement.classList.contains('on'); a.userData.role = on ? 'dance' : MROLES[i % MROLES.length];
-    for (const k in mAct) mAct[k].visible = false; pose(a, tt, 0); a.visible = true; a.userData.sh.visible = true;
-    renderer.setViewport(0, 0, S / DPR, S / DPR); renderer.setScissor(0, 0, S / DPR, S / DPR); renderer.setClearColor(0, 0); renderer.clear(); renderer.render(mScene, mCam);
-    const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, 0, H - S, S, S, 0, 0, S, S); });
-  for (const k in mAct) mAct[k].visible = false;
+    pose(a, tt, 0); a.visible = true; a.userData.sh.visible = true;
+    renderer.setViewport(i * Sc, 0, Sc, Sc); renderer.setScissor(i * Sc, 0, Sc, Sc); renderer.clear(); renderer.render(mScene, mCam); a.visible = false; });
+  cs.forEach((c, i) => { if (c.width !== S) { c.width = c.height = S; } const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, Math.round(i * Sc * pr), H - S, S, S, 0, 0, S, S); });
   renderer.setScissorTest(false);
 }
 // ---------- bucle ----------
-let last = now(), shown = true;
+let last = now(), shown = true, fpsN = 0, fpsT = now();
 function frame() {
   requestAnimationFrame(frame);
   const t1 = now(), dt = Math.min(.05, t1 - last); last = t1;
+  fpsN++; if (t1 - fpsT > 2) { const f = fpsN / (t1 - fpsT); fpsN = 0; fpsT = t1; if (f < 45 && DPR > 1) { DPR = Math.max(1, DPR - .25); renderer.setPixelRatio(DPR); size(); } }
   const el = document.querySelector('.scr.on .stage3d'); let r = el && el.getBoundingClientRect();
   if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
   const want = el.dataset.mode; if (want !== mode || el.dataset.key !== extra.key) { build(want, JSON.parse(el.dataset.d || '{}')); extra.key = el.dataset.key; }
