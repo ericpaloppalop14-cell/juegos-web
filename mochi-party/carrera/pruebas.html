@@ -58,6 +58,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#ffd6ec;font-family:Fr
 #load{background:radial-gradient(circle at 50% 40%,#fff3fa,#ffd6ec 70%);text-shadow:0 2px 0 #fff}
 #exitB{border:1.5px solid #fff;box-shadow:0 3px 8px rgba(150,60,140,.2)}
 </style>
+<style>/* noche 25-10: color más vivo (GPU) */canvas{filter:saturate(1.1) contrast(1.04)}</style>
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -72,6 +73,6 @@ html,body{margin:0;height:100%;overflow:hidden;background:#ffd6ec;font-family:Fr
 <div id="load">Preparando la prueba…</div>
 <script src="../js/musica.js?v=o35"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/pruebas3d.js?v=m16"></script>
+<script type="module" src="js/pruebas3d.js?v=m17"></script>
 </body>
 </html>

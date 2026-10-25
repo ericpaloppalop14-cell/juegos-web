@@ -3,7 +3,7 @@
 //  bumerán · topos de lava · cuenta peces · ¡que no te vea! · bola caliente · salto de esquí ·
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m18';
+import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m19';
 import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o35';
 import { mergedGeo } from './decor.js?v=o35';
 import { jungle } from './selva-lianas.js?v=o35';

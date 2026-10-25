@@ -2,7 +2,7 @@
 //  LIANAS DE LA SELVA — escenario inmersivo: selva en capas, río, cascada, flores,
 //  mariposas, pájaros, rayos de luz y hojas que caen. Todo instanciado (barato en móvil).
 // ======================================================================
-import { THREE, toon, mesh, rnd, pick } from '../core3d.js?v=m18';
+import { THREE, toon, mesh, rnd, pick } from '../core3d.js?v=m19';
 import { CYL, SPH, SPHL } from './mundos.js?v=o35';
 import { instSet } from './decor.js?v=o35';
 

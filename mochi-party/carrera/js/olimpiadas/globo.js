@@ -5,7 +5,7 @@
 //  Nada atraviesa nada: globos que se apartan entre sí, ovejas dormilonas que te empujan (boing) y
 //  el paisaje (islas, arcoíris, nubes) siempre fuera del pasillo de vuelo.
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m18';
+import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m19';
 import { buildWorld, prop, arch, SPH, CYL } from './mundos.js?v=o35';
 import { T, GL, v3, $, sk, setButtons, racers, hitFx, base } from './tipos.js?v=o35';
 

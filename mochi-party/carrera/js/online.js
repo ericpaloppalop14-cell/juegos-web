@@ -4,7 +4,7 @@
 //  Cada cliente simula a su mochi y difunde su estado; el anfitrión simula la IA,
 //  decide el final, los resultados y los puntos del torneo.
 // ======================================================================
-import { run, Audio } from './core3d.js?v=m18';
+import { run, Audio } from './core3d.js?v=m19';
 import { CHARS } from './data.js';
 import { Net, netAvailable } from './net-rivals.js';
 const $ = id => document.getElementById(id);

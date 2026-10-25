@@ -3,7 +3,7 @@
 //  Ciclo visible: 😴 cerrada → 👀 se prepara (aviso) → 🔥 ¡ABIERTA, TOCA YA! → ñam. 8 chiles.
 //  Acierto: +2 (+3 si tocas en el centro de la ventana) · Fallo: rebota en el morro, 0.
 // ======================================================================
-import { THREE, camera, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m18';
+import { THREE, camera, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=m19';
 import { buildWorld, MUNDOS } from './mundos.js?v=o35';
 import { T, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o35';
 
