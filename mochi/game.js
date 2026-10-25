@@ -826,19 +826,14 @@ function gxBubbles(g, px) { // burbujas de gelatina flotando delante del cielo (
     g.globalAlpha *= 1.6; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x - b.r * 0.35, y - b.r * 0.35, b.r * 0.22, 0, 7); g.fill(); }
   g.restore();
 }
-function gxRoad(g, P, RH) { // textura del camino: brillo por carril + virutas de azúcar que avanzan con la carrera
+function gxRoad(g, P, RH) { // textura del camino: brillo por carril 
   // franjas de carril alternas con brillo suave
   for (let lx = -LH; lx <= LH; lx++) { if (((lx + LH) & 1) === 0) continue; const a0 = proj(lx - 0.5, -2.8), a1 = proj(lx + 0.5, -2.8);
     g.fillStyle = 'rgba(255,255,255,0.07)'; g.beginPath(); g.moveTo(W / 2 + (lx - 0.5) * 0.001, horizonY); g.lineTo(a1.x, a1.y); g.lineTo(a0.x, a0.y); g.closePath(); g.fill(); }
   // sombreado de bordes (oclusión) para dar volumen
   for (const sd of [-1, 1]) { const e0 = proj(sd * RH, -2.8), e1 = proj(sd * (RH - 0.35), -2.8); const lg = g.createLinearGradient(e0.x, 0, e1.x, 0); lg.addColorStop(0, 'rgba(110,50,120,0.16)'); lg.addColorStop(1, 'rgba(110,50,120,0)');
     g.fillStyle = lg; g.beginPath(); g.moveTo(W / 2, horizonY); g.lineTo(e0.x, e0.y); g.lineTo(e1.x, e1.y); g.closePath(); g.fill(); }
-  if (GX.q < 1) return; gxInit();
-  const n = GX.q > 1 ? GX.sprk.length : GX.sprk.length >> 1, per = 24, off = dist % per;
-  for (let i = 0; i < n; i++) { const s = GX.sprk[i]; let z = s.z - off; if (z < -1.5) z += per; for (let rep = 0; rep < 2; rep++, z += per) { if (z > 40) break;
-    const p = proj(s.x * (RH - 0.15), z); const sc = Math.min(p.s * laneW * 0.09, laneW * 0.06), fog = Math.min(1, z / 40) + Math.max(0, (1 - z) * 0.35);
-    g.globalAlpha = 0.95 * (1 - fog); g.strokeStyle = SPRK_COL[s.c]; g.lineWidth = Math.max(1, sc * 0.55); g.lineCap = 'round';
-    const dx = Math.cos(s.a) * sc * s.l, dy = Math.sin(s.a) * sc * s.l * 0.5; g.beginPath(); g.moveTo(p.x - dx, p.y - dy); g.lineTo(p.x + dx, p.y + dy); g.stroke(); } }
+  // (virutas de colores del suelo quitadas a petición de Eric, v27)
   g.globalAlpha = 1;
 }
 function gxFore(g) { // partículas delante: polvo brillante y estelas de velocidad
