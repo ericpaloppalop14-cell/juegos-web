@@ -179,3 +179,9 @@ const _hit = Race.prototype.hitKart;
 Race.prototype.hitKart = function (k, why, by) { const ok = _hit.call(this, k, why, by); if (ok && this.lj) this.lj.onHit(k, by); return ok; };
 const _sq = Race.prototype.squash;
 Race.prototype.squash = function (v, by) { const before = v.squashT; _sq.call(this, v, by); if (this.lj && v.squashT > 0 && !(before > 0)) this.lj.onHit(v, by); };
+// v42: adornos animados de objetos + animación de espera de proyectiles
+import { tickDeco, DECO } from './itemdeco.js';
+const _sp2 = Race.prototype.setupParticles;
+Race.prototype.setupParticles = function () { DECO.hi = !!(this.quality && this.quality.hi); _sp2.call(this); };
+const _up2 = Race.prototype.update;
+Race.prototype.update = function (dt) { _up2.call(this, dt); try { tickDeco(dt); const t = this.time || 0; for (const p of this.projs || []) { const f = p.mesh && p.mesh.userData.idle; if (f) f(t); } } catch (e) { console.warn('deco', e); } };

@@ -8,6 +8,21 @@
 import * as THREE from 'three';
 import { toon, mesh, outline, glowTex, starShape } from './gfx.js';
 import { Audio } from './audio.js';
+import { deco } from './itemdeco.js';
+export const makeShark = (...a) => deco(makeShark__(...a), 'shark');
+export const makeStarAura = (...a) => deco(makeStarAura__(...a), 'star');
+export const makeGlider = (...a) => deco(makeGlider__(...a), 'glider');
+export const makeTimeAura = (...a) => deco(makeTimeAura__(...a), 'time');
+export const makePiano = (...a) => deco(makePiano__(...a), 'piano');
+export const makeFish = (...a) => deco(makeFish__(...a), 'fish');
+export const makeTeapot = (...a) => deco(makeTeapot__(...a), 'tea');
+export const makeRocket = (...a) => deco(makeRocket__(...a), 'rocket');
+export const makeCarpet = (...a) => deco(makeCarpet__(...a), 'carpet');
+export const makePortal = (...a) => deco(makePortal__(...a), 'portal');
+export const makeBubble = (...a) => deco(makeBubble__(...a), 'bubble');
+export const makeMound = (...a) => deco(makeMound__(...a), 'mound');
+export const makeCircusBall = (...a) => deco(makeCircusBall__(...a), 'circus');
+export const makeDolphin = (...a) => deco(makeDolphin__(...a), 'dolphin');
 
 const V3 = THREE.Vector3, R = Math.random;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -56,7 +71,7 @@ const windowTex = () => mat('winTex', () => canvasTex(64, 128, (x, w, h) => { x.
 
 // --- Tiburón con ciudad dentro ---
 const boomMats = {}; function boomMat(kind) { return boomMats[kind] || (boomMats[kind] = new THREE.MeshBasicMaterial({ color: kind === 'topo' ? '#ffcf8a' : kind === 'bola' ? '#ffb3e0' : '#bfefff', transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false })); }
-function makeShark() {
+function makeShark__() {
   const g = new THREE.Group();
   const glass = mat('sharkGlass', () => toon('#7fd8ff', { opacity: 0.34, rim: 1.2, emissive: '#3fa8ff', ei: 0.25, nocache: true }));
   const fin = mat('sharkFin', () => toon('#5fb0f0', { opacity: 0.55, rim: 1, emissive: '#3f8fff', ei: 0.2, nocache: true }));
@@ -81,7 +96,7 @@ function makeShark() {
   return g;
 }
 // --- Superestrella ---
-function makeStarAura() {
+function makeStarAura__() {
   const g = new THREE.Group();
   const sg = geo('pstar', () => new THREE.ExtrudeGeometry(starShape(0.6, 0.27), { depth: 0.2, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 1 }));
   const stars = []; for (let i = 0; i < 5; i++) { const s = mesh(sg, toon(['#ffe066', '#ff8fd8', '#7ff5ff', '#9dff7a', '#ffb36b'][i], { emissive: '#ffffff', ei: 0.35 }), g); stars.push(s); }
@@ -92,7 +107,7 @@ function makeStarAura() {
   return g;
 }
 // --- Ala delta ---
-function makeGlider() {
+function makeGlider__() {
   const g = new THREE.Group();
   const tex = mat('gliderTex', () => canvasTex(256, 128, (x, w, h) => { const c = ['#ff6fb0', '#ffd84a', '#7ff5ff', '#b98cff', '#9dff7a', '#ff9f5a']; for (let i = 0; i < 6; i++) { x.fillStyle = c[i]; x.beginPath(); x.moveTo(w / 2, 0); x.lineTo(i * w / 6, h); x.lineTo((i + 1) * w / 6, h); x.closePath(); x.fill(); } }));
   const wg = geo('wing', () => { const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 2.6, -4.2, -0.4, -1.4, 4.2, -0.4, -1.4], 3)); gg.setAttribute('uv', new THREE.Float32BufferAttribute([0.5, 0, 0, 1, 1, 1], 2)); gg.computeVertexNormals(); return gg; });
@@ -111,7 +126,7 @@ const timeMat = () => mat('timeBub', () => new THREE.ShaderMaterial({ transparen
   fragmentShader: 'uniform float uT; varying vec3 vN; varying vec3 vV; varying vec3 vP; void main(){ float fr = 1.0 - abs(dot(normalize(vN), normalize(vV))); fr = pow(fr, 2.2);' +
     ' float band = smoothstep(0.82, 1.0, sin(vP.y * 9.0 - uT * 2.2) * 0.5 + 0.5) * 0.18; float sw = smoothstep(0.9, 1.0, sin(atan(vP.z, vP.x) * 6.0 + vP.y * 3.0 + uT * 0.8)) * 0.12;' +
     ' vec3 c = mix(vec3(1.0, 0.78, 0.45), vec3(1.0, 0.95, 0.82), fr); gl_FragColor = vec4(c, clamp(fr * 0.55 + band + sw, 0.0, 0.62)); }' }));
-function makeTimeAura() {
+function makeTimeAura__() {
   const g = new THREE.Group();
   const dome = mesh(sph(24), timeMat(), g, [0, 1.3, 0], null, [2.5, 2.1, 2.5]); dome.renderOrder = 7;
   const ring = new THREE.Group(); ring.position.y = 0.25; g.add(ring);
@@ -131,7 +146,7 @@ function makeTimeAura() {
   return g;
 }
 // --- Piano ---
-function makePiano() {
+function makePiano__() {
   const g = new THREE.Group();
   const blk = mat('pianoB', () => toon('#2a1838', { rim: 0.9 })), wht = mat('pianoW', () => toon('#ffffff')), gold = mat('pianoG', () => toon('#ffd84a', { emissive: '#ffb000', ei: 0.3 }));
   const b = mesh(box(), blk, g, [0, 1.6, 0], null, [4, 1.3, 3]); outline(b, '#ff8fd8', 1.05);
@@ -144,7 +159,7 @@ function makePiano() {
 }
 const ringGeo = () => geo('pring', () => new THREE.RingGeometry(0.8, 1, 32));
 // --- Pez volador ---
-function makeFish(i) {
+function makeFish__(i) {
   const g = new THREE.Group();
   const c = ['#ff9f5a', '#7ff5ff', '#ff8fd8'][i % 3];
   const b = mesh(sph(14), toon(c, { rim: 0.8, emissive: c, ei: 0.15 }), g, [0, 0, 0], null, [0.55, 0.65, 1.2]); outline(b, '#5a3a6e', 1.06);
@@ -156,7 +171,7 @@ function makeFish(i) {
 }
 // --- Tetera tornado v12: sin deslumbrar. Remolino de té sólido (cintas en espiral con sombreado toon),
 //     tetera de porcelana con flores que vierte el chorro, tacitas y terrones de azúcar girando alrededor
-function makeTeapot() {
+function makeTeapot__() {
   const g = new THREE.Group();
   const pot = new THREE.Group(); pot.position.y = 4.6; g.add(pot);
   const pm = mat('potPorc', () => toon('#f4fbff', { rim: 0.5 })), dm = mat('potRose', () => toon('#ff8fb8', { rim: 0.3 })), gm = mat('potGold', () => toon('#ffd27a', { emissive: '#b07a20', ei: 0.15, rim: 0.7 })), lm = mat('potLeaf', () => toon('#7fd6a0'));
@@ -186,7 +201,7 @@ function makeTeapot() {
 }
 // --- v15: Cohete Purpurina (sustituye a la Puerta Espejo: nada de teletransporte) ---
 const CONF = ['#ff6fb0', '#ffd84a', '#7ff5ff', '#9dff7a', '#b98cff', '#ffffff', '#ff9f5a'];
-function makeRocket() {
+function makeRocket__() {
   const g = new THREE.Group(), r = new THREE.Group(); g.add(r);
   const bodyM = mat('rkBody', () => toon('#4fc8ff', { rim: 0.9, emissive: '#2f8fff', ei: 0.2 })), wM = mat('rkWhite', () => toon('#fff4fb', { rim: 0.6 })), yM = mat('rkYel', () => toon('#ffd84a', { emissive: '#ffb000', ei: 0.3, rim: 0.7 })), glassM = mat('rkGlass', () => toon('#7ff5ff', { emissive: '#3fd8ff', ei: 0.35, rim: 1 }));
   const b = mesh(cyl(16), bodyM, r, [0, 0, 0], [Math.PI / 2, 0, 0], [0.55, 3.0, 0.55]); outline(b, '#5a3a6e', 1.05);
@@ -203,7 +218,7 @@ function makeRocket() {
   g.userData = { r, fl }; return g;
 }
 // --- v15: Alfombra Arcoíris: alfombra voladora con flecos que se desenrolla delante y la surfeas
-function makeCarpet() {
+function makeCarpet__() {
   const g = new THREE.Group();
   const tex = mat('carpetTex', () => canvasTex(64, 256, (x, w, h) => { const c = ['#ff6f8a', '#ffb36b', '#ffe066', '#9dff7a', '#7ff5ff', '#b98cff']; for (let i = 0; i < 6; i++) { x.fillStyle = c[i]; x.fillRect(i * w / 6, 0, w / 6 + 1, h); } x.fillStyle = 'rgba(255,255,255,.55)'; for (let j = 0; j < 16; j++) { x.beginPath(); x.arc(w / 2, j * 16 + 8, 4, 0, 7); x.fill(); } }));
   const cm = mat('carpetM', () => new THREE.MeshToonMaterial({ map: tex, side: THREE.DoubleSide }));
@@ -219,7 +234,7 @@ function makeCarpet() {
 }
 
 // --- Portal espejo ---
-function makePortal() {
+function makePortal__() {
   const g = new THREE.Group();
   const swirl = mat('swirlTex', () => canvasTex(128, 128, (x) => { const gr = x.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.4, '#c8a8ff'); gr.addColorStop(1, '#5f3fbf'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128); x.strokeStyle = 'rgba(255,255,255,.8)'; x.lineWidth = 5; for (let k = 0; k < 4; k++) { x.beginPath(); for (let a = 0; a < 9; a += 0.1) { const r = a * 6; x.lineTo(64 + Math.cos(a + k * 1.57) * r, 64 + Math.sin(a + k * 1.57) * r); } x.stroke(); } }));
   const disc = mesh(geo('pdisc', () => new THREE.CircleGeometry(3, 32)), new THREE.MeshBasicMaterial({ map: swirl, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }), g, [0, 3.2, 0]);
@@ -229,7 +244,7 @@ function makePortal() {
   return g;
 }
 // --- Globo de chicle / burbuja antigravedad ---
-function makeBubble(color, hi) {
+function makeBubble__(color, hi) {
   const g = new THREE.Group();
   const b = mesh(sph(20), toon(color, { opacity: 0.42, rim: 1.3, emissive: color, ei: 0.2, nocache: true }), g, [0, 1.4, 0], null, 2.5); b.renderOrder = 7;
   const s = mesh(sph(8), add('#ffffff', 0.7), g, [-0.8, 2.6, 1.2], null, [0.45, 0.3, 0.2]);
@@ -239,7 +254,7 @@ function makeBubble(color, hi) {
 }
 
 // --- v12: Topo Excavador: montículo de tierra con terrones, hierba, una piedra, el hocico rosa y las garras del topo con casco de minero
-function makeMound() {
+function makeMound__() {
   const g = new THREE.Group();
   const dirt = mat('dirt', () => toon('#8a5a3a', { rim: 0.25 })), dirt2 = mat('dirt2', () => toon('#a8714a', { rim: 0.25 })), grass = mat('grassT', () => toon('#7fd67a', { rim: 0.3 })), rock = mat('rockT', () => toon('#b8b0c8', { rim: 0.4 }));
   const hill = new THREE.Group(); g.add(hill);
@@ -262,7 +277,7 @@ function makeMound() {
 // --- v12: Bola de Circo: bola gigante de algodón de azúcar con espiral, estrellas y lunares; el piloto hace equilibrios encima
 const ballTex = () => mat('ballTex', () => canvasTex(256, 128, (x, w, h) => { const c = ['#ff9fd0', '#ffffff', '#9fe0ff', '#ffffff', '#ffd27a', '#ffffff']; for (let i = 0; i < 12; i++) { x.fillStyle = c[i % 6]; x.beginPath(); x.moveTo(i * w / 12, 0); x.lineTo((i + 1) * w / 12, 0); x.lineTo((i + 1) * w / 12 + 40, h); x.lineTo(i * w / 12 + 40, h); x.fill(); }
   x.fillStyle = 'rgba(255,255,255,.75)'; for (let i = 0; i < 30; i++) { x.beginPath(); x.arc(Math.random() * w, Math.random() * h, 3 + Math.random() * 4, 0, 7); x.fill(); } }));
-function makeCircusBall() {
+function makeCircusBall__() {
   const g = new THREE.Group();
   const ball = mesh(sph(28), mat('ballM', () => { const m = new THREE.MeshToonMaterial({ map: ballTex() }); return m; }), g, [0, 0, 0], null, 1); ball.castShadow = true;
   const fluff = mat('fluff', () => toon('#ffd6ec', { opacity: 0.55, rim: 1.1, nocache: true }));
@@ -273,7 +288,7 @@ function makeCircusBall() {
   return g;
 }
 // --- v12: Delfín de Gelatina: delfín translúcido de gelatina de fresa con burbujas dentro y el piloto montado
-function makeDolphin() {
+function makeDolphin__() {
   const g = new THREE.Group(); const body = new THREE.Group(); g.add(body);
   const jel = mat('jelly', () => toon('#7fd8ff', { opacity: 0.78, rim: 1.0, emissive: '#3fa8ff', ei: 0.18, nocache: true })), belly = mat('jellyB', () => toon('#e6fbff', { opacity: 0.85, rim: 0.6, nocache: true }));
   const b = mesh(sph(22), jel, body, [0, 0, 0], null, [1.1, 1.05, 2.9]); b.renderOrder = 6;
@@ -547,3 +562,4 @@ export class PowerFX {
     if (k.carpetT > 0) { const h = 0.35 + Math.sin(this.race.time * 6) * 0.12; k.mesh.position.y += h; }
     if (k.flyH > 0.01) { k.mesh.position.y += k.flyH; k.mesh.rotation.z = Math.sin(this.race.time * 2) * 0.1; const u = k.mesh.userData; u.shadow.position.y -= k.flyH / k.megaS; } }
 }
+
