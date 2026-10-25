@@ -5,15 +5,15 @@
 //  encima). La sala se va quedando sin suelo: ¡sé el último en pie!
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
-import { floatJoy } from './joy.js?v=v21';
+import { floatJoy } from './joy.js?v=v22';
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v21';
-import { createEscenarios } from './escenarios.js?v=v21';
-import { makeCharacter, animCharacter } from './gfx.js?v=v21';
-import { chOf } from './chars.js?v=v21';
-import { createShell } from './shell.js?v=v21';
-import { Sfx } from './sfx.js?v=v21';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v21';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v22';
+import { createEscenarios } from './escenarios.js?v=v22';
+import { makeCharacter, animCharacter } from './gfx.js?v=v22';
+import { chOf } from './chars.js?v=v22';
+import { createShell } from './shell.js?v=v22';
+import { Sfx } from './sfx.js?v=v22';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v22';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -45,7 +45,7 @@ export const MODE_MAPS = {
 const MODE_MAP = { patata: 'acantilado', rey: 'cima', fresas: 'huerto', pinta: 'paleta', reves: 'reves' };
 const ALLMAPS = { ...MAPS, ...MODE_MAPS };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 21;
+export const VERSION = 22;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
@@ -478,7 +478,7 @@ function onEvents(evs) {
 let keyL = false, keyR = false, keyU = false, keyD = false, joyM = 1, sentM = 1; const numBusy = new Array(11).fill(false);
 function send(d) { if (!playing) return; if (online && !shell.isHost) shell.send({ t: 'gin', ...d }); else sim && sim.input(me, d); }
 // v10: joystick fijo abajo a la derecha (mano derecha); números a la izquierda. Multitouch: cada dedo va por su pointerId.
-const cv3 = $('c3d'); let joyA = null, refYaw = null, sentHd = undefined; const joy = $('joy'), knob = $('joyK');
+const cv3 = $('c3d'); let joyA = null, steering = false, sentHd = undefined; const joy = $('joy'), knob = $('joyK');
 const J = floatJoy({ joy, knob, active: () => playing, onStart: () => Sfx.init() }); window.__joy = J;
 function hop() { if (!playing) return; const c = chars.get(me); if (!c || !c.alive) return; send({ k: 'jump' }); }
 { const hb = $('hopB'); hb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); Sfx.init(); hop(); hb.classList.add('press'); hb.classList.remove('boing'); void hb.offsetWidth; hb.classList.add('boing'); });
@@ -501,8 +501,8 @@ function frame() {
   { // dirección relativa a la cámara, recalculada cada frame (como Stumble Guys); teclado: WASD/flechas
     let ja = J.m > 0 ? Math.atan2(J.x, J.y) : null, m = J.m; const kx = (keyR ? 1 : 0) - (keyL ? 1 : 0), ky = (keyU ? 1 : 0) - (keyD ? 1 : 0); if (kx || ky) { ja = Math.atan2(kx, ky); m = 1; }
     // v21: la referencia de cámara se congela mientras mantienes la dirección (antes la cámara giraba detrás del mochi y la dirección se iba torciendo → daba vueltas)
-    if (ja == null || refYaw == null) refYaw = camYaw; else refYaw = wrap(refYaw + wrap(camYaw - refYaw) * (1 - Math.exp(-dt * 0.6)));
-    const hd = ja == null ? null : wrap(refYaw - ja);
+    // v22: mientras hay entrada la cámara NO gira (ver más abajo), así la dirección es exactamente la del dedo en pantalla y no deriva
+    steering = ja != null; const hd = ja == null ? null : wrap(camYaw - ja);
     if (playing && (hd === null ? sentHd !== null : (sentHd == null || Math.abs(wrap(hd - sentHd)) > 0.025 || Math.abs(m - sentM) > 0.06))) { sentHd = hd; sentM = m; send({ k: 'mv', v: hd == null ? null : +hd.toFixed(3), m: +m.toFixed(2) }); } }
   if (sim && (playing || (sim.over && !endSent))) {
     { simAcc = Math.min(0.25, simAcc + rdt * SPD); while (simAcc >= STEP) { sim.step(STEP); simAcc -= STEP; } }
@@ -565,7 +565,7 @@ function frame() {
     const vx = fc.vx != null && sim == null ? fc.vx : (simP && simP.get(tgtId) ? simP.get(tgtId).vx : Math.sin(fc.h)), vz = fc.vz != null && sim == null ? fc.vz : (simP && simP.get(tgtId) ? simP.get(tgtId).vz : Math.cos(fc.h));
     // cámara de ángulo fijo que se realinea despacio detrás del movimiento (nunca gira de golpe; si corres hacia la cámara no se da la vuelta)
     { const spv = Math.hypot(vx, vz), df = wrap(Math.atan2(vx, vz) - camYaw), al = Math.max(0, Math.cos(df) + 0.35) / 1.35;
-      const rate = 0.95 * Math.min(1, spv / SPEED) * al; camYawV += (wrap(df) * rate - camYawV) * (1 - Math.exp(-dt * 4)); camYaw = wrap(camYaw + camYawV * dt); }
+      const rate = steering ? 0 : 0.95 * Math.min(1, spv / SPEED) * al; /* v22: la cámara solo se recoloca detrás cuando sueltas */ camYawV += (wrap(df) * rate - camYawV) * (1 - Math.exp(-dt * (steering ? 14 : 4))); camYaw = wrap(camYaw + camYawV * dt); }
     const la = port ? 4.2 : 3.4; camP.set(fc.x - Math.sin(camYaw) * back, FY + up, fc.z - Math.cos(camYaw) * back); camT.set(fc.x + Math.sin(camYaw) * la + vx * 0.25, FY + 0.4, fc.z + Math.cos(camYaw) * la + vz * 0.25);
     camera.position.lerp(camP, 1 - Math.exp(-dt * 12)); camLook.lerp(camT, 1 - Math.exp(-dt * 12)); }
   if (mapG) mapG.visible = !$('sChars').classList.contains('on'); // que el decorado no tape al personaje al elegir
@@ -655,7 +655,7 @@ function start(cfg, api) {
   room.visible = decoG.visible = !OPEN[cfg.mode]; MD = null; tiles.forEach(T => T.mk = -1);
   if (MODE_MAP[cfg.mode]) cfg.map = MODE_MAP[cfg.mode]; // v19: escenario propio del modo
   buildMap(cfg.map || 'tiovivo'); setEscena(MODE_MAP[cfg.mode]);
-  shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; joyA = null; refYaw = null; J.cancel(); sentHd = undefined; camInit = false; specId = null; myCd = 0; myJcd = 0; simAcc = 0; snapBuf.length = 0;
+  shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; joyA = null; steering = false; J.cancel(); sentHd = undefined; camInit = false; specId = null; myCd = 0; myJcd = 0; simAcc = 0; snapBuf.length = 0;
   if (showcase) { scene.remove(showcase); showcase = null; }
   resetBoard(); buildChars(); $('spect').classList.remove('on');
   sim = (!online || api.isHost) ? new Sim(cfg) : null; if (sim) applySnap(sim.snap(), true);

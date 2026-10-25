@@ -5,20 +5,20 @@
 //  demás al vacío, salta los huecos, coge regalos… y el suelo se hunde
 //  detrás de vosotros cada vez más rápido. ¡Gana quien llegue más lejos!
 // ======================================================================
-import { floatJoy } from './joy.js?v=v21';
+import { floatJoy } from './joy.js?v=v22';
 import * as THREE from 'three';
-import { createRenderer, addLights, Particles } from './world.js?v=v21';
-import { makeCharacter, animCharacter } from './gfx.js?v=v21';
-import { chOf } from './chars.js?v=v21';
-import { createShell } from './shell.js?v=v21';
-import { Sfx } from './sfx.js?v=v21';
+import { createRenderer, addLights, Particles } from './world.js?v=v22';
+import { makeCharacter, animCharacter } from './gfx.js?v=v22';
+import { chOf } from './chars.js?v=v22';
+import { createShell } from './shell.js?v=v22';
+import { Sfx } from './sfx.js?v=v22';
 
 const $ = id => document.getElementById(id);
 const RL = 2, COLS = 4, CW = 2.5, TW = COLS * CW, HW = TW / 2; // filas de 2 m, 4 carriles de 2,5 m
-const STEP = 1 / 60, SPEED = 10.5, LAT = 8.5, HOP_T = 0.55, HOP_CD = 0.6, PAD_T = 0.75, PUSH_CD = 1.5; // v20: mucho más rápida
+const STEP = 1 / 60, SPEED = 8.4, LAT = 7.4, HOP_T = 0.68, HOP_CD = 0.9, PAD_T = 0.94, PUSH_CD = 1.6; // v22: +20 % sobre la original (7); saltos alargados para cubrir la misma distancia
 const KNOCK = 8.5, KNOCK_BIG = 17, PUSH_R = 1.9, PUSH_R_BIG = 3.2, SINK_DELAY = 1.0;
 const NUMCOL = ['#ff8fb8', '#ffa673', '#f2c64e', '#7fd08a', '#4fcabb', '#6eaef2', '#9789f2', '#c487e6', '#f4878f'];
-const FIN = 500; const T_GRAB = 2.4, T_STEAL_CD = 1.4; // v20: tortuga mucho más fácil de coger // meta del relevo con tortuga
+const FIN = 420; const T_GRAB = 2.4, T_STEAL_CD = 1.4; // v20: tortuga mucho más fácil de coger // meta del relevo con tortuga
 let curMode = new URLSearchParams(location.search).get('modo') || localStorage.getItem('hunde_carrera_modo') || 'carrera'; if (!['carrera', 'tortuga'].includes(curMode)) curMode = 'carrera'; localStorage.setItem('hunde_carrera_modo', curMode);
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -85,7 +85,7 @@ class Sim {
     return true; }
   step(dt) {
     if (this.over) return; this.T += dt;
-    const cs = Math.min(12.5, 4.6 + this.T * 0.075); this.zc += cs * dt; // el suelo se hunde detrás, cada vez más rápido
+    const cs = Math.min(10, 3.7 + this.T * 0.06); this.zc += cs * dt; // el suelo se hunde detrás, cada vez más rápido
     const W = this.wind; W.t -= dt; // ventolera
     if (W.st === 'idle' && W.t <= 0) { W.st = 'warn'; W.t = 2; W.dir = Math.random() < 0.5 ? -1 : 1; this.ev.push(['wwarn', W.dir]); }
     else if (W.st === 'warn' && W.t <= 0) { W.st = 'blow'; W.t = 2.6; this.ev.push(['wblow', W.dir]); }
@@ -409,7 +409,7 @@ function frame() {
     else if (s0 && idx.has(id)) { const a0 = s0.s.p[idx.get(id)]; let x = a0[1], z = a0[2], h = a0[3]; if (s1) { const a1 = s1.s.p[idx.get(id)], f = clamp((rnow - s0.at) / Math.max(1, s1.at - s0.at), 0, 1); if (a1) { x += (a1[1] - x) * f; z += (a1[2] - z) * f; h += wrap(a1[3] - h) * f; } } c.x = x; c.z = z; c.h = h; }
     else { const k = 1 - Math.exp(-dt * 14); c.x += (c.tx - c.x) * k; c.z += (c.tz - c.z) * k; c.h += wrap(c.th - c.h) * k; }
     if (c.alive) { const sp = dt > 0 ? Math.hypot(c.x - ox, c.z - oz) / dt : 0; c.spd = (c.spd || 0) + (Math.min(14, sp) - (c.spd || 0)) * Math.min(1, dt * 10); const sn = Math.min(1.3, c.spd / SPEED);
-      c.ph2 = (c.ph2 || 0) + dt * (4 + c.spd * 1.6); const air = c.air || 0, a0 = c.air0 || HOP_T, hy = air > 0 ? Math.sin((1 - air / a0) * Math.PI) * (a0 > 0.7 ? 4.2 : 1.6) : 0;
+      c.ph2 = (c.ph2 || 0) + dt * (4 + c.spd * 1.6); const air = c.air || 0, a0 = c.air0 || HOP_T, hy = air > 0 ? Math.sin((1 - air / a0) * Math.PI) * (a0 > 0.8 ? 4.2 : 1.6) : 0;
       if (c.wasAir && air <= 0) { c.land = 1; parts.burst(new THREE.Vector3(c.x, 0.1, c.z), '#fff4fb', 10, 2.5, 1.5); } c.wasAir = air > 0; c.land = Math.max(0, (c.land || 0) - dt * 5);
       c.hitFx = Math.max(0, (c.hitFx || 0) - dt); c.punch = Math.max(0, (c.punch || 0) - dt * 4);
       c.root.position.set(c.x, Math.abs(Math.sin(c.ph2)) * 0.24 * sn + hy, c.z); c.root.rotation.set(0, c.h, c.hitFx > 0 ? Math.sin(t * 30) * 0.4 : 0);
@@ -519,5 +519,5 @@ setShowcase(localStorage.getItem('ms_ch') || 'mochi');
 frame();
 // v16: desde la pantalla de modos del menú principal se entra directo a jugar
 if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell && window.__shell.solo(), 400); }
-fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 21 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 22 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
 window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, blockType, get chars() { return chars; } };
