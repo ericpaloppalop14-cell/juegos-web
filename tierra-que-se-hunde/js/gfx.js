@@ -24,10 +24,11 @@ export function toon(color, o = {}) {
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float rimStr;')
         .replace('#include <opaque_fragment>', `
           { float fr = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
-            outgoingLight += vec3(1.0, 0.95, 0.98) * smoothstep(0.5, 1.0, fr) * rimStr * 0.8; }
+            vec3 nn = normalize(normal); vec3 rc = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.86, 0.62), smoothstep(-0.4, 0.5, nn.x + nn.y * 0.5));
+            outgoingLight += rc * smoothstep(0.42, 1.0, fr) * rimStr * 1.25; }
           #include <opaque_fragment>`);
     };
-    m.customProgramCacheKey = () => 'rim' + rim;
+    m.customProgramCacheKey = () => 'rim2' + rim;
   }
   if (!o.nocache) matCache.set(key, m);
   return m;
@@ -83,7 +84,7 @@ export function makeCharacter(ch, opts = {}) {
   const c = new THREE.Color(ch.color);
   const inner = new THREE.Group(); root.add(inner);
   buildInner(ch.inner, inner, ch);
-  const body = mesh(bodyGeo(), toon(hex(col(ch.color, 0.1)), { opacity: 0.86, rim: 0.5, depthWrite: false, rough: 0.32 }), root);
+  const body = mesh(bodyGeo(), toon(hex(col(ch.color, 0.1)), { opacity: 0.86, rim: 0.75, depthWrite: false, rough: 0.32 }), root);
   body.renderOrder = 2;
   const ol = outline(body, hex(col(ch.color, -0.32)), 1.03); ol.renderOrder = 1;
   // cara kawaii (front = +z): ojos grandes y brillantes, coloretes difuminados, boquita ω, bracitos y pies

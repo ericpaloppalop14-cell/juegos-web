@@ -6,12 +6,12 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v17';
-import { makeCharacter, animCharacter } from './gfx.js?v=v17';
-import { chOf } from './chars.js?v=v17';
-import { createShell } from './shell.js?v=v17';
-import { Sfx } from './sfx.js?v=v17';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v17';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v18';
+import { makeCharacter, animCharacter } from './gfx.js?v=v18';
+import { chOf } from './chars.js?v=v18';
+import { createShell } from './shell.js?v=v18';
+import { Sfx } from './sfx.js?v=v18';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v18';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -32,7 +32,7 @@ export const MAPS = {
     obs: T => [...H4.map(([a, b]) => ({ x: a * HALF * 0.5, z: b * HALF * 0.5, r: 5.6 })), { x: 0, z: 0, r: 2.2 + Math.sin(T * 2.4) * 0.5 }] },
 };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 17;
+export const VERSION = 18;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
@@ -203,7 +203,7 @@ const Q = window.__Q = { lv: 1, dprs: [2.5, 2, 1.75, 1.5, 1.25, 1, 0.85, 0.7], a
 camera.fov = 60; camera.updateProjectionMatrix();
 const world = buildWorld(scene, 'atardecer', 22);
 world.lights.sun.shadow.camera.left = world.lights.sun.shadow.camera.bottom = -HALF - 4; world.lights.sun.shadow.camera.right = world.lights.sun.shadow.camera.top = HALF + 4; world.lights.sun.shadow.camera.updateProjectionMatrix();
-const parts = new Particles(scene, 220);
+const parts = new Particles(scene, 640);
 const TILE_COLS = ['#ff9cc8', '#b9a2f7', '#7ee3c4', '#ffcf7a', '#9fd0ff'];
 
 // --- la sala: suelo de casillas, paredes decoradas, columnas, guirnaldas, farolillos
@@ -489,8 +489,8 @@ function frame() {
   for (let i = 0; i < N * N; i++) { const T = tiles[i]; if (T.hole) continue;
     if (T.s === 1) { const k = 1 - Math.max(0, T.t) / CRACK, w = Math.sin(t * 38 + i) * 0.045 * (0.4 + Math.min(1, k));
       T.g.rotation.set(w, 0, -w * 0.8); T.g.position.y = FY - Math.min(1, k) * 0.12;
-      if (!T.hot) { T.hot = true; drawNum(T, T.n, true); } }
-    else if (T.s === 2) { T.rise = 0; if (T.g.visible) { T.sinkT += dt; const k = T.sinkT; T.g.position.y = FY - k * k * 9; T.g.rotation.x += dt; T.g.rotation.z += dt * 0.7; if (k > 1.5) T.g.visible = false; } }
+      if (!T.hot) { T.hot = true; drawNum(T, T.n, true); } if (Q.lv < 5 && Math.random() < dt * 5) parts.burst(new THREE.Vector3(tx(i) + (Math.random() - 0.5) * TS * 0.8, FY + 0.15, tz(i) + (Math.random() - 0.5) * TS * 0.8), '#f3dcc2', 2, 0.8, 1.2); }
+    else if (T.s === 2) { T.rise = 0; if (T.g.visible) { if (T.sinkT < 0.02 && Q.lv < 7) { const P = new THREE.Vector3(tx(i), FY + 0.2, tz(i)); parts.burst(P, '#f7d9b8', Q.lv < 4 ? 16 : 8, 3.2, 3); parts.burst(P, '#ffffff', Q.lv < 4 ? 10 : 5, 2, 1.5); } else if (Q.lv < 5 && Math.random() < dt * 14) parts.burst(new THREE.Vector3(tx(i) + (Math.random() - 0.5) * TS, T.g.position.y, tz(i) + (Math.random() - 0.5) * TS), '#e8c49c', 1, 0.6, -0.5); T.sinkT += dt; const k = T.sinkT; T.g.position.y = FY - k * k * 9; T.g.rotation.x += dt; T.g.rotation.z += dt * 0.7; if (k > 1.5) T.g.visible = false; } }
     else { T.g.visible = true; T.g.rotation.set(0, 0, 0); if (T.rise > 0) { T.rise = Math.max(0, T.rise - dt * 1.6); T.g.position.y = FY - T.rise * T.rise * 6; } else T.g.position.y = FY; if (T.hot) { T.hot = false; drawNum(T, T.n, false); } }
     if (T.ping > 0) T.ping = Math.max(0, T.ping - dt * 2.5);
   }

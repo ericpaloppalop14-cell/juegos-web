@@ -6,11 +6,11 @@
 //  detrás de vosotros cada vez más rápido. ¡Gana quien llegue más lejos!
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, addLights, Particles } from './world.js?v=v17';
-import { makeCharacter, animCharacter } from './gfx.js?v=v17';
-import { chOf } from './chars.js?v=v17';
-import { createShell } from './shell.js?v=v17';
-import { Sfx } from './sfx.js?v=v17';
+import { createRenderer, addLights, Particles } from './world.js?v=v18';
+import { makeCharacter, animCharacter } from './gfx.js?v=v18';
+import { chOf } from './chars.js?v=v18';
+import { createShell } from './shell.js?v=v18';
+import { Sfx } from './sfx.js?v=v18';
 
 const $ = id => document.getElementById(id);
 const RL = 2, COLS = 4, CW = 2.5, TW = COLS * CW, HW = TW / 2; // filas de 2 m, 4 carriles de 2,5 m
@@ -471,5 +471,5 @@ setShowcase(localStorage.getItem('ms_ch') || 'mochi');
 frame();
 // v16: desde la pantalla de modos del menú principal se entra directo a jugar
 if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell && window.__shell.solo(), 400); }
-fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 17 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 18 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
 window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, get chars() { return chars; } };

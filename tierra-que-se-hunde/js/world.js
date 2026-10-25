@@ -144,6 +144,76 @@ function sparkles(scene, n = 260, R = 60) {
   const pts = new THREE.Points(g, m); scene.add(pts); return pts;
 }
 
+
+// ---------- v18: decorado de fondo en capas (cielo, mar, islas lejanas, globos, pájaros, barcos, cascadas) ----------
+function cvTex(w, h, f) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; f(cv.getContext('2d'), w, h); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }
+function cloudBand(seed, tint, dens) {
+  return cvTex(1024, 128, (x, w, h) => { let s = seed; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < 60 * dens; i++) { const cx = r() * w, cy = h * (0.45 + r() * 0.35), R = 14 + r() * 34;
+      for (const dx of [0, -w, w]) { const g = x.createRadialGradient(cx + dx, cy, 0, cx + dx, cy, R); g.addColorStop(0, tint); g.addColorStop(0.55, tint.replace(/[\d.]+\)$/, '0.5)')); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(cx + dx - R, cy - R, R * 2, R * 2); } } });
+}
+function decorLayers(scene, th, R) {
+  const G = new THREE.Group(); scene.add(G); const upd = [];
+  // 1) tres bandas de nubes a distinta distancia y velocidad (parallax al girar la cámara)
+  const bands = [[560, 150, 70, 'rgba(255,240,250,0.9)', 1.2, 0.004], [500, 95, 46, 'rgba(255,225,240,0.85)', 1, -0.007], [440, 55, 30, 'rgba(255,255,255,0.95)', 0.8, 0.011]];
+  bands.forEach(([rad, y, hh, tint, dens, sp], i) => { const tx = cloudBand(7 + i * 13, tint, dens); tx.wrapS = THREE.RepeatWrapping; tx.repeat.x = 2;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, hh, 64, 1, true), new THREE.MeshBasicMaterial({ map: tx, transparent: true, side: THREE.BackSide, depthWrite: false, fog: false, opacity: 0.9 - i * 0.05 }));
+    m.position.y = y; m.renderOrder = -9 + i; G.add(m); upd.push(t => { m.rotation.y = t * sp; }); });
+  // 2) brillos del sol sobre el mar (centelleo)
+  { const n = 420, p = new Float32Array(n * 3), ph = new Float32Array(n); for (let i = 0; i < n; i++) { const a = -2.2 + (Math.random() - 0.5) * 1.3, r = 60 + Math.random() * 300; p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = 0.6; p[i * 3 + 2] = Math.sin(a) * r; ph[i] = Math.random() * 6.28; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('ph', new THREE.BufferAttribute(ph, 1));
+    const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uT: { value: 0 } },
+      vertexShader: 'attribute float ph; uniform float uT; varying float vA; void main(){ vA = pow(max(0.0, sin(uT*2.5+ph*3.0)), 6.0); vec4 mv = modelViewMatrix*vec4(position,1.0); gl_PointSize = (2.0+vA*9.0) * 300.0 / -mv.z; gl_Position = projectionMatrix*mv; }',
+      fragmentShader: 'varying float vA; void main(){ vec2 d = gl_PointCoord-0.5; float r = length(d); float s = max(0.0, 1.0-r*2.0) + max(0.0, 1.0-abs(d.x)*14.0)*max(0.0,1.0-abs(d.y)*2.0)*0.6 + max(0.0, 1.0-abs(d.y)*14.0)*max(0.0,1.0-abs(d.x)*2.0)*0.6; gl_FragColor = vec4(vec3(1.0,0.97,0.88), s*vA); }' });
+    const pts = new THREE.Points(g, m); pts.frustumCulled = false; G.add(pts); upd.push(t => { m.uniforms.uT.value = t; }); G.userData.glint = pts; }
+  // 3) islas lejanas en silueta con niebla (otra capa de profundidad)
+  for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283 + 0.2, r = R * 5.2 + (i % 3) * 22; const s = 6 + (i % 4) * 3;
+    const isl = new THREE.Group(); isl.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); G.add(isl);
+    const hill = new THREE.Mesh(new THREE.SphereGeometry(s, 14, 8, 0, 6.283, 0, 1.5), new THREE.MeshStandardMaterial({ color: pastel('#9fe0b8', th.fog, 0.35), roughness: 0.9 })); hill.scale.y = 0.55; isl.add(hill);
+    for (let k = 0; k < 3; k++) { const pt = new THREE.Group(); pt.position.set((k - 1) * s * 0.4, s * 0.45, Math.sin(k * 3 + i) * s * 0.25); isl.add(pt);
+      const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, s * 0.6, 6), new THREE.MeshStandardMaterial({ color: '#e9cfae' })); tr.position.y = s * 0.3; tr.rotation.z = (k - 1) * 0.25; pt.add(tr);
+      for (let f = 0; f < 5; f++) { const lf = new THREE.Mesh(new THREE.ConeGeometry(0.5, s * 0.55, 4), new THREE.MeshStandardMaterial({ color: '#7fd6a2', flatShading: true })); lf.position.y = s * 0.6; lf.rotation.set(1.25, f * 1.256, 0); lf.translateY(s * 0.25); pt.add(lf); }
+      upd.push(t => { pt.rotation.z = Math.sin(t * 1.2 + i + k) * 0.05; }); }
+    const foam = new THREE.Mesh(new THREE.RingGeometry(s * 0.95, s * 1.25, 32), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false })); foam.rotation.x = -Math.PI / 2; foam.position.y = 0.5; isl.add(foam);
+    upd.push(t => { const k = 1 + Math.sin(t * 1.4 + i) * 0.06; foam.scale.set(k, k, 1); foam.material.opacity = 0.35 + Math.sin(t * 1.4 + i) * 0.15; }); }
+  // 4) globos aerostáticos a la deriva
+  const bc = ['#ff8fb8', '#ffd36b', '#8fd8ff', '#b9a2f7', '#7ee3c4', '#ffb08a'];
+  for (let i = 0; i < 6; i++) { const b = new THREE.Group(); const env = new THREE.Mesh(new THREE.SphereGeometry(3, 20, 14), new THREE.MeshStandardMaterial({ color: bc[i], roughness: 0.4, emissive: bc[i], emissiveIntensity: 0.12 })); env.scale.y = 1.2; b.add(env);
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(3.02, 0.35, 8, 32), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 })); stripe.rotation.x = Math.PI / 2; b.add(stripe);
+    const bas = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.6, 0.9, 10), new THREE.MeshStandardMaterial({ color: '#c9915f' })); bas.position.y = -4.6; b.add(bas);
+    for (let k = 0; k < 4; k++) { const ro = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 4), new THREE.MeshBasicMaterial({ color: '#8a6a50' })); ro.position.set(Math.cos(k * 1.57) * 0.7, -3.5, Math.sin(k * 1.57) * 0.7); b.add(ro); }
+    const a0 = i / 6 * 6.283, r = R * (3.2 + (i % 3) * 0.9), y0 = 22 + (i % 3) * 9; b.scale.setScalar(1 + (i % 2) * 0.5); G.add(b);
+    upd.push(t => { const a = a0 + t * 0.012; b.position.set(Math.cos(a) * r, y0 + Math.sin(t * 0.5 + i) * 2, Math.sin(a) * r); b.rotation.z = Math.sin(t * 0.7 + i) * 0.05; }); }
+  // 5) bandadas de pájaros (aleteo)
+  const wingM = new THREE.MeshBasicMaterial({ color: '#6b4f86', side: THREE.DoubleSide, fog: true });
+  const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, -0.3, 0, 0, 0.3, 1.4, 0, 0]), 3));
+  for (let f = 0; f < 3; f++) { const fl = new THREE.Group(); G.add(fl); const birds = [];
+    for (let i = 0; i < 7; i++) { const bd = new THREE.Group(); const l = new THREE.Mesh(wg, wingM), rr = new THREE.Mesh(wg, wingM); rr.scale.x = -1; bd.add(l, rr); bd.position.set(-Math.abs(i - 3) * 2.2, Math.sin(i) * 0.6, (i - 3) * 2); fl.add(bd); birds.push([l, rr, i]); }
+    const r = R * (2.6 + f), y = 30 + f * 8, sp = 0.05 + f * 0.015, a0 = f * 2.1;
+    upd.push(t => { const a = a0 + t * sp; fl.position.set(Math.cos(a) * r, y + Math.sin(t * 0.8 + f) * 1.5, Math.sin(a) * r); fl.rotation.y = -a; for (const [l, rr, i] of birds) { const w = Math.sin(t * 9 + i * 0.7) * 0.6; l.rotation.z = w; rr.rotation.z = -w; } }); }
+  // 6) barquitos de vela meciéndose
+  for (let i = 0; i < 5; i++) { const bt = new THREE.Group(); const hull = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.9, 0.9, 12, 1, false, 0, Math.PI), new THREE.MeshStandardMaterial({ color: ['#ff9ec7', '#9fd0ff', '#ffd36b', '#b9a2f7', '#7ee3c4'][i] })); hull.rotation.set(Math.PI / 2, 0, Math.PI / 2); hull.scale.set(1, 2.4, 1); bt.add(hull);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.5, 6), new THREE.MeshStandardMaterial({ color: '#f7e2c8' })); mast.position.y = 2.3; bt.add(mast);
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 4.4, 0, 0, 0.6, 0, 0, 0.6, 2.6]), 3)); sg.computeVertexNormals();
+    const sail = new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: '#fffaf4', side: THREE.DoubleSide, emissive: '#ffffff', emissiveIntensity: 0.15 })); sail.position.x = 0.1; bt.add(sail);
+    const a0 = i * 1.3 + 0.5, r = R * (3.6 + (i % 2)); bt.scale.setScalar(1.6); G.add(bt);
+    upd.push(t => { const a = a0 + t * 0.008 * (i % 2 ? 1 : -1); bt.position.set(Math.cos(a) * r, 0.4 + Math.sin(t * 1.3 + i) * 0.3, Math.sin(a) * r); bt.rotation.set(Math.sin(t * 1.1 + i) * 0.08, -a, Math.cos(t * 0.9 + i) * 0.06); }); }
+  // 7) arcoíris tenue al fondo
+  { const tx = cvTex(8, 256, (x, w, h) => { const cs = ['#ff7aa8', '#ffb36b', '#ffe36b', '#8ff0a8', '#8fd0ff', '#b9a2f7']; cs.forEach((c, k) => { x.fillStyle = c; x.fillRect(0, h * (0.2 + k * 0.1), w, h * 0.1); }); });
+    const rb = new THREE.Mesh(new THREE.RingGeometry(150, 185, 64, 1, 0, Math.PI), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide, uniforms: { map: { value: tx }, uT: { value: 0 } },
+      vertexShader: 'varying vec2 vU; varying vec3 vP; void main(){ vU = uv; vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+      fragmentShader: 'uniform sampler2D map; uniform float uT; varying vec3 vP; void main(){ float r = (length(vP.xy)-150.0)/35.0; vec4 c = texture2D(map, vec2(0.5, 1.0-(0.2+r*0.6))); float a = smoothstep(0.0,0.15,r)*smoothstep(1.0,0.85,r)*smoothstep(0.0,40.0,vP.y)*(0.28+0.06*sin(uT*0.5)); gl_FragColor = vec4(c.rgb, a); }' }));
+    rb.position.set(-120, -10, -380); rb.renderOrder = -5; G.add(rb); upd.push(t => { rb.material.uniforms.uT.value = t; }); }
+  return { G, update(t) { const lv = (window.__Q && window.__Q.lv) || 0; if (G.userData.glint) G.userData.glint.visible = lv < 5; if (lv >= 6 && (t * 60 | 0) % 2) return; for (const f of upd) f(t); } };
+}
+// cascadas que caen de las islas flotantes
+function waterfall(g, r, seed) {
+  const tx = cvTex(32, 128, (x, w, h) => { for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.6})`; x.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 3, 10 + Math.random() * 30); } });
+  tx.wrapT = THREE.RepeatWrapping; tx.wrapS = THREE.RepeatWrapping;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 14, 10, 1, true), new THREE.MeshBasicMaterial({ map: tx, color: '#dff6ff', transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide }));
+  const a = seed * 1.7; m.position.set(Math.cos(a) * r * 0.85, -7, Math.sin(a) * r * 0.85); g.add(m); return t => { tx.offset.y = t * 1.6 + seed; };
+}
+
 // Construye todo el decorado. R = radio de la zona de juego
 export function buildWorld(scene, themeName = 'atardecer', R = 14) {
   const th = THEMES[themeName];
@@ -157,10 +227,11 @@ export function buildWorld(scene, themeName = 'atardecer', R = 14) {
   for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + 0.3, r = R * (2.2 + (i % 3) * 0.7); isl.push(island(scene, Math.cos(a) * r, 1 + (i % 3) * 3.5, Math.sin(a) * r, 2.2 + (i % 4) * 1.1, th, i)); }
   const cl = clouds(scene, R * 9);
   const sp = sparkles(scene, 240, R * 3);
+  const deco = decorLayers(scene, th, R); const wf = isl.filter((g, i) => i % 3 !== 1).map((g, i) => waterfall(g, 2.2 + (isl.indexOf(g) % 4) * 1.1, i));
   return {
-    th, lights, cl, isl,
+    th, lights, cl, isl, deco,
     update(t) {
-      seaU.uT.value = t;
+      seaU.uT.value = t; deco.update(t); for (const f of wf) f(t);
       for (const g of isl) g.position.y += Math.sin(t * 0.6 + g.userData.phase) * 0.004;
       for (const c of cl.children) { c.position.x += 0.01 * c.userData.sp; if (c.position.x > R * 8) c.position.x = -R * 8; }
       sp.rotation.y = t * 0.02; sp.material.opacity = 0.38 + Math.sin(t * 2) * 0.08;
