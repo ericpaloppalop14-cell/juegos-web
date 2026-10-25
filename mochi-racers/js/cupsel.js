@@ -164,8 +164,13 @@ export function createCupCarousel(renderer, cups) {
   function select(i) { i = Math.max(0, Math.min(N - 1, i)); if (i !== st.sel) { items[st.sel].out = 1; items[i].pop = 1; gag.t = 0; } st.sel = st.target = i; }
 
   function layout() {
-    const W = innerWidth, H = innerHeight; if (W === st.w && H === st.h) return; st.w = W; st.h = H;
+    // v39: en vertical el trofeo se centra en el hueco libre entre la cabecera y el panel de la copa (no lo tapa)
+    const W = innerWidth, H = innerHeight, pnl = W < H && document.getElementById('cupPanel'), pr = pnl && pnl.offsetParent ? pnl.getBoundingClientRect() : null;
+    const ptop = pr && pr.height > 0 ? Math.round(pr.top) : 0; if (W === st.w && H === st.h && ptop === st.ptop) return; st.w = W; st.h = H; st.ptop = ptop;
     const a = W / H; cam.aspect = a; cam.fov = a < 1 ? 46 : 36;
+    if (a < 1 && ptop > 0) { const top = 64, avail = Math.max(120, ptop - top), cy = top + avail / 2; cam.zoom = Math.min(1, avail / (H * 0.44)); cam.setViewOffset(W, H, 0, H / 2 - cy, W, H); cam.updateProjectionMatrix();
+      const dist = 11, halfH = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * dist, halfW = halfH * a; st.gap = Math.max(2.5, Math.min(4.6, halfW * 1.05)); st.view = a; return; }
+    cam.zoom = 1;
     // vertical: el carrusel sube (panel abajo); horizontal: se va a la izquierda (panel a la derecha)
     if (a < 1) cam.setViewOffset(W, H, 0, H * 0.26, W, H); else cam.setViewOffset(W, H, W * 0.27, H * 0.04, W, H);
     cam.updateProjectionMatrix();

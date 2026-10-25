@@ -1,88 +1,131 @@
-// v38: miniaturas animadas de los 4 circuitos en «Elige copa» (vista cenital 2D, ligera).
-// Trazado real (pts de cada pista, Catmull-Rom centrípeta), colores del tema y karts corriendo.
+// v39: vistas previas 3D en directo de los 4 circuitos en «Elige copa».
+// Un único WebGLRenderer pequeño (pixel ratio bajo) con scissor/viewport para las 4 casillas.
+// Reutiliza buildTrack + cielo/luces de la carrera; karts simplificados sobre la línea de carrera;
+// cámara de persecución elevada detrás del líder. ~30 fps, en pausa si no se ve, escenas liberadas al cambiar de copa.
 import * as THREE from 'three';
 import { CHARS } from './data.js';
 import { cupForRace, raceNames } from './tracks2.js';
+import { buildTrack } from './track.js';
+import { Race } from './race.js';
+import { makeKart, animKart } from './gfx.js';
 
-const cache = new Map();
-function pathOf(cup, rev) {
-  const key = (cup.base ? cup.base.id + ':' : '') + cup.track + (rev ? ':r' : '');
-  if (cache.has(key)) return cache.get(key);
-  let P = cup.pts.map(p => p.slice()); if (rev) P = [P[0], ...P.slice(1).reverse()];
-  const curve = new THREE.CatmullRomCurve3(P.map(p => new THREE.Vector3(p[0], 0, p[1])), true, 'centripetal');
-  const N = 180, pts = curve.getSpacedPoints(N).slice(0, N).map(v => [v.x, v.z]);
-  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
-  const r = { pts, x0, x1, y0, y1, w: P.reduce((s, p) => s + (p[3] || 18), 0) / P.length }; cache.set(key, r); return r;
+const V3 = THREE.Vector3;
+const FRAME_MS = 1000 / 30;
+
+function disposeScene(sc) {
+  sc.traverse(o => { if (o.geometry) o.geometry.dispose(); });
 }
-const shade = (hex, k) => { const c = new THREE.Color(hex || '#cccccc'); return '#' + (k > 0 ? c.lerp(new THREE.Color('#ffffff'), k) : c.lerp(new THREE.Color('#2a1640'), -k)).getHexString(); };
 
 export function createTrackMinis(host) {
-  let tiles = [], raf = 0, last = 0, visible = true, t0 = performance.now();
-  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { visible = es.some(e => e.isIntersecting); loop(); }) : null;
+  let tiles = [], scenes = [], raf = 0, last = 0, seen = true, gen = 0, hiddenSince = 0, fpsN = 0, fpsT = 0;
+  const canvas = document.createElement('canvas'); canvas.className = 'tm3d';
+  const isTouch = matchMedia('(pointer:coarse)').matches;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, preserveDrawingBuffer: true, powerPreference: 'low-power' });
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.shadowMap.enabled = false;
+  const PR = Math.min(devicePixelRatio || 1, isTouch ? 1 : 1.25); renderer.setPixelRatio(PR);
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { seen = es.some(e => e.isIntersecting); kick(); }) : null;
   if (io) io.observe(host);
-  function setHost(h) { if (h === host) return; if (io) { io.unobserve(host); io.observe(h); } host = h; visible = true; }
-  document.addEventListener('visibilitychange', loop);
+  document.addEventListener('visibilitychange', kick);
+  const stats = { fps: 0, builds: [] }; window.__tm3d = stats;
+
+  function setHost(h) { if (h === host) return; if (io) { io.unobserve(host); io.observe(h); } host = h; seen = true; }
+  function freeAll() { for (const s of scenes) if (s && s.scene) { disposeScene(s.scene); } scenes = []; renderer.renderLists.dispose(); }
 
   function setCup(c, locked) {
-    host.innerHTML = ''; tiles = [];
-    const names = raceNames(c), dpr = Math.min(2, devicePixelRatio || 1);
-    names.forEach((name, i) => {
-      const cup = cupForRace(c, i), rev = i === 1, P = pathOf(cup, rev);
+    gen++; freeAll(); tiles = [];
+    host.innerHTML = ''; host.appendChild(canvas);
+    raceNames(c).forEach((name, i) => {
       const d = document.createElement('div'); d.className = 'tmini' + (locked ? ' lk' : ''); d.style.setProperty('--cc', c.color); d.style.animationDelay = (i * 0.06) + 's';
-      d.innerHTML = `<canvas></canvas><div class="tmn"><b>${i + 1}</b><span>${name}</span></div>`;
-      host.appendChild(d);
-      const cv = d.querySelector('canvas');
-      const karts = CHARS.slice(0, 5).map((ch, k) => ({ col: ch.color || '#fff', u: 0.985 - k * 0.022, sp: 0.075 + ((k * 37 + i * 11) % 7) * 0.003, lane: ((k % 3) - 1) * 0.28, ph: k * 1.7 }));
-      tiles.push({ cv, ctx: cv.getContext('2d'), cup, P, karts, dpr, locked });
+      d.innerHTML = `<div class="tmload"></div><div class="tmn"><b>${i + 1}</b><span>${name}</span></div>`;
+      host.appendChild(d); tiles.push({ el: d, i, cup: cupForRace(c, i), rev: i === 1, scene: null, cam: new THREE.PerspectiveCamera(58, 1.6, 0.5, 1500), karts: [], camPos: new V3(), camLook: new V3(), snap: true, locked });
     });
-    resize(); draw(performance.now()); loop();
+    // construir de una en una, en fotogramas distintos (la vuelta reutiliza la escena de la ida)
+    const my = gen; let k = 0; const order = [0, 2, 3];
+    const next = () => { if (my !== gen || k >= order.length) return; const ti = order[k++];
+      const t0 = performance.now();
+      try { buildScene(ti, tiles[ti].cup); if (ti === 0) shareScene(1); } catch (e) { console.warn('trackmini', e); }
+      stats.builds.push(Math.round(performance.now() - t0));
+      setTimeout(() => requestAnimationFrame(next), 30); };
+    setTimeout(() => requestAnimationFrame(next), 350); // espera breve: si se cambian copas rápido no se construye nada
+    kick();
   }
-  function resize() { for (const T of tiles) { const r = T.cv.getBoundingClientRect(); const w = Math.max(40, Math.round(r.width * T.dpr)), h = Math.max(30, Math.round(r.height * T.dpr)); if (T.cv.width !== w || T.cv.height !== h) { T.cv.width = w; T.cv.height = h; T.bg = null; } } }
-  addEventListener('resize', () => { resize(); draw(performance.now()); });
-
-  function fit(T) { const { cv, P } = T, W = cv.width, H = cv.height, pad = 0.13 * Math.min(W, H);
-    const s = Math.min((W - 2 * pad) / (P.x1 - P.x0), (H - 2 * pad - H * 0.2) / (P.y1 - P.y0));
-    return { s, ox: W / 2 - (P.x0 + P.x1) / 2 * s, oy: (H * 0.4) - (P.y0 + P.y1) / 2 * s + H * 0.02 }; }
-  // fondo estático (suelo + pista) dibujado una vez por tile en un lienzo aparte
-  function bake(T) {
-    const { cv, cup, P } = T, W = cv.width, H = cv.height, F = fit(T), b = document.createElement('canvas'); b.width = W; b.height = H; const g = b.getContext('2d');
-    const space = !cup.ground, g1 = space ? (cup.sky && cup.sky[0]) || '#1a1040' : cup.ground, g2 = space ? (cup.sky && cup.sky[1]) || '#3b1f6e' : (cup.ground2 || shade(cup.ground, 0.3));
-    const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, g1); gr.addColorStop(1, g2); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    let rs = 9 + cup.track.length; const rnd = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
-    for (let k = 0; k < 26; k++) { g.fillStyle = space ? 'rgba(255,255,255,' + (0.3 + rnd() * 0.6) + ')' : 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(rnd() * W, rnd() * H, (space ? 0.6 : 1.5 + rnd() * 3) * T.dpr, 0, 7); g.fill(); }
-    const path = () => { g.beginPath(); P.pts.forEach(([x, y], k) => { const X = F.ox + x * F.s, Y = F.oy + y * F.s; k ? g.lineTo(X, Y) : g.moveTo(X, Y); }); g.closePath(); };
-    const rw = Math.max(4 * T.dpr, P.w * F.s * 1.25); g.lineJoin = g.lineCap = 'round';
-    path(); g.strokeStyle = 'rgba(40,15,60,.28)'; g.lineWidth = rw + 6 * T.dpr; g.save(); g.translate(0, 2 * T.dpr); g.stroke(); g.restore();
-    path(); g.strokeStyle = cup.curbB || '#fff'; g.lineWidth = rw + 3.2 * T.dpr; g.stroke();
-    path(); g.setLineDash([5 * T.dpr, 5 * T.dpr]); g.strokeStyle = cup.curbA || '#ff7fb6'; g.stroke(); g.setLineDash([]);
-    path(); g.strokeStyle = cup.road || '#ffe3f0'; g.lineWidth = rw; g.stroke();
-    path(); g.setLineDash([3 * T.dpr, 4 * T.dpr]); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = Math.max(1, T.dpr * 0.8); g.stroke(); g.setLineDash([]);
-    // línea de meta a cuadros
-    const [ax, ay] = P.pts[0], [bx, by] = P.pts[1], dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l, cx = F.ox + ax * F.s, cy = F.oy + ay * F.s, hw = rw / 2, q = Math.max(1.5, hw / 3);
-    g.save(); g.translate(cx, cy); g.rotate(Math.atan2(ny, nx)); for (let k = -3; k < 3; k++) for (let j = 0; j < 2; j++) { g.fillStyle = (k + j) & 1 ? '#222' : '#fff'; g.fillRect(k * q, (j - 1) * q, q, q); } g.restore();
-    T.bg = b; T.F = F; T.rw = rw;
+  function buildScene(ti, cup) {
+    const scene = new THREE.Scene(), lod0 = window.__mrLod; window.__mrLod = 0.35; let T; try { T = buildTrack(cup, false, { hi: false }); } finally { window.__mrLod = lod0; }
+    scene.add(T.group);
+    const fake = { cup, scene, quality: { hi: false }, track: T }; Race.prototype.setupSky.call(fake);
+    scene.traverse(o => { if (o.isLight) o.castShadow = false; if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+    scenes.push({ scene, T });
+    attach(tiles[ti], scene, T);
   }
-  function draw(now) {
-    const t = (now - t0) / 1000;
-    for (const T of tiles) {
-      if (!T.bg) bake(T); const { ctx: g, cv, P, F } = T, N = P.pts.length;
-      g.clearRect(0, 0, cv.width, cv.height); g.drawImage(T.bg, 0, 0);
-      const ks = T.karts.map(k => { const u = ((k.u + t * k.sp * (T.locked ? 0.4 : 1)) % 1 + 1) % 1, f = u * N, a = Math.floor(f) % N, b = (a + 1) % N, e = f - Math.floor(f);
-        const [x1, y1] = P.pts[a], [x2, y2] = P.pts[b], x = x1 + (x2 - x1) * e, y = y1 + (y2 - y1) * e, l = Math.hypot(x2 - x1, y2 - y1) || 1, off = (k.lane + Math.sin(t * 1.3 + k.ph) * 0.12) * T.rw / F.s;
-        return { k, X: F.ox + (x - (y2 - y1) / l * off) * F.s, Y: F.oy + (y + (x2 - x1) / l * off) * F.s, ang: Math.atan2(y2 - y1, x2 - x1) }; });
-      const r = Math.max(3 * T.dpr, T.rw * 0.34);
-      for (const o of ks) { g.save(); g.translate(o.X, o.Y); g.rotate(o.ang);
-        g.fillStyle = 'rgba(40,15,60,.3)'; g.beginPath(); g.ellipse(0.5, r * 0.5, r * 1.3, r * 0.8, 0, 0, 7); g.fill();
-        g.fillStyle = o.k.col; g.strokeStyle = '#fff'; g.lineWidth = Math.max(1, T.dpr * 0.9); g.beginPath(); g.roundRect ? g.roundRect(-r * 1.3, -r * 0.85, r * 2.6, r * 1.7, r * 0.7) : g.rect(-r * 1.3, -r * 0.85, r * 2.6, r * 1.7); g.fill(); g.stroke();
-        g.fillStyle = '#fff'; g.beginPath(); g.arc(r * 0.45, 0, r * 0.42, 0, 7); g.fill(); g.restore(); }
+  function shareScene(ti) { const s = scenes[scenes.length - 1]; attach(tiles[ti], s.scene, s.T); }
+  function attach(tile, scene, T) {
+    tile.scene = scene; tile.T = T; tile.snap = true;
+    const pool = CHARS.slice(); tile.karts = [];
+    for (let j = 0; j < 5; j++) {
+      const ch = pool[(j * 3 + tile.i * 5 + 1) % pool.length]; const m = makeKart(ch, j);
+      m.traverse(o => { if (o.isMesh) o.castShadow = false; });
+      scene.add(m); m.visible = false;
+      tile.karts.push({ m, d: -j * 9 - (j % 2) * 3, sp: 36 + j * -1.2 + ((tile.i * 7 + j * 3) % 5) * 0.5, lane: (j % 2 ? 1 : -1) * (0.15 + (j % 3) * 0.18), ph: j * 1.9 });
     }
+    tile.el.classList.add('ready');
   }
-  function loop() {
-    const run = visible && !document.hidden && host.isConnected && host.offsetParent !== null && tiles.length;
-    if (!run) { cancelAnimationFrame(raf); raf = 0; return; }
-    if (raf) return;
-    const step = now => { raf = 0; if (!(visible && !document.hidden && host.offsetParent !== null)) return; if (now - last >= 32) { last = now; draw(now); } raf = requestAnimationFrame(step); };
-    raf = requestAnimationFrame(step);
+  function placeKart(tile, k, dt, t) {
+    const T = tile.T, N = T.N, L = N * T.STEP;
+    k.d += k.sp * (tile.locked ? 0.5 : 1) * dt;
+    const dd = ((tile.rev ? -k.d : k.d) % L + L) % L, f = dd / T.STEP, a = Math.floor(f) % N, b = (a + 1) % N, e = f - Math.floor(f);
+    const A = T.S[a], B = T.S[b], lane = (k.lane + Math.sin(t * 0.7 + k.ph) * 0.12) * A.w;
+    const m = k.m; m.visible = true;
+    m.position.set(A.p.x + (B.p.x - A.p.x) * e + A.right.x * lane, A.p.y + (B.p.y - A.p.y) * e, A.p.z + (B.p.z - A.p.z) * e + A.right.z * lane);
+    const fx = tile.rev ? -A.fl.x : A.fl.x, fz = tile.rev ? -A.fl.z : A.fl.z;
+    m.rotation.y = Math.atan2(fx, fz);
+    animKart(m, t, k.sp, '');
+    return { fx, fz };
   }
-  return { setCup, setHost, resume: () => { resize(); loop(); }, stop: () => { cancelAnimationFrame(raf); raf = 0; } };
+  function draw(now, dt) {
+    const t = now / 1000, cr = canvas.getBoundingClientRect();
+    const W = Math.round(cr.width), H = Math.round(cr.height); if (W < 2 || H < 2) return;
+    const sz = renderer.getSize(new THREE.Vector2()); if (sz.x !== W || sz.y !== H) { renderer.setSize(W, H, false); renderer.setViewport(0, 0, W, H); renderer.clear(); }
+    const resized = sz.x !== W || sz.y !== H;
+    renderer.setScissorTest(true); renderer.setClearColor(0x000000, 0);
+    // modo ligero adaptativo: si el dibujo cuesta mucho, se pintan 2 casillas por fotograma (alternas)
+    const t0 = performance.now(); tick++;
+    const done = new Set();
+    for (const tile of tiles) {
+      if (!tile.scene) continue;
+      if (rr && !resized && (tile.i + tick) % 2) { tile.skip = (tile.skip || 0) + dt; continue; }
+      const tdt = dt + (tile.skip || 0); tile.skip = 0;
+      const r = tile.el.getBoundingClientRect(), x = r.left - cr.left, y = r.top - cr.top, w = r.width, h = r.height;
+      if (w < 2 || h < 2) continue;
+      // karts de otras casillas que comparten escena: ocultar
+      for (const o of tiles) if (o !== tile && o.scene === tile.scene) o.karts.forEach(k => k.m.visible = false);
+      let lead = null, ld = -1e9, dir = null;
+      for (const k of tile.karts) { const dv = placeKart(tile, k, tdt, t); if (k.d > ld) { ld = k.d; lead = k; dir = dv; } }
+      if (!done.has(tile.scene) && tile.T.anims) { for (const fn of tile.T.anims) try { fn(t, tdt); } catch (e) {} done.add(tile.scene); }
+      const p = lead.m.position, want = new V3(p.x - dir.fx * 10, p.y + 5.2, p.z - dir.fz * 10), look = new V3(p.x + dir.fx * 7, p.y + 1.2, p.z + dir.fz * 7);
+      if (tile.snap) { tile.camPos.copy(want); tile.camLook.copy(look); tile.snap = false; }
+      else { const kf = 1 - Math.exp(-tdt * 4); tile.camPos.lerp(want, kf); tile.camLook.lerp(look, kf); }
+      const cam = tile.cam; cam.aspect = w / h; cam.updateProjectionMatrix(); cam.position.copy(tile.camPos); cam.lookAt(tile.camLook);
+      const vy = H - y - h; renderer.setViewport(x, vy, w, h); renderer.setScissor(x, vy, w, h);
+      renderer.render(tile.scene, cam);
+    }
+    renderer.setScissorTest(false);
+    const ms = performance.now() - t0; drawMs = drawMs * 0.9 + ms * 0.1; stats.drawMs = Math.round(drawMs * 10) / 10;
+    if (!rr && drawMs > 14) rr = true; else if (rr && drawMs < 4) rr = false; stats.rr = rr;
+  }
+  function visibleNow() { return seen && !document.hidden && host.isConnected && host.offsetParent !== null && tiles.length; }
+  function kick() { if (!raf && visibleNow()) { last = performance.now(); raf = requestAnimationFrame(loop); } }
+  function loop(now) {
+    raf = 0;
+    if (!visibleNow()) { // pantalla fuera: liberar escenas tras 1,5 s
+      if (!hiddenSince) hiddenSince = now; if (now - hiddenSince > 1500 && scenes.length && !(host.offsetParent !== null)) { gen++; freeAll(); tiles.forEach(t => { t.scene = null; t.el.classList.remove('ready'); }); needRebuild = true; }
+      if (host.isConnected) setTimeout(() => requestAnimationFrame(loop), 250); return;
+    }
+    hiddenSince = 0;
+    if (needRebuild && cur) { needRebuild = false; setCup(cur.c, cur.locked); }
+    if (now - last >= FRAME_MS - 2) { const dt = Math.min(0.1, (now - last) / 1000); last = now; draw(now, dt); fpsN++; }
+    if (now - fpsT > 1000) { stats.fps = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; }
+    raf = requestAnimationFrame(loop);
+  }
+  let needRebuild = false, cur = null, tick = 0, rr = false, drawMs = 0;
+  return { setHost, setCup: (c, locked) => { cur = { c, locked }; needRebuild = false; setCup(c, locked); }, free: () => { gen++; freeAll(); tiles = []; } };
 }
