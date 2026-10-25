@@ -1,4 +1,5 @@
 import * as THREE from './three.js?v=693';
+import { makePost } from './lib/fx-post.js?v=1';
 let NET = null; const NEV = []; NEV.gone = []; let netT = 0, netMvT = 0, CID = 0, FID = 0;
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -195,6 +196,7 @@ const FT = (navigator.hardwareConcurrency || 4) >= 6 ? 1024 : 768; let DPR = Mat
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xc9b6ff); scene.fog = new THREE.Fog(0xc9b6ff, 90, 260);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 1500);
+const POST = makePost(renderer, scene, camera, { bloom: .22, threshold: .97, sat: 1.12, vig: .22 }); // noche 25-10: bloom + color
 window.__fxNoche && window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: .3, env: .25, top: '#cfe0ff', mid: '#f3e8ff', bot: '#ffd6ec' }); // noche 25-10: reflejos suaves + luz de cielo
 const sun = new THREE.DirectionalLight(0xfff0e0, 2.4); sun.position.set(30, 60, 25); scene.add(sun); const fill = new THREE.DirectionalLight(0xbfe4ff, .7); fill.position.set(-40, 25, -30); scene.add(fill);
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
@@ -821,7 +823,7 @@ function frame1(now) {
     { let vx = 0, vz = 0; for (const c of me.cells) { vx += c.vx; vz += c.vz; } const n = me.cells.length || 1; mx += vx / n * .25; mz += vz / n * .25; } camX += (mx - camX) * damp(12, dt); camZp += (mz - camZp) * damp(12, dt); if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 2.2); const sk = (G.shake || 0) ** 2 * 2.2; camera.position.set(camX + rnd(-sk, sk), camH, camZp + camH * .42 + rnd(-sk, sk)); camera.lookAt(camX, 0, camZp); camera.fov = 50 + (me.boost > 0 ? 6 : 0) + (G.shake || 0) * 6; camera.near = Math.max(.5, camH * .12); camera.far = camH * 6 + 600; camera.updateProjectionMatrix(); /* v6.18: near dinámico = sin parpadeo de baldosas al alejar */ }
   else { camera.position.set(Math.sin(t * .1) * 40, 45, Math.cos(t * .1) * 40); camera.lookAt(0, 0, 0); }
   skyDome.position.copy(camera.position); skyU.t.value = t; for (const g of [arenaG, ELITE && ELG[G.th]]) { const fl = g && g.visible && g.userData.flo; if (fl) for (const im of fl.children) im.rotation.y += im.userData.w * dt; }
-  renderer.render(scene, camera);
+  POST.render(scene, camera);
   if (G.on && (hudT -= dt) <= 0) { hudT = .25; updHud(); }
   if (msgT > 0 && (msgT -= dt) <= 0) $('msg').style.opacity = 0;
 }
