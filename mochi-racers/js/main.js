@@ -22,7 +22,9 @@ const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in wind
 document.title = CONFIG.title; $('logo').firstChild.textContent = CONFIG.title;
 
 // ---------------- save ----------------
-const SKEY = 'mracers_save_v1';
+// v40: la copia de prueba (/mochi-racers-prueba/) guarda aparte; la primera vez copia la partida normal
+const SKEY = /-prueba\//.test(location.pathname) ? 'mracers_save_prueba_v1' : 'mracers_save_v1';
+if (SKEY !== 'mracers_save_v1' && !localStorage.getItem(SKEY) && localStorage.getItem('mracers_save_v1')) try { localStorage.setItem(SKEY, localStorage.getItem('mracers_save_v1')); } catch (e) {}
 const save = Object.assign({ trophies: {}, char: 'mochi', settings: { sound: '1', music: '1', engine: '0', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' } }, JSON.parse(localStorage.getItem(SKEY) || '{}'));
 save.settings = Object.assign({ sound: '1', music: '1', engine: '0', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' }, save.settings);
 const persist = () => localStorage.setItem(SKEY, JSON.stringify(save));
@@ -213,7 +215,9 @@ const TIER = ['🥇 Oro', '🥈 Plata', '🥉 Bronce'];
 let carousel = null, cupBusy = false;
 function cupInfo() { const c = CUPS[uSel], un = cupUnlocked(c), tr = save.trophies[c.id];
   $('cupName').textContent = c.name; $('cupName').style.setProperty('--cc', un ? c.color : '#b8a8d0');
-  $('cupTrack').innerHTML = '<div class="rlist">' + raceNames(c).map((n, i) => `<span><b>${i + 1}</b>${n}</span>`).join('') + '</div>' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
+  $('cupTrack').innerHTML = '<div class="tminis"></div>' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
+  // v40: 4 ilustraciones fijas por copa (una por circuito), cargadas solo al mostrar la copa
+  $('cupTrack').firstChild.innerHTML = raceNames(c).map((n, i) => `<div class="tmini${un ? '' : ' lk'}" style="--cc:${c.color};animation-delay:${i * 0.06}s"><img src="img/circuitos/${c.id}-${i + 1}.webp" alt="" decoding="async" onload="this.parentNode.classList.add('ready')"><div class="tmn"><b>${i + 1}</b><span>${n}</span></div>${i === 1 ? '<i class="tmrev">⟲</i>' : ''}</div>`).join('');
   [...$('cupGrid').children].forEach((d, i) => d.classList.toggle('sel', i === uSel));
   $('uGo').classList.toggle('locked', !un); $('uGo').innerHTML = un ? '<span>¡A correr!</span>' : '<span>🔒 Bloqueada</span>';
   $('cupPanel').classList.remove('swap'); void $('cupPanel').offsetWidth; $('cupPanel').classList.add('swap');
