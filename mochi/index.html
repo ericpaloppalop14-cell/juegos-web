@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+/* noche 25-10: color más vivo y nítido (GPU, sin coste en el dibujo) */#c{filter:saturate(1.12) contrast(1.04) brightness(1.01)}
 @font-face{font-family:'Fredoka';src:url(fredoka.woff2) format('woff2');font-weight:300 700;font-display:block}
 @font-face{font-family:'MochiJA';src:url(fonts/cjk-ja.woff2) format('woff2');font-weight:300 800;font-display:swap}
 @font-face{font-family:'MochiKO';src:url(fonts/cjk-ko.woff2) format('woff2');font-weight:300 800;font-display:swap}
@@ -206,8 +207,8 @@ I18N.apply();document.documentElement.style.setProperty('--mf',I18N.FONT);
 </script>
 <script src="monet.js"></script>
 <script src="peerjs.min.js"></script>
-<script>window.FX_NOCHE={z:2,n:18,vig:.14,rays:false}</script><script src="fx-noche.js?v=1"></script>
-<script src="game.js?v=23"></script>
+<script>window.FX_NOCHE={z:2,n:18,vig:.14,rays:false}</script><script src="fx-noche.js?v=2"></script>
+<script src="game.js?v=24"></script>
 <script>
 if('serviceWorker' in navigator && location.protocol==='https:' && !(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 </script>

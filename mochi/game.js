@@ -2399,6 +2399,7 @@ function spawnTutorial() {
 function cellOK(cell) { return cell.t === 'e' || (cell.t === 'w' && cell.c === mochi.color); }
 
 // ================= Effects =================
+const FXGLOW = !/nofx/.test(location.search); // noche 25-10
 function burst(x, y, col, n, opt = {}) {
   for (let i = 0; i < n; i++) {
     const a = opt.up ? rnd(-Math.PI * 0.95, -Math.PI * 0.05) : rnd(0, Math.PI * 2), sp = rnd(opt.min || 60, opt.max || 260);
@@ -3256,6 +3257,7 @@ function render() {
   // particles
   for (const p of particles) {
     const e = p.life / p.max, a = 1 - e;
+    if ((p.type === 'spark' || p.type === 'star') && FXGLOW) { g.globalCompositeOperation = 'lighter'; g.fillStyle = rgbs(p.col, a * 0.22); g.beginPath(); g.arc(p.x, p.y, p.r * 3.2, 0, 7); g.fill(); g.globalCompositeOperation = 'source-over'; } // noche 25-10: halo de luz
     if (p.type === 'spark') { g.fillStyle = rgbs(p.col, a); g.beginPath(); g.arc(p.x, p.y, p.r * (1 - e * 0.5), 0, 7); g.fill(); }
     else if (p.type === 'star') {
       g.fillStyle = rgbs(p.col, a); const r = p.r * 2 * (1 - e * 0.3);
