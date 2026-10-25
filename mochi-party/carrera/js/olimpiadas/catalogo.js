@@ -42,7 +42,7 @@ export const OLIMPIADAS = [
     { id: 'vallas', base: 'vallas', name: 'Vallas Serpiente', icon: '🐍', desc: 'Salta las serpientes de gominola que ondulan.' },
     { id: 'anillos', base: 'anillos', name: 'Vuelo de Anillos', icon: '💫', desc: 'Vuela por el cielo de golosinas atravesando anillos.' },
     { id: 'pintaTarta', tipo: 'pinta', name: 'Pinta la Tarta', icon: '🎨', desc: 'Pinta la tarta gigante de tu color. Las magdalenas son bombas de nata que pintan mucho.', how: 'Arrastra el dedo para moverte: todo lo que pisas se pinta de tu color.' },
-    { id: 'futbol', tipo: 'futbol', grass: '#9fe0a0', name: 'Fútbol de Gominola', icon: '⚽', desc: 'Partido de 3 contra 3 con un balón de gominola. Tu equipo ataca la portería rosa.', how: 'Arrastra el dedo para moverte y pulsa ⚽ cerca del balón para chutar.' },
+    { id: 'futbol', tipo: 'futbol', grass: '#9fe0a0', name: 'Fútbol de Gominola', icon: '⚽', desc: 'Partido de 3 contra 3 con un balón de gominola. Tu equipo ataca la portería rosa.', how: 'Arrastra el dedo para moverte: el balón se pega a tus pies. Pulsa el botón grande ⚽ CHUTAR para tirar a la portería rosa.' },
     { id: 'caramelos', tipo: 'distinto', name: '¿Cuál es Distinto?', icon: '🔍', desc: 'En la bandeja gigante hay muchas golosinas iguales… y una con un detalle casi invisible: un matiz de color, un pelín más grande, girada o inclinada. ¡Cada ronda cuesta más! 8 rondas.', how: 'Fíjate bien y toca la golosina que es distinta a las demás. Si te equivocas, te mareas un momento.' },
   ] },
   { id: 'suenos', name: 'Olimpiada de los Sueños', icon: '☁️', color: ['#6a4ad0', '#ffc8e8'], lema: 'Ovejas que vuelan y relojes que se derriten', pruebas: [

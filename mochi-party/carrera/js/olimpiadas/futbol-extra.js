@@ -20,6 +20,10 @@ function pitchTex(FX, FZ, GW, MX, MZ) {
     g.fillStyle = '#62c45a'; g.fillRect(0, 0, W, H);
     const n = 14; for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? '#7ad66c' : '#5cbf55'; g.fillRect(X(-FX + i * 2 * FX / n), Z(-FZ), 2 * FX / n * sx + 1, 2 * FZ * sz); }
     for (let i = 0; i < 9; i++) { g.fillStyle = 'rgba(255,255,255,.035)'; g.fillRect(X(-FX), Z(-FZ + i * 2 * FZ / 9), 2 * FX * sx, FZ / 9 * sz); } // damero suave
+    // o37: briznas de césped, tréboles y brillo de corte (detalle fino sin coste por fotograma)
+    for (let i = 0; i < 9000; i++) { const x = Math.random() * W, y = Math.random() * H, l = 5 + Math.random() * 9; g.strokeStyle = Math.random() < .5 ? 'rgba(30,110,30,.22)' : 'rgba(190,255,160,.18)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (Math.random() - .5) * 4, y - l); g.stroke(); }
+    for (let i = 0; i < 160; i++) { const x = Math.random() * W, y = Math.random() * H; g.fillStyle = Math.random() < .3 ? 'rgba(255,255,255,.5)' : 'rgba(255,230,120,.45)'; g.beginPath(); g.arc(x, y, 2 + Math.random() * 2, 0, 7); g.fill(); }
+    { const rg = g.createRadialGradient(X(0), Z(0), 0, X(0), Z(0), W * .45); rg.addColorStop(0, 'rgba(255,255,220,.12)'); rg.addColorStop(1, 'rgba(0,40,0,.10)'); g.fillStyle = rg; g.fillRect(0, 0, W, H); }
     g.strokeStyle = '#ffffff'; g.lineWidth = 9; g.lineJoin = 'round';
     g.strokeRect(X(-FX), Z(-FZ), 2 * FX * sx, 2 * FZ * sz);
     g.beginPath(); g.moveTo(X(0), Z(-FZ)); g.lineTo(X(0), Z(FZ)); g.stroke();
@@ -162,9 +166,31 @@ export function futbolExtra(E, { FX, FZ, GW }) {
   ticks.push((t, dt) => { if ((fwT -= dt) < 0) { fwT = 2.2 + Math.random() * 2; launch(1); }
     for (const f of fws) { if (f.t > 2) { f.m.material.opacity = 0; continue; } f.t += dt; const r = 5 * (1 - Math.exp(-f.t * 2.5)), drop = f.t * f.t * .8; for (let i = 0; i < FP; i++) { const d = f.dir[i]; f.pos[i * 3] = f.c.x + d[0] * r; f.pos[i * 3 + 1] = f.c.y + d[1] * r - drop; f.pos[i * 3 + 2] = f.c.z + d[2] * r; } f.m.geometry.attributes.position.needsUpdate = true; f.m.material.opacity = Math.max(0, 1 - f.t / 2); }
     for (let i = 0; i < NC; i++) { const v = cv[i]; cp[i * 3 + 1] -= v.vy * dt; cp[i * 3] += Math.sin(t * 2 + v.ph) * dt * .4; if (cp[i * 3 + 1] < 0) spawnC(i); } cg.attributes.position.needsUpdate = true; });
+  // 11) o37 BANDERINES DE CÓRNER, COPA DEL MUNDO, FOTÓGRAFOS CON FLASH Y GLOBOS GIGANTES
+  const flagsC = []; for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const g = new THREE.Group(); g.position.set(sx * (FX + .25), 0, sz * (FZ + .25)); sc.add(g);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, 1.4, 6), toon('#ffffff')); pole.position.y = .7; g.add(pole);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(.5, .34), new THREE.MeshBasicMaterial({ color: sx > 0 ? '#ff6fae' : '#5fa8ff', side: THREE.DoubleSide })); fl.position.set(.25, 1.22, 0); const piv = new THREE.Group(); piv.position.y = 0; piv.add(fl); g.add(piv); flagsC.push(piv); }
+  ticks.push(t => flagsC.forEach((f, i) => f.rotation.y = Math.sin(t * 5 + i) * .5));
+  { const cup = new THREE.Group(); cup.position.set(0, 0, -(FZ + 1.7)); sc.add(cup); const gold = toon('#ffd23a', { emissive: '#ffb300', ei: .25, rim: .7 });
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(.55, .65, .8, 16), toon('#ffffff', { rim: .3 })); ped.position.y = .4; cup.add(ped);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.3, .38, .25, 16), toon('#2fae6a')); base.position.y = .93; cup.add(base);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.12, .22, .5, 12), gold); stem.position.y = 1.3; cup.add(stem);
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(.38, 16, 12, 0, 6.29, 0, 1.8), gold); bowl.position.y = 1.75; bowl.rotation.x = Math.PI; cup.add(bowl);
+    for (const s2 of [-1, 1]) { const h = new THREE.Mesh(new THREE.TorusGeometry(.16, .045, 6, 12), gold); h.position.set(s2 * .42, 1.75, 0); cup.add(h); }
+    const gl = glowSprite('#fff2a0', 3, .55); gl.position.y = 1.7; cup.add(gl);
+    ticks.push(t => { cup.rotation.y = t * .8; gl.material.opacity = .4 + .2 * Math.sin(t * 3); }); }
+  const flashes = []; for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { const z = (i - 1) * 3.6 + (i === 1 ? 0 : s * .4); if (Math.abs(z) < GW + .6) continue; const g = new THREE.Group(); g.position.set(s * (FX + 1.7), 0, z); g.rotation.y = -s * Math.PI / 2; sc.add(g);
+    const bd = new THREE.Mesh(new THREE.SphereGeometry(.3, 10, 8), toon(PAL[(i + (s > 0 ? 3 : 0)) % PAL.length], { rim: .3 })); bd.position.y = .4; bd.scale.y = .9; g.add(bd); outline(bd, '#5a3a6e', 1.06);
+    const cam = new THREE.Mesh(new THREE.BoxGeometry(.3, .2, .2), toon('#3a3550')); cam.position.set(0, .5, .3); g.add(cam);
+    const fx = glowSprite('#ffffff', 1.6, 0); fx.position.set(0, .55, .45); g.add(fx); flashes.push({ fx, t: Math.random() * 3 }); }
+  ticks.push((t, dt) => flashes.forEach(f => { f.t -= dt; if (f.t < 0) f.t = .6 + Math.random() * 2.5; f.fx.material.opacity = f.t < .08 ? 1 : 0; }));
+  const balloons = []; for (let i = 0; i < (low ? 5 : 8); i++) { const g = new THREE.Group(); const a = i / 8 * Math.PI - Math.PI * .02; g.position.set(Math.cos(a) * (IX + 8) * (i % 2 ? 1 : -1) * .9, 15 + (i % 3) * 2.5, -(IZ + 5 + (i % 3) * 3)); sc.add(g);
+    const bl = new THREE.Mesh(new THREE.SphereGeometry(1.1, 14, 12), toon(PAL[i % PAL.length], { rim: .5 })); bl.scale.y = 1.2; g.add(bl);
+    const str = new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, 3, 4), new THREE.MeshBasicMaterial({ color: '#ffffff' })); str.position.y = -2.6; g.add(str); balloons.push({ g, y: g.position.y, ph: i }); }
+  ticks.push(t => balloons.forEach(b => { b.g.position.y = b.y + Math.sin(t * .8 + b.ph) * .6; b.g.rotation.z = Math.sin(t * .6 + b.ph) * .1; }));
   let lastGoals = '0-0', flashT = 0;
   return { tick(dt, goals, timeLeft) { const t = performance.now() / 1000; goalHype = Math.max(0, goalHype - dt * .5);
-      const gk = goals.join('-'); if (gk !== lastGoals) { lastGoals = gk; goalHype = 1; flashT = 2.5; launch(3); }
+      const gk = goals.join('-'); if (gk !== lastGoals) { lastGoals = gk; goalHype = 1; flashT = 2.5; launch(5); flashes.forEach(f => f.t = Math.random() * .4); }
       flashT -= dt; drawSB(goals[0], goals[1], Math.max(0, Math.ceil(timeLeft)), flashT > 0 && Math.floor(flashT * 4) % 2 === 0);
       for (const f of ticks) f(t, dt); },
     counts: { publico: N, banderas: flagIdx.length, bufandas: scarfIdx.length } };
