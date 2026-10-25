@@ -6,7 +6,7 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v18';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v18b';
 import { makeCharacter, animCharacter } from './gfx.js?v=v18';
 import { chOf } from './chars.js?v=v18';
 import { createShell } from './shell.js?v=v18';

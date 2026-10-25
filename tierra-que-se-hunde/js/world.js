@@ -182,14 +182,14 @@ function decorLayers(scene, th, R) {
     const stripe = new THREE.Mesh(new THREE.TorusGeometry(3.02, 0.35, 8, 32), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 })); stripe.rotation.x = Math.PI / 2; b.add(stripe);
     const bas = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.6, 0.9, 10), new THREE.MeshStandardMaterial({ color: '#c9915f' })); bas.position.y = -4.6; b.add(bas);
     for (let k = 0; k < 4; k++) { const ro = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 4), new THREE.MeshBasicMaterial({ color: '#8a6a50' })); ro.position.set(Math.cos(k * 1.57) * 0.7, -3.5, Math.sin(k * 1.57) * 0.7); b.add(ro); }
-    const a0 = i / 6 * 6.283, r = R * (3.2 + (i % 3) * 0.9), y0 = 22 + (i % 3) * 9; b.scale.setScalar(1 + (i % 2) * 0.5); G.add(b);
+    const a0 = i / 6 * 6.283, r = R * (2.3 + (i % 3) * 0.6), y0 = 16 + (i % 3) * 7; b.scale.setScalar(1.6 + (i % 2) * 0.6); G.add(b);
     upd.push(t => { const a = a0 + t * 0.012; b.position.set(Math.cos(a) * r, y0 + Math.sin(t * 0.5 + i) * 2, Math.sin(a) * r); b.rotation.z = Math.sin(t * 0.7 + i) * 0.05; }); }
   // 5) bandadas de pájaros (aleteo)
   const wingM = new THREE.MeshBasicMaterial({ color: '#6b4f86', side: THREE.DoubleSide, fog: true });
   const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, -0.3, 0, 0, 0.3, 1.4, 0, 0]), 3));
   for (let f = 0; f < 3; f++) { const fl = new THREE.Group(); G.add(fl); const birds = [];
     for (let i = 0; i < 7; i++) { const bd = new THREE.Group(); const l = new THREE.Mesh(wg, wingM), rr = new THREE.Mesh(wg, wingM); rr.scale.x = -1; bd.add(l, rr); bd.position.set(-Math.abs(i - 3) * 2.2, Math.sin(i) * 0.6, (i - 3) * 2); fl.add(bd); birds.push([l, rr, i]); }
-    const r = R * (2.6 + f), y = 30 + f * 8, sp = 0.05 + f * 0.015, a0 = f * 2.1;
+    const r = R * (2.0 + f * 0.5), y = 18 + f * 5, sp = 0.05 + f * 0.015, a0 = f * 2.1; fl.scale.setScalar(1.6);
     upd.push(t => { const a = a0 + t * sp; fl.position.set(Math.cos(a) * r, y + Math.sin(t * 0.8 + f) * 1.5, Math.sin(a) * r); fl.rotation.y = -a; for (const [l, rr, i] of birds) { const w = Math.sin(t * 9 + i * 0.7) * 0.6; l.rotation.z = w; rr.rotation.z = -w; } }); }
   // 6) barquitos de vela meciéndose
   for (let i = 0; i < 5; i++) { const bt = new THREE.Group(); const hull = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.9, 0.9, 12, 1, false, 0, Math.PI), new THREE.MeshStandardMaterial({ color: ['#ff9ec7', '#9fd0ff', '#ffd36b', '#b9a2f7', '#7ee3c4'][i] })); hull.rotation.set(Math.PI / 2, 0, Math.PI / 2); hull.scale.set(1, 2.4, 1); bt.add(hull);
