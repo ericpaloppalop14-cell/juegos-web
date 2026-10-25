@@ -182,6 +182,7 @@ export function createShell(G) {
   }
   $('rList').onclick = e => { const d = e.target.closest('.me'); if (d) openChars('sRoom'); };
   $('bStart').onclick = () => {
+    if (!net) return; // noche 25-10: evita error si la sala online no llegó a conectarse
     Sfx.init(); Sfx.go(); net.started = true;
     const humans = net.players.map(p => ({ id: p.id, name: p.name, ch: p.ch, bot: false }));
     const nb = Math.max(0, roomBots + 1 - humans.length);
