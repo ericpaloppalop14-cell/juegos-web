@@ -16,6 +16,8 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const lerp = (a, b, t) => a + (b - a) * t;
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const R = Math.random;
+// v41: menos diferencia entre karts: los valores bajos de velocidad y aceleración suben a mitad de camino hacia 5 (el 5 no cambia)
+export const eff = v => 5 - (5 - v) * 0.5;
 
 export class Race {
   constructor(app, { cup, reverse, playerChar, rivals, grid, cupIndex = 0, quality }) {
@@ -88,7 +90,7 @@ export class Race {
     const pers = [{ name: 'prudente', laneAmp: 0.15, aggr: 0.3, skill: 0.95 }, { name: 'agresivo', laneAmp: 0.45, aggr: 0.9, skill: 0.98 }, { name: 'travieso', laneAmp: 0.35, aggr: 0.7, skill: 0.93 }, { name: 'veloz', laneAmp: 0.2, aggr: 0.5, skill: 1.0 }][gi % 4];
     return {
       ch, isPlayer, mesh: m, shield, pos: new V3(), yaw: 0, vx: 0, vz: 0, fs: 0, y: 0, vy: 0, air: false, airT: 0,
-      vmax: 43 + (s.vel - 3) * 2.8, acc: 0.74 + (s.acel - 3) * 0.14, turn: 2.0 + (s.man - 3) * 0.2, weight: 0.7 + s.peso * 0.15,
+      vmax: 43 + (eff(s.vel) - 3) * 2.8, acc: 0.74 + (eff(s.acel) - 3) * 0.14, turn: 2.0 + (s.man - 3) * 0.2, weight: 0.7 + s.peso * 0.15,
       idx: 0, prevIdx: 0, dist: 0, lap: 0, finished: false, finishTime: 0, place: gi + 1,
       item: null, rollT: 0, boostT: 0, megaT: 0, megaS: 1, shieldT: 0, magT: 0, spinT: 0, squashT: 0, blindT: 0, invT: 0,
       driftDir: 0, driftT: 0, dLvl: 0, expr: '', exprT: 0, lastBoost: 0, trick: false, trickT: 0, steerVis: 0, wrongT: 0, stuckT: 0, bumpCD: 0, lastHitBy: null,

@@ -9,6 +9,12 @@ import { PowerFX, POWER, POWER_W, SELF_POWERS } from './powerups.js';
 import { toon, mesh, outline, glowTex } from './gfx.js';
 import { Audio } from './audio.js';
 import { Race } from './race.js';
+import { deco } from './itemdeco.js';
+export const makeDriller = (...a) => deco(makeDriller__(...a), 'driller');
+export const makeClump = (...a) => deco(makeClump__(...a), 'clump');
+export const makeRing = (...a) => deco(makeRing__(...a), 'ring');
+export const makeDragon = (...a) => deco(makeDragon__(...a), 'dragon');
+export const makeRainbowCloud = (...a) => deco(makeRainbowCloud__(...a), 'rainbow');
 const V3 = THREE.Vector3, R = Math.random, clamp = (x, a, b) => Math.max(a, Math.min(b, x)), sm = x => x * x * (3 - 2 * x);
 
 export const EPIC = {
@@ -52,7 +58,7 @@ function face(p, y, z, s, o = {}) { // ojos grandes con brillos, mejillas y sonr
 }
 
 // ---------- 1) TALADRÍN: ser kawaii con casco-taladro, asomando entre la tierra ----------
-function makeDriller() {
+function makeDriller__() {
   const g = new THREE.Group(), u = g.userData;
   const body = new THREE.Group(); body.position.y = -0.55; g.add(body); u.body = body; // la mitad de abajo queda bajo la pista
   const fur = toon('#c9a7ff', { rim: 0.6 }), OL = '#9a74d8';
@@ -87,11 +93,11 @@ function makeDriller() {
   u.rings = [0, 1, 2].map(i => { const r = mesh(tor(), new THREE.MeshBasicMaterial({ color: ['#7ff5ff', '#ff9cf0', '#fff39a'][i], transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }), dome, [0, 0.3, 0], [0, 0, 0], 2.0); return r; });
   return g;
 }
-function makeClump() { const g = new THREE.Group(); const c = toon('#c69a72', { rim: 0.3 }); mesh(sph(), c, g, [0, 0, 0], null, [0.9, 0.4, 0.9]); mesh(sph(), toon('#e0b88f', { rim: 0.3 }), g, [0.5, 0.15, 0.2], null, 0.32); mesh(sph(), c, g, [-0.5, 0.1, -0.2], null, 0.28); return g; }
-function makeRing() { const m = new THREE.Mesh(tor(), new THREE.MeshBasicMaterial({ color: '#7ff5ff', transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); const g = new THREE.Group(); g.add(m); g.userData.m = m; return g; }
+function makeClump__() { const g = new THREE.Group(); const c = toon('#c69a72', { rim: 0.3 }); mesh(sph(), c, g, [0, 0, 0], null, [0.9, 0.4, 0.9]); mesh(sph(), toon('#e0b88f', { rim: 0.3 }), g, [0.5, 0.15, 0.2], null, 0.32); mesh(sph(), c, g, [-0.5, 0.1, -0.2], null, 0.28); return g; }
+function makeRing__() { const m = new THREE.Mesh(tor(), new THREE.MeshBasicMaterial({ color: '#7ff5ff', transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); const g = new THREE.Group(); g.add(m); g.userData.m = m; return g; }
 
 // ---------- 2) DRAGÓN COLOSAL: escamas, cuernos, alas, cola ondulante, silla y riendas ----------
-function makeDragon() {
+function makeDragon__() {
   const g = new THREE.Group(), u = g.userData;
   const skin = toon('#8fe3c4', { rim: 0.6 }), skin2 = toon('#6fd0b0', { rim: 0.5 }), belly = toon('#fff1c9', { rim: 0.4 }), spike = toon('#ff9cc8', { rim: 0.6 }), horn = toon('#ffe7a8', { rim: 0.7 }), OL = '#4fae90';
   const root = new THREE.Group(); root.position.y = -3.7; g.add(root); u.root = root;
@@ -148,7 +154,7 @@ function makeDragon() {
 
 // ---------- 3) TOBOGÁN ARCOÍRIS: se construye sobre la pista que tienes delante ----------
 const RB = ['#ff8fb0', '#ffb36b', '#ffe66b', '#8fe8a0', '#8fcfff', '#c6a2ff'];
-function makeRainbowCloud() { const g = new THREE.Group(), w = toon('#ffffff', { rim: 0.7 }); [[0, 0, 0, 2.2], [1.9, -0.3, 0.2, 1.6], [-1.9, -0.3, 0.1, 1.7], [0.9, 1.1, 0, 1.4], [-0.9, 1.0, 0.2, 1.3]].forEach(([x, y, z, r]) => { const m = mesh(sph(), w, g, [x, y, z], null, r); outline(m, '#d9c8f0', 1.04); });
+function makeRainbowCloud__() { const g = new THREE.Group(), w = toon('#ffffff', { rim: 0.7 }); [[0, 0, 0, 2.2], [1.9, -0.3, 0.2, 1.6], [-1.9, -0.3, 0.1, 1.7], [0.9, 1.1, 0, 1.4], [-0.9, 1.0, 0.2, 1.3]].forEach(([x, y, z, r]) => { const m = mesh(sph(), w, g, [x, y, z], null, r); outline(m, '#d9c8f0', 1.04); });
   g.userData.eyes = face(g, 0.2, 2.15, 1.6); return g; }
 function buildRainbow(T, i0, cnt, lat0, H) {
   const g = new THREE.Group(), pts = RB.map(() => []), N = T.N;
@@ -272,3 +278,4 @@ Race.prototype.placeCamera = function (snap, dt) {
   if (h) pl.y += h + extra; pc.call(this, snap, dt); if (h) pl.y -= h + extra;
   if (pl && pl.drillT > 0 && this.state === 'race') { const t = this.time; this.camera.position.x += Math.sin(t * 31) * 0.05; this.camera.position.y += Math.sin(t * 27 + 1) * 0.06; }
 };
+

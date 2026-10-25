@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { premiumChar, premiumVehicle } from './premium.js';
 import { classicChar, classicVehicle } from './classic.js';
+import { addCompi } from './compis.js';
+import { deco } from './itemdeco.js';
 
 // ---------- toon materials ----------
 let gradTex;
@@ -237,7 +239,7 @@ export function makeCharacter(ch, opts = {}) {
   if (X === 'disco') { add(tor(0.07, 32), gold, [0, 0.42, 0.04], [Math.PI / 2 + 0.15, 0, 0], [0.86, 0.86, 0.86]);
     const med = add(starGeoS(), gold, [0, 0.3, 0.92], [0.2, 0, 0], 0.1); root.userData.medal = med;
     for (const s of [-1, 1]) add(sph(8), toon('#ff8fd8', { emissive: '#ff4fb0', ei: 0.6, rim: 0 }), [s * 0.82, 0.92, 0.2], null, 0.06); }
-  premiumChar(X, rig, root, H); classicChar(X, rig, root, H);
+  premiumChar(X, rig, root, H); classicChar(X, rig, root, H); addCompi(X, rig, root);
   Object.assign(root.userData, { body, inner, rig, eyes, mouth, open, happy, xx, strain, ohMouth, sweat, stars, arms, ears, earParts, feet, face, ph: Math.random() * 6 });
   return root;
 }
@@ -307,6 +309,7 @@ export function animCharacter(c, t, k = 1, expr = '', sp = 0) {
   if (sq) { u.stars.rotation.y = t * 4; for (const m of u.xx.children) if (m.userData.s) m.rotation.z = t * 8 * m.userData.s; }
   if (st) { u.sweat.position.y = 1.18 - ((t * 0.9) % 1) * 0.35; u.sweat.scale.setScalar(0.09 * (1 - ((t * 0.9) % 1) * 0.3)); }
   if (u.flag) u.flag.rotation.y = Math.sin(t * 7) * 0.4 - sp * 0.6;
+  if (u.compi) u.compi(t, ph, sp);
   if (u.bow) u.bow.rotation.z = 0.4 + Math.sin(t * 5 + ph) * 0.08;
   if (u.pom) u.pom.position.x = Math.sin(t * 4 + ph) * 0.04;
   if (u.scarf) u.scarf.rotation.x = 0.3 + Math.sin(t * 6) * 0.15 + sp * 0.8;
@@ -501,24 +504,56 @@ export function makeItemBox() {
   return g;
 }
 export function makeProjectile(type) {
-  const g = new THREE.Group();
+  // v42: modelos con mucho más detalle (caras, costuras, lazos, brillos) y animación de espera en userData.idle
+  const g = new THREE.Group(), blk = toon('#2a1838', { rim: 0 }), wht = basic('#ffffff'), cheek = basic('#ff8fb8', { opacity: 0.75 });
   if (type === 'osito') {
-    const m = toon('#ff6fa0', { opacity: 0.85, rim: 0.6 });
-    mesh(sph(12), m, g, [0, 0.7, 0], null, [0.55, 0.6, 0.5]); mesh(sph(12), m, g, [0, 1.35, 0], null, 0.45);
-    for (const s of [-1, 1]) { mesh(sph(8), m, g, [s * 0.32, 1.72, 0], null, 0.16); mesh(sph(8), m, g, [s * 0.5, 0.75, 0.1], null, [0.15, 0.25, 0.15]); mesh(sph(8), m, g, [s * 0.28, 0.2, 0.1], null, [0.18, 0.2, 0.2]);
-      mesh(sph(6), toon('#2a1838', { rim: 0 }), g, [s * 0.15, 1.42, 0.4], null, 0.06); }
-    g.children.forEach(c => c.material === m && outline(c, '#a03060', 1.06));
+    const m = toon('#ff6fa0', { opacity: 0.9, rim: 0.7, emissive: '#ff3f8a', ei: 0.12 }), lt = toon('#ffd0e2', { rim: 0.4 });
+    const body = new THREE.Group(); g.add(body);
+    const torso = mesh(sph(16), m, body, [0, 0.72, 0], null, [0.56, 0.62, 0.5]); outline(torso, '#a03060', 1.06);
+    mesh(sph(14), lt, body, [0, 0.66, 0.34], null, [0.32, 0.36, 0.2]); // tripa
+    const head = mesh(sph(16), m, body, [0, 1.38, 0], null, 0.47); outline(head, '#a03060', 1.06);
+    mesh(sph(12), lt, body, [0, 1.3, 0.38], null, [0.2, 0.15, 0.14]); // hocico
+    mesh(sph(8), blk, body, [0, 1.35, 0.5], null, [0.07, 0.05, 0.05]); // nariz
+    for (const s of [-1, 1]) {
+      const ear = mesh(sph(10), m, body, [s * 0.33, 1.74, 0], null, 0.17); outline(ear, '#a03060', 1.08); mesh(sph(8), lt, body, [s * 0.33, 1.74, 0.08], null, 0.09);
+      mesh(sph(8), m, body, [s * 0.52, 0.78, 0.1], [0, 0, s * 0.5], [0.15, 0.27, 0.15]); mesh(sph(8), m, body, [s * 0.28, 0.2, 0.12], null, [0.19, 0.2, 0.22]);
+      mesh(sph(8), lt, body, [s * 0.28, 0.16, 0.3], null, [0.1, 0.1, 0.04]); // planta del pie
+      mesh(sph(8), blk, body, [s * 0.16, 1.46, 0.41], null, 0.07); mesh(sph(6), wht, body, [s * 0.14, 1.49, 0.47], null, 0.025);
+      mesh(sph(8), cheek, body, [s * 0.27, 1.32, 0.37], null, [0.08, 0.05, 0.03]);
+    }
+    // lazo al cuello
+    const bow = toon('#7fd8ff', { rim: 0.5, emissive: '#3fb8ff', ei: 0.2 });
+    for (const s of [-1, 1]) mesh(geo('bowL', () => new THREE.ConeGeometry(0.14, 0.26, 10)), bow, body, [s * 0.15, 1.04, 0.42], [0, 0, s * Math.PI / 2], 1);
+    mesh(sph(8), bow, body, [0, 1.04, 0.44], null, 0.07);
+    // costura de corazón
+    mesh(geo('heartS', () => { const h = new THREE.Shape(); h.moveTo(0, -0.1); h.bezierCurveTo(0.14, 0.02, 0.1, 0.13, 0, 0.06); h.bezierCurveTo(-0.1, 0.13, -0.14, 0.02, 0, -0.1); return new THREE.ExtrudeGeometry(h, { depth: 0.03, bevelEnabled: false }); }), toon('#ff3f7a', { emissive: '#ff3f7a', ei: 0.4 }), body, [0.18, 0.86, 0.44], [0, 0.3, 0], 1);
+    g.userData.idle = t => { body.rotation.z = Math.sin(t * 9) * 0.14; body.position.y = Math.abs(Math.sin(t * 9)) * 0.12; head.rotation.y = Math.sin(t * 4) * 0.3; };
   } else if (type === 'misil') {
-    const stick = mesh(cyl(6), toon('#ffffff'), g, [0, 0.9, -0.9], [Math.PI / 2, 0, 0], [0.08, 1.4, 0.08]);
-    const pop = mesh(sph(14), toon('#ff6f9a', { emissive: '#ff3f7a', ei: 0.3 }), g, [0, 0.9, 0.2], null, 0.6); outline(pop, '#a03060', 1.06);
-    mesh(tor(0.18, 20), toon('#ffffff'), pop, [0, 0, 0], [0, 0, 0], 0.6); mesh(tor(0.18, 20), toon('#ffe066'), pop, [0, 0, 0], [Math.PI / 2, 0, 0], 0.75);
+    const stick = mesh(cyl(8), toon('#ffffff', { rim: 0.3 }), g, [0, 0.9, -0.95], [Math.PI / 2, 0, 0], [0.08, 1.45, 0.08]);
+    for (let k = 0; k < 4; k++) mesh(tor(0.25, 12), toon('#ff8fb8'), stick, [0, -0.35 + k * 0.22, 0], [Math.PI / 2, 0, 0], [1.2, 1.2, 0.05]);
+    const pop = mesh(sph(20), toon('#ff6f9a', { emissive: '#ff3f7a', ei: 0.35, rim: 0.8 }), g, [0, 0.9, 0.2], null, 0.62); outline(pop, '#a03060', 1.06);
+    // espiral de caramelo de colores
+    const sw = geo('popSwirl', () => { const pts = []; for (let i = 0; i <= 60; i++) { const a = i / 60 * Math.PI * 6, r = 0.15 + i / 60 * 0.82; pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0.0)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 0.075, 6, false); });
+    for (const [z, c] of [[0.93, '#ffffff'], [-0.93, '#ffe066']]) { const m = mesh(sw, toon(c, { emissive: c, ei: 0.25 }), pop, [0, 0, z], [0, z < 0 ? Math.PI : 0, 0], 1); }
+    mesh(tor(0.1, 32), toon('#7fd8ff', { emissive: '#7fd8ff', ei: 0.4 }), pop, [0, 0, 0], [0, Math.PI / 2, 0], 1.02);
+    // carita traviesa
+    for (const s of [-1, 1]) { mesh(sph(8), blk, pop, [s * 0.32, 0.2, 0.88], null, [0.1, 0.14, 0.06]); mesh(sph(6), wht, pop, [s * 0.3, 0.26, 0.93], null, 0.04); mesh(sph(8), cheek, pop, [s * 0.55, -0.05, 0.78], null, [0.12, 0.07, 0.04]); }
+    mesh(geo('grinT', () => new THREE.TorusGeometry(0.2, 0.04, 6, 16, Math.PI)), blk, pop, [0, -0.12, 0.9], [0, 0, Math.PI], 1);
+    // aletitas
+    for (let k = 0; k < 4; k++) { const f = mesh(geo('finB', () => new THREE.BoxGeometry(0.05, 0.42, 0.5)), toon(['#ffe066', '#7fd8ff', '#b98cff', '#7ff5a0'][k], { rim: 0.4 }), stick, [0, 0.62, 0], null, 1); f.rotation.y = k * Math.PI / 2; f.position.set(Math.cos(k * Math.PI / 2) * 0.22, 0.62, Math.sin(k * Math.PI / 2) * 0.22); }
     g.userData.spin = pop;
   } else if (type === 'charco') {
-    const p = mesh(geo('puddle', () => { const s = new THREE.Shape(); for (let i = 0; i <= 24; i++) { const a = i / 24 * 6.283, r = 1 + Math.sin(a * 3) * 0.15 + Math.cos(a * 5) * 0.08; i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); } return new THREE.ShapeGeometry(s); }),
-      toon('#7ee3c4', { opacity: 0.8, rim: 0, emissive: '#3fc49f', ei: 0.3 }), g, [0, 0.08, 0], [-Math.PI / 2, 0, 0], 1.6);
-    mesh(sph(8), toon('#d8fbef', { opacity: 0.9 }), g, [0.4, 0.15, 0.3], null, [0.3, 0.08, 0.2]);
+    const shp = r0 => { const s = new THREE.Shape(); for (let i = 0; i <= 32; i++) { const a = i / 32 * 6.283, r = r0 * (1 + Math.sin(a * 3) * 0.15 + Math.cos(a * 5) * 0.08); i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); } return s; };
+    const jelly = mesh(geo('puddle2', () => new THREE.ExtrudeGeometry(shp(1), { depth: 0.08, bevelEnabled: true, bevelSize: 0.12, bevelThickness: 0.1, bevelSegments: 3 })),
+      toon('#7ee3c4', { opacity: 0.82, rim: 0.6, emissive: '#3fc49f', ei: 0.35 }), g, [0, 0.1, 0], [-Math.PI / 2, 0, 0], 1.6);
+    mesh(geo('puddleIn', () => new THREE.ShapeGeometry(shp(0.62))), basic('#d8fbef', { opacity: 0.45 }), g, [0, 0.33, 0], [-Math.PI / 2, 0, 0.6], 1.6);
+    const bubbles = []; for (let k = 0; k < 6; k++) { const b = mesh(sph(10), toon('#e8fff8', { opacity: 0.8, rim: 1, emissive: '#bff7e6', ei: 0.3 }), g, [Math.cos(k * 1.7) * 1.1, 0.32, Math.sin(k * 1.7) * 1.1], null, 0.12 + (k % 3) * 0.05); bubbles.push(b); }
+    // carita gelatinosa
+    for (const s of [-1, 1]) { mesh(sph(8), blk, g, [s * 0.32, 0.38, -0.1], null, [0.1, 0.06, 0.13]); mesh(sph(8), cheek, g, [s * 0.6, 0.36, 0.15], null, [0.14, 0.03, 0.09]); }
+    mesh(geo('smileT', () => new THREE.TorusGeometry(0.18, 0.035, 6, 14, Math.PI)), blk, g, [0, 0.37, 0.18], [-Math.PI / 2, 0, Math.PI], 1);
+    g.userData.idle = t => { jelly.scale.set(1.6 + Math.sin(t * 5) * 0.06, 1.6 + Math.cos(t * 5) * 0.06, 1.6 + Math.sin(t * 7) * 0.2); bubbles.forEach((b, k) => { b.position.y = 0.32 + ((t * 0.6 + k * 0.17) % 1) * 0.5; b.scale.setScalar((0.12 + (k % 3) * 0.05) * (1 - ((t * 0.6 + k * 0.17) % 1) * 0.6)); }); };
   }
-  return g;
+  return deco(g, type);
 }
 export function makeSeta() {
   const g = new THREE.Group();

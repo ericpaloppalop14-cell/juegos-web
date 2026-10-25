@@ -9,6 +9,20 @@ import * as THREE from 'three';
 import { PowerFX, POWER, POWER_W, SELF_POWERS } from './powerups.js';
 import { toon, mesh, outline, glowTex } from './gfx.js';
 import { Audio } from './audio.js';
+import { deco } from './itemdeco.js';
+export const makeHand = (...a) => deco(makeHand__(...a), 'hand');
+export const makeNose = (...a) => deco(makeNose__(...a), 'nose');
+export const makeBunny = (...a) => deco(makeBunny__(...a), 'bunny');
+export const makeHat = (...a) => deco(makeHat__(...a), 'hat');
+export const makeDisco = (...a) => deco(makeDisco__(...a), 'disco');
+export const makeDuck = (...a) => deco(makeDuck__(...a), 'duck');
+export const makeKernel = (...a) => deco(makeKernel__(...a), 'corn');
+export const makeCannon = (...a) => deco(makeCannon__(...a), 'cannon');
+export const makeHen = (...a) => deco(makeHen__(...a), 'hen');
+export const makeEars = (...a) => deco(makeEars__(...a), 'ears');
+export const makeEgg = (...a) => deco(makeEgg__(...a), 'egg');
+export const makeChick = (...a) => deco(makeChick__(...a), 'chick');
+export const makeOcto = (...a) => deco(makeOcto__(...a), 'octo');
 const V3 = THREE.Vector3, R = Math.random, lerp = (a, b, t) => a + (b - a) * t;
 
 export const LOCO = {
@@ -45,7 +59,7 @@ const sph = () => geo('s', () => new THREE.SphereGeometry(1, 16, 12)), cyl = () 
 const cap = () => geo('cap', () => new THREE.CapsuleGeometry(0.5, 1, 4, 10));
 const eyes = (p, y, z, s = 1) => { for (const sd of [-1, 1]) { mesh(sph(), toon('#ffffff', { rim: 0 }), p, [sd * 0.3 * s, y, z], null, 0.17 * s); mesh(sph(), toon('#1a1030', { rim: 0 }), p, [sd * 0.3 * s, y, z + 0.12 * s], null, 0.09 * s); } };
 const glow = (c, s, op = 0.8) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: op })); sp.scale.setScalar(s); return sp; };
-function makeHand() { // v31: manita kawaii (mochi pastel con carita, mejillas y dedos gorditos) + varita arcoíris + hilos de colores
+function makeHand__() { // v31: manita kawaii (mochi pastel con carita, mejillas y dedos gorditos) + varita arcoíris + hilos de colores
   const g = new THREE.Group(), u = g.userData, skin = toon('#ffe3f0', { rim: 0.55 }), OL = '#f2a7c9';
   const rig = new THREE.Group(); rig.position.set(0, 7.2, -0.6); g.add(rig); u.rig = rig;
   const hand = new THREE.Group(); hand.position.set(0, 1.55, 0); rig.add(hand); u.hand = hand;
@@ -76,25 +90,25 @@ function makeHand() { // v31: manita kawaii (mochi pastel con carita, mejillas y
   const halo = glow('#ffd6ec', 5.5, 0.25); halo.position.set(0, 1.5, 0); rig.add(halo);
   return g;
 }
-function makeNose() { const g = new THREE.Group(); const n = mesh(cone(), toon('#e0a070', { rim: 0.5 }), g, [0, 0, 0.5], [Math.PI / 2, 0, 0], [0.22, 1, 0.22]); g.userData.n = n; mesh(sph(), toon('#7fd67a'), g, [0, 0.25, 0.9], null, [0.25, 0.1, 0.4]); return g; }
-function makeBunny() { const g = new THREE.Group(), w = toon('#ffffff', { rim: 0.6 }); const b = mesh(sph(), w, g, [0, 0.9, 0], null, [0.9, 0.85, 1.1]); outline(b, '#b080a0', 1.05); mesh(sph(), w, g, [0, 1.8, 0.6], null, 0.65); eyes(g, 1.95, 1.15, 0.9); mesh(sph(), toon('#ff8fc0', { rim: 0 }), g, [0, 1.75, 1.25], null, 0.12);
+function makeNose__() { const g = new THREE.Group(); const n = mesh(cone(), toon('#e0a070', { rim: 0.5 }), g, [0, 0, 0.5], [Math.PI / 2, 0, 0], [0.22, 1, 0.22]); g.userData.n = n; mesh(sph(), toon('#7fd67a'), g, [0, 0.25, 0.9], null, [0.25, 0.1, 0.4]); return g; }
+function makeBunny__() { const g = new THREE.Group(), w = toon('#ffffff', { rim: 0.6 }); const b = mesh(sph(), w, g, [0, 0.9, 0], null, [0.9, 0.85, 1.1]); outline(b, '#b080a0', 1.05); mesh(sph(), w, g, [0, 1.8, 0.6], null, 0.65); eyes(g, 1.95, 1.15, 0.9); mesh(sph(), toon('#ff8fc0', { rim: 0 }), g, [0, 1.75, 1.25], null, 0.12);
   g.userData.ears = [-1, 1].map(sd => mesh(cap(), w, g, [sd * 0.28, 2.75, 0.45], [0, 0, sd * 0.2], [0.35, 1.1, 0.25])); mesh(sph(), w, g, [0, 0.9, -1.1], null, 0.35); return g; }
-function makeHat() { const g = new THREE.Group(), k = toon('#2a1838', { rim: 0.6 }); mesh(cyl(), k, g, [0, 0.15, 0], null, [2.4, 0.3, 2.4]); mesh(cyl(), k, g, [0, 1.6, 0], null, [1.5, 2.8, 1.5]); mesh(cyl(), toon('#ff4f7a'), g, [0, 0.7, 0], null, [1.55, 0.5, 1.55]); for (let i = 0; i < 6; i++) { const s = glow(['#ffe066', '#ffffff', '#ff8fd8'][i % 3], 1.2); s.position.set(Math.cos(i) * 2, 2 + i * 0.4, Math.sin(i) * 2); g.add(s); } return g; }
-function makeDisco() { const g = new THREE.Group(), u = g.userData; u.ball = mesh(geo('ico', () => new THREE.IcosahedronGeometry(1, 1)), toon('#c8c0ff', { flat: true, rim: 0.8, emissive: '#7f6fff', ei: 0.2 }), g, [0, 7, 0], null, 1.6); mesh(cyl(), toon('#c0c0d0'), g, [0, 9, 0], null, [0.05, 3, 0.05]);
+function makeHat__() { const g = new THREE.Group(), k = toon('#2a1838', { rim: 0.6 }); mesh(cyl(), k, g, [0, 0.15, 0], null, [2.4, 0.3, 2.4]); mesh(cyl(), k, g, [0, 1.6, 0], null, [1.5, 2.8, 1.5]); mesh(cyl(), toon('#ff4f7a'), g, [0, 0.7, 0], null, [1.55, 0.5, 1.55]); for (let i = 0; i < 6; i++) { const s = glow(['#ffe066', '#ffffff', '#ff8fd8'][i % 3], 1.2); s.position.set(Math.cos(i) * 2, 2 + i * 0.4, Math.sin(i) * 2); g.add(s); } return g; }
+function makeDisco__() { const g = new THREE.Group(), u = g.userData; u.ball = mesh(geo('ico', () => new THREE.IcosahedronGeometry(1, 1)), toon('#c8c0ff', { flat: true, rim: 0.8, emissive: '#7f6fff', ei: 0.2 }), g, [0, 7, 0], null, 1.6); mesh(cyl(), toon('#c0c0d0'), g, [0, 9, 0], null, [0.05, 3, 0.05]);
   u.beams = ['#ff5fd2', '#5ff5ff', '#ffe066', '#9dff7a'].map((c, i) => { const b = mesh(cone(), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.13, depthWrite: false, blending: THREE.AdditiveBlending }), g, [0, 3.5, 0], null, [1.1, 7, 1.1]); return b; });
   u.notes = [0, 1, 2].map(i => { const s = glow(['#ff8fd8', '#7ff5ff', '#ffe066'][i], 1.1); g.add(s); return s; }); return g; }
-function makeDuck() { const g = new THREE.Group(), u = g.userData, y = toon('#ffd83a', { rim: 0.7 }); const b = mesh(sph(), y, g, [0, 0.4, 0], null, [2.6, 1.5, 3.3]); outline(b, '#b08020', 1.03); const hd = mesh(sph(), y, g, [0, 2.6, 2.4], null, 1.35); outline(hd, '#b08020', 1.04);
+function makeDuck__() { const g = new THREE.Group(), u = g.userData, y = toon('#ffd83a', { rim: 0.7 }); const b = mesh(sph(), y, g, [0, 0.4, 0], null, [2.6, 1.5, 3.3]); outline(b, '#b08020', 1.03); const hd = mesh(sph(), y, g, [0, 2.6, 2.4], null, 1.35); outline(hd, '#b08020', 1.04);
   u.beak = mesh(sph(), toon('#ff8a2a'), g, [0, 2.4, 3.65], null, [0.75, 0.3, 0.6]); eyes(g, 3, 3.45, 1.4); mesh(sph(), y, g, [0, 1.4, -3.2], [0.6, 0, 0], [1.2, 0.5, 0.9]); u.wings = [-1, 1].map(sd => mesh(sph(), y, g, [sd * 2.5, 0.9, 0], null, [0.4, 0.9, 1.6]));
   u.bub = []; for (let i = 0; i < 6; i++) { const s = mesh(sph(), toon('#e8f8ff', { opacity: 0.5, rim: 1 }), g, [0, 0, 0], null, 0.35); u.bub.push(s); } return g; }
-function makeKernel() { const g = new THREE.Group(), u = g.userData; u.k = mesh(sph(), toon('#ffcf3a', { rim: 0.5 }), g, [0, 0.45, 0], null, [0.55, 0.45, 0.45]); u.pop = new THREE.Group(); g.add(u.pop); for (let i = 0; i < 7; i++) mesh(sph(), toon(i % 3 ? '#fffaf0' : '#ffe8a0', { rim: 0.5 }), u.pop, [Math.cos(i * 0.9) * 0.9, 1 + (i % 3) * 0.5, Math.sin(i * 0.9) * 0.9], null, 0.9 + (i % 2) * 0.3); u.pop.visible = false; u.ring = glow('#ffe066', 2.2, 0.6); u.ring.position.y = 0.6; g.add(u.ring); return g; }
-function makeCannon() { const g = new THREE.Group(), u = g.userData; const barrel = new THREE.Group(); barrel.position.y = 2; barrel.rotation.x = -0.6; g.add(barrel); u.barrel = barrel; const c = mesh(cyl(), toon('#ff4f7a', { rim: 0.6 }), barrel, [0, 0, 1.5], [Math.PI / 2, 0, 0], [1.5, 5, 1.5]); outline(c, '#7a2040', 1.04); for (let i = 0; i < 3; i++) mesh(geo('tr', () => new THREE.TorusGeometry(1, 0.15, 8, 20)), toon('#ffd24a'), barrel, [0, 0, i * 1.6], null, 1.55);
+function makeKernel__() { const g = new THREE.Group(), u = g.userData; u.k = mesh(sph(), toon('#ffcf3a', { rim: 0.5 }), g, [0, 0.45, 0], null, [0.55, 0.45, 0.45]); u.pop = new THREE.Group(); g.add(u.pop); for (let i = 0; i < 7; i++) mesh(sph(), toon(i % 3 ? '#fffaf0' : '#ffe8a0', { rim: 0.5 }), u.pop, [Math.cos(i * 0.9) * 0.9, 1 + (i % 3) * 0.5, Math.sin(i * 0.9) * 0.9], null, 0.9 + (i % 2) * 0.3); u.pop.visible = false; u.ring = glow('#ffe066', 2.2, 0.6); u.ring.position.y = 0.6; g.add(u.ring); return g; }
+function makeCannon__() { const g = new THREE.Group(), u = g.userData; const barrel = new THREE.Group(); barrel.position.y = 2; barrel.rotation.x = -0.6; g.add(barrel); u.barrel = barrel; const c = mesh(cyl(), toon('#ff4f7a', { rim: 0.6 }), barrel, [0, 0, 1.5], [Math.PI / 2, 0, 0], [1.5, 5, 1.5]); outline(c, '#7a2040', 1.04); for (let i = 0; i < 3; i++) mesh(geo('tr', () => new THREE.TorusGeometry(1, 0.15, 8, 20)), toon('#ffd24a'), barrel, [0, 0, i * 1.6], null, 1.55);
   for (const sd of [-1, 1]) { const w = mesh(cyl(), toon('#7fd8ff'), g, [sd * 1.8, 1.3, 0], [0, 0, Math.PI / 2], [1.3, 0.4, 1.3]); } u.smoke = []; for (let i = 0; i < 8; i++) { const s = mesh(sph(), toon('#ffffff', { opacity: 0.8, rim: 0.5 }), g, [0, 0, 0], null, 1); u.smoke.push(s); } return g; }
-function makeHen() { const g = new THREE.Group(), u = g.userData, w = toon('#ffffff', { rim: 0.6 }); const b = mesh(sph(), w, g, [0, 0, 0], null, [2.2, 2, 2.6]); outline(b, '#c09080', 1.04); mesh(sph(), w, g, [0, 2, 1.8], null, 1.2); eyes(g, 2.3, 2.85, 1.2); mesh(cone(), toon('#ffb020'), g, [0, 1.9, 3.2], [Math.PI / 2, 0, 0], [0.35, 0.8, 0.35]); for (let i = 0; i < 3; i++) mesh(sph(), toon('#ff3f4f'), g, [0, 3.1 + (i === 1 ? 0.2 : 0), 1.4 + i * 0.4], null, 0.35);
+function makeHen__() { const g = new THREE.Group(), u = g.userData, w = toon('#ffffff', { rim: 0.6 }); const b = mesh(sph(), w, g, [0, 0, 0], null, [2.2, 2, 2.6]); outline(b, '#c09080', 1.04); mesh(sph(), w, g, [0, 2, 1.8], null, 1.2); eyes(g, 2.3, 2.85, 1.2); mesh(cone(), toon('#ffb020'), g, [0, 1.9, 3.2], [Math.PI / 2, 0, 0], [0.35, 0.8, 0.35]); for (let i = 0; i < 3; i++) mesh(sph(), toon('#ff3f4f'), g, [0, 3.1 + (i === 1 ? 0.2 : 0), 1.4 + i * 0.4], null, 0.35);
   u.wings = [-1, 1].map(sd => { const p = new THREE.Group(); p.position.set(sd * 2, 0.5, 0); g.add(p); mesh(sph(), w, p, [sd * 1.4, 0, 0], null, [1.8, 0.3, 1.3]); return p; }); mesh(sph(), w, g, [0, 1, -2.6], [0.6, 0, 0], [1.2, 1.4, 0.6]); return g; }
-function makeEars() { const g = new THREE.Group(), w = toon('#ffffff', { rim: 0.6 }); for (const sd of [-1, 1]) { const e = new THREE.Group(); e.position.x = sd * 0.5; g.add(e); mesh(cap(), w, e, [0, 1, 0], null, [0.45, 1.5, 0.3]); mesh(cap(), toon('#ffb3d0', { rim: 0 }), e, [0, 1, 0.1], null, [0.25, 1.1, 0.2]); } return g; }
-function makeEgg() { const g = new THREE.Group(); mesh(sph(), toon('#fff4e0', { rim: 0.6 }), g, [0, 0, 0], null, [0.8, 1.05, 0.8]); for (let i = 0; i < 4; i++) mesh(sph(), toon(['#ff8fc0', '#7fd8ff', '#9dff7a', '#ffe066'][i]), g, [Math.cos(i * 1.57) * 0.75, (i % 2 - 0.5) * 0.5, Math.sin(i * 1.57) * 0.75], null, 0.18); return g; }
-function makeChick() { const g = new THREE.Group(); const y = toon('#ffe24a', { rim: 0.6 }); mesh(sph(), y, g, [0, 0.5, 0], null, 0.6); mesh(sph(), y, g, [0, 1.2, 0.1], null, 0.42); eyes(g, 1.3, 0.45, 0.6); mesh(cone(), toon('#ff8a2a'), g, [0, 1.18, 0.55], [Math.PI / 2, 0, 0], [0.12, 0.3, 0.12]); const sh = mesh(geo('half', () => new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), toon('#fff4e0'), g, [0, 0.45, 0], null, [0.8, 0.6, 0.8]); return g; }
-function makeOcto() { const g = new THREE.Group(), u = g.userData, c = toon('#c86fff', { rim: 0.7 }); const hd = mesh(sph(), c, g, [0, 1.6, 0], null, [1.3, 1.5, 1.3]); outline(hd, '#6a2a8a', 1.04); eyes(g, 1.6, 1.15, 1.2); mesh(cyl(), toon('#2a1838'), g, [0, 3.3, 0], null, [0.7, 0.9, 0.7]); mesh(cyl(), toon('#2a1838'), g, [0, 2.9, 0], null, [1.1, 0.1, 1.1]);
+function makeEars__() { const g = new THREE.Group(), w = toon('#ffffff', { rim: 0.6 }); for (const sd of [-1, 1]) { const e = new THREE.Group(); e.position.x = sd * 0.5; g.add(e); mesh(cap(), w, e, [0, 1, 0], null, [0.45, 1.5, 0.3]); mesh(cap(), toon('#ffb3d0', { rim: 0 }), e, [0, 1, 0.1], null, [0.25, 1.1, 0.2]); } return g; }
+function makeEgg__() { const g = new THREE.Group(); mesh(sph(), toon('#fff4e0', { rim: 0.6 }), g, [0, 0, 0], null, [0.8, 1.05, 0.8]); for (let i = 0; i < 4; i++) mesh(sph(), toon(['#ff8fc0', '#7fd8ff', '#9dff7a', '#ffe066'][i]), g, [Math.cos(i * 1.57) * 0.75, (i % 2 - 0.5) * 0.5, Math.sin(i * 1.57) * 0.75], null, 0.18); return g; }
+function makeChick__() { const g = new THREE.Group(); const y = toon('#ffe24a', { rim: 0.6 }); mesh(sph(), y, g, [0, 0.5, 0], null, 0.6); mesh(sph(), y, g, [0, 1.2, 0.1], null, 0.42); eyes(g, 1.3, 0.45, 0.6); mesh(cone(), toon('#ff8a2a'), g, [0, 1.18, 0.55], [Math.PI / 2, 0, 0], [0.12, 0.3, 0.12]); const sh = mesh(geo('half', () => new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), toon('#fff4e0'), g, [0, 0.45, 0], null, [0.8, 0.6, 0.8]); return g; }
+function makeOcto__() { const g = new THREE.Group(), u = g.userData, c = toon('#c86fff', { rim: 0.7 }); const hd = mesh(sph(), c, g, [0, 1.6, 0], null, [1.3, 1.5, 1.3]); outline(hd, '#6a2a8a', 1.04); eyes(g, 1.6, 1.15, 1.2); mesh(cyl(), toon('#2a1838'), g, [0, 3.3, 0], null, [0.7, 0.9, 0.7]); mesh(cyl(), toon('#2a1838'), g, [0, 2.9, 0], null, [1.1, 0.1, 1.1]);
   u.arms = []; for (let i = 0; i < 8; i++) { const p = new THREE.Group(); const a = i / 8 * 6.283; p.position.set(Math.cos(a) * 0.9, 0.6, Math.sin(a) * 0.9); p.rotation.y = -a; g.add(p); mesh(cap(), c, p, [0.7, 0, 0], [0, 0, Math.PI / 2], [0.35, 1.2, 0.35]); u.arms.push(p); }
   u.balls = ['#ff5f8f', '#ffe066', '#5ff5ff'].map(col => mesh(sph(), toon(col, { emissive: col, ei: 0.3 }), g, [0, 0, 0], null, 0.4)); return g; }
 
@@ -229,3 +243,4 @@ P0.place = function (k) {
   // v24 salvaguarda: el kart siempre de pie (sin inclinaciones residuales)
   m.rotation.x = 0; m.rotation.z = 0; const tl = m.userData.tilt; if (tl && !k.trick && !(k.flip && k.air)) { tl.rotation.x = Math.max(-0.45, Math.min(0.45, tl.rotation.x)); tl.rotation.z = Math.max(-0.45, Math.min(0.45, tl.rotation.z)); }
 };
+

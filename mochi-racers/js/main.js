@@ -4,11 +4,12 @@ import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS, RACES_PER_CUP } from './data.js';
 import { POWER } from './powerups.js';
 import './locos.js'; // v23: 8 objetos hiperlocos
+import './lujo.js'; // v41: todo lujo de detalles (cajas, objetos, golpes, karts)
 import './epic.js'; // v32: Taladrín, Dragón Colosal y Tobogán Arcoíris
 import { cupForRace, raceNames } from './tracks2.js';
 Object.assign(ITEMS, POWER); // v10: iconos y nombres de los potenciadores surrealistas
 import { makeKart, animKart, makeTrophy, toon, mesh, outline, makeSeta } from './gfx.js';
-import { Race } from './race.js';
+import { Race, eff } from './race.js';
 import { buildTrack } from './track.js';
 import { Audio } from './audio.js';
 import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
@@ -132,7 +133,7 @@ function renderChars() {
   const ch = CHARS[cSel], un = charUnlocked(ch);
   $('cName').textContent = ch.name; $('cName').style.color = ch.color === '#e8f4ff' ? '#7fb0e0' : '';
   $('cVeh').textContent = '🛞 ' + ch.vname; $('cDesc').textContent = ch.desc;
-  for (const [k, id] of [['vel', 'sVel'], ['acel', 'sAcel'], ['man', 'sMan'], ['peso', 'sPeso']]) $(id).style.width = ch.stats[k] * 20 + '%';
+  for (const [k, id] of [['vel', 'sVel'], ['acel', 'sAcel'], ['man', 'sMan'], ['peso', 'sPeso']]) $(id).style.width = (k === 'vel' || k === 'acel' ? eff(ch.stats[k]) : ch.stats[k]) * 20 + '%';
   $('cLock').textContent = ch.premium ? '⭐ Premium · 🎁 Prueba gratis (sin pagar nada)' : un ? '' : ch.premium ? '⭐ Piloto premium · ' + ch.price + ' · muy pronto en la tienda' : '🔒 ' + ch.unlock.text;
   $('cInfo').classList.toggle('prem', !!ch.premium); $('cGo').classList.toggle('prem', !!ch.premium);
   $('cGo').textContent = ch.premium ? '🎁 ¡Probar a ' + ch.name + ' gratis!' : un ? '¡Elegir a ' + ch.name + '!' : ch.premium ? '🔒 Premium · ' + ch.price : 'Bloqueado'; $('cGo').style.opacity = un ? 1 : 0.55;

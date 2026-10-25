@@ -614,12 +614,23 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 </div><div class="oS" style="font-size:13px;opacity:.8">Puedes cambiarlo luego en Ajustes</div></div>
 <div id="rotate"><div class="ph"><div class="oPh v"><b></b><i>🍡</i></div></div><div style="font-size:24px;font-weight:700;color:#c0508a">Gira el móvil</div><div id="rotMsg">Has elegido jugar en horizontal.</div><button class="btn sec sm" id="rotAny">Cambiar orientación</button></div>
 
+<style>/* v41 lujo: ruleta, destellos */
+#hItem.roll{animation:ljroll .1s infinite;background:conic-gradient(from var(--a,0deg),#ff6fc0,#ffb36b,#ffe066,#7ff5a0,#7fd8ff,#b98cff,#ff6fc0);filter:saturate(1.2);box-shadow:0 0 18px rgba(255,180,230,.9),0 4px 0 rgba(200,100,170,.4)}
+@keyframes ljroll{0%{transform:rotate(-7deg) scale(1.02)}50%{transform:rotate(7deg) scale(.96)}100%{transform:rotate(-7deg) scale(1.02)}}
+#hItem.land{animation:ljland .5s cubic-bezier(.3,1.8,.5,1)}
+@keyframes ljland{0%{transform:scale(1.55) rotate(-12deg);box-shadow:0 0 34px #fff6a0,0 0 0 8px rgba(255,240,150,.8)}60%{transform:scale(.92)}100%{transform:scale(1)}}
+#ljFlash{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0}
+#ljFlash.box{animation:ljf .28s ease-out;background:radial-gradient(circle,rgba(255,255,255,0) 45%,rgba(255,230,160,.55))}
+#ljFlash.use{animation:ljf .32s ease-out;background:radial-gradient(circle,rgba(255,255,255,0) 40%,rgba(255,150,220,.5))}
+#ljFlash.hit{animation:ljf .42s ease-out;background:radial-gradient(circle,rgba(255,80,120,0) 35%,rgba(255,60,110,.55))}
+@keyframes ljf{0%{opacity:1}100%{opacity:0}}
+</style><div id="ljFlash"></div>
 <script>window.FX_NOCHE={z:2,n:16,vig:.14,rays:false}</script><script src="js/fx-noche.js?v=2"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script>
-<script type="module" src="js/main.js?v=40"></script>
+<script type="module" src="js/main.js?v=42"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=40', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=42', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>
 </body>
 </html>
