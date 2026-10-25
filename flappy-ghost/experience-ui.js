@@ -90,14 +90,27 @@
     const result=await M.share(data);if(!panel.dialog.isConnected)return;
     statusKey=result==='opened'?'shareOpened':result==='cancelled'?'shareCancelled':'shareFallback';text(status,statusKey);
   }
-  window.GhostUI={openPanel,openPolicy,hasOverlay:()=>panels.length>0,help,tutorial,
-    sync(){if(!tools||lastMode===game.mode)return;lastMode=game.mode;window.GhostMusic?.setMode();tools.hidden=game.mode==='play'||game.mode==='recovery';const share=tools.querySelector('.fg-share');if(share)share.hidden=game.mode!=='dead';},
+  const RATE={es:'⭐ Valorar',en:'⭐ Rate','pt-BR':'⭐ Avaliar',id:'⭐ Beri nilai',vi:'⭐ Đánh giá',hi:'⭐ रेट करें',fr:'⭐ Noter',de:'⭐ Bewerten',ja:'⭐ 評価する',ko:'⭐ 평가하기','zh-CN':'⭐ 评分','zh-TW':'⭐ 評分'};
+  function rateLabel(){return RATE[I.language()]||RATE.en;}
+  async function shareApp(){
+    if(window.NativeBridge?.isNative?.()){const r=await window.NativeBridge.shareApp();if(r?.ok)return;}
+    return openShare();
+  }
+  // In-App Review after finished games 3, 12 and 40 (Google decides whether to show it).
+  const GAMES_KEY='flappyGhostGames.v1';
+  function gameEnded(){
+    let n=0;try{n=(parseInt(localStorage.getItem(GAMES_KEY),10)||0)+1;localStorage.setItem(GAMES_KEY,String(n));}catch{}
+    if([3,12,40].includes(n)&&window.NativeBridge?.isNative?.())setTimeout(()=>window.NativeBridge.requestReview?.(),900);
+    return n;
+  }
+  window.GhostUI={gameEnded,openPanel,openPolicy,hasOverlay:()=>panels.length>0,help,tutorial,
+    sync(){if(!tools||lastMode===game.mode)return;lastMode=game.mode;window.GhostMusic?.setMode();tools.hidden=game.mode==='play'||game.mode==='recovery';},
     ready(){window.GhostMusic?.setMode();if(!M.seen())tutorial();},
     status:()=>({mode:game?.mode,score:game?.score,best:game?.best,overlays:panels.length}),
   };
   // Keep DOM controls outside the canvas' centre action; no gameplay hit boxes change.
-  window.GhostUI.attach=value=>{game=value;window.GhostMusic?.attach(game);tools=element('nav');tools.className='fg-tools';tools.setAttribute('aria-label',t('help'));document.body.append(tools);const language=element('button',null,tools);language.type='button';language.textContent=I.languageShort();language.setAttribute('aria-label',t('language'));language.onclick=help;const share=action(tools,'share',openShare);share.className='fg-share';share.hidden=true;action(tools,'help',help);musicButton(document.body,true);};
-  window.addEventListener('ghost-language-changed',()=>{for(const panel of panels)panel.updateLanguage();updateMusic();if(tools){tools.setAttribute('aria-label',t('help'));const buttons=tools.querySelectorAll('button');buttons[0].textContent=I.languageShort();buttons[0].setAttribute('aria-label',t('language'));text(buttons[1],'share');text(buttons[2],'help');}if(game){game.hint='';game.draw();}});
+  window.GhostUI.attach=value=>{game=value;window.GhostMusic?.attach(game);tools=element('nav');tools.className='fg-tools';tools.setAttribute('aria-label',t('help'));document.body.append(tools);const language=element('button',null,tools);language.type='button';language.textContent=I.languageShort();language.setAttribute('aria-label',t('language'));language.onclick=help;const share=action(tools,'share',()=>game?.mode==='dead'?openShare():shareApp());share.className='fg-share';action(tools,'help',help);const rate=element('button',null,tools);rate.type='button';rate.className='fg-rate';rate.textContent=rateLabel();rate.onclick=()=>{window.NativeBridge?.rateApp?.();};rate.hidden=!window.NativeBridge?.isNative?.();musicButton(document.body,true);};
+  window.addEventListener('ghost-language-changed',()=>{for(const panel of panels)panel.updateLanguage();updateMusic();if(tools){tools.setAttribute('aria-label',t('help'));const buttons=tools.querySelectorAll('button');buttons[0].textContent=I.languageShort();buttons[0].setAttribute('aria-label',t('language'));text(buttons[1],'share');text(buttons[2],'help');const rate=tools.querySelector('.fg-rate');if(rate)rate.textContent=rateLabel();}if(game){game.hint='';game.draw();}});
   window.addEventListener('ghost-music-changed',updateMusic);
   window.addEventListener('ghost-native-back',event=>{if(panels.length){event.preventDefault();panels.at(-1).close();return;}pause();});
 })();

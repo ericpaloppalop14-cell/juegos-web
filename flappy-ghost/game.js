@@ -682,6 +682,7 @@
     die() {
       if (this.mode !== "play") return;
       this.mode = "dead";
+      try { window.GhostUI.gameEnded(); } catch (e) {}
       this.shake = 0.22;
       this.flash = 0.16;
       this.beep(140, 0.22, "triangle", 0.06);

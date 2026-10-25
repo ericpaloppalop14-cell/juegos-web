@@ -59,6 +59,10 @@
     isNative:()=>!!(modern()||android()),
     storeName:()=>ios()?'App Store':(window.AndroidStore||android())?'Google Play':window.FG_I18N.text('webPreview'),
     shareScore:(score,best,language)=>call('shareScore',{score,best,language},10000),
+    // 1.0.17: Rate (Play listing / In-App Review) and Share app. Native only; never tied to rewards.
+    shareApp:()=>modern()?call('shareApp',{},10000):Promise.resolve(null),
+    rateApp:()=>modern()?call('rateApp',{},10000):Promise.resolve(null),
+    requestReview:()=>modern()?call('requestReview',{},20000):Promise.resolve(null),
     syncLanguage(){
       // This one-way local preference uses the same origin-restricted bridge.
       // It never creates a purchase, ad request, entitlement or score update.
