@@ -1,9 +1,9 @@
 // ======================================================================
 //  MOCHI PARTY · OLIMPIADAS — mundos (cielo, suelo, decorado) y objetos surrealistas
 // ======================================================================
-import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m19n3';
-import { ambiente } from './ambiente.js?v=o35n3';
-import { richDecor } from './decor.js?v=o35n3';
+import { THREE, toon, outline, mesh, glowSprite, skyDome, lights, rnd, pick, camera } from '../core3d.js?v=m19n4';
+import { ambiente } from './ambiente.js?v=o35n4';
+import { richDecor } from './decor.js?v=o35n4';
 
 const G = {};
 const geo = (k, f) => G[k] || (G[k] = f());
@@ -109,6 +109,25 @@ export const MUNDOS = {
   volcan: { sky: ['#2a0a1a', '#8a2a2a', '#ff8a3a'], fog: '#6a2a2a', ground: '#4a3040', alt: '#5a3848', line: '#ff8a3a', deco: ['volcancito', 'roca', 'cristal', 'volcancito'], embers: true, music: { bpm: 136, root: 55, scale: 'minor' }, sun: 1.4, hemi: ['#ffb08a', '#5a2030'] },
 };
 
+// noche 3: textura de detalle del suelo por mundo (hierba, arena, nieve, virutas…), se multiplica por el color
+function groundTex(mk) {
+  const N = 256, cv = document.createElement('canvas'); cv.width = cv.height = N; const x = cv.getContext('2d');
+  let sd = 31; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  x.fillStyle = '#fff'; x.fillRect(0, 0, N, N);
+  const wrap = (f) => { for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { x.save(); x.translate(ox, oy); f(); x.restore(); } };
+  // manchas suaves de tono (rompen la monotonía)
+  for (let i = 0; i < 18; i++) { const px = R() * N, py = R() * N, r = 20 + R() * 50, a = .05 + R() * .07; wrap(() => { const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, `rgba(60,30,80,${a})`); g.addColorStop(1, 'rgba(60,30,80,0)'); x.fillStyle = g; x.fillRect(px - r, py - r, r * 2, r * 2); }); }
+  const dots = (n, c, r0, r1) => { for (let i = 0; i < n; i++) { const px = R() * N, py = R() * N, r = r0 + R() * (r1 - r0); x.fillStyle = c; x.beginPath(); x.arc(px, py, r, 0, 7); x.fill(); } };
+  if (mk === 'selva') { for (let i = 0; i < 700; i++) { const px = R() * N, py = R() * N, h = 3 + R() * 6; x.strokeStyle = R() < .5 ? 'rgba(40,90,30,.28)' : 'rgba(255,255,220,.35)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (R() - .5) * 3, py - h); x.stroke(); } dots(14, 'rgba(255,240,120,.7)', 1.5, 2.5); dots(10, 'rgba(255,150,200,.6)', 1.5, 2.5); }
+  else if (mk === 'desierto') { for (let k = 0; k < 14; k++) { x.strokeStyle = k % 2 ? 'rgba(150,90,30,.14)' : 'rgba(255,250,230,.35)'; x.lineWidth = 2; x.beginPath(); for (let px = 0; px <= N; px += 4) { const py = k * N / 14 + Math.sin(px / N * Math.PI * 4 + k) * 5; px ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke(); } dots(160, 'rgba(140,80,30,.18)', .6, 1.4); }
+  else if (mk === 'nieve') { dots(220, 'rgba(150,190,240,.18)', .8, 2.2); dots(60, 'rgba(255,255,255,1)', .6, 1.3); }
+  else if (mk === 'dulces') { const cs = ['rgba(255,110,170,.55)', 'rgba(120,210,255,.55)', 'rgba(255,220,100,.6)', 'rgba(150,230,170,.55)', 'rgba(255,255,255,.8)']; for (let i = 0; i < 120; i++) { const px = R() * N, py = R() * N, a = R() * 3.14; x.save(); x.translate(px, py); x.rotate(a); x.fillStyle = cs[i % 5]; x.fillRect(-3, -1, 6, 2); x.restore(); } }
+  else if (mk === 'espacio') { for (let i = 0; i < 10; i++) { const px = R() * N, py = R() * N, r = 6 + R() * 16; x.strokeStyle = 'rgba(255,255,255,.22)'; x.lineWidth = 2; x.beginPath(); x.arc(px, py, r, 0, 7); x.stroke(); x.fillStyle = 'rgba(30,10,60,.16)'; x.beginPath(); x.arc(px + 1, py + 1, r * .85, 0, 7); x.fill(); } dots(80, 'rgba(255,255,255,.4)', .5, 1.2); }
+  else if (mk === 'mar') { for (let i = 0; i < 26; i++) { const px = R() * N, py = R() * N; x.strokeStyle = 'rgba(255,255,255,.3)'; x.lineWidth = 1.5; x.beginPath(); x.ellipse(px, py, 10 + R() * 12, 3 + R() * 3, 0, 0, 7); x.stroke(); } dots(120, 'rgba(120,80,30,.14)', .6, 1.5); }
+  else if (mk === 'suenos') { dots(90, 'rgba(255,255,255,.55)', .6, 1.6); for (let i = 0; i < 12; i++) { const px = R() * N, py = R() * N, r = 2 + R() * 3; x.fillStyle = 'rgba(255,240,170,.6)'; x.beginPath(); for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5, rr = k % 2 ? r * .45 : r; x.lineTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr); } x.fill(); } }
+  else if (mk === 'volcan') { for (let i = 0; i < 16; i++) { let px = R() * N, py = R() * N; x.strokeStyle = 'rgba(20,0,10,.3)'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(px, py); for (let k = 0; k < 5; k++) { px += (R() - .5) * 26; py += (R() - .5) * 26; x.lineTo(px, py); } x.stroke(); } dots(40, 'rgba(255,150,60,.35)', .8, 1.6); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(64, 64); t.anisotropy = 8; return t;
+}
 // monta cielo, luces, suelo y decorado. area: {track:{z0,z1,half}} o {arena:{r}}
 export function buildWorld(E, mk, area) {
   const M = MUNDOS[mk], sc = E.scene;
@@ -122,7 +141,8 @@ export function buildWorld(E, mk, area) {
   { const P = gg0.attributes.position, c = [], A = new THREE.Color(M.ground), Bc = new THREE.Color(M.alt), t = new THREE.Color();
     for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i); const n = Math.sin(x * .07) * Math.cos(z * .05) + Math.sin((x + z) * .023) * .8 + Math.sin(x * .19 - z * .13) * .3; t.copy(A).lerp(Bc, n > .45 ? 1 : n > .2 ? (n - .2) / .25 : 0); c.push(t.r, t.g, t.b); }
     gg0.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); }
-  const ground = mesh(gg0, toon('#ffffff', { rim: 0, vc: true }), sc, [0, -.05, 0]); ground.receiveShadow = true;
+  const gmat = toon('#ffffff', { rim: 0, vc: true, nocache: true }); try { gmat.map = groundTex(mk); gmat.needsUpdate = true; } catch (e) {}
+  const ground = mesh(gg0, gmat, sc, [0, -.05, 0]); ground.receiveShadow = true;
   const spots = new THREE.Group(); sc.add(spots);
   const deco = [];
   const rich = richDecor(sc, mk, area, M);

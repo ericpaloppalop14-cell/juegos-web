@@ -5,10 +5,10 @@
 // ======================================================================
 import * as THREE from 'three';
 import { CHARS } from './data.js';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js?v=m10n3';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, starShape } from './gfx.js?v=m10n4';
 import { Audio } from './audio.js';
-import { makePost } from './post.js?v=n3';
-import { horizonte } from './horizonte.js?v=n3';
+import { makePost } from './post.js?v=n4';
+import { horizonte } from './horizonte.js?v=n4';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);

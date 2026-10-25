@@ -32,7 +32,8 @@ export function makePost(renderer, opts = {}) {
         c = toS(c);
         // gradación: contraste suave en S, saturación, sombras algo frías y luces cálidas
         float l = dot(c, vec3(.299, .587, .114));
-        c = mix(vec3(l), c, sat);
+        float sa = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+        c = mix(vec3(l), c, 1. + (sat - 1.) * clamp(1.4 - sa * 1.6, 0., 1.4)); // vibrance: aviva los pasteles, no satura más lo ya intenso
         c = (c - .5) * con + .5;
         c += vec3(.025, .006, -.02) * smoothstep(.45, 1., l) + vec3(-.012, -.004, .03) * (1. - smoothstep(0., .45, l));
         vec2 q = (vUv - .5) * vec2(asp, 1.); float v = smoothstep(.35, 1.05, length(q) * 1.05);

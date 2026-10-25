@@ -8,8 +8,8 @@
 //   podio → podio 1-2-3 con caída de los mochis, el ganador salta de alegría y los demás aplauden
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS } from '../carrera/js/data.js?v=m10n3';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=m10n3';
+import { CHARS } from '../carrera/js/data.js?v=m10n4';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=m10n4';
 
 const CH = id => CHARS.find(c => c.id === id) || CHARS[0];
 const rnd = (a, b) => a + Math.random() * (b - a), lerp = (a, b, t) => a + (b - a) * t;

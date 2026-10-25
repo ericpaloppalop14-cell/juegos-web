@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG, ITEMS, ITEM_KEYS, ITEM_W } from './data.js';
-import { makeKart, animKart, makeProjectile, makeBomba, makeSeta, toon, mesh } from './gfx.js?v=pn3';
+import { makeKart, animKart, makeProjectile, makeBomba, makeSeta, toon, mesh } from './gfx.js?v=pn4';
 import { buildTrack } from './track.js';
 import { addSurreal } from './surreal.js';
 import { addPeds } from './peds.js';
