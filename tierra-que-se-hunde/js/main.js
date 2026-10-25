@@ -5,15 +5,15 @@
 //  encima). La sala se va quedando sin suelo: ¡sé el último en pie!
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
-import { floatJoy } from './joy.js?v=v22';
+import { floatJoy } from './joy.js?v=v23';
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v22';
-import { createEscenarios } from './escenarios.js?v=v22';
-import { makeCharacter, animCharacter } from './gfx.js?v=v22';
-import { chOf } from './chars.js?v=v22';
-import { createShell } from './shell.js?v=v22';
-import { Sfx } from './sfx.js?v=v22';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v22';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v23';
+import { createEscenarios } from './escenarios.js?v=v23';
+import { makeCharacter, animCharacter } from './gfx.js?v=v23';
+import { chOf } from './chars.js?v=v23';
+import { createShell } from './shell.js?v=v23';
+import { Sfx } from './sfx.js?v=v23';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v23';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -45,7 +45,7 @@ export const MODE_MAPS = {
 const MODE_MAP = { patata: 'acantilado', rey: 'cima', fresas: 'huerto', pinta: 'paleta', reves: 'reves' };
 const ALLMAPS = { ...MAPS, ...MODE_MAPS };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 22;
+export const VERSION = 23;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
@@ -504,7 +504,7 @@ function frame() {
     // v22: mientras hay entrada la cámara NO gira (ver más abajo), así la dirección es exactamente la del dedo en pantalla y no deriva
     steering = ja != null; const hd = ja == null ? null : wrap(camYaw - ja);
     if (playing && (hd === null ? sentHd !== null : (sentHd == null || Math.abs(wrap(hd - sentHd)) > 0.025 || Math.abs(m - sentM) > 0.06))) { sentHd = hd; sentM = m; send({ k: 'mv', v: hd == null ? null : +hd.toFixed(3), m: +m.toFixed(2) }); } }
-  if (sim && (playing || (sim.over && !endSent))) {
+  if (sim && !(shell && shell.paused) && (playing || (sim.over && !endSent))) {
     { simAcc = Math.min(0.25, simAcc + rdt * SPD); while (simAcc >= STEP) { sim.step(STEP); simAcc -= STEP; } }
     const ev = sim.ev.splice(0); applySnap(sim.snap()); if (ev.length) { onEvents(ev); if (online) shell.send({ t: 'gev', e: ev }); }
     sendAcc += dt; if (online && sendAcc > 0.066) { sendAcc = 0; shell.send({ t: 'gs', s: sim.snap() }); }
@@ -679,7 +679,7 @@ createShell({
     <li>Si pisas un agujero, te caes. El martillo tarda un poco en recargarse.</li>
     <li>La sala <b>se encoge</b> cada poco y cada vez queda menos suelo. Gana el <b>último mochi en pie</b>.</li></ul>
     <p><b>Modos:</b><br>💣 <b>Patata caliente</b> (sendero entre acantilados): pasa la bomba tocando a otro antes de que explote.<br>👑 <b>Rey de la cima</b> (cima de la montaña): coge la corona y póntela; mientras la lleves sumas segundos. Choca con quien la lleve para robársela; si quien la lleva se cae, la corona queda suelta en el suelo para quien llegue antes. Gana quien más tiempo la haya llevado (90 s).<br>🎨 <b>Pinta el suelo</b> (paleta del pintor): pinta casillas de tu color al pisarlas; gana quien tenga más (90 s).<br>🍓 <b>Lluvia de fresas</b> (isla-huerto): esquiva las sombras rojas, ¡caen fresas gigantes que rompen el suelo!<br>🙃 <b>Mundo al revés</b> (cielo al revés): cada 12 s lo hundido vuelve a salir y otras zonas se hunden.<br>🏔️ <b>Carrera</b> y 🐢 <b>Relevo con tortuga</b>: en la pasarela de las alturas.</p>`,
-  onPreview: chId => setShowcase(chId), start, stop, getMode: () => curMode,
+  onPreview: chId => setShowcase(chId), start, stop, getMode: () => curMode, page: 'index', mapModes: ['clasico'], setMode: m => { if (MODES[m]) { curMode = m; localStorage.setItem('hunde_modo', m); } },
   maps: Object.entries(MAPS).map(([k, m]) => [k, m.name]),
   onMap: v => { if (v !== 'random' && MAPS[v]) { buildMap(v); resetBoard(); } },
   onNetMsg(d, api) {
@@ -691,36 +691,10 @@ createShell({
   },
   onLeft(id) { if (sim) { const p = sim.P.find(p => p.id === id); if (p && p.alive) { p.ai = { goal: null, gt: 0, atk: 3, react: 0 }; p.skill = 0.6; p.bot = true; } } },
 });
-// v16: PANTALLA GRANDE DE SELECCIÓN DE MODO (sale al pulsar ▶ Jugar)
-const MODE_CARDS = [
-  ['clasico', '🏝️', 'Clásico', 'Hunde números y sé el último en pie', '#ff9cc8'],
-  ['carrera', '🏔️', 'Carrera en las alturas', 'Corre, empuja al vacío y llega más lejos', '#7ecbff'],
-  ['patata', '💣', 'Patata caliente', 'Sendero entre acantilados: ¡pasa la bomba!', '#ffa673'],
-  ['rey', '👑', 'Rey de la cima', 'Coge la corona y aguanta con ella', '#f2c64e'],
-  ['fresas', '🍓', 'Lluvia de fresas', 'Isla-huerto: esquiva las fresas gigantes', '#ff7f9a'],
-  ['pinta', '🎨', 'Pinta el suelo', 'Paleta del pintor: pinta más que nadie', '#9789f2'],
-  ['reves', '🙃', 'Mundo al revés', 'Cielo al revés: lo hundido sube', '#4fcabb'],
-  ['tortuga', '🐢', 'Relevo con tortuga', 'Lleva la tortuga a la meta por las alturas', '#7fd08a']];
-{ const st = document.createElement('style'); st.textContent = `#sModes{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;z-index:30}
-#sModes h2{margin:4px 0 8px;font-size:min(9vw,40px);color:#fff;text-shadow:0 4px 0 #f08cbc,0 8px 18px rgba(170,90,170,.35)}
-#mGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(96vw,720px)}
-@media (orientation:landscape){#mGrid{grid-template-columns:repeat(4,1fr)}#sModes h2{font-size:28px;margin:0 0 6px}}
-#mGrid button{font-family:inherit;border:3px solid #fff;border-radius:22px;padding:10px 8px;color:#fff;cursor:pointer;text-align:center;background:radial-gradient(120% 90% at 30% 10%,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),var(--c);box-shadow:0 5px 0 rgba(110,60,140,.25),0 10px 20px rgba(120,60,150,.25);min-height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;touch-action:manipulation}
-#mGrid button:active{transform:translateY(3px) scale(.97)}#mGrid b{font-size:42px;line-height:1.1}#mGrid span{font-weight:700;font-size:18px;text-shadow:0 2px 3px rgba(80,40,90,.4)}#mGrid small{font-size:12.5px;font-weight:600;opacity:.95;text-shadow:0 1px 2px rgba(80,40,90,.4)}
-#mGrid button.on{outline:4px solid #ff4fa0;outline-offset:2px}
-@media (orientation:landscape) and (max-height:500px){#mGrid button{min-height:88px;padding:6px}#mGrid b{font-size:30px}#mGrid span{font-size:15px}}
-#verTag{position:absolute;left:10px;bottom:calc(env(safe-area-inset-bottom) + 6px);font-size:12px;font-weight:700;color:#fff;opacity:.85;text-shadow:0 1px 2px rgba(120,60,140,.6);z-index:2;pointer-events:none}`; document.head.appendChild(st);
-  const sc = document.createElement('section'); sc.className = 'scr'; sc.id = 'sModes';
-  sc.innerHTML = `<h2>¿A qué jugamos?</h2><div id="mGrid">${MODE_CARDS.map(([k, e, n, d, c]) => `<button data-m="${k}" style="--c:${c}"><b>${e}</b><span>${n}</span><small>${d}</small></button>`).join('')}</div><div class="row"><button class="btn" id="bModesBack">‹ Volver</button></div>`;
-  document.getElementById('ui').appendChild(sc);
-  const solo = $('bSolo'); solo.textContent = '▶ Jugar · elegir modo'; let pass = false;
-  const showModes = () => { document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === 'sModes')); [...$('mGrid').children].forEach(b => b.classList.toggle('on', b.dataset.m === curMode)); };
-  solo.addEventListener('click', e => { if (pass || !$('sHome').classList.contains('on')) return; e.stopImmediatePropagation(); Sfx.init(); Sfx.tap(); showModes(); }, true);
-  $('mGrid').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; Sfx.init(); Sfx.go(); const m = b.dataset.m;
-    if (m === 'carrera' || m === 'tortuga') { location.href = `./carrera.html?modo=${m}&auto=1`; return; }
-    curMode = m; localStorage.setItem('hunde_modo', m); document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === 'sHome')); pass = true; solo.click(); pass = false; });
-  $('bModesBack').onclick = () => { Sfx.tap(); document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === 'sHome')); };
-  window.__pickMode = m => { [...$('mGrid').children].find(b => b.dataset.m === m).click(); };
+// v23: el menú de modos vive en el propio menú principal (shell.js)
+{ window.__pickMode = m => { window.__shell.pick(m); window.__shell.solo(); };
+  const q = new URLSearchParams(location.search).get('modo'); if (q && MODES[q]) { curMode = q; localStorage.setItem('hunde_modo', q); window.__shell.pick(q); }
+  if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell.solo(), 400); }
   const v = document.createElement('div'); v.id = 'verTag'; v.textContent = 'v' + VERSION; document.body.appendChild(v); }
 setShowcase(localStorage.getItem('ms_ch') || 'mochi'); { const m0 = localStorage.getItem('hunde_map'); buildMap(MAPS[m0] ? m0 : 'tiovivo'); } resetBoard();
 frame();

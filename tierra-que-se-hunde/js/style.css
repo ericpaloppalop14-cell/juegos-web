@@ -58,3 +58,50 @@ input.code{text-transform:uppercase;letter-spacing:6px;width:150px}
 .rank div{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;padding:4px 8px;border-radius:12px;background:#fff4fa;color:#8a5aa8}
 .rank div.me{background:#ffe0ef}.rank b{width:26px;color:#f27bb2}.rank img{width:30px;height:30px;border-radius:50%}
 .winimg{width:120px;height:120px;border-radius:50%;background:radial-gradient(#fff,#ffe0ef);margin:4px auto;display:block}
+/* ===== v23: menú en una sola pantalla, por pasos ===== */
+#ui #sHome{justify-content:flex-start;overflow:hidden;gap:6px;padding:calc(env(safe-area-inset-top) + 12px) 10px calc(env(safe-area-inset-bottom) + 10px);touch-action:none}
+#sHome .hLogo{font-weight:700;font-size:min(7.4vw,30px);line-height:1.05;color:#fff;text-align:center;text-shadow:0 3px 0 #f08cbc,2px 2px 0 #f08cbc,-2px 2px 0 #f08cbc,0 6px 0 #c58ae0,0 10px 18px rgba(170,90,170,.35);margin:2px 56px 2px;white-space:nowrap}
+#sHome .hLogo b{color:#fff}
+#sHome .hA,#sHome .hB{display:flex;flex-direction:column;align-items:center;gap:6px;width:min(96vw,560px)}
+#sHome .hB{flex:1 1 auto;justify-content:space-evenly;min-height:0}
+#sHome .step{align-self:flex-start;display:flex;align-items:center;gap:7px;font-weight:700;font-size:16px;color:#fff;text-shadow:0 2px 0 rgba(170,100,180,.55)}
+#sHome .step i{font-style:normal;width:24px;height:24px;border-radius:50%;background:linear-gradient(180deg,#ff9ec7,#f27bb2);border:2px solid #fff;display:grid;place-items:center;font-size:14px;text-shadow:none;box-shadow:0 2px 0 #d86fa3}
+#hModes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
+#hModes button{position:relative;font-family:inherit;border:2.5px solid #fff;border-radius:18px;padding:6px 2px 5px;color:#fff;cursor:pointer;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;touch-action:manipulation;
+ background:radial-gradient(120% 90% at 30% 10%,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),var(--c);box-shadow:0 4px 0 rgba(110,60,140,.25),0 8px 14px rgba(120,60,150,.2);transition:transform .12s;opacity:.82}
+#hModes button b{font-size:32px;line-height:1.05}
+#hModes button span{font-weight:700;font-size:15px;line-height:1.1;text-shadow:0 2px 3px rgba(80,40,90,.45)}
+#hModes button small{font-size:10.5px;font-weight:600;line-height:1.1;text-shadow:0 1px 2px rgba(80,40,90,.5)}
+#hModes button.on{opacity:1;outline:4px solid #ff4fa0;outline-offset:1px;transform:scale(1.05);z-index:1}
+#hModes button.on::after{content:"✔";position:absolute;right:-6px;top:-6px;background:#ff4fa0;border:2px solid #fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:grid;place-items:center}
+#hModes button:active{transform:scale(.95)}
+#hInfo{font-size:14px;font-weight:600;color:#8a5aa8;background:rgba(255,255,255,.85);border-radius:14px;padding:4px 12px;text-align:center;box-shadow:0 3px 8px rgba(150,80,150,.15)}
+#hInfo b{color:#e2508e}
+#sHome .hOpts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center}
+#sHome #bChar{padding:4px 12px 4px 4px;font-size:16px;gap:6px}#sHome #bChar img{width:34px;height:34px;border-radius:50%}#sHome #bChar small{opacity:.6}
+#sHome .hGrp{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.72);border:1.5px solid #fff;border-radius:18px;padding:3px 4px 3px 9px}
+#sHome .hGrp>span{font-size:13px;font-weight:700;color:#9a6bbd;white-space:nowrap}
+#sHome .hGrp .chips{margin:0;gap:3px;flex-wrap:nowrap}
+#sHome .hGrp .chips button{padding:4px 9px;font-size:14px;background:rgba(255,255,255,.9)}
+#sHome .hGrp .chips button.on{background:linear-gradient(90deg,#ff9ec7,#b9a1f5)}
+#sHome .chipbtn{font-family:inherit;font-weight:700;font-size:14px;border:none;border-radius:14px;padding:4px 10px;background:linear-gradient(90deg,#ff9ec7,#b9a1f5);color:#fff;cursor:pointer}
+#sHome #bSolo{font-size:32px;padding:12px 0;width:min(86vw,360px);justify-content:center;letter-spacing:1px}
+#sHome .hMore{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap}
+#sHome .hMore .btn{font-size:14px;padding:7px 12px;white-space:nowrap}
+@media (max-height:700px) and (orientation:portrait){#hModes button{min-height:70px;padding:4px 2px}#hModes button b{font-size:26px}#hModes button span{font-size:13.5px}#sHome .hLogo{font-size:24px}#sHome #bSolo{font-size:28px;padding:9px 0}#sHome .step{font-size:14px}#ui #sHome{gap:4px}}
+@media (orientation:landscape){
+ #ui #sHome{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;column-gap:14px;row-gap:4px;align-items:start;justify-items:center;padding:calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 8px) calc(env(safe-area-inset-left) + 12px)}
+ #sHome .hLogo{grid-column:1/3;font-size:26px}
+ #sHome .hA,#sHome .hB{width:100%;max-width:460px;height:100%}
+ #sHome .hA,#sHome .hB{justify-content:center;gap:8px}
+}
+@media (orientation:landscape) and (max-height:430px){#hModes button{min-height:72px;padding:3px 2px}#hModes button b{font-size:26px}#hModes button span{font-size:13.5px}#hModes button small{font-size:10px}#sHome #bSolo{font-size:28px;padding:8px 0}#sHome .hLogo{font-size:22px;margin-top:0}#sHome .step{font-size:14px}}
+/* fin de partida y pausa */
+#sOver .card,#sPause .card{max-height:calc(100vh - 20px);overflow:hidden;padding:12px 18px 14px}
+#sOver .overBtns{gap:10px;margin-top:8px;flex-wrap:nowrap}#sOver .overBtns .btn{font-size:22px;padding:12px 20px;animation:none}
+#sOver .rank{margin:4px 0}#sOver .rank div{padding:2px 8px;font-size:15px}
+@media (orientation:landscape) and (max-height:500px){#sOver .winimg{display:none}#sOver .card{width:min(560px,92vw)}#sOver .rank{display:grid;grid-template-columns:1fr 1fr;gap:4px}#sOver h2{font-size:28px}}
+@media (max-height:700px) and (orientation:portrait){#sOver .winimg{width:80px;height:80px}}
+#sPause{background:rgba(120,60,140,.35);z-index:40;transition:none}
+#sPause .pcard{display:flex;flex-direction:column;gap:10px;align-items:stretch;width:min(320px,88vw)}#sPause .pcard .btn{justify-content:center;animation:none;font-size:24px;padding:12px 0}
+#bQuit{font-size:20px}

@@ -7,7 +7,7 @@
 <title>Tierra que se hunde</title><link rel="manifest" href="manifest.json"><meta property="og:title" content="Tierra que se hunde"><meta property="og:site_name" content="Tierra que se hunde"><meta name="application-name" content="Tierra que se hunde"><meta name="apple-mobile-web-app-title" content="Tierra que se hunde">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="js/style.css?v=v22">
+<link rel="stylesheet" href="js/style.css?v=v23">
 <style>
 #hud{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:5}
 #hud.on{display:flex}
@@ -71,9 +71,6 @@ body.zurdo #mm{right:auto!important;left:calc(env(safe-area-inset-left) + 8px)!i
 @keyframes hboing{0%{transform:translateY(0)}35%{transform:translateY(-6px) scale(1.08)}70%{transform:translateY(1px) scale(.96)}100%{transform:none}}
 #hopB.cd{filter:saturate(.55) brightness(.97)}
 body.zurdo #hopB{right:auto!important;left:calc(env(safe-area-inset-left) + 132px)!important}
-/* v15: menú con más modos: se puede desplazar y es más compacto */
-#sHome{overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}#sHome .logo{margin-top:2vh}#sHome .logo .a{font-size:min(13vw,72px)}#sHome .chips{margin-top:5px}#sHome .chips button{padding:5px 10px;font-size:14px}#sHome .lbl{margin-top:7px}#sHome .row{margin-top:8px}
-@media (orientation:landscape) and (max-height:520px){#sHome .sub{display:none}#sHome .logo{margin-top:0}#sHome .logo .a{font-size:32px}#sHome .logo .b{font-size:22px;margin-top:0}#sHome .grow{display:none}#sHome .lbl{margin-top:3px;font-size:12px}#sHome .chips{margin-top:2px}#sHome .chips button{padding:3px 9px;font-size:13px}#sHome #bChar{padding:4px 14px;margin-top:4px}#sHome .btn.big{padding:8px 30px;font-size:22px}#sHome .row{margin-top:5px}}
 </style>
 <style>/* noche 25-10: color más vivo (GPU) */canvas{filter:saturate(1.1) contrast(1.04)}</style>
 <style>/* v20 marcador de la corona */#crownBoard{position:absolute;left:calc(env(safe-area-inset-left) + 8px);top:calc(env(safe-area-inset-top) + 86px);display:none;flex-direction:column;gap:3px;z-index:5;pointer-events:none;min-width:118px}
@@ -98,6 +95,6 @@ body.zurdo #hopB{right:auto!important;left:calc(env(safe-area-inset-left) + 132p
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="lib/peerjs.min.js"></script>
 <script>if (/localnet/.test(location.search)) document.write('<script src="lib/fakepeer.js"><\/script>');</script>
-<script type="module" src="js/main.js?v=v22"></script>
+<script type="module" src="js/main.js?v=v23"></script>
 </body>
 </html>

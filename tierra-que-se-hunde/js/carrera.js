@@ -5,13 +5,13 @@
 //  demás al vacío, salta los huecos, coge regalos… y el suelo se hunde
 //  detrás de vosotros cada vez más rápido. ¡Gana quien llegue más lejos!
 // ======================================================================
-import { floatJoy } from './joy.js?v=v22';
+import { floatJoy } from './joy.js?v=v23';
 import * as THREE from 'three';
-import { createRenderer, addLights, Particles } from './world.js?v=v22';
-import { makeCharacter, animCharacter } from './gfx.js?v=v22';
-import { chOf } from './chars.js?v=v22';
-import { createShell } from './shell.js?v=v22';
-import { Sfx } from './sfx.js?v=v22';
+import { createRenderer, addLights, Particles } from './world.js?v=v23';
+import { makeCharacter, animCharacter } from './gfx.js?v=v23';
+import { chOf } from './chars.js?v=v23';
+import { createShell } from './shell.js?v=v23';
+import { Sfx } from './sfx.js?v=v23';
 
 const $ = id => document.getElementById(id);
 const RL = 2, COLS = 4, CW = 2.5, TW = COLS * CW, HW = TW / 2; // filas de 2 m, 4 carriles de 2,5 m
@@ -394,7 +394,7 @@ function frame() {
   const rdt = Math.min(0.25, clock.getDelta()), dt = Math.min(0.05, rdt); t += dt;
   { let x = J.x, y = J.y; const kx = (keyR ? 1 : 0) - (keyL ? 1 : 0), ky = (keyU ? 1 : 0) - (keyD ? 1 : 0); if (kx || ky) { x = kx; y = ky; }
     if (playing && (Math.abs(x - sentX) > 0.05 || Math.abs(y - sentY) > 0.05)) { sentX = x; sentY = y; send({ k: 'mv', x: +x.toFixed(2), y: +y.toFixed(2) }); } }
-  if (sim && (playing || (sim.over && !endSent))) {
+  if (sim && !(shell && shell.paused) && (playing || (sim.over && !endSent))) {
     simAcc = Math.min(0.3, simAcc + rdt * SPD * ff); while (simAcc >= STEP) { sim.step(STEP); simAcc -= STEP; }
     const ev = sim.ev.splice(0); applySnap(sim.snap()); if (ev.length) { onEvents(ev); if (online) shell.send({ t: 'gev', e: ev }); }
     sendAcc += dt; if (online && sendAcc > 0.066) { sendAcc = 0; shell.send({ t: 'gs', s: sim.snap() }); }
@@ -499,7 +499,7 @@ createShell({
     <li>🎁 Regalos: <b>🥊 guante gigante</b> (empujón brutal), <b>⚡ turbo</b> o <b>🍌 plátanos</b> que dejas detrás para que resbalen.</li>
     <li>💨 De vez en cuando sopla una <b>ventolera</b> que te arrastra hacia un lado: ¡aguanta!</li>
     <li>El suelo <b>se hunde detrás de vosotros</b> cada vez más rápido. Gana quien <b>llegue más lejos</b>.</li></ul><p>🐢 <b>Relevo con tortuga</b>: la tortuga suelta tiene una <b>columna de luz verde y una flecha</b>; basta con pasar cerca para cogerla. Quien la lleva tiene una flecha y un aro (verde si eres tú, rosa si es otro). <b>Toca a quien la lleve</b> y te la pasa (relevo); si le empujan, resbala o le da un obstáculo, se le cae. Gana quien la lleve a la meta (500 m) o quien más metros la haya llevado.</p>`,
-  onPreview: chId => setShowcase(chId), start, stop, getMode: () => curMode,
+  onPreview: chId => setShowcase(chId), start, stop, getMode: () => curMode, page: 'carrera', setMode: m => { if (m === 'carrera' || m === 'tortuga') { curMode = m; localStorage.setItem('hunde_carrera_modo', m); } },
   onNetMsg(d, api) {
     if (d.t === 'gin' && sim && api.isHost) { sim.input(d.from, d); return; }
     if (sim) return;
@@ -509,15 +509,9 @@ createShell({
   },
   onLeft(id) { if (sim) { const p = sim.P.find(p => p.id === id); if (p && p.alive) { p.ai = { tx: p.x, react: 0, push: 3 }; p.skill = 0.6; p.bot = true; } } },
 });
-// selector Carrera / Tortuga
-{ const a = document.querySelector('#sHome #cBots'); if (a) { const l = document.createElement('div'); l.className = 'lbl'; l.textContent = 'Modo'; const c = document.createElement('div'); c.className = 'chips'; c.id = 'cMode'; a.previousElementSibling.before(l, c);
-  const draw = () => { c.innerHTML = [['carrera', '🏔️ Carrera'], ['tortuga', '🐢 Relevo con tortuga']].map(([k, n]) => `<button data-v="${k}" class="${k === curMode ? 'on' : ''}">${n}</button>`).join(''); }; draw();
-  c.onclick = e => { const b = e.target.closest('button'); if (!b) return; Sfx.tap(); curMode = b.dataset.v; localStorage.setItem('hunde_carrera_modo', curMode); draw(); }; } }
-// botón para volver al modo clásico
-{ const h = document.querySelector('#sHome .row:last-child'); if (h) { const b = document.createElement('button'); b.className = 'btn mint'; b.id = 'bClassic'; b.textContent = '🏝️ Modo clásico'; b.onclick = () => { Sfx.tap(); location.href = './index.html'; }; h.appendChild(b); } }
 setShowcase(localStorage.getItem('ms_ch') || 'mochi');
 frame();
 // v16: desde la pantalla de modos del menú principal se entra directo a jugar
 if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell && window.__shell.solo(), 400); }
-fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 22 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 23 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
 window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, blockType, get chars() { return chars; } };

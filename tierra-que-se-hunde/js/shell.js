@@ -3,10 +3,10 @@
 //  partida en solitario con bots y salas multijugador con código (PeerJS).
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS, chOf } from './chars.js?v=v22';
-import { makeCharacter, animCharacter } from './gfx.js?v=v22';
-import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v22';
-import { Sfx } from './sfx.js?v=v22';
+import { CHARS, chOf } from './chars.js?v=v23';
+import { makeCharacter, animCharacter } from './gfx.js?v=v23';
+import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v23';
+import { Sfx } from './sfx.js?v=v23';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
@@ -24,23 +24,42 @@ function makeThumbs() {
   r.dispose();
 }
 
+// v23: todos los modos en el mismo menú: [id, icono, nombre, escenario, objetivo, página, color]
+export const ALL_MODES = [
+  ['clasico', '🏝️', 'Clásico', 'Sala de números', 'Hunde casillas y sé el último en pie', 'index', '#ff9cc8'],
+  ['carrera', '🏔️', 'Carrera', 'Las alturas', 'Corre, salta y llega más lejos', 'carrera', '#7ecbff'],
+  ['tortuga', '🐢', 'Relevo', 'Las alturas', 'Lleva la tortuga hasta la meta', 'carrera', '#7fd08a'],
+  ['patata', '💣', 'Patata', 'Acantilados', 'Pasa la bomba antes de que explote', 'index', '#ffa673'],
+  ['rey', '👑', 'Corona', 'Cima nevada', 'Aguanta más tiempo con la corona', 'index', '#f2c64e'],
+  ['fresas', '🍓', 'Fresas', 'Isla-huerto', 'Esquiva las fresas gigantes', 'index', '#ff7f9a'],
+  ['pinta', '🎨', 'Pinta', 'Paleta gigante', 'Pinta más suelo que nadie', 'index', '#9789f2'],
+  ['reves', '🙃', 'Al revés', 'Cielo al revés', 'Lo hundido vuelve a subir', 'index', '#4fcabb']];
+
 export function createShell(G) {
   // G: { id, titleA, titleB, sub, how (html), prefix, onPreview(chId), start(cfg), onNetMsg(d), stop() }
   NETCFG.peerPrefix = G.prefix;
   const ui = document.createElement('div'); ui.id = 'ui'; document.body.appendChild(ui);
   ui.innerHTML = `
-  <div class="topbar"><button class="round" id="bQuit" style="visibility:hidden">✕</button><button class="round" id="bMute">${Sfx.muted ? '🔇' : '🔊'}</button></div>
+  <div class="topbar"><button class="round" id="bQuit" style="visibility:hidden" aria-label="Pausa y menú">⏸</button><button class="round" id="bMute">${Sfx.muted ? '🔇' : '🔊'}</button></div>
   <div id="toast"></div><div class="big-msg" id="bigMsg"></div>
   <section class="scr on" id="sHome">
-    <div class="logo"><span class="a">${letters(G.titleA)}</span><span class="b">${letters(G.titleB)}</span></div>
-    <div class="sub">${G.sub}</div>
-    <div class="grow"></div>
-    <button class="btn" id="bChar"><img id="myThumb" style="width:34px;height:34px;border-radius:50%"> <span id="myName">Mochi</span> ✎</button>
-    <div class="lbl">Rivales</div><div class="chips" id="cBots"></div>
-    <div class="lbl">Dificultad de los bots</div><div class="chips" id="cDiff"></div>
-    <div class="lbl mapl">Mapa</div><div class="chips" id="cMap"></div>
-    <div class="row"><button class="btn big" id="bSolo">▶ Jugar</button></div>
-    <div class="row"><button class="btn lila" id="bMulti">👥 Multijugador</button><button class="btn" id="bHow">❓ Cómo se juega</button><button class="btn" id="bSet">⚙️ Ajustes</button></div>
+    <div class="hLogo">Tierra que se hunde</div>
+    <div class="hA">
+      <div class="step"><i>1</i> Elige el modo</div>
+      <div id="hModes"></div>
+      <div id="hInfo"></div>
+    </div>
+    <div class="hB">
+      <div class="step"><i>2</i> Tu mochi y rivales</div>
+      <div class="hOpts">
+        <button class="btn" id="bChar"><img id="myThumb"><span id="myName">Mochi</span><small>✎</small></button>
+        <div class="hGrp"><span>🤖 Rivales</span><div class="chips" id="cBots"></div></div>
+        <div class="hGrp"><span>💪 Nivel</span><div class="chips" id="cDiff"></div></div>
+        <div class="hGrp mapl"><span>🗺️ Mapa</span><button class="chipbtn" id="bMapCycle"></button><div class="chips" id="cMap" style="display:none"></div></div>
+      </div>
+      <button class="btn big" id="bSolo">▶ JUGAR</button>
+      <div class="hMore"><button class="btn lila" id="bMulti">👥 Con amigos</button><button class="btn" id="bHow">❓ Cómo se juega</button><button class="btn" id="bSet">⚙️</button></div>
+    </div>
   </section>
   <section class="scr" id="sChars">
     <div class="chartop"><button class="btn" id="bCharBack">‹ Volver</button><h3>Personajes</h3><span style="width:80px"></span></div>
@@ -68,14 +87,16 @@ export function createShell(G) {
   <section class="scr" id="sOver" style="justify-content:center"><div class="card">
     <h2 id="oTitle">¡Has ganado!</h2><img class="winimg" id="oImg"><div id="oSub" style="font-weight:700;color:#8b5cc2"></div>
     <div class="rank" id="oRank"></div>
-    <div class="row"><button class="btn" id="bMenu">Menú</button><button class="btn big" id="bAgain">Revancha</button></div></div></section>`;
+    <div class="row overBtns"><button class="btn big" id="bAgain">🔁 Otra vez</button><button class="btn big lila" id="bMenu">🏠 Menú</button></div></div></section>
+  <section class="scr" id="sPause" style="justify-content:center"><div class="card pcard"><h2>⏸ Pausa</h2>
+    <button class="btn big" id="bResume">▶ Seguir</button><button class="btn big mint" id="bRetry">🔁 Repetir</button><button class="btn big lila" id="bPMenu">🏠 Menú</button></div></section>`;
   makeThumbs();
 
   let myCh = localStorage.getItem('ms_ch') || 'mochi'; if (!CHARS.some(c => c.id === myCh)) myCh = 'mochi';
   let pickCh = myCh, nBots = +(localStorage.getItem(G.id + '_bots') || 7), diff = localStorage.getItem(G.id + '_diff') || 'normal';
   let net = null, mode = 'solo', inGame = false, lastCfg = null;
   $('iName').value = localStorage.getItem('ms_name') || '';
-  const show = id => { document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === id)); $('bQuit').style.visibility = id ? 'hidden' : 'visible'; };
+  const show = id => { document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === id)); $('bQuit').style.visibility = id ? 'hidden' : 'visible'; if (id === 'sHome') { try { drawModes(); } catch (e) { } } };
   const myName = () => { const n = ($('iName').value || '').trim().slice(0, 12) || 'Jugador'; localStorage.setItem('ms_name', n); return n; };
   const refreshMe = () => { $('myThumb').src = thumbs[myCh]; $('myName').textContent = chOf(myCh).name; G.onPreview && G.onPreview(myCh); };
   const chips = (box, items, cur, set) => { $(box).innerHTML = items.map(([v, t]) => `<button data-v="${v}" class="${String(v) === String(cur) ? 'on' : ''}">${t}</button>`).join('');
@@ -88,6 +109,15 @@ export function createShell(G) {
   if (MAPL) chips('cMap', MAPL, map, setMap); else document.querySelectorAll('.mapl').forEach(e => e.style.display = 'none');
   const realMap = () => map === 'random' ? MAPL[Math.random() * (MAPL.length - 1) | 0][0] : map;
   refreshMe();
+  // v23: menú en una sola pantalla: 1) modo (incluye carrera y relevo, en la otra página), 2) opciones, JUGAR
+  const MODES = G.modes || ALL_MODES; let selMode = G.getMode ? G.getMode() : (MODES[0] || [''])[0];
+  const drawModes = () => { $('hModes').innerHTML = MODES.map(([k, e, n, esc2]) => `<button data-m="${k}" class="${k === selMode ? 'on' : ''}" style="--c:${(MODES.find(m => m[0] === k) || [])[6] || '#ff9cc8'}"><b>${e}</b><span>${n}</span><small>${esc2}</small></button>`).join('');
+    const M = MODES.find(m => m[0] === selMode); $('hInfo').innerHTML = M ? `<b>${M[1]} ${M[2]}</b> · ${M[4]}` : '';
+    document.querySelectorAll('#sHome .mapl').forEach(e => e.style.display = MAPL && (!G.mapModes || G.mapModes.includes(selMode)) ? '' : 'none'); };
+  $('hModes').onclick = e => { const b = e.target.closest('button'); if (!b) return; Sfx.init(); Sfx.tap(); selMode = b.dataset.m; G.setMode && G.setMode(selMode); drawModes(); };
+  if (MAPL) { const cyc = () => { const i = MAPL.findIndex(m => m[0] === map); $('bMapCycle').textContent = (MAPL[i] || MAPL[0])[1] + ' ▸'; }; cyc();
+    $('bMapCycle').onclick = () => { Sfx.tap(); const i = MAPL.findIndex(m => m[0] === map); setMap(MAPL[(i + 1) % MAPL.length][0]); cyc(); }; }
+  drawModes();
 
   const toastT = { t: 0 };
   const api = {
@@ -104,8 +134,8 @@ export function createShell(G) {
       $('oTitle').textContent = !w ? '¡Empate!' : win === me ? '¡Has ganado!' : `¡Gana ${w.name}!`;
       $('oImg').src = w ? thumbs[w.ch] : thumbs[myCh];
       const pos = res.ranking.indexOf(me) + 1; $('oSub').textContent = pos ? `Has quedado ${pos}º de ${res.ranking.length}` : '';
-      $('oRank').innerHTML = res.ranking.slice(0, 10).map((id, i) => { const p = byId(id); return `<div class="${id === me ? 'me' : ''}"><b>${i + 1}º</b><img src="${thumbs[p.ch]}">${esc(p.name)}${p.bot ? ' 🤖' : ''}</div>`; }).join('');
-      $('bAgain').textContent = mode === 'solo' ? 'Revancha' : (net && net.isHost ? 'Volver a la sala' : 'Volver a la sala');
+      $('oRank').innerHTML = res.ranking.map((id, i) => [id, i]).filter(([id, i]) => i < 5 || id === me).slice(0, 6).map(([id, i]) => { const p = byId(id); return `<div class="${id === me ? 'me' : ''}"><b>${i + 1}º</b><img src="${thumbs[p.ch]}">${esc(p.name)}${p.bot ? ' 🤖' : ''}</div>`; }).join('');
+      $('bAgain').textContent = mode === 'solo' ? '🔁 Otra vez' : '🔁 Volver a la sala';
       setTimeout(() => { show('sOver'); if (win === me) Sfx.win(); }, 1400);
     },
   };
@@ -136,10 +166,15 @@ export function createShell(G) {
     return Array.from({ length: n }, (_, i) => { const c = free[i % free.length]; return { id: 'b' + i, name: names[i % names.length], ch: c.id, bot: true, skill: +(sk[0] + Math.random() * (sk[1] - sk[0])).toFixed(2) }; });
   }
   function launch(cfg) { lastCfg = cfg; inGame = true; show(null); G.start(cfg, api); }
-  $('bSolo').onclick = () => { Sfx.init(); Sfx.go(); mode = 'solo';
+  $('bSolo').onclick = () => { Sfx.init(); Sfx.go(); const M = MODES.find(m => m[0] === selMode); if (M && M[5] && G.page && M[5] !== G.page) { location.href = `./${M[5]}.html?modo=${selMode}&auto=1`; return; } mode = 'solo';
     const roster = [{ id: 'h', name: myName() === 'Jugador' ? 'Tú' : myName(), ch: myCh, bot: false }, ...bots(nBots, new Set([myCh]))];
     launch({ roster, seed: Math.random() * 1e9 | 0, online: false, map: MAPL ? realMap() : null, mode: G.getMode ? G.getMode() : undefined }); };
-  $('bQuit').onclick = () => { if (!inGame) return; if (!confirm('¿Salir de la partida?')) return; G.stop(); inGame = false; if (net) { net.close(); net = null; } show('sHome'); refreshMe(); };
+  // v23: pausa clara con Seguir / Repetir / Menú (en solitario la partida se para de verdad)
+  const unpause = () => { api.paused = false; document.getElementById('sPause').classList.remove('on'); $('bQuit').style.visibility = inGame ? 'visible' : 'hidden'; };
+  $('bQuit').onclick = () => { if (!inGame) return; Sfx.tap(); api.paused = mode === 'solo'; $('bRetry').style.display = mode === 'solo' ? '' : 'none'; document.getElementById('sPause').classList.add('on'); };
+  $('bResume').onclick = () => { Sfx.tap(); unpause(); };
+  $('bRetry').onclick = () => { Sfx.tap(); unpause(); G.stop(); inGame = false; $('bSolo').click(); };
+  $('bPMenu').onclick = () => { Sfx.tap(); unpause(); G.stop(); inGame = false; if (net) { net.close(); net = null; } mode = 'solo'; show('sHome'); refreshMe(); };
 
   // ---------- multijugador ----------
   const ERR = { nosala: 'No hay ninguna sala con ese código.', llena: 'La sala está llena (máximo 8 personas).', empezada: 'Esa sala está jugando. Espera a que acabe la partida.', broker: 'No se pudo conectar con el servidor de salas. Revisa tu conexión.', codigo: 'El código tiene 4 letras.' };
@@ -194,6 +229,6 @@ export function createShell(G) {
   $('bMenu').onclick = () => { Sfx.tap(); G.stop(); if (net) { net.close(); net = null; } mode = 'solo'; show('sHome'); refreshMe(); };
   addEventListener('beforeunload', () => { try { net && net.close(); } catch (e) { } });
   // ganchos de prueba
-  window.__shell = { api, solo: () => $('bSolo').click(), get inGame() { return inGame; } };
+  window.__shell = { api, solo: () => $('bSolo').click(), get inGame() { return inGame; }, pick: m => { selMode = m; G.setMode && G.setMode(m); drawModes(); } };
   return api;
 }
