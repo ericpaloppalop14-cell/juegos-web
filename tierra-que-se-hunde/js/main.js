@@ -5,15 +5,15 @@
 //  encima). La sala se va quedando sin suelo: ¡sé el último en pie!
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
-import { floatJoy } from './joy.js?v=v24';
+import { floatJoy } from './joy.js?v=v25';
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v24';
-import { createEscenarios } from './escenarios.js?v=v24';
-import { makeCharacter, animCharacter } from './gfx.js?v=v24';
-import { chOf } from './chars.js?v=v24';
-import { createShell } from './shell.js?v=v24';
-import { Sfx } from './sfx.js?v=v24';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v24';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v25';
+import { createEscenarios } from './escenarios.js?v=v25';
+import { makeCharacter, animCharacter } from './gfx.js?v=v25';
+import { chOf } from './chars.js?v=v25';
+import { createShell } from './shell.js?v=v25';
+import { Sfx } from './sfx.js?v=v25';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v25';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -46,7 +46,7 @@ const STEAL_R = 1.6; // v24: radio del robo de la corona
 const MODE_MAP = { patata: 'acantilado', rey: 'cima', fresas: 'huerto', pinta: 'paleta', reves: 'reves' };
 const ALLMAPS = { ...MAPS, ...MODE_MAPS };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 24;
+export const VERSION = 25;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
@@ -473,9 +473,9 @@ function onEvents(evs) {
       else shell.toast(e[2] === me ? `💥 ¡Has hundido a ${who(e[1])}!` : `🌊 ${who(e[1])} se ha caído`, 1500); }
     if (e[0] === 'bomb') { Sfx.tick(); if (e[1] === me) { shell.big('💣 ¡Tienes la bomba! ¡Pásala!', 1100); Sfx.bad(); } else if (e[2] === me) { shell.toast(`😅 Bomba pasada a ${who(e[1])}`, 1200); Sfx.ok(); } else shell.toast(`💣 La bomba la tiene ${who(e[1])}`, 1100); }
     if (e[0] === 'boom') { Sfx.sink(); Sfx.crack(); parts.burst(new THREE.Vector3(e[1], FY + 1, e[2]), '#ff8a3d', 70, 10, 8); shell.big('💥 ¡BUM!', 900); }
-    if (e[0] === 'cgrab') { Sfx.shield(); shell.big(e[1] === me ? '👑 ¡Tienes la corona! ¡Aguanta!' : `👑 ¡${who(e[1])} coge la corona!`, 1100); }
-    if (e[0] === 'csteal') { Sfx.zap ? Sfx.zap() : Sfx.shield(); shell.big(e[1] === me ? `👑 ¡Le has robado la corona a ${who(e[2])}!` : e[2] === me ? `💢 ¡${who(e[1])} te ha robado la corona!` : `👑 ${who(e[1])} roba la corona a ${who(e[2])}`, 1200); }
-    if (e[0] === 'cdrop') { Sfx.bad(); shell.toast(e[1] === me ? '👑 ¡Se te ha caído la corona! Ha quedado suelta' : `👑 ¡${who(e[1])} ha caído! La corona está suelta`, 1400); }
+    if (e[0] === 'cgrab') { Sfx.shield(); shell.notice(e[1] === me ? '👑 ¡La llevas tú!' : `👑 ${who(e[1])} cogió la corona`); }
+    if (e[0] === 'csteal') { Sfx.zap ? Sfx.zap() : Sfx.shield(); shell.notice(e[1] === me ? `👑 ¡Robaste la corona a ${who(e[2])}!` : e[2] === me ? `💢 ${who(e[1])} te robó la corona` : `👑 ${who(e[1])} robó la corona`); }
+    if (e[0] === 'cdrop') { Sfx.bad(); shell.notice(e[1] === me ? '👑 Se te cayó la corona' : '👑 ¡Corona suelta!'); }
     if (e[0] === 'fresa') { Sfx.sink(); parts.burst(new THREE.Vector3(e[1], FY + 0.5, e[2]), '#ff4f6e', 40, 7, 6); }
     if (e[0] === 'rwarn') { Sfx.tick(); shell.big('🙃 ¡El mundo se da la vuelta en 3 s!', 1500); }
     if (e[0] === 'rflip') { Sfx.crack(); shell.big('🙃 ¡AL REVÉS!', 900); flipFx = 1; }

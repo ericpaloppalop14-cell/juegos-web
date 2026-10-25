@@ -105,3 +105,7 @@ input.code{text-transform:uppercase;letter-spacing:6px;width:150px}
 #sPause{background:rgba(120,60,140,.35);z-index:40;transition:none}
 #sPause .pcard{display:flex;flex-direction:column;gap:10px;align-items:stretch;width:min(320px,88vw)}#sPause .pcard .btn{justify-content:center;animation:none;font-size:24px;padding:12px 0}
 #bQuit{font-size:20px}
+/* v25: aviso discreto */
+#notice{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 50px);transform:translate(-50%,-6px);max-width:80vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(90,40,110,.42);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);color:#fff;font-weight:700;font-size:14px;line-height:1;padding:6px 12px;border-radius:14px;opacity:0;pointer-events:none;z-index:7;transition:opacity .35s,transform .35s}
+#notice.on{opacity:1;transform:translate(-50%,0);transition:opacity .12s,transform .12s}
+@media (orientation:landscape) and (max-height:500px){#notice{top:calc(env(safe-area-inset-top) + 46px);font-size:13px}}

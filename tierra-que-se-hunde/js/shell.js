@@ -3,10 +3,10 @@
 //  partida en solitario con bots y salas multijugador con código (PeerJS).
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS, chOf } from './chars.js?v=v24';
-import { makeCharacter, animCharacter } from './gfx.js?v=v24';
-import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v24';
-import { Sfx } from './sfx.js?v=v24';
+import { CHARS, chOf } from './chars.js?v=v25';
+import { makeCharacter, animCharacter } from './gfx.js?v=v25';
+import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v25';
+import { Sfx } from './sfx.js?v=v25';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
@@ -41,7 +41,7 @@ export function createShell(G) {
   const ui = document.createElement('div'); ui.id = 'ui'; document.body.appendChild(ui);
   ui.innerHTML = `
   <div class="topbar"><button class="round" id="bQuit" style="visibility:hidden" aria-label="Pausa y menú">⏸</button><button class="round" id="bMute">${Sfx.muted ? '🔇' : '🔊'}</button></div>
-  <div id="toast"></div><div class="big-msg" id="bigMsg"></div>
+  <div id="toast"></div><div id="notice"></div><div class="big-msg" id="bigMsg"></div>
   <section class="scr on" id="sHome">
     <div class="hLogo">Tierra que se hunde</div>
     <div class="hA">
@@ -122,6 +122,8 @@ export function createShell(G) {
   const toastT = { t: 0 };
   const api = {
     toast(msg, ms = 1600) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT.t); toastT.t = setTimeout(() => t.classList.remove('on'), ms); },
+    // v25: aviso discreto arriba en el centro (no tapa el juego)
+    notice(msg, ms = 1200) { const n = $('notice'); n.textContent = msg; n.classList.remove('on'); void n.offsetWidth; n.classList.add('on'); clearTimeout(api._nt); api._nt = setTimeout(() => n.classList.remove('on'), ms); },
     big(msg, ms = 900) { const b = $('bigMsg'); b.textContent = msg; b.classList.add('on'); clearTimeout(api._bt); if (ms) api._bt = setTimeout(() => b.classList.remove('on'), ms); },
     get net() { return net; },
     get myId() { return net ? net.myId : 'h'; },
