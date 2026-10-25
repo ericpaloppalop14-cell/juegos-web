@@ -178,7 +178,7 @@ canvas#c{z-index:9}
 }
 #sChars .stage3d,#menuStage{border-radius:0}.stage3d::after{display:none}
 .chars canvas{width:58px;height:58px;image-rendering:auto}
-@media (orientation:landscape) and (max-height:600px){#sChars .colB{padding-top:10px}}
+@media (orientation:landscape) and (max-height:600px){#sChars .colB{padding:16px 56px 10px 8px;box-sizing:border-box;overflow:visible}#sChars .colB .chars{overflow:visible}} /* noche 25-10: fila de arriba ya no se corta y el botón de música no tapa */
 </style>
 <script>window.FX_NOCHE={z:4,n:20,vig:.12}</script><script src="js/fx-noche.js?v=1"></script>
 <script type="importmap">{ "imports": { "three": "./carrera/lib/three.module.min.js" } }</script>
