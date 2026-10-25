@@ -469,4 +469,7 @@ createShell({
 { const h = document.querySelector('#sHome .row:last-child'); if (h) { const b = document.createElement('button'); b.className = 'btn mint'; b.id = 'bClassic'; b.textContent = '🏝️ Modo clásico'; b.onclick = () => { Sfx.tap(); location.href = './index.html'; }; h.appendChild(b); } }
 setShowcase(localStorage.getItem('ms_ch') || 'mochi');
 frame();
+// v16: desde la pantalla de modos del menú principal se entra directo a jugar
+if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell && window.__shell.solo(), 400); }
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 16 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
 window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, get chars() { return chars; } };

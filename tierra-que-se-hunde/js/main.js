@@ -31,9 +31,12 @@ export const MAPS = {
   gelatina: { name: '🍮 Islas de gelatina', hole: (x, z) => { for (const [a, b] of H4) if (Math.hypot(x - a * HALF * 0.5, z - b * HALF * 0.5) < 3.6) return true; return false; },
     obs: T => [...H4.map(([a, b]) => ({ x: a * HALF * 0.5, z: b * HALF * 0.5, r: 5.6 })), { x: 0, z: 0, r: 2.2 + Math.sin(T * 2.4) * 0.5 }] },
 };
+// v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
+export const VERSION = 16;
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
-const TIMED = { rey: 1, pinta: 1 }, MODE_T = 90;
+const TIMED = { rey: 1, pinta: 1 }, MODE_T = 90, OPEN = { patata: 1, rey: 1, fresas: 1 }; // OPEN: plataforma flotante sin paredes (caes al vacío)
 let curMode = localStorage.getItem('hunde_modo'); if (!MODES[curMode]) curMode = 'clasico';
 // zona segura que se cierra por fases (radio final 0)
 const ZPH = [[10, 7, 0.62], [8, 6, 0.4], [7, 5, 0.23], [7, 4, 0.1], [6, 3, 0.035], [7, 3, 0]];
@@ -132,7 +135,7 @@ class Sim {
       // paredes y postes: solo se quita la parte de la velocidad que empuja contra ellos (se desliza, sin rebotes ni tirones de giro)
       const slide = (nx, nz) => { const dot = p.vx * nx + p.vz * nz; if (dot >= 0) return; p.vx -= dot * nx; p.vz -= dot * nz; if (p.bt <= 0 && dot < -3) { p.bt = 0.5; this.ev.push(['boing', p.id]); } };
       const L = HALF - 0.6;
-      if (Math.abs(p.x) > L) { const sg = Math.sign(p.x); p.x = sg * L; slide(-sg, 0); } if (Math.abs(p.z) > L) { const sg = Math.sign(p.z); p.z = sg * L; slide(0, -sg); }
+      if (!OPEN[this.mode]) { if (Math.abs(p.x) > L) { const sg = Math.sign(p.x); p.x = sg * L; slide(-sg, 0); } if (Math.abs(p.z) > L) { const sg = Math.sign(p.z); p.z = sg * L; slide(0, -sg); } }
       for (const o of this.obs) { const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz) || 0.01, R = o.r + 0.5; if (d < R) { p.x = o.x + dx / d * R; p.z = o.z + dz / d * R; slide(dx / d, dz / d); } }
       p.tile = tileAt(p.x, p.z);
       if (p.air <= 0 && (p.tile < 0 || this.tiles[p.tile].s === 2)) { const by = p.tile >= 0 ? this.tiles[p.tile].by : null; this.kill(p, by); }
@@ -161,7 +164,7 @@ class Sim {
     for (const u of [0, -0.35, 0.35, -0.7, 0.7, -1, 1]) {
       let x = p.x, z = p.z, h = p.h, s = 0;
       for (let k = 1; k <= 16; k++) { h -= u * TURN * 0.1; x += Math.sin(h) * SPEED * 0.1; z += Math.cos(h) * SPEED * 0.1;
-        const L = HALF - 0.6; if (Math.abs(x) > L || Math.abs(z) > L) { s += 2; break; }
+        const L = HALF - 0.6; if (Math.abs(x) > L || Math.abs(z) > L) { s += OPEN[this.mode] ? 400 / k * care : 2; break; }
         let ob = 0; for (const o of this.obs) if (Math.hypot(x - o.x, z - o.z) < o.r + 0.7) ob = 1; if (ob) { s += 8 / k; break; }
         const dg = this.danger(x, z, k * 0.1); if (dg >= 9) { s += 400 / k * care; break; } s += dg * 3 / k * care; }
       s += Math.abs(wrap(h - want)) * 0.9 + Math.abs(u) * 0.2;
@@ -620,7 +623,7 @@ function resetBoard() { for (let i = 0; i < N * N; i++) { const T = tiles[i]; T.
 function setShowcase(chId) { if (showcase) scene.remove(showcase); showcase = makeCharacter(chOf(chId)); showcase.scale.setScalar(1.3); showcase.position.set(0, FY, 4); showcase.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(showcase); }
 function finish(res) { $('hud').classList.remove('on'); $('nums').classList.remove('on'); $('spect').classList.remove('on'); $('steerHint').classList.remove('on'); $('mm').classList.remove('on'); $('hopB').classList.remove('on'); $('hOut').classList.remove('on'); shell.end(res); }
 function start(cfg, api) {
-  MD = null; tiles.forEach(T => T.mk = -1);
+  room.visible = decoG.visible = !OPEN[cfg.mode]; MD = null; tiles.forEach(T => T.mk = -1);
   buildMap(cfg.map || 'tiovivo');
   shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; joyA = null; sentHd = undefined; camInit = false; specId = null; myCd = 0; myJcd = 0; simAcc = 0; snapBuf.length = 0;
   if (showcase) { scene.remove(showcase); showcase = null; }
@@ -630,7 +633,7 @@ function start(cfg, api) {
   playing = false; let n = 3; api.big('3', 0); Sfx.tick();
   const cd = setInterval(() => { n--; if (n > 0) { api.big(String(n), 0); Sfx.tick(); } else { clearInterval(cd); api.big('¡Ya!', 700); Sfx.go(); playing = true; } }, 750);
 }
-function stop() { playing = false; sim = null; S = null; MD = null; online = false; finishUI(); for (const c of chars.values()) { scene.remove(c.root); scene.remove(c.blob); } chars.clear(); resetBoard(); setShowcase(localStorage.getItem('ms_ch') || 'mochi'); }
+function stop() { room.visible = decoG.visible = true; playing = false; sim = null; S = null; MD = null; online = false; finishUI(); for (const c of chars.values()) { scene.remove(c.root); scene.remove(c.blob); } chars.clear(); resetBoard(); setShowcase(localStorage.getItem('ms_ch') || 'mochi'); }
 function finishUI() { ['hud', 'nums', 'spect', 'steerHint', 'mm', 'hOut', 'hopB'].forEach(id => $(id).classList.remove('on')); }
 
 createShell({
@@ -658,12 +661,37 @@ createShell({
   },
   onLeft(id) { if (sim) { const p = sim.P.find(p => p.id === id); if (p && p.alive) { p.ai = { goal: null, gt: 0, atk: 3, react: 0 }; p.skill = 0.6; p.bot = true; } } },
 });
-// v15: selector de modo en el menú
-{ const anchor = document.querySelector('#sHome .lbl.mapl'); if (anchor) { const l = document.createElement('div'); l.className = 'lbl'; l.textContent = 'Modo de juego'; const c = document.createElement('div'); c.className = 'chips'; c.id = 'cMode'; anchor.before(l, c);
-  const draw = () => { c.innerHTML = Object.entries(MODES).map(([k, n]) => `<button data-v="${k}" class="${k === curMode ? 'on' : ''}">${n}</button>`).join(''); }; draw();
-  c.onclick = e => { const b = e.target.closest('button'); if (!b) return; Sfx.tap(); curMode = b.dataset.v; localStorage.setItem('hunde_modo', curMode); draw(); }; } }
-// v13: acceso al nuevo modo Carrera en las alturas desde el menú
-{ const r = document.querySelector('#sHome #bSolo'); if (r) { const row = document.createElement('div'); row.className = 'row'; row.innerHTML = '<button class="btn mint" id="bCarrera">🏔️ Carrera en las alturas</button><button class="btn mint" id="bTortuga">🐢 Relevo con tortuga</button>'; r.parentElement.after(row); $('bCarrera').onclick = () => { Sfx.init(); Sfx.tap(); location.href = './carrera.html?modo=carrera'; }; $('bTortuga').onclick = () => { Sfx.init(); Sfx.tap(); location.href = './carrera.html?modo=tortuga'; }; } }
+// v16: PANTALLA GRANDE DE SELECCIÓN DE MODO (sale al pulsar ▶ Jugar)
+const MODE_CARDS = [
+  ['clasico', '🏝️', 'Clásico', 'Hunde números y sé el último en pie', '#ff9cc8'],
+  ['carrera', '🏔️', 'Carrera en las alturas', 'Corre, empuja al vacío y llega más lejos', '#7ecbff'],
+  ['patata', '💣', 'Patata caliente', 'Plataforma flotante: ¡pasa la bomba!', '#ffa673'],
+  ['rey', '👑', 'Rey de la cima', 'Isla en el cielo: quédate en la corona', '#f2c64e'],
+  ['fresas', '🍓', 'Lluvia de fresas', 'Isla flotante: esquiva las fresas gigantes', '#ff7f9a'],
+  ['pinta', '🎨', 'Pinta el suelo', 'Pinta más casillas que nadie', '#9789f2'],
+  ['reves', '🙃', 'Mundo al revés', 'Lo hundido sube, lo demás se hunde', '#4fcabb'],
+  ['tortuga', '🐢', 'Relevo con tortuga', 'Lleva la tortuga a la meta por las alturas', '#7fd08a']];
+{ const st = document.createElement('style'); st.textContent = `#sModes{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;z-index:30}
+#sModes h2{margin:4px 0 8px;font-size:min(9vw,40px);color:#fff;text-shadow:0 4px 0 #f08cbc,0 8px 18px rgba(170,90,170,.35)}
+#mGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(96vw,720px)}
+@media (orientation:landscape){#mGrid{grid-template-columns:repeat(4,1fr)}#sModes h2{font-size:28px;margin:0 0 6px}}
+#mGrid button{font-family:inherit;border:3px solid #fff;border-radius:22px;padding:10px 8px;color:#fff;cursor:pointer;text-align:center;background:radial-gradient(120% 90% at 30% 10%,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),var(--c);box-shadow:0 5px 0 rgba(110,60,140,.25),0 10px 20px rgba(120,60,150,.25);min-height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;touch-action:manipulation}
+#mGrid button:active{transform:translateY(3px) scale(.97)}#mGrid b{font-size:42px;line-height:1.1}#mGrid span{font-weight:700;font-size:18px;text-shadow:0 2px 3px rgba(80,40,90,.4)}#mGrid small{font-size:12.5px;font-weight:600;opacity:.95;text-shadow:0 1px 2px rgba(80,40,90,.4)}
+#mGrid button.on{outline:4px solid #ff4fa0;outline-offset:2px}
+@media (orientation:landscape) and (max-height:500px){#mGrid button{min-height:88px;padding:6px}#mGrid b{font-size:30px}#mGrid span{font-size:15px}}
+#verTag{position:absolute;left:10px;bottom:calc(env(safe-area-inset-bottom) + 6px);font-size:12px;font-weight:700;color:#fff;opacity:.85;text-shadow:0 1px 2px rgba(120,60,140,.6);z-index:2;pointer-events:none}`; document.head.appendChild(st);
+  const sc = document.createElement('section'); sc.className = 'scr'; sc.id = 'sModes';
+  sc.innerHTML = `<h2>¿A qué jugamos?</h2><div id="mGrid">${MODE_CARDS.map(([k, e, n, d, c]) => `<button data-m="${k}" style="--c:${c}"><b>${e}</b><span>${n}</span><small>${d}</small></button>`).join('')}</div><div class="row"><button class="btn" id="bModesBack">‹ Volver</button></div>`;
+  document.getElementById('ui').appendChild(sc);
+  const solo = $('bSolo'); solo.textContent = '▶ Jugar · elegir modo'; let pass = false;
+  const showModes = () => { document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === 'sModes')); [...$('mGrid').children].forEach(b => b.classList.toggle('on', b.dataset.m === curMode)); };
+  solo.addEventListener('click', e => { if (pass || !$('sHome').classList.contains('on')) return; e.stopImmediatePropagation(); Sfx.init(); Sfx.tap(); showModes(); }, true);
+  $('mGrid').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; Sfx.init(); Sfx.go(); const m = b.dataset.m;
+    if (m === 'carrera' || m === 'tortuga') { location.href = `./carrera.html?modo=${m}&auto=1`; return; }
+    curMode = m; localStorage.setItem('hunde_modo', m); document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === 'sHome')); pass = true; solo.click(); pass = false; });
+  $('bModesBack').onclick = () => { Sfx.tap(); document.querySelectorAll('#ui .scr').forEach(s => s.classList.toggle('on', s.id === 'sHome')); };
+  window.__pickMode = m => { [...$('mGrid').children].find(b => b.dataset.m === m).click(); };
+  const v = document.createElement('div'); v.id = 'verTag'; v.textContent = 'v' + VERSION; document.body.appendChild(v); }
 setShowcase(localStorage.getItem('ms_ch') || 'mochi'); { const m0 = localStorage.getItem('hunde_map'); buildMap(MAPS[m0] ? m0 : 'tiovivo'); } resetBoard();
 frame();
 window.__rend = () => { const c = chars.get(me); return c ? [c.root.position.x, c.root.position.z, c.root.rotation.y, c.alive ? 1 : 0] : null; };
