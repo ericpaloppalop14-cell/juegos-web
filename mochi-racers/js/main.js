@@ -14,6 +14,7 @@ import { Audio } from './audio.js';
 import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
 import { Online, soloMatch, MAX_PLAYERS } from './online.js';
 import { createCupCarousel } from './cupsel.js';
+import { createTrackMinis } from './trackmini.js'; // v38: miniaturas animadas de circuitos
 import { buildPodium } from './podium.js';
 import { buildTitleFx, animTitleFx, buildSelBg, animSelBg, setSelColor, makePortraits, makePortraitsAsync, finishPortraits, ANIMS, animPreview } from './showcase.js';
 
@@ -210,10 +211,11 @@ btn('rMenu', () => { if (app.race) { app.race.dispose(); app.race = null; } onli
 let uSel = 0;
 const trophySVG = (col, dim) => `<svg viewBox="0 0 64 64"><path d="M18 8h28v10c0 10-6 18-14 18S18 28 18 18z" fill="${col}" stroke="#5a3a6e" stroke-width="2.5"/><path d="M18 12H9c0 9 5 14 11 14M46 12h9c0 9-5 14-11 14" fill="none" stroke="${col}" stroke-width="4"/><rect x="28" y="36" width="8" height="10" fill="${col}" stroke="#5a3a6e" stroke-width="2"/><rect x="18" y="46" width="28" height="9" rx="3" fill="#fff4fa" stroke="#5a3a6e" stroke-width="2.5"/>${dim ? '' : '<path d="M32 14l2.4 5 5.4.6-4 3.7 1.1 5.3-4.9-2.7-4.9 2.7 1.1-5.3-4-3.7 5.4-.6z" fill="#fff" opacity=".9"/>'}</svg>`;
 const TIER = ['🥇 Oro', '🥈 Plata', '🥉 Bronce'];
-let carousel = null, cupBusy = false;
+let carousel = null, cupBusy = false, trackMinis = null;
 function cupInfo() { const c = CUPS[uSel], un = cupUnlocked(c), tr = save.trophies[c.id];
   $('cupName').textContent = c.name; $('cupName').style.setProperty('--cc', un ? c.color : '#b8a8d0');
-  $('cupTrack').innerHTML = '<div class="rlist">' + raceNames(c).map((n, i) => `<span><b>${i + 1}</b>${n}</span>`).join('') + '</div>' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
+  $('cupTrack').innerHTML = '<div class="tminis"></div>' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
+  if (!trackMinis) trackMinis = createTrackMinis($('cupTrack').firstChild); else trackMinis.setHost($('cupTrack').firstChild); trackMinis.setCup(c, !un);
   [...$('cupGrid').children].forEach((d, i) => d.classList.toggle('sel', i === uSel));
   $('uGo').classList.toggle('locked', !un); $('uGo').innerHTML = un ? '<span>¡A correr!</span>' : '<span>🔒 Bloqueada</span>';
   $('cupPanel').classList.remove('swap'); void $('cupPanel').offsetWidth; $('cupPanel').classList.add('swap');

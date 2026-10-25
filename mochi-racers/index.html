@@ -470,6 +470,14 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 #cupTrack .rlist b{flex:none;width:18px;height:18px;border-radius:50%;background:#fff;color:#c0509f;display:grid;place-items:center;font-size:11px}
 @keyframes rpop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
 @media (orientation:landscape) and (max-height:500px){#cupTrack .rlist span{font-size:10.5px;padding:2px 6px}#cupTrack .rlist{gap:3px 4px;margin:2px 0 3px}}
+#cupTrack .tminis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:5px 0 6px}
+#cupTrack .tmini{position:relative;height:clamp(64px,11vh,108px);border-radius:14px;overflow:hidden;border:2.5px solid #fff;box-shadow:0 0 0 2px var(--cc,#ff8fc0),0 4px 10px rgba(60,20,90,.3);background:#fff;animation:rpop .45s cubic-bezier(.3,1.6,.5,1) both}
+#cupTrack .tmini canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#cupTrack .tmini.lk canvas{filter:grayscale(.65) brightness(.8)}
+#cupTrack .tmn{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:4px;padding:10px 5px 3px;background:linear-gradient(180deg,rgba(60,20,90,0),rgba(60,20,90,.72));color:#fff;font-size:10.5px;line-height:1.1;text-align:left;text-shadow:0 1px 2px rgba(30,0,50,.8)}
+#cupTrack .tmn b{flex:none;width:15px;height:15px;border-radius:50%;background:#fff;color:#c0509f;display:grid;place-items:center;font-size:9.5px;text-shadow:none}
+#cupTrack .tmn span{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+@media (orientation:landscape) and (max-height:500px){#cupTrack .tmini{height:clamp(44px,13vh,70px)}#cupTrack .tmn{font-size:9px}}
 #muteB{position:fixed;left:calc(10px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom));z-index:60;width:42px;height:42px;border-radius:50%;border:2px solid #fff;background:rgba(255,255,255,.85);font-size:19px;box-shadow:0 4px 12px rgba(120,60,150,.25);padding:0;cursor:pointer}
 /* v28: selección en horizontal: cuadrícula a la izquierda, ficha a la derecha, piloto grande en el centro */
 @media (orientation:landscape){
@@ -608,9 +616,9 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 <script>window.FX_NOCHE={z:2,n:16,vig:.14,rays:false}</script><script src="js/fx-noche.js?v=2"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script>
-<script type="module" src="js/main.js?v=37"></script>
+<script type="module" src="js/main.js?v=38"></script>
 <script>
-if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=37', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=38', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>
 </body>
 </html>
