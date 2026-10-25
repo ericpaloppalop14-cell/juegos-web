@@ -5,13 +5,13 @@
 //  demás al vacío, salta los huecos, coge regalos… y el suelo se hunde
 //  detrás de vosotros cada vez más rápido. ¡Gana quien llegue más lejos!
 // ======================================================================
-import { floatJoy } from './joy.js?v=v23';
+import { floatJoy } from './joy.js?v=v24';
 import * as THREE from 'three';
-import { createRenderer, addLights, Particles } from './world.js?v=v23';
-import { makeCharacter, animCharacter } from './gfx.js?v=v23';
-import { chOf } from './chars.js?v=v23';
-import { createShell } from './shell.js?v=v23';
-import { Sfx } from './sfx.js?v=v23';
+import { createRenderer, addLights, Particles } from './world.js?v=v24';
+import { makeCharacter, animCharacter } from './gfx.js?v=v24';
+import { chOf } from './chars.js?v=v24';
+import { createShell } from './shell.js?v=v24';
+import { Sfx } from './sfx.js?v=v24';
 
 const $ = id => document.getElementById(id);
 const RL = 2, COLS = 4, CW = 2.5, TW = COLS * CW, HW = TW / 2; // filas de 2 m, 4 carriles de 2,5 m
@@ -513,5 +513,5 @@ setShowcase(localStorage.getItem('ms_ch') || 'mochi');
 frame();
 // v16: desde la pantalla de modos del menú principal se entra directo a jugar
 if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell && window.__shell.solo(), 400); }
-fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 23 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 24 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
 window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, blockType, get chars() { return chars; } };

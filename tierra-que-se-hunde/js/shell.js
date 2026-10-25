@@ -3,10 +3,10 @@
 //  partida en solitario con bots y salas multijugador con código (PeerJS).
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS, chOf } from './chars.js?v=v23';
-import { makeCharacter, animCharacter } from './gfx.js?v=v23';
-import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v23';
-import { Sfx } from './sfx.js?v=v23';
+import { CHARS, chOf } from './chars.js?v=v24';
+import { makeCharacter, animCharacter } from './gfx.js?v=v24';
+import { Net, netAvailable, CONFIG as NETCFG } from './net.js?v=v24';
+import { Sfx } from './sfx.js?v=v24';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);

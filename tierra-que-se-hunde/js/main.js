@@ -5,15 +5,15 @@
 //  encima). La sala se va quedando sin suelo: ¡sé el último en pie!
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
-import { floatJoy } from './joy.js?v=v23';
+import { floatJoy } from './joy.js?v=v24';
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v23';
-import { createEscenarios } from './escenarios.js?v=v23';
-import { makeCharacter, animCharacter } from './gfx.js?v=v23';
-import { chOf } from './chars.js?v=v23';
-import { createShell } from './shell.js?v=v23';
-import { Sfx } from './sfx.js?v=v23';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v23';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v24';
+import { createEscenarios } from './escenarios.js?v=v24';
+import { makeCharacter, animCharacter } from './gfx.js?v=v24';
+import { chOf } from './chars.js?v=v24';
+import { createShell } from './shell.js?v=v24';
+import { Sfx } from './sfx.js?v=v24';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v24';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -42,10 +42,11 @@ export const MODE_MAPS = {
   paleta: { name: '🎨 Paleta del pintor', hole: (x, z) => (x / 40) ** 2 + (z / 31) ** 2 > 1 || Math.hypot(x - 19, z - 11) < 5.4, obs: () => [] },
   reves: { name: '🙃 Cielo al revés', hole: (x, z) => Math.abs(x) + Math.abs(z) > 47, obs: () => [] },
 };
+const STEAL_R = 1.6; // v24: radio del robo de la corona
 const MODE_MAP = { patata: 'acantilado', rey: 'cima', fresas: 'huerto', pinta: 'paleta', reves: 'reves' };
 const ALLMAPS = { ...MAPS, ...MODE_MAPS };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 23;
+export const VERSION = 24;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
@@ -97,7 +98,8 @@ class Sim {
     if (m === 'rey') { const C = this.crown; C.cool -= dt; C.st -= dt; let h = C.by != null ? this.P.find(p => p.id === C.by) : null;
       if (C.by != null && (!h || !h.alive)) { this.ev.push(['cdrop', C.by]); this.dropCrown(h ? h.x : 0, h ? h.z : 0); h = null; }
       if (h) { h.sc += dt; C.x = h.x; C.z = h.z;
-        if (C.st <= 0) for (const q of this.P) if (q !== h && q.alive && Math.hypot(q.x - h.x, q.z - h.z) < 1.2) { C.by = q.id; C.st = 1.5; this.ev.push(['csteal', q.id, h.id]); break; } }
+        if (C.st <= 0) for (const q of this.P) if (q !== h && q.alive && Math.hypot(q.x - h.x, q.z - h.z) < STEAL_R) { C.by = q.id; C.st = 1.5; // v24: choque con empujón (el que pierde sale despedido un poco, el que roba rebota)
+          const dx = h.x - q.x, dz = h.z - q.z, d = Math.hypot(dx, dz) || 1; for (const [o, k] of [[h, 7], [q, -3]]) { o.vx += dx / d * k; o.vz += dz / d * k; o.tvx = o.vx; o.tvz = o.vz; } this.ev.push(['csteal', q.id, h.id]); break; } }
       else { const i = tileAt(C.x, C.z); if (i < 0 || this.tiles[i].s !== 0) this.dropCrown(C.x, C.z);
         if (C.cool <= 0) for (const p of this.P) if (p.alive && Math.hypot(p.x - C.x, p.z - C.z) < 1.8) { C.by = p.id; C.st = 1.5; this.ev.push(['cgrab', p.id]); break; } } }
     if (m === 'pinta') for (const p of this.P) if (p.alive && p.tile >= 0 && this.tiles[p.tile].s === 0 && p.air <= 0) { const t = this.tiles[p.tile], k = this.P.indexOf(p); if (t.pt !== k) t.pt = k; }
@@ -144,7 +146,8 @@ class Sim {
       p.px = p.x; p.pz = p.z; p.ph = p.h; p.jcd = Math.max(0, p.jcd - dt); p.bt -= dt;
       // estilo Fall Guys / Stumble Guys: el joystick marca la dirección; la velocidad la sigue con suavidad (~0,1 s) y el mochi gira a mirarla
       let dx0, dz0, m;
-      if (p.ai) { p.w += (-p.turn * TURN * 1.15 - p.w) * Math.min(1, dt * 14); p.h = wrap(p.h + p.w * dt); dx0 = Math.sin(p.h); dz0 = Math.cos(p.h); m = 1; }
+      if (p.ai && p.ai.dir) { dx0 = p.ai.dir[0]; dz0 = p.ai.dir[1]; m = 1; const th = Math.atan2(dx0, dz0); p.h = wrap(p.h + wrap(th - p.h) * (1 - Math.exp(-dt * 10))); p.w = 0; } // v24: persecución directa (como un jugador con joystick)
+      else if (p.ai) { p.w += (-p.turn * TURN * 1.15 - p.w) * Math.min(1, dt * 14); p.h = wrap(p.h + p.w * dt); dx0 = Math.sin(p.h); dz0 = Math.cos(p.h); m = 1; }
       else { dx0 = p.wx; dz0 = p.wz; m = p.mag; }
       // 2º orden: la entrada se suaviza un pelín (50 ms) y la velocidad la sigue (~90 ms): rápido pero sin tirones
       const sp = (m > 0 ? SPEED * Math.min(1, 0.22 + m * 0.88) : 0) * (p.air > 0 ? 1.2 : 1) * (this.crown && this.crown.by === p.id ? 0.86 : 1), ki = 1 - Math.exp(-dt / 0.07), kv = 1 - Math.exp(-dt / 0.09);
@@ -173,9 +176,20 @@ class Sim {
     Object.assign(Z, { ncx: cx, ncz: cz, nr, st: 'wait', t: ZPH[Z.ph][0] }); this.ev.push(['znext', Z.ph]); }
   danger(x, z, tt = 0) { const i = tileAt(x, z); if (i < 0) return 9; if (this.fr) for (const f of this.fr) if (Math.hypot(x - f.x, z - f.z) < TS * 1.5) return f.t < tt + 0.6 ? 9 : 3; const t = this.tiles[i]; return t.s === 2 ? 9 : t.s === 1 ? (t.t < tt + 0.35 ? 9 : 3) : (Math.hypot(x - this.Z.ncx, z - this.Z.ncz) > this.Z.nr - 1 && this.Z.t < 5) ? 2 : 0; }
   bot(p, dt) {
+    p.ai.dir = null;
     const A = p.ai, sk = p.skill; A.gt -= dt; A.atk -= dt; A.react -= dt;
     if (!A.goal || A.gt <= 0 || this.tiles[A.goal].s) { const Z = this.Z, ok = this.tiles.map((t, i) => i).filter(i => this.tiles[i].s === 0 && Math.hypot(tx(i) - Z.ncx, tz(i) - Z.ncz) < Math.max(TS, Z.nr * 0.8)); A.goal = ok.length ? ok[Math.random() * ok.length | 0] : null; A.gt = 2 + Math.random() * 3; }
     this.botGoal(p, A);
+    // v24: Corona: si otro la lleva, los bots le persiguen anticipando su movimiento y van a chocar con él
+    if (this.mode === 'rey' && this.crown && this.crown.by != null && this.crown.by !== p.id) { const h = this.P.find(q => q.id === this.crown.by);
+      if (h && h.alive) { if ((A.cz = (A.cz ?? 0) - dt) <= 0) { A.cz = 0.6 + Math.random() * 0.8; A.chasing = Math.random() < Math.min(1, 0.1 + sk * sk); /* Fácil ≈30 %, Normal ≈60 %, Difícil ≈95 % de los bots persiguiendo */ }
+        if (A.chasing) { const d = Math.hypot(h.x - p.x, h.z - p.z), lead = Math.min(1.1, d / SPEED) * (0.3 + sk * 0.9);
+          const gx = h.x + h.vx * lead, gz = h.z + h.vz * lead, ax = gx - p.x, az = gz - p.z, ad = Math.hypot(ax, az) || 1;
+          // ruta segura: si en línea recta hay agujero, rodea por el lado más seguro
+          let best = null, bs = 1e9; for (const off of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2]) { const a = Math.atan2(ax, az) + off; let sc = Math.abs(off) * 2;
+            for (let k = 1; k <= 8; k++) { const t = k * 0.08, x = p.x + Math.sin(a) * SPEED * t, z = p.z + Math.cos(a) * SPEED * t; if (t * SPEED > ad + 1) break; const dg = this.danger(x, z, t); if (dg >= 9) { sc += 100 / k; break; } sc += dg / k; }
+            if (sc < bs) { bs = sc; best = a; } }
+          if (bs < 40) { A.dir = [Math.sin(best), Math.cos(best)]; p.ai.dir = A.dir; return; } } } }
     if (A.react > 0) return; A.react = 0.06 + (1 - sk) * 0.18;
     // elige el rumbo más seguro de varios candidatos, prefiriendo ir hacia su objetivo
     const want = A.goal != null ? Math.atan2(tx(A.goal) - p.x, tz(A.goal) - p.z) : p.h;
