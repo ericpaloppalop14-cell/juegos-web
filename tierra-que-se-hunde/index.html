@@ -7,7 +7,7 @@
 <title>Tierra que se hunde</title><link rel="manifest" href="manifest.json"><meta property="og:title" content="Tierra que se hunde"><meta property="og:site_name" content="Tierra que se hunde"><meta name="application-name" content="Tierra que se hunde"><meta name="apple-mobile-web-app-title" content="Tierra que se hunde">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="js/style.css?v=v19">
+<link rel="stylesheet" href="js/style.css?v=v20">
 <style>
 #hud{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 8px);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:5}
 #hud.on{display:flex}
@@ -76,10 +76,16 @@ body.zurdo #hopB{right:auto!important;left:calc(env(safe-area-inset-left) + 132p
 @media (orientation:landscape) and (max-height:520px){#sHome .sub{display:none}#sHome .logo{margin-top:0}#sHome .logo .a{font-size:32px}#sHome .logo .b{font-size:22px;margin-top:0}#sHome .grow{display:none}#sHome .lbl{margin-top:3px;font-size:12px}#sHome .chips{margin-top:2px}#sHome .chips button{padding:3px 9px;font-size:13px}#sHome #bChar{padding:4px 14px;margin-top:4px}#sHome .btn.big{padding:8px 30px;font-size:22px}#sHome .row{margin-top:5px}}
 </style>
 <style>/* noche 25-10: color más vivo (GPU) */canvas{filter:saturate(1.1) contrast(1.04)}</style>
+<style>/* v20 marcador de la corona */#crownBoard{position:absolute;left:calc(env(safe-area-inset-left) + 8px);top:calc(env(safe-area-inset-top) + 86px);display:none;flex-direction:column;gap:3px;z-index:5;pointer-events:none;min-width:118px}
+#crownBoard.on{display:flex}#crownBoard div{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.8);border-radius:12px;padding:3px 8px;font-size:12px;font-weight:700;color:#7a4b8a;box-shadow:0 3px 8px rgba(150,80,150,.18)}
+#crownBoard div b{margin-left:auto;padding-left:8px}#crownBoard div i{width:10px;height:10px;border-radius:50%;display:inline-block;border:1.5px solid #fff}
+#crownBoard{left:calc(env(safe-area-inset-left) + min(13vw,50px) + 14px)}@media (orientation:landscape) and (max-height:540px){#crownBoard{left:calc(env(safe-area-inset-left) + min(14vw,92px) + 14px);top:calc(env(safe-area-inset-top) + 58px);gap:2px}#crownBoard div{font-size:11px;padding:2px 7px}}body.zurdo #crownBoard{left:calc(env(safe-area-inset-left) + 8px)}
+#crownBoard div.k{background:linear-gradient(90deg,#ffe27a,#ffc23d);color:#7a4a00;transform:scale(1.06);transform-origin:left}#crownBoard div.me{outline:2px solid #ff8fc0}</style>
 </head>
 <body>
 <canvas id="c3d"></canvas>
 <div id="hud"><div class="pill" id="hAlive"></div><div class="pill" id="hNext"></div></div>
+<div id="crownBoard"></div>
 <div id="spect"><span class="pill">👻 Te has hundido · mirando la partida</span></div>
 <div id="nums"></div>
 <button id="hopB" aria-label="Salto"><i class="hring"></i><svg class="hico" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 25 L20 12 L32 25" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="20" cy="33" rx="9" ry="2.6" fill="rgba(255,255,255,.75)"/></svg><small>Salto</small></button>
@@ -91,6 +97,6 @@ body.zurdo #hopB{right:auto!important;left:calc(env(safe-area-inset-left) + 132p
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="lib/peerjs.min.js"></script>
 <script>if (/localnet/.test(location.search)) document.write('<script src="lib/fakepeer.js"><\/script>');</script>
-<script type="module" src="js/main.js?v=v19"></script>
+<script type="module" src="js/main.js?v=v20"></script>
 </body>
 </html>

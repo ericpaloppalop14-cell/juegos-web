@@ -6,18 +6,18 @@
 //  detrás de vosotros cada vez más rápido. ¡Gana quien llegue más lejos!
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, addLights, Particles } from './world.js?v=v19';
-import { makeCharacter, animCharacter } from './gfx.js?v=v19';
-import { chOf } from './chars.js?v=v19';
-import { createShell } from './shell.js?v=v19';
-import { Sfx } from './sfx.js?v=v19';
+import { createRenderer, addLights, Particles } from './world.js?v=v20';
+import { makeCharacter, animCharacter } from './gfx.js?v=v20';
+import { chOf } from './chars.js?v=v20';
+import { createShell } from './shell.js?v=v20';
+import { Sfx } from './sfx.js?v=v20';
 
 const $ = id => document.getElementById(id);
 const RL = 2, COLS = 4, CW = 2.5, TW = COLS * CW, HW = TW / 2; // filas de 2 m, 4 carriles de 2,5 m
-const STEP = 1 / 60, SPEED = 7, LAT = 6.5, HOP_T = 0.8, HOP_CD = 1.6, PAD_T = 1.15, PUSH_CD = 1.7;
+const STEP = 1 / 60, SPEED = 10.5, LAT = 8.5, HOP_T = 0.55, HOP_CD = 0.6, PAD_T = 0.75, PUSH_CD = 1.5; // v20: mucho más rápida
 const KNOCK = 8.5, KNOCK_BIG = 17, PUSH_R = 1.9, PUSH_R_BIG = 3.2, SINK_DELAY = 1.0;
 const NUMCOL = ['#ff8fb8', '#ffa673', '#f2c64e', '#7fd08a', '#4fcabb', '#6eaef2', '#9789f2', '#c487e6', '#f4878f'];
-const FIN = 400; // meta del relevo con tortuga
+const FIN = 500; const T_GRAB = 2.4, T_STEAL_CD = 1.4; // v20: tortuga mucho más fácil de coger // meta del relevo con tortuga
 let curMode = new URLSearchParams(location.search).get('modo') || localStorage.getItem('hunde_carrera_modo') || 'carrera'; if (!['carrera', 'tortuga'].includes(curMode)) curMode = 'carrera'; localStorage.setItem('hunde_carrera_modo', curMode);
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -27,11 +27,11 @@ function rng(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.im
 // Bloques de 8 filas: llano, slalom de agujeros, hueco para saltar, suelo que se hunde, muelles, tramo estrecho (¡a empujar!)
 const rowCache = new Map(); let rowSeed = 0;
 function blockType(b) { if (b < 3) return 'plain'; const R = rng(rowSeed ^ (b * 7919 + 13)); const d = Math.min(1, b / 40), x = R();
-  const W = [['plain', 1.2 - d * 0.6], ['holes', 1 + d], ['gap', 0.7 + d * 0.6], ['sink', 0.6 + d * 0.5], ['pad', 0.5], ['narrow', 0.6 + d * 0.5]];
+  const W = [['plain', 0.9 - d * 0.5], ['holes', 0.8 + d], ['gap', 0.6 + d * 0.5], ['sink', 0.5 + d * 0.4], ['pad', 0.6], ['narrow', 0.5 + d * 0.4], ['plats', b < 5 ? 0 : 0.8 + d * 0.5], ['pend', 0.7 + d * 0.4], ['bar', 0.7 + d * 0.4]];
   const tot = W.reduce((a, w) => a + w[1], 0); let acc = 0; for (const [k, w] of W) { acc += w / tot; if (x < acc) return k; } return 'plain'; }
 function row(r) {
   let o = rowCache.get(r); if (o) return o;
-  o = { t: 'n', hole: [0, 0, 0, 0], pad: [0, 0, 0, 0], box: -1 };
+  o = { t: 'n', hole: [0, 0, 0, 0], pad: [0, 0, 0, 0], boost: [0, 0, 0, 0], box: -1, ob: null };
   if (r >= 0) { const b = Math.floor(r / 8), k = r % 8, ty = blockType(b), R = rng(rowSeed ^ (b * 104729 + 7)), d = Math.min(1, b / 40);
     const a = R() * 4 | 0, a2 = (a + 1 + (R() * 3 | 0)) % 4, bb = R() * 4 | 0, boxc = R() * 4 | 0, boxp = R();
     if (ty === 'holes') { if (k === 2 || k === 3) { o.hole[a] = 1; if (d > 0.3) o.hole[a2] = 1; } if (k === 5 || k === 6) { o.hole[bb] = 1; o.hole[3 - bb] = d > 0.5 ? 1 : 0; } }
@@ -39,11 +39,19 @@ function row(r) {
     if (ty === 'sink' && k >= 2 && k <= (d > 0.5 ? 5 : 4)) o.t = 'sink';
     if (ty === 'pad' && k === 3) { o.pad[a] = 1; o.pad[(a + 2) % 4] = 1; }
     if (ty === 'pad' && (k === 5 || k === 6)) { o.hole[(a + 1) % 4] = 1; o.hole[(a + 3) % 4] = 1; }
+    // v20: saltos de plataforma en plataforma, péndulos, barras que suben y bajan y casillas turbo
+    if (ty === 'plats') { if (k === 1 || k === 2 || k === 6 || k === 7) { o.t = 'gap'; o.hole = [1, 1, 1, 1]; } if (k >= 3 && k <= 5) { o.hole = [1, 1, 1, 1]; o.hole[a] = 0; o.hole[a2] = 0; if (d < 0.4) o.hole[(a2 + 1) % 4] = 0; } }
+    if (ty === 'pend' && (k === 3 || (k === 6 && d > 0.4))) o.ob = { k: 'pend', ph: R() * 6.283 + k, w: 1.7 + d * 0.6 };
+    if (ty === 'bar' && (k === 3 || (k === 6 && d > 0.3))) o.ob = { k: 'bar', ph: R() * 6.283 + k, w: 2.2 + d * 0.8 };
+    if ((ty === 'plain' || ty === 'pend' || ty === 'bar') && k === 1) { o.boost[bb] = 1; if (d > 0.3) o.boost[(bb + 2) % 4] = 1; }
     if (ty === 'narrow' && k >= 1 && k <= 6) { o.hole[0] = 1; o.hole[3] = 1; if (d > 0.6 && k >= 3 && k <= 4) o.hole[1 + (b % 2)] = 0; }
     if ((ty === 'plain' || ty === 'narrow') && k === 4 && boxp < 0.75) { let c = boxc; if (o.hole[c]) c = 1 + (boxc % 2); o.box = c; }
     if (ty === 'plain' && k === 1 && boxp > 0.5 && b > 1) o.box = (boxc + 2) % 4; }
   rowCache.set(r, o); if (rowCache.size > 3000) rowCache.delete(rowCache.keys().next().value); return o;
 }
+// posición de los obstáculos móviles en el instante T (todos los ven igual)
+function pendX(ob, T) { const th = 1.0 * Math.sin(T * ob.w + ob.ph); return { x: 5.6 * Math.sin(th), y: 6.8 - 5.6 * Math.cos(th), v: Math.cos(T * ob.w + ob.ph) }; }
+function barY(ob, T) { return 0.35 + 1.9 * Math.max(0, Math.sin(T * ob.w + ob.ph)); }
 const colOf = x => Math.floor((x + HW) / CW), rowOf = z => Math.floor(z / RL), colX = c => -HW + CW * (c + 0.5);
 
 // ---------------------------------------------------------------- SIMULACIÓN (anfitrión / solitario)
@@ -76,7 +84,7 @@ class Sim {
     return true; }
   step(dt) {
     if (this.over) return; this.T += dt;
-    const cs = Math.min(10, 3.2 + this.T * 0.055); this.zc += cs * dt; // el suelo se hunde detrás, cada vez más rápido
+    const cs = Math.min(12.5, 4.6 + this.T * 0.075); this.zc += cs * dt; // el suelo se hunde detrás, cada vez más rápido
     const W = this.wind; W.t -= dt; // ventolera
     if (W.st === 'idle' && W.t <= 0) { W.st = 'warn'; W.t = 2; W.dir = Math.random() < 0.5 ? -1 : 1; this.ev.push(['wwarn', W.dir]); }
     else if (W.st === 'warn' && W.t <= 0) { W.st = 'blow'; W.t = 2.6; this.ev.push(['wblow', W.dir]); }
@@ -95,11 +103,17 @@ class Sim {
       p.x += (p.vx + p.kx + wind) * dt; p.z += (p.vz + p.kz) * dt; if (p.z < p.pz - 0.5 * dt) p.z = p.pz - 0.5 * dt;
       const sp = Math.hypot(p.vx + p.kx, p.vz + p.kz); if (sp > 0.5) p.h = wrap(p.h + wrap(Math.atan2(p.vx + p.kx, p.vz + p.kz) - p.h) * (1 - Math.exp(-dt * 12)));
       p.dist = Math.max(p.dist, p.z);
+      { const r0 = rowOf(p.z); for (const rr of [r0 - 1, r0, r0 + 1]) { if (rr < 0) continue; const ob = row(rr).ob; if (!ob) continue; const zo = (rr + 0.5) * RL;
+          const hy = p.air > 0 ? Math.sin((1 - p.air / p.air0) * Math.PI) * (p.air0 > 0.7 ? 4.2 : 1.6) : 0;
+          if (ob.k === 'pend') { const P = pendX(ob, this.T); if (Math.abs(p.z - zo) < 1.1 && Math.abs(p.x - P.x) < 1.35 && P.y - hy < 2.3 && (p.bonk || 0) <= 0) { p.kx += (P.v >= 0 ? 1 : -1) * 15; p.stun = 0.6; p.bonk = 0.8; if (this.tt && this.tt.by === p.id) this.dropT(p); this.ev.push(['pend', p.id]); } }
+          if (ob.k === 'bar') { const by = barY(ob, this.T); if (Math.abs(p.z - zo) < 0.55 && by < 1.25 && hy < by + 0.2 && (p.bonk || 0) <= 0) { p.vz = -2; p.kz = -5; p.stun = 0.55; p.bonk = 0.8; if (this.tt && this.tt.by === p.id) this.dropT(p); this.ev.push(['bar', p.id]); } } } }
+      p.bonk = Math.max(0, (p.bonk || 0) - dt);
       if (p.air <= 0) {
         const r = rowOf(p.z), R = r >= 0 ? row(r) : null, c = colOf(p.x);
         if (R && R.t === 'sink' && c >= 0 && c < 4 && !this.sinks.has(r * 4 + c)) { this.sinks.set(r * 4 + c, this.T); this.ev.push(['sink', r]); }
         if (R && c >= 0 && c < 4 && R.pad[c] && !R.hole[c]) { p.air = p.air0 = PAD_T; p.vz = Math.max(p.vz, SPEED * 1.15); this.ev.push(['pad', p.id]); }
         else if (!this.solid(p.x, p.z)) { this.kill(p); continue; }
+        if (R && c >= 0 && c < 4 && R.boost[c] && p.turbo < 0.9) { p.turbo = 1.4; this.ev.push(['boost', p.id]); }
         if (R && R.box >= 0 && !this.picked.has(r) && Math.abs(p.x - colX(R.box)) < 1.3 && Math.abs(p.z - (r + 0.5) * RL) < 1.3) this.pick(p, r);
         for (let i = this.bananas.length - 1; i >= 0; i--) { const b = this.bananas[i]; if (b.by === p.id && b.age < 0.6) continue; if (Math.hypot(p.x - b.x, p.z - b.z) < 0.85) { this.bananas.splice(i, 1);
           p.kx += (Math.random() < 0.5 ? -1 : 1) * 9; p.stun = 0.9; if (this.tt && this.tt.by === p.id) this.dropT(p); p.lastHit = b.by; p.hitT = 2.5; this.ev.push(['slip', p.id, b.by]); } }
@@ -115,10 +129,13 @@ class Sim {
       if (c && c.alive) { if (c.z > tt.z) c.carry += c.z - tt.z; tt.x = c.x; tt.z = c.z; if (c.z >= FIN) { this.over = true; c.carry += 1000; this.ranking = [...this.P].sort((a, b) => b.carry - a.carry).map(p => p.id); this.ev.push(['tfin', c.id]); this.ev.push(['over', c.id]); return; } }
       else { if (c) { tt.by = null; this.placeT(Math.max(this.zc + 12, c.z)); }
         if (tt.z < this.zc + 4) this.placeT(this.zc + 22);
-        if (tt.cool <= 0) for (const p of A) if (p.air <= 0.2 && Math.hypot(p.x - tt.x, p.z - tt.z) < 1.2) { tt.by = p.id; this.ev.push(['tgrab', p.id]); break; } } }
+        if (tt.cool <= 0) { let b = null, bd = T_GRAB; for (const p of A) { const d = Math.hypot(p.x - tt.x, p.z - tt.z); if (d < bd) { bd = d; b = p; } } if (b) { tt.by = b.id; tt.sc = T_STEAL_CD; this.ev.push(['tgrab', b.id]); } } }
+      // v20: relevo: si alcanzas a quien lleva la tortuga y le tocas, te la pasa a ti
+      tt.sc = Math.max(0, (tt.sc || 0) - dt); const c2 = tt.by != null ? this.P.find(p => p.id === tt.by) : null;
+      if (c2 && c2.alive && tt.sc <= 0) for (const q of A) if (q !== c2 && Math.hypot(q.x - c2.x, q.z - c2.z) < 1.35) { tt.by = q.id; tt.sc = T_STEAL_CD; this.ev.push(['tpass', q.id, c2.id]); break; } }
     if (A.length === 0) { this.over = true; this.ranking = [...this.P].sort((a, b) => this.tt ? b.carry - a.carry || b.dist - a.dist : b.dist - a.dist).map(p => p.id); this.ev.push(['over', this.ranking[0]]); }
   }
-  dropT(q) { const tt = this.tt; tt.by = null; tt.cool = 0.5; tt.x = clamp(q.x + (Math.random() - 0.5) * 2, -HW + 0.6, HW - 0.6); tt.z = q.z + 1.5; if (!this.solid(tt.x, tt.z)) this.placeT(tt.z); this.ev.push(['tdrop', q.id]); }
+  dropT(q) { const tt = this.tt; tt.by = null; tt.cool = 0.35; tt.x = clamp(q.x + (Math.random() - 0.5) * 2, -HW + 0.6, HW - 0.6); tt.z = q.z + 1.5; if (!this.solid(tt.x, tt.z)) this.placeT(tt.z); this.ev.push(['tdrop', q.id]); }
   placeT(z) { const tt = this.tt; for (let k = 0; k < 40; k++, z += 2) for (const x of [0, -1.25, 1.25, -3.75, 3.75]) if (this.solid(x, z) && row(Math.max(0, rowOf(z))).t !== 'sink') { tt.x = x; tt.z = z; tt.cool = 0.3; return; } }
   pick(p, r) { this.picked.add(r); const k = ['guante', 'turbo', 'platano'][Math.random() * 3 | 0];
     if (k === 'guante') p.pw = 'guante';
@@ -128,20 +145,23 @@ class Sim {
   kill(p) { if (!p.alive) return; window.__falls && window.__falls.push([p.name, +this.T.toFixed(1), +p.x.toFixed(1), +p.z.toFixed(1), +this.zc.toFixed(1), p.hitT > 0 ? p.lastHit : '-', p.air]); p.alive = false; this.dead.push(p.id); const by = p.hitT > 0 ? p.lastHit : null; this.ev.push(['fall', p.id, by, +p.x.toFixed(2), +p.z.toFixed(2), Math.round(p.dist)]); }
   bot(p, dt) {
     const A = p.ai, sk = p.skill || 0.5; A.react -= dt; A.push -= dt; A.fwd = 0.8 + sk * 0.11;
-    if (A.react <= 0) { A.react = 0.08 + (1 - sk) * 0.22; // elige carril mirando hacia delante
-      const look = 3 + sk * 7; let best = p.x, bs = 1e9;
+    if (A.react <= 0) { A.react = 0.05 + (1 - sk) * 0.15; // elige carril mirando hacia delante
+      const look = 5 + sk * 10; let best = p.x, bs = 1e9;
       for (const x of [-3.75, -1.25, 1.25, 3.75, p.x]) { let s = Math.abs(x - p.x) * 0.25 + Math.abs(x) * 0.08;
-        for (let dz = 0.4; dz < look; dz += 0.5) { const z = p.z + dz; if (!this.solid(x, z) || (rowOf(z) >= 0 && row(rowOf(z)).t === 'sink' && this.sinks.has(rowOf(z) * 4 + clamp(colOf(x), 0, 3)))) { const R = row(rowOf(z)); s += R.t === 'gap' ? 1 : 30 + 60 / dz; break; } }
+        for (let dz = 0.4; dz < look; dz += 0.5) { const z = p.z + dz; if (!this.solid(x, z) || (rowOf(z) >= 0 && row(rowOf(z)).t === 'sink' && this.sinks.has(rowOf(z) * 4 + clamp(colOf(x), 0, 3)))) { const R = row(rowOf(z)); if (R.t === 'gap' && z > this.zc) { s += 0.3; continue; } s += 30 + 60 / dz; break; } }
+        for (let rr = rowOf(p.z) + 1; rr <= rowOf(p.z + look); rr++) { if (rr < 0) continue; const ob = row(rr).ob; if (!ob || ob.k !== 'pend') continue; const tt2 = ((rr + 0.5) * RL - p.z) / Math.max(4, p.vz); if (Math.abs(pendX(ob, this.T + tt2).x - x) < 1.6) s += 4 + 6 * sk; }
+        for (let rr = rowOf(p.z) + 1; rr <= rowOf(p.z + look); rr++) { if (rr >= 0 && row(rr).boost[clamp(colOf(x), 0, 3)]) { s -= 1.2; break; } }
         for (const b of this.bananas) if (Math.abs(b.x - x) < 1 && b.z > p.z && b.z < p.z + look) s += 6;
         const r4 = rowOf(p.z + 4); if (r4 >= 0) { const R = row(r4); if (R.box >= 0 && !this.picked.has(r4) && Math.abs(colX(R.box) - x) < 0.5) s -= 2; }
         if (this.tt && this.tt.by == null && this.tt.z > p.z && this.tt.z < p.z + 14 && Math.abs(this.tt.x - x) < 0.7) s -= 3 * sk + 1;
-        if (this.tt && this.tt.by != null && this.tt.by !== p.id && this.tt.z > p.z - 1 && this.tt.z < p.z + 6 && Math.abs(this.tt.x - x) < 0.8) s -= 1.5;
+        if (this.tt && this.tt.by != null && this.tt.by !== p.id && this.tt.z > p.z - 1 && this.tt.z < p.z + 9 && Math.abs(this.tt.x - x) < 0.9) s -= 2.5 + 2 * sk;
         if (s < bs) { bs = s; best = x; } }
       if (Math.random() > 0.7 + sk * 0.3) best += (Math.random() - 0.5) * 1.6 * (1 - sk); // despistes
       A.tx = clamp(best, -HW + 0.7, HW - 0.7);
       // saltar huecos (los fáciles a veces no saltan a tiempo)
       const ahead = p.z + 0.7 + p.vz * 0.06; const ra = rowOf(ahead), sa = ra >= 0 && row(ra).t === 'sink' && this.sinks.has(ra * 4 + clamp(colOf(p.x), 0, 3));
       if ((!this.solid(p.x, ahead) || sa) && p.air <= 0 && Math.random() < 0.55 + sk * 0.4) this.jump(p);
+      { const rb = rowOf(p.z + 1.6 + p.vz * 0.05); const ob = rb >= 0 ? row(rb).ob : null; if (ob && ob.k === 'bar' && barY(ob, this.T + 0.15) < 1.3 && p.air <= 0 && Math.random() < 0.5 + sk * 0.45) this.jump(p); }
       // empujar a quien tenga al lado
       if (A.push <= 0 && p.pcd <= 0 && this.T > 6) { const near = this.P.find(q => q !== p && q.alive && Math.hypot(q.x - p.x, q.z - p.z) < 1.7); if (near && Math.random() < 0.18 + sk * 0.25 + (this.tt && this.tt.by === near.id ? 0.25 : 0)) { this.push(p); A.push = 3 + Math.random() * 4 * (1.3 - sk); } else A.push = 0.6; } }
     p.ix = clamp(-(A.tx - p.x) / 1.4, -1, 1);
@@ -201,8 +221,8 @@ const tileIM = new THREE.InstancedMesh(roundedTile(CW - 0.16, RL - 0.16), new TH
 tileIM.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(NT * 3), 3); tileIM.receiveShadow = true;
 // atlas con todos los números de metros (0…1019) + símbolos
 const ATL = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 2048; const x = cv.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
-  for (let n = 0; n < 1024; n++) { const ox = (n % 32) * 64 + 32, oy = (n / 32 | 0) * 64 + 34; let s = String(n); if (n === 1020) s = '⇧'; if (n === 1021) s = '★'; if (n > 1021) continue;
-    x.font = `700 ${s.length >= 4 ? 21 : s.length === 3 ? 27 : 36}px Fredoka, sans-serif`; x.lineWidth = 7; x.strokeStyle = n === 1020 ? '#e0408a' : 'rgba(110,60,140,.55)'; x.strokeText(s, ox, oy); x.fillStyle = '#fff'; x.fillText(s, ox, oy); }
+  for (let n = 0; n < 1024; n++) { const ox = (n % 32) * 64 + 32, oy = (n / 32 | 0) * 64 + 34; let s = String(n); if (n === 1020) s = '⇧'; if (n === 1021) s = '★'; if (n === 1022) s = '»'; if (n > 1022) continue;
+    x.font = `700 ${s.length >= 4 ? 21 : s.length === 3 ? 27 : 36}px Fredoka, sans-serif`; x.lineWidth = 7; x.strokeStyle = n === 1020 ? '#e0408a' : n === 1022 ? '#d08a00' : 'rgba(110,60,140,.55)'; x.strokeText(s, ox, oy); x.fillStyle = '#fff'; x.fillText(s, ox, oy); }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.generateMipmaps = true; return t; })();
 const LABG = new THREE.PlaneGeometry(1.9, 1.9); LABG.rotateX(-Math.PI / 2); LABG.rotateY(Math.PI);
 const aCell = new THREE.InstancedBufferAttribute(new Float32Array(NT), 1); LABG.setAttribute('aCell', aCell);
@@ -213,7 +233,7 @@ for (const im of [tileIM, labIM]) { im.instanceMatrix.setUsage(THREE.DynamicDraw
 // bordes brillantes de la pasarela (dos tiras que siguen a la cámara) y pilares que bajan hasta el valle
 const PIL = 40, pilIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.9, 1.6, 1, 10), new THREE.MeshStandardMaterial({ color: '#e9d3ff', roughness: 0.6 }), PIL); pilIM.frustumCulled = false; scene.add(pilIM);
 const _o = new THREE.Object3D(), _z = new THREE.Matrix4().makeScale(0, 0, 0), _c = new THREE.Color();
-const ROWC = ['#ffd0e4', '#e2d6ff', '#cff3e6', '#ffe6bf', '#d3e8ff'].map(c => new THREE.Color(c)), C_SINK = new THREE.Color('#e8b48c'), C_SINKHOT = new THREE.Color('#ff6aa6'), C_PAD = new THREE.Color('#ff7fbf'), C_TEN = new THREE.Color('#ffffff'), C_START = new THREE.Color('#fff4a8');
+const ROWC = ['#ffd0e4', '#e2d6ff', '#cff3e6', '#ffe6bf', '#d3e8ff'].map(c => new THREE.Color(c)), C_SINK = new THREE.Color('#e8b48c'), C_SINKHOT = new THREE.Color('#ff6aa6'), C_PAD = new THREE.Color('#ff7fbf'), C_TEN = new THREE.Color('#ffffff'), C_START = new THREE.Color('#fff4a8'), C_BOOST = new THREE.Color('#ffd23a');
 // arcos con cartel de metros cada 50 m
 const ARCH = []; for (let i = 0; i < 6; i++) { const g = new THREE.Group(); const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
   for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 6, 10), m); p.position.set(s * (HW + 0.7), 1.8, 0); g.add(p);
@@ -230,6 +250,20 @@ const banM = new THREE.MeshStandardMaterial({ color: '#ffe066', roughness: 0.4, 
 for (let i = 0; i < 16; i++) { const b = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.16, 8, 14, Math.PI * 0.9), banM); b.rotation.x = -Math.PI / 2; b.visible = false; scene.add(b); BANS.push(b); }
 const PADS = []; for (let i = 0; i < 12; i++) { const g = new THREE.Group(); const sp = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.18, 8, 18), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ff6fae', emissiveIntensity: 0.7 })); sp.rotation.x = Math.PI / 2; sp.position.y = 0.2; g.add(sp);
   const top = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.18, 18), new THREE.MeshStandardMaterial({ color: '#ff7fbf', roughness: 0.3 })); top.position.y = 0.42; g.add(top); g.visible = false; scene.add(g); PADS.push(g); }
+// v20: péndulos (bola de gominola gigante) y barras que suben y bajan
+const PENDS = []; for (let i = 0; i < 6; i++) { const g = new THREE.Group(); const wood = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.35 });
+  for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 7.4, 10), wood); p.position.set(s * (HW + 0.8), 3.0, 0); g.add(p); }
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, TW + 1.6, 10), new THREE.MeshStandardMaterial({ color: '#ff8fc0', roughness: 0.4 })); top.rotation.z = Math.PI / 2; top.position.y = 6.8; g.add(top);
+  const arm = new THREE.Group(); arm.position.y = 6.8; g.add(arm);
+  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 5.6, 6), new THREE.MeshStandardMaterial({ color: '#c79cf5' })); rope.position.y = -2.8; arm.add(rope);
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(1.05, 22, 16), new THREE.MeshStandardMaterial({ color: NUMCOL[i % 9], roughness: 0.25, emissive: NUMCOL[i % 9], emissiveIntensity: 0.25 })); ball.position.y = -5.6; ball.castShadow = true; arm.add(ball);
+  for (let k = 0; k < 8; k++) { const sp = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.55, 8), new THREE.MeshStandardMaterial({ color: '#ffffff' })); const a = k / 8 * 6.283; sp.position.set(Math.cos(a) * 1.05, -5.6, Math.sin(a) * 1.05); sp.lookAt(Math.cos(a) * 3, -5.6, Math.sin(a) * 3); sp.rotateX(Math.PI / 2); arm.add(sp); }
+  g.userData.arm = arm; g.visible = false; scene.add(g); PENDS.push(g); }
+const BARS = []; for (let i = 0; i < 6; i++) { const g = new THREE.Group();
+  for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.2, 0.5), new THREE.MeshStandardMaterial({ color: '#9fd0f5', roughness: 0.4 })); p.position.set(s * (HW + 0.6), 1.4, 0); g.add(p); }
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, TW + 0.8, 16), new THREE.MeshStandardMaterial({ color: '#ff6f9c', roughness: 0.3, emissive: '#ff3f7c', emissiveIntensity: 0.25 })); bar.rotation.z = Math.PI / 2; bar.castShadow = true; g.add(bar);
+  for (let k = 0; k < 6; k++) { const st = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.06, 6, 14), new THREE.MeshStandardMaterial({ color: '#ffffff' })); st.rotation.y = Math.PI / 2; st.position.x = -HW + 0.8 + k * (TW - 1.6) / 5; bar.add(st); st.position.set(0, st.position.x, 0); }
+  g.userData.bar = bar; g.visible = false; scene.add(g); BARS.push(g); }
 // partículas de viento
 const windM = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false }); const STREAK = [];
 for (let i = 0; i < 24; i++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.06), windM); s.visible = false; scene.add(s); STREAK.push({ m: s, x: 0, y: 0, z: 0 }); }
@@ -242,6 +276,11 @@ const turtle = (() => { const g = new THREE.Group(); const shell = new THREE.Mes
     for (const sz of [-1, 1]) { const l = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 6), skin); l.position.set(sx * 0.45, -0.02, sz * 0.38); g.add(l); } }
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.1, 28), new THREE.MeshBasicMaterial({ color: '#7fffb0', transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = -0.1; g.add(ring); g.userData.ring = ring;
   g.visible = false; scene.add(g); return g; })();
+// v20: indicadores del relevo: flecha que rebota, columna de luz sobre la tortuga suelta y aro en los pies de quien la lleva
+const tArrow = (() => { const g = new THREE.Group(); const m = new THREE.MeshBasicMaterial({ color: '#7fffb0', toneMapped: false }); const c = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 4), m); c.rotation.x = Math.PI; g.add(c);
+  const st = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.7, 0.32), m); st.position.y = 0.75; g.add(st); g.userData.m = m; g.visible = false; scene.add(g); return g; })();
+const tBeam = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 30, 20, 1, true), new THREE.MeshBasicMaterial({ color: '#7fffb0', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })); tBeam.visible = false; scene.add(tBeam);
+const tFoot = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.15, 32), new THREE.MeshBasicMaterial({ color: '#7fffb0', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); tFoot.rotation.x = -Math.PI / 2; tFoot.visible = false; scene.add(tFoot);
 // ---------------------------------------------------------------- PERSONAJES
 const chars = new Map(); let me = 'h', roster = [];
 const BLOBG = new THREE.CircleGeometry(1, 20), blobMat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, map: (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d');
@@ -280,6 +319,9 @@ function onEvents(evs) {
       if (e[2] === me) { Sfx.bad(); shell.toast(e[3] ? `🥊 ¡${who(e[1])} te ha dado un guantazo!` : `💢 ¡${who(e[1])} te ha empujado!`, 1100); if (navigator.vibrate) navigator.vibrate(60); }
       else if (e[1] === me) { Sfx.ok(); } }
     if (e[0] === 'sink') { Sfx.crack(); }
+    if (e[0] === 'boost') { const c = chars.get(e[1]); if (e[1] === me) { Sfx.zap(); shell.toast('⚡ ¡Turbo!', 700); } if (c) parts.burst(new THREE.Vector3(c.x, 0.4, c.z), '#ffd23a', 14, 4, 3); }
+    if (e[0] === 'pend' || e[0] === 'bar') { const c = chars.get(e[1]); if (c) { c.hitFx = 0.6; parts.burst(new THREE.Vector3(c.x, 1, c.z), e[0] === 'pend' ? '#ff8fc0' : '#9fd0f5', 22, 6, 4); } if (e[1] === me) { Sfx.bad(); shell.toast(e[0] === 'pend' ? '🍬 ¡Bolazo del péndulo!' : '🚧 ¡Te has comido la barra! Salta cuando baje', 1100); if (navigator.vibrate) navigator.vibrate(60); } }
+    if (e[0] === 'tpass') { Sfx.shield(); const c = chars.get(e[1]); if (c) parts.burst(new THREE.Vector3(c.x, 2.2, c.z), '#7fffb0', 26, 5, 4); shell.big(e[1] === me ? `🐢 ¡Relevo! Se la has quitado a ${who(e[2])}` : e[2] === me ? `🐢 ¡${who(e[1])} te ha quitado la tortuga!` : `🐢 Relevo: ${who(e[2])} ➜ ${who(e[1])}`, 1300); }
     if (e[0] === 'pick') { if (e[1] === me) { Sfx.shield(); shell.toast(PWN[e[2]], 1500); } const c = chars.get(e[1]); if (c) parts.burst(new THREE.Vector3(c.x, 1.2, c.z), '#ff9cc8', 20, 4, 4); }
     if (e[0] === 'slip') { const c = chars.get(e[1]); if (e[1] === me) { Sfx.bad(); shell.toast(`🍌 ¡Has pisado un plátano${e[2] && e[2] !== me ? ' de ' + who(e[2]) : ''}!`, 1300); } else if (e[2] === me) shell.toast(`🍌 ¡${who(e[1])} ha resbalado con tu plátano!`, 1300); if (c) c.hitFx = 0.8; }
     if (e[0] === 'wwarn') { Sfx.tick(); shell.big(e[1] < 0 ? '💨 ¡Viento hacia la derecha! ➡️' : '⬅️ ¡Viento hacia la izquierda! 💨', 1700); }
@@ -289,7 +331,7 @@ function onEvents(evs) {
         if (!online && !sim.P.some(p => p.alive && !p.bot)) { ff = 3; setTimeout(() => shell.toast('⏩ Acelerando el final…', 1500), 1700); } }
       else shell.toast(e[2] === me ? `💥 ${BURLAS[Math.random() * BURLAS.length | 0]} Has tirado a ${who(e[1])}` : e[2] ? `🌀 ${who(e[2])} tira a ${who(e[1])} al vacío` : `🌀 ${who(e[1])} se ha caído (${e[5]} m)`, 1500); }
     if (e[0] === 'deny' && e[1] === me) { Sfx.bad(); }
-    if (e[0] === 'tgrab') { Sfx.shield(); shell.toast(e[1] === me ? '🐢 ¡Tienes la tortuga! ¡Llévala a la meta!' : `🐢 ${who(e[1])} coge la tortuga`, 1300); }
+    if (e[0] === 'tgrab') { Sfx.shield(); const c = chars.get(e[1]); if (c) parts.burst(new THREE.Vector3(c.x, 2, c.z), '#7fffb0', 24, 5, 4); shell.big(e[1] === me ? '🐢 ¡Es tuya! ¡Corre a la meta!' : `🐢 ${who(e[1])} tiene la tortuga · ¡tócale para quitársela!`, 1300); }
     if (e[0] === 'tdrop') { Sfx.bad(); shell.toast(e[1] === me ? '🐢 ¡Se te ha caído la tortuga!' : `🐢 ¡A ${who(e[1])} se le cae la tortuga!`, 1200); }
     if (e[0] === 'tfin') { Sfx.win(); shell.big(e[1] === me ? '🏁 ¡Tortuga en la meta!' : `🏁 ¡${who(e[1])} llega a la meta!`, 1600); }
     if (e[0] === 'over') { playing = false; const w = e[1]; shell.big(w === me ? '¡Has llegado el más lejos!' : `¡Gana ${who(w)}!`, 1600); const c = chars.get(w); if (c) c.expr = 'happy'; }
@@ -326,7 +368,7 @@ function tileState(r, c, now) { // 0 normal, 1 temblando, 2 caído
   if (z1 < zc + 4) return 1; return 0; }
 const fallT = new Map();
 function drawTrack(camZ, now) {
-  const r0 = Math.floor(camZ / RL) - 12; let gi = 0, bi = 0, pi = 0;
+  const r0 = Math.floor(camZ / RL) - 12; let gi = 0, bi = 0, pi = 0, qi = 0, ri = 0;
   for (let k = 0; k < NR; k++) { const r = r0 + k, R = r >= 0 ? row(r) : null, z = (r + 0.5) * RL;
     if (r < -5) { for (let c = 0; c < COLS; c++) { tileIM.setMatrixAt(k * COLS + c, _z); labIM.setMatrixAt(k * COLS + c, _z); } continue; }
     const m = Math.round(r * RL), ten = r >= 0 && m % 10 === 0;
@@ -336,12 +378,16 @@ function drawTrack(camZ, now) {
       if (st === 1) { const w = Math.sin(t * 40 + r + c) * 0.05; rx = w; rz = -w * 0.7; y = -0.06; fallT.delete(key); }
       if (st === 2) { let f = fallT.get(key); if (f == null) { f = t; fallT.set(key, f); if (fallT.size > 4000) fallT.delete(fallT.keys().next().value); } const q = t - f; if (q > 2.5) { tileIM.setMatrixAt(i, _z); labIM.setMatrixAt(i, _z); continue; } y = -q * q * 9; rx = q * 1.3; rz = q * (c - 1.5) * 0.5; }
       _o.position.set(colX(c), y, z); _o.rotation.set(rx, 0, rz); _o.scale.set(1, 1, 1); _o.updateMatrix(); tileIM.setMatrixAt(i, _o.matrix);
-      _c.copy(r < 0 ? C_START : R && R.t === 'sink' ? (st === 1 ? _c.copy(C_SINK).lerp(C_SINKHOT, 0.5 + 0.5 * Math.sin(t * 20)) : C_SINK) : R && R.pad[c] ? C_PAD : ten ? C_TEN : ROWC[((r % 5) + 5) % 5]);
+      _c.copy(r < 0 ? C_START : R && R.t === 'sink' ? (st === 1 ? _c.copy(C_SINK).lerp(C_SINKHOT, 0.5 + 0.5 * Math.sin(t * 20)) : C_SINK) : R && R.pad[c] ? C_PAD : R && R.boost[c] ? C_BOOST : ten ? C_TEN : ROWC[((r % 5) + 5) % 5]);
       if (st === 1 && !(R && R.t === 'sink')) _c.lerp(C_SINKHOT, 0.3 + 0.2 * Math.sin(t * 20)); tileIM.setColorAt(i, _c);
-      _o.position.y = y + 0.012; _o.updateMatrix(); labIM.setMatrixAt(i, _o.matrix); aCell.setX(i, r < 0 ? 1021 : R.pad[c] ? 1020 : Math.min(1019, m % 1020));
+      _o.position.y = y + 0.012; _o.updateMatrix(); labIM.setMatrixAt(i, _o.matrix); aCell.setX(i, r < 0 ? 1021 : R.pad[c] ? 1020 : R.boost[c] ? 1022 : Math.min(1019, m % 1020));
       if (R && R.pad[c] && st === 0 && pi < PADS.length) { const p = PADS[pi++]; p.visible = true; p.position.set(colX(c), Math.abs(Math.sin(t * 6 + c)) * 0.12, z); } }
     if (R && R.box >= 0 && !pickedSet.has(r) && tileState(r, R.box, now) === 0 && gi < GIFTS.length) { const g = GIFTS[gi++]; g.visible = true; g.position.set(colX(R.box), 1.0 + Math.sin(t * 3 + r) * 0.2, z); g.rotation.set(0.3, t * 1.8 + r, 0.2); }
+    if (R && R.ob && (z + RL) > zc && tileState(r, 1, now) !== 2) { const ob = R.ob;
+      if (ob.k === 'pend' && qi < PENDS.length) { const g = PENDS[qi++]; g.visible = true; g.position.set(0, 0, z); g.userData.arm.rotation.z = 1.0 * Math.sin(now * ob.w + ob.ph); }
+      if (ob.k === 'bar' && ri < BARS.length) { const g = BARS[ri++]; g.visible = true; g.position.set(0, 0, z); g.userData.bar.position.y = barY(ob, now) + 0.3; } }
   }
+  for (; qi < PENDS.length; qi++) PENDS[qi].visible = false; for (; ri < BARS.length; ri++) BARS[ri].visible = false;
   for (; gi < GIFTS.length; gi++) GIFTS[gi].visible = false; for (; pi < PADS.length; pi++) PADS[pi].visible = false;
   for (const b of BANS) b.visible = false; bananas.forEach(([id, x, z], k) => { if (k < BANS.length) { const b = BANS[k]; b.visible = true; b.position.set(x, 0.18, z); b.rotation.z = id; } });
   tileIM.instanceMatrix.needsUpdate = labIM.instanceMatrix.needsUpdate = true; tileIM.instanceColor.needsUpdate = true; aCell.needsUpdate = true;
@@ -368,7 +414,7 @@ function frame() {
     else if (s0 && idx.has(id)) { const a0 = s0.s.p[idx.get(id)]; let x = a0[1], z = a0[2], h = a0[3]; if (s1) { const a1 = s1.s.p[idx.get(id)], f = clamp((rnow - s0.at) / Math.max(1, s1.at - s0.at), 0, 1); if (a1) { x += (a1[1] - x) * f; z += (a1[2] - z) * f; h += wrap(a1[3] - h) * f; } } c.x = x; c.z = z; c.h = h; }
     else { const k = 1 - Math.exp(-dt * 14); c.x += (c.tx - c.x) * k; c.z += (c.tz - c.z) * k; c.h += wrap(c.th - c.h) * k; }
     if (c.alive) { const sp = dt > 0 ? Math.hypot(c.x - ox, c.z - oz) / dt : 0; c.spd = (c.spd || 0) + (Math.min(14, sp) - (c.spd || 0)) * Math.min(1, dt * 10); const sn = Math.min(1.3, c.spd / SPEED);
-      c.ph2 = (c.ph2 || 0) + dt * (4 + c.spd * 1.6); const air = c.air || 0, a0 = c.air0 || HOP_T, hy = air > 0 ? Math.sin((1 - air / a0) * Math.PI) * (a0 > 1 ? 4.2 : 1.6) : 0;
+      c.ph2 = (c.ph2 || 0) + dt * (4 + c.spd * 1.6); const air = c.air || 0, a0 = c.air0 || HOP_T, hy = air > 0 ? Math.sin((1 - air / a0) * Math.PI) * (a0 > 0.7 ? 4.2 : 1.6) : 0;
       if (c.wasAir && air <= 0) { c.land = 1; parts.burst(new THREE.Vector3(c.x, 0.1, c.z), '#fff4fb', 10, 2.5, 1.5); } c.wasAir = air > 0; c.land = Math.max(0, (c.land || 0) - dt * 5);
       c.hitFx = Math.max(0, (c.hitFx || 0) - dt); c.punch = Math.max(0, (c.punch || 0) - dt * 4);
       c.root.position.set(c.x, Math.abs(Math.sin(c.ph2)) * 0.24 * sn + hy, c.z); c.root.rotation.set(0, c.h, c.hitFx > 0 ? Math.sin(t * 30) * 0.4 : 0);
@@ -407,12 +453,16 @@ function frame() {
     $('hNext').classList.toggle('warn', !!(mc && mc.alive && mc.z - zc < 9));
     if (mc) { const hb = $('hopB'); hb.style.setProperty('--cd', ((mc.jcd || 0) / HOP_CD * 360) + 'deg'); hb.classList.toggle('cd', (mc.jcd || 0) > 0);
       const pb = $('pushB'); pb.style.setProperty('--cd', ((mc.pcd || 0) / PUSH_CD * 360) + 'deg'); pb.classList.toggle('cd', (mc.pcd || 0) > 0); pb.classList.toggle('big', mc.pw === 'guante'); $('pushIco').textContent = mc.pw === 'guante' ? '🥊' : '👐'; } }
-  if (TT) { turtle.visible = true; const c = TT[2] != null ? chars.get(TT[2]) : null; if (c && c.alive) { turtle.position.set(c.x, c.root.position.y + 2.15, c.z); turtle.rotation.set(0, c.h, 0); turtle.userData.ring.visible = false; }
-      else { turtle.position.set(TT[0], 0.55 + Math.abs(Math.sin(t * 4)) * 0.25, TT[1]); turtle.rotation.y = t; turtle.userData.ring.visible = true; }
+  if (TT) { turtle.visible = true; const c = TT[2] != null ? chars.get(TT[2]) : null; tArrow.visible = true;
+      if (c && c.alive) { turtle.position.set(c.x, c.root.position.y + 2.15, c.z); turtle.rotation.set(0, c.h, 0); turtle.scale.setScalar(1); turtle.userData.ring.visible = false; tBeam.visible = false;
+        tFoot.visible = true; tFoot.position.set(c.x, 0.06, c.z); tFoot.scale.setScalar(1 + 0.12 * Math.sin(t * 8)); const mine = TT[2] === me; tFoot.material.color.set(mine ? '#7fffb0' : '#ff7fbf'); tArrow.userData.m.color.set(mine ? '#7fffb0' : '#ff7fbf');
+        tArrow.position.set(c.x, c.root.position.y + 3.6 + Math.abs(Math.sin(t * 5)) * 0.35, c.z); tArrow.rotation.y = t * 2; }
+      else { turtle.position.set(TT[0], 0.55 + Math.abs(Math.sin(t * 4)) * 0.25, TT[1]); turtle.rotation.y = t; turtle.scale.setScalar(1.35); turtle.userData.ring.visible = true; turtle.userData.ring.scale.setScalar(2.1 + 0.25 * Math.sin(t * 6));
+        tBeam.visible = true; tBeam.position.set(TT[0], 14, TT[1]); tFoot.visible = false; tArrow.userData.m.color.set('#7fffb0'); tArrow.position.set(TT[0], 2.6 + Math.abs(Math.sin(t * 5)) * 0.5, TT[1]); tArrow.rotation.y = t * 2; }
     if (S && CR) { const k = roster.findIndex(r => r.id === me), mine = CR[k] || 0, best = roster.map((r, i) => [r, CR[i] || 0]).sort((a, b) => b[1] - a[1])[0];
       $('hAlive').textContent = `🐢 Llevas ${mine} m · meta ${FIN} m`; const hold = TT[2] != null ? roster.find(r => r.id === TT[2]) : null;
-      $('hNext').textContent = hold ? `🐢 ${hold.id === me ? '¡La llevas TÚ!' : hold.name + ' la lleva'} · ${Math.max(0, FIN - Math.round(TT[1]))} m a la meta` : `🐢 ¡Coge la tortuga! · Líder ${best[0].id === me ? 'Tú' : best[0].name} ${best[1]} m`; } }
-  else turtle.visible = false;
+      $('hNext').textContent = hold ? (hold.id === me ? `🐢 ¡La llevas TÚ! Corre · ${Math.max(0, FIN - Math.round(TT[1]))} m a la meta` : `🐢 ${hold.name} la lleva (flecha rosa) · ¡tócale para quitársela!`) : `🐢 ¡Tortuga suelta! Pasa por la luz verde · Líder ${best[0].id === me ? 'Tú' : best[0].name} ${best[1]} m`; } }
+  else { turtle.visible = false; tArrow.visible = tBeam.visible = tFoot.visible = false; }
   parts.update(dt); composer.render();
   if (playing) { Q.acc += rdt; Q.n++; if (Q.acc > 1) { const avg = Q.acc / Q.n * 1000; Q.acc = 0; Q.n = 0; Q.last = avg;
     const setQ = lv => { Q.lv = lv; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dprs[lv])); renderer.setSize(innerWidth, innerHeight, false); const sh = lv <= 3 && !/noshadows/.test(location.search); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); } };
@@ -448,9 +498,12 @@ createShell({
     <li><b>👐 Empujón</b> (PC: E): aparta a quien tengas al lado… ¡y tíralo al vacío!</li>
     <li><b>Salto</b> (PC: espacio) para cruzar los <b>huecos</b>. Las casillas rosas con flecha son <b>muelles</b>: ¡superbote!</li>
     <li>Las casillas <b>marrones</b> se hunden en cuanto alguien las pisa. ¡No te pares!</li>
+    <li>🪨 <b>Plataformas</b>: tramos de islotes con huecos; ¡salta de una a otra!</li>
+    <li>🍬 <b>Péndulos</b> gigantes que te lanzan al vacío y 🚧 <b>barras</b> que suben y bajan: pasa por debajo cuando estén arriba o salta cuando bajen.</li>
+    <li>⚡ Las casillas <b>amarillas</b> con » te dan un <b>turbo</b>.</li>
     <li>🎁 Regalos: <b>🥊 guante gigante</b> (empujón brutal), <b>⚡ turbo</b> o <b>🍌 plátanos</b> que dejas detrás para que resbalen.</li>
     <li>💨 De vez en cuando sopla una <b>ventolera</b> que te arrastra hacia un lado: ¡aguanta!</li>
-    <li>El suelo <b>se hunde detrás de vosotros</b> cada vez más rápido. Gana quien <b>llegue más lejos</b>.</li></ul><p>🐢 <b>Relevo con tortuga</b>: coge la tortuga y llévala a la meta (400 m). Si te empujan o resbalas, se te cae y la puede coger otro. Gana quien la cruce o quien más metros la haya llevado.</p>`,
+    <li>El suelo <b>se hunde detrás de vosotros</b> cada vez más rápido. Gana quien <b>llegue más lejos</b>.</li></ul><p>🐢 <b>Relevo con tortuga</b>: la tortuga suelta tiene una <b>columna de luz verde y una flecha</b>; basta con pasar cerca para cogerla. Quien la lleva tiene una flecha y un aro (verde si eres tú, rosa si es otro). <b>Toca a quien la lleve</b> y te la pasa (relevo); si le empujan, resbala o le da un obstáculo, se le cae. Gana quien la lleve a la meta (500 m) o quien más metros la haya llevado.</p>`,
   onPreview: chId => setShowcase(chId), start, stop, getMode: () => curMode,
   onNetMsg(d, api) {
     if (d.t === 'gin' && sim && api.isHost) { sim.input(d.from, d); return; }
@@ -471,5 +524,5 @@ setShowcase(localStorage.getItem('ms_ch') || 'mochi');
 frame();
 // v16: desde la pantalla de modos del menú principal se entra directo a jugar
 if (/[?&]auto=1/.test(location.search)) { history.replaceState(null, '', location.pathname + '?modo=' + curMode); setTimeout(() => window.__shell && window.__shell.solo(), 400); }
-fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 19 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
-window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, get chars() { return chars; } };
+fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > 20 && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); location.replace(location.pathname + '?modo=' + curMode + '&v=' + j.v); } }).catch(() => {});
+window.__carrera = { get sim() { return sim; }, get playing() { return playing; }, row, blockType, get chars() { return chars; } };
