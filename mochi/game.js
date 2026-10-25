@@ -798,6 +798,58 @@ function renderSkyCache(idx) {
   const m3g = c.createLinearGradient(0, horizonY * 0.9, 0, horizonY); m3g.addColorStop(0, rgbs(P.m3[0])); m3g.addColorStop(1, rgbs(P.m3[1])); c.fillStyle = m3g; c.fill(land.m3);
   C.ok = true;
 }
+// ===== Mejora gráfica noche 3: parallax en capas, carriles con textura y partículas (calidad automática) =====
+const GX = window.__GX = { q: 2, fr: 0, t0: 0, sprk: null, bub: null, dust: null, n: 0 }; { const m = /[?&]gxq=(\d)/.exec(location.search); if (m) { GX.q = +m[1]; GX.lock = true; } }
+function gxTick() { if (GX.lock) return; const now = performance.now(); if (!GX.t0) GX.t0 = now; GX.fr++; if (now - GX.t0 > 2000) { const fps = GX.fr * 1000 / (now - GX.t0); if (fps < 30 && GX.q > 1) GX.q--; else if (fps < 20 && GX.q > 0) GX.q--; else if (fps > 56 && GX.q < 2) GX.q++; GX.fr = 0; GX.t0 = now; } }
+function gxInit() {
+  if (GX.sprk) return; let s = 12345; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  GX.sprk = []; for (let i = 0; i < 150; i++) GX.sprk.push({ x: r() * 2 - 1, z: r() * 24, c: (r() * 5) | 0, a: r() * 6.28, l: 0.5 + r() * 0.8 });
+  GX.bub = []; for (let i = 0; i < 14; i++) GX.bub.push({ x: r(), y: r(), r: 4 + r() * 14, sp: 6 + r() * 14, ph: r() * 6.28, d: 0.1 + r() * 0.3 });
+  GX.dust = []; for (let i = 0; i < 26; i++) GX.dust.push({ x: r(), y: r(), r: 1 + r() * 2.6, sp: 10 + r() * 30, ph: r() * 6.28 });
+}
+const SPRK_COL = ['#ff8fc0', '#8fd8ff', '#ffe27a', '#b9a2f7', '#8ff0c4'];
+function gxRidges(g, P, px) { // dos cordilleras lejanas a distinta velocidad (parallax)
+  if (GX.q < 1) return; const Hh = horizonY;
+  for (let L = 0; L < 2; L++) {
+    const col = mix(P.ground[0], L ? [255, 255, 255] : [200, 160, 235], L ? 0.25 : 0.3), sp = L ? 0.06 : 0.025, amp = Hh * (L ? 0.05 : 0.08), base = Hh * (L ? 1.0 : 0.985);
+    const off = px * sp + t * (L ? 4 : 1.5);
+    const gr = g.createLinearGradient(0, base - amp * 2, 0, Hh + 2); gr.addColorStop(0, rgbs(col, (L ? 0.9 : 0.75) * (1 - 0.4 * P.stars))); gr.addColorStop(1, rgbs(mix(col, P.fog, 0.5), 0.9));
+    g.fillStyle = gr; g.beginPath(); g.moveTo(0, Hh + 2);
+    for (let k = 0; k <= 48; k++) { const x = k / 48 * W, u = (x + off) / W * 6.283; g.lineTo(x, base - amp * (0.55 + 0.3 * Math.sin(u * (L ? 3 : 2) + L) + 0.18 * Math.sin(u * 7.3 + 1.7 * L) + 0.1 * Math.sin(u * 13.1))); }
+    g.lineTo(W, Hh + 2); g.closePath(); g.fill();
+  }
+}
+function gxBubbles(g, px) { // burbujas de gelatina flotando delante del cielo (capa más cercana)
+  if (GX.q < 1) return; gxInit(); g.save(); g.globalCompositeOperation = 'lighter';
+  for (const b of GX.bub) { const y = ((b.y * horizonY * 1.1 - t * b.sp) % (horizonY * 1.1) + horizonY * 1.1) % (horizonY * 1.1) - b.r, x = ((b.x * W + px * b.d + Math.sin(t * 0.7 + b.ph) * 14) % W + W) % W;
+    g.globalAlpha = 0.18 * (0.6 + 0.4 * Math.sin(t + b.ph)); g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, b.r, 0, 7); g.stroke();
+    g.globalAlpha *= 1.6; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x - b.r * 0.35, y - b.r * 0.35, b.r * 0.22, 0, 7); g.fill(); }
+  g.restore();
+}
+function gxRoad(g, P, RH) { // textura del camino: brillo por carril + virutas de azúcar que avanzan con la carrera
+  // franjas de carril alternas con brillo suave
+  for (let lx = -LH; lx <= LH; lx++) { if (((lx + LH) & 1) === 0) continue; const a0 = proj(lx - 0.5, -2.8), a1 = proj(lx + 0.5, -2.8);
+    g.fillStyle = 'rgba(255,255,255,0.07)'; g.beginPath(); g.moveTo(W / 2 + (lx - 0.5) * 0.001, horizonY); g.lineTo(a1.x, a1.y); g.lineTo(a0.x, a0.y); g.closePath(); g.fill(); }
+  // sombreado de bordes (oclusión) para dar volumen
+  for (const sd of [-1, 1]) { const e0 = proj(sd * RH, -2.8), e1 = proj(sd * (RH - 0.35), -2.8); const lg = g.createLinearGradient(e0.x, 0, e1.x, 0); lg.addColorStop(0, 'rgba(110,50,120,0.16)'); lg.addColorStop(1, 'rgba(110,50,120,0)');
+    g.fillStyle = lg; g.beginPath(); g.moveTo(W / 2, horizonY); g.lineTo(e0.x, e0.y); g.lineTo(e1.x, e1.y); g.closePath(); g.fill(); }
+  if (GX.q < 1) return; gxInit();
+  const n = GX.q > 1 ? GX.sprk.length : GX.sprk.length >> 1, per = 24, off = dist % per;
+  for (let i = 0; i < n; i++) { const s = GX.sprk[i]; let z = s.z - off; if (z < -1.5) z += per; for (let rep = 0; rep < 2; rep++, z += per) { if (z > 40) break;
+    const p = proj(s.x * (RH - 0.15), z); const sc = Math.min(p.s * laneW * 0.09, laneW * 0.06), fog = Math.min(1, z / 40) + Math.max(0, (1 - z) * 0.35);
+    g.globalAlpha = 0.95 * (1 - fog); g.strokeStyle = SPRK_COL[s.c]; g.lineWidth = Math.max(1, sc * 0.55); g.lineCap = 'round';
+    const dx = Math.cos(s.a) * sc * s.l, dy = Math.sin(s.a) * sc * s.l * 0.5; g.beginPath(); g.moveTo(p.x - dx, p.y - dy); g.lineTo(p.x + dx, p.y + dy); g.stroke(); } }
+  g.globalAlpha = 1;
+}
+function gxFore(g) { // partículas delante: polvo brillante y estelas de velocidad
+  gxTick(); if (GX.q < 1 || state === 'select') return; gxInit(); g.save(); g.globalCompositeOperation = 'lighter';
+  for (const d of GX.dust) { const y = ((d.y * H - t * d.sp) % H + H) % H, x = ((d.x * W + Math.sin(t * 0.8 + d.ph) * 20) % W + W) % W; const tw = 0.5 + 0.5 * Math.sin(t * 3 + d.ph);
+    g.globalAlpha = 0.35 * tw; g.fillStyle = '#fff6fb'; g.beginPath(); g.arc(x, y, d.r * (0.7 + tw * 0.6), 0, 7); g.fill(); }
+  if (state === 'play' && GX.q > 1) { g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; for (let i = 0; i < 10; i++) { const ph = (t * 1.6 + i * 0.37) % 1, ang = i * 2.39 + 0.3, side = Math.cos(ang) < 0 ? -1 : 1;
+      const x0 = W / 2 + side * (W * 0.32 + Math.abs(Math.cos(ang)) * W * 0.15) * (0.3 + ph), y0 = horizonY + (baseY - horizonY) * (0.15 + ph * 0.9) * (0.6 + 0.4 * Math.abs(Math.sin(ang)));
+      g.globalAlpha = 0.22 * Math.sin(ph * Math.PI); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + side * 24 * ph, y0 + 30 * ph); g.stroke(); } }
+  g.restore();
+}
 function drawSky(g) {
   const P = TP, px = -mochi.x * laneW, Hh = horizonY + 4;
   skyCache.frame++;
@@ -850,12 +902,14 @@ function drawSky(g) {
   });
   g.globalAlpha = 1;
   { const hx = Math.round((-W * 0.15 + px * 0.07) * DPR) / DPR; if (cFrom) { g.drawImage(cFrom.hills, hx, skyCache.hTop, W * 1.3, Hh - skyCache.hTop); g.globalAlpha = fe; } g.drawImage(cTo.hills, hx, skyCache.hTop, W * 1.3, Hh - skyCache.hTop); g.globalAlpha = 1; }
+  gxRidges(g, P, px);
   for (const gi of land.giants) {
     const img = gi.alt ? spr.giant2 : spr.giant, h = horizonY * 0.22 * gi.s, w = h * img.width / img.height;
     const x = gi.x * W + px * 0.08, y = horizonY + 2;
     g.save(); g.translate(x, y); g.rotate(Math.sin(t * 0.9 + gi.ph) * 0.03); g.drawImage(img, -w / 2, -h, w, h); g.restore();
   }
   drawSurrealFront(g, P, px);
+  gxBubbles(g, px);
   if (P.bugs > 0.05) {
     g.globalAlpha = P.bugs;
     for (const b of land.bugs) {
@@ -916,6 +970,7 @@ function drawWorld(g) {
     const a0 = proj(-RH, Math.max(z0, -2.8)), a1 = proj(RH, Math.max(z0, -2.8)), b0 = proj(-RH, z1), b1 = proj(RH, z1);
     g.beginPath(); g.moveTo(a0.x, a0.y); g.lineTo(a1.x, a1.y); g.lineTo(b1.x, b1.y); g.lineTo(b0.x, b0.y); g.closePath(); g.fill();
   }
+  gxRoad(g, P, RH);
   // glossy sheen on the road (reflection band)
   const sh0 = proj(-RH, 1.2), sh1 = proj(RH, 1.2), sh2 = proj(RH, -1.5), sh3 = proj(-RH, -1.5);
   const shg = g.createLinearGradient(0, sh0.y, 0, sh2.y);
@@ -3248,6 +3303,7 @@ function render() {
   if (window.ONL && ONL.active) ONL.items(items, g);
   items.sort((a, b) => b.z - a.z || (a.mochi ? -1 : 1));
   for (const it of items) it.d();
+  gxFore(g);
   // ripples
   for (const r of ripples) {
     const e = r.t / 0.5;
