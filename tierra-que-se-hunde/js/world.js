@@ -82,7 +82,7 @@ function sea(scene, th, R) {
         diffuseColor.rgb += vec3(1.0) * smoothstep(0.5, 0.7, vWave) * 0.35;`);
   };
   const mesh = new THREE.Mesh(g, m); mesh.receiveShadow = true; scene.add(mesh);
-  return u;
+  u.mesh = mesh; return u;
 }
 
 const pastel = (a, b, t) => new THREE.Color(a).lerp(new THREE.Color(b), t);
@@ -222,14 +222,14 @@ export function buildWorld(scene, themeName = 'atardecer', R = 14) {
   skyDome(scene, th);
   const lights = addLights(scene, th, R * 1.6);
   const seaU = sea(scene, th, 420);
-  mountains(scene, th, R * 9);
+  const mount = mountains(scene, th, R * 9);
   const isl = [];
   for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + 0.3, r = R * (2.2 + (i % 3) * 0.7); isl.push(island(scene, Math.cos(a) * r, 1 + (i % 3) * 3.5, Math.sin(a) * r, 2.2 + (i % 4) * 1.1, th, i)); }
   const cl = clouds(scene, R * 9);
   const sp = sparkles(scene, 240, R * 3);
   const deco = decorLayers(scene, th, R); const wf = isl.filter((g, i) => i % 3 !== 1).map((g, i) => waterfall(g, 2.2 + (isl.indexOf(g) % 4) * 1.1, i));
   return {
-    th, lights, cl, isl, deco,
+    th, lights, cl, isl, deco, seaMesh: seaU.mesh, mount,
     update(t) {
       seaU.uT.value = t; deco.update(t); for (const f of wf) f(t);
       for (const g of isl) g.position.y += Math.sin(t * 0.6 + g.userData.phase) * 0.004;

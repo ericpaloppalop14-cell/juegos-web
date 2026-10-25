@@ -6,12 +6,13 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v18b';
-import { makeCharacter, animCharacter } from './gfx.js?v=v18';
-import { chOf } from './chars.js?v=v18';
-import { createShell } from './shell.js?v=v18';
-import { Sfx } from './sfx.js?v=v18';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v18';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v19';
+import { createEscenarios } from './escenarios.js?v=v19';
+import { makeCharacter, animCharacter } from './gfx.js?v=v19';
+import { chOf } from './chars.js?v=v19';
+import { createShell } from './shell.js?v=v19';
+import { Sfx } from './sfx.js?v=v19';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v19';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -31,12 +32,23 @@ export const MAPS = {
   gelatina: { name: '🍮 Islas de gelatina', hole: (x, z) => { for (const [a, b] of H4) if (Math.hypot(x - a * HALF * 0.5, z - b * HALF * 0.5) < 3.6) return true; return false; },
     obs: T => [...H4.map(([a, b]) => ({ x: a * HALF * 0.5, z: b * HALF * 0.5, r: 5.6 })), { x: 0, z: 0, r: 2.2 + Math.sin(T * 2.4) * 0.5 }] },
 };
+// v19: cada modo tiene su propio escenario (forma del suelo + decorado de js/escenarios.js)
+const PATHX = z => Math.sin(z / 13) * 9;
+export const MODE_MAPS = {
+  acantilado: { name: '🏞️ Sendero del acantilado', hole: (x, z) => Math.abs(x - PATHX(z)) > 10.8, obs: () => [] },
+  cima: { name: '🏔️ Cima de la montaña', hole: (x, z) => { const a = Math.atan2(z, x); return Math.hypot(x, z) > HALF * 0.74 + Math.sin(a * 5) * 2.4 + Math.sin(a * 3 + 1) * 1.6; }, obs: () => [] },
+  huerto: { name: '🍓 Isla-huerto de fresas', hole: (x, z) => (x / 35) ** 4 + (z / 35) ** 4 > 1, obs: () => [] },
+  paleta: { name: '🎨 Paleta del pintor', hole: (x, z) => (x / 40) ** 2 + (z / 31) ** 2 > 1 || Math.hypot(x - 19, z - 11) < 5.4, obs: () => [] },
+  reves: { name: '🙃 Cielo al revés', hole: (x, z) => Math.abs(x) + Math.abs(z) > 47, obs: () => [] },
+};
+const MODE_MAP = { patata: 'acantilado', rey: 'cima', fresas: 'huerto', pinta: 'paleta', reves: 'reves' };
+const ALLMAPS = { ...MAPS, ...MODE_MAPS };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 18;
+export const VERSION = 19;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
-const TIMED = { rey: 1, pinta: 1 }, MODE_T = 90, OPEN = { patata: 1, rey: 1, fresas: 1 }; // OPEN: plataforma flotante sin paredes (caes al vacío)
+const TIMED = { rey: 1, pinta: 1 }, MODE_T = 90, OPEN = { patata: 1, rey: 1, fresas: 1, pinta: 1, reves: 1 }; // OPEN: sin paredes (caes al vacío); v19: todos los modos nuevos tienen su escenario abierto
 let curMode = localStorage.getItem('hunde_modo'); if (!MODES[curMode]) curMode = 'clasico';
 // zona segura que se cierra por fases (radio final 0)
 const ZPH = [[10, 7, 0.62], [8, 6, 0.4], [7, 5, 0.23], [7, 4, 0.1], [6, 3, 0.035], [7, 3, 0]];
@@ -51,13 +63,16 @@ class Sim {
     this.T = 0; this.ev = []; this.over = false; this.dead = [];
     const nums = [...Array(N * N).keys()].map(v => v % 10 + 1).sort(() => Math.random() - 0.5);
     this.tiles = nums.map(n => ({ n, s: 0, t: 0, by: null, perm: false }));
-    this.map = MAPS[cfg.map] ? cfg.map : 'tiovivo'; const M = MAPS[this.map];
+    this.map = ALLMAPS[cfg.map] ? cfg.map : 'tiovivo'; const M = ALLMAPS[this.map];
     this.tiles.forEach((t, i) => { if (M.hole(tx(i), tz(i))) { t.s = 2; t.perm = true; t.hole = true; } });
     this.Z = { cx: 0, cz: 0, r: HALF * 1.5, ncx: 0, ncz: 0, nr: HALF * 1.5, ph: -1, st: 'wait', t: 6 };
     const k = cfg.roster.length;
     this.mode = MODES[cfg.mode] ? cfg.mode : 'clasico';
     this.P = cfg.roster.map((r, i) => { const a = i / k * Math.PI * 2 + 0.4, R = HALF * 0.55; const x = Math.cos(a) * R, z = Math.sin(a) * R;
       const h = Math.atan2(-x, -z); return { ...r, x, z, h, px: x, pz: z, ph: h, w: 0, v: SPEED, vx: Math.sin(h) * SPEED, vz: Math.cos(h) * SPEED, air: 0, jcd: 1, mag: 0, wx: Math.sin(h), wz: Math.cos(h), bt: 0, turn: 0, alive: true, cd: 1.5, tile: tileAt(x, z), ai: r.bot ? { goal: null, gt: 0, atk: 2.5 + Math.random() * 3, react: 0 } : null, sc: 0 }; });
+    { const used = new Set(); for (const p of this.P) { if (!M.hole(p.x, p.z) && !used.has(p.tile)) { used.add(p.tile); continue; } // v19: si el punto de salida cae fuera del suelo del escenario, la casilla libre más cercana
+        let bi = -1, bd = 1e9; for (let i = 0; i < N * N; i++) { if (this.tiles[i].hole || used.has(i)) continue; const x = tx(i), z = tz(i); if (M.hole(x + TS, z) || M.hole(x - TS, z) || M.hole(x, z + TS) || M.hole(x, z - TS)) continue; const d = Math.hypot(x - p.x * 0.5, z - p.z * 0.5); if (d < bd) { bd = d; bi = i; } }
+        if (bi >= 0) { used.add(bi); Object.assign(p, { x: tx(bi), z: tz(bi), px: tx(bi), pz: tz(bi), tile: bi }); } } }
     this.modeInit();
   }
   modeInit() { const m = this.mode; if (m === 'clasico') return;
@@ -67,7 +82,7 @@ class Sim {
     if (m === 'pinta') this.tiles.forEach(t => t.pt = -1);
     if (m === 'fresas') { this.fr = []; this.frT = 3; }
     if (m === 'reves') { this.rv = { t: 12, warn: false }; } }
-  okTile(i) { const t = this.tiles[i]; if (!t || t.hole || t.s) return false; for (const o of MAPS[this.map].obs(this.T)) if (Math.hypot(tx(i) - o.x, tz(i) - o.z) < o.r + 1.4) return false; return true; }
+  okTile(i) { const t = this.tiles[i]; if (!t || t.hole || t.s) return false; for (const o of ALLMAPS[this.map].obs(this.T)) if (Math.hypot(tx(i) - o.x, tz(i) - o.z) < o.r + 1.4) return false; return true; }
   moveCrown() { for (let k = 0; k < 80; k++) { const cx = 2 + (Math.random() * (N - 4) | 0), cz = 2 + (Math.random() * (N - 4) | 0); let ok = true;
       for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (!this.okTile((cz + b) * N + cx + a)) ok = false;
       if (ok || k === 79) { this.crown = { cx, cz, t: 20 }; this.ev.push(['crown']); return; } } }
@@ -117,7 +132,7 @@ class Sim {
     for (let i = 0; i < N * N; i++) { const t = this.tiles[i]; if (t.perm && t.s) continue; if (Math.hypot(tx(i) - Z.cx, tz(i) - Z.cz) > Z.r + TS * 0.5) { t.perm = true; if (t.s !== 2) Object.assign(t, { s: 1, t: Math.max(t.s === 1 ? t.t : 0, SHRINK_CRACK), by: null }); } }
     for (let i = 0; i < N * N; i++) { const t = this.tiles[i]; if (t.s !== 1) continue; t.t -= dt; if (t.t <= 0) { t.s = 2; t.t = RESPAWN; if (t.rvp) t.perm = true; if (t.pt != null) t.pt = -1; this.ev.push(['gone', i]); } }
     for (const t of this.tiles) if (t.s === 2 && !t.perm) { t.t -= dt; if (t.t <= 0) { t.s = 0; t.by = null; } } // las casillas normales vuelven a subir
-    this.obs = MAPS[this.map].obs(this.T); this.modeStep(dt);
+    this.obs = ALLMAPS[this.map].obs(this.T); this.modeStep(dt);
     for (const p of this.P) {
       if (!p.alive) { if (TIMED[this.mode] && (p.resp -= dt) <= 0) { const ok = this.tiles.map((t, i) => i).filter(i => this.okTile(i)); const i = ok[Math.random() * ok.length | 0]; if (i != null) { Object.assign(p, { alive: true, x: tx(i), z: tz(i), px: tx(i), pz: tz(i), vx: 0, vz: 0, tvx: 0, tvz: 0, air: 0, tile: i }); this.ev.push(['resp', p.id]); } } continue; } p.cd = Math.max(0, p.cd - dt);
       if (p.ai) this.bot(p, dt);
@@ -146,7 +161,7 @@ class Sim {
   }
   kill(p, by) { if (!p.alive) return; if (window.__dbg) window.__dbg.push([this.T.toFixed(1), p.name, by, p.turn, p.tile, (p.hist || []).join(' ')]); p.alive = false; p.resp = 2.5; if (!TIMED[this.mode]) this.dead.push(p.id); this.ev.push(['fall', p.id, by, +p.x.toFixed(2), +p.z.toFixed(2)]); }
   nextZone() { const Z = this.Z; Z.ph++; if (Z.ph >= ZPH.length) { Z.st = 'end'; Z.t = 999; return; }
-    const nr = HALF * ZPH[Z.ph][2] * 1.42 + (Z.ph === ZPH.length - 1 ? 0 : 0); const M = MAPS[this.map]; let cx = 0, cz = 0;
+    const nr = HALF * ZPH[Z.ph][2] * 1.42 + (Z.ph === ZPH.length - 1 ? 0 : 0); const M = ALLMAPS[this.map]; let cx = 0, cz = 0;
     for (let k = 0; k < 40; k++) { const a = Math.random() * 6.28, d = Math.random() * Math.max(0, Math.min(Z.r, HALF * 1.2) - nr) * (Z.ph ? 1 : 0.5); cx = (Z.ph ? Z.cx : 0) + Math.cos(a) * d; cz = (Z.ph ? Z.cz : 0) + Math.sin(a) * d;
       if (Math.abs(cx) < HALF - 3 && Math.abs(cz) < HALF - 3 && !M.hole(cx, cz)) break; }
     if (Z.ph === 0) { Z.cx = 0; Z.cz = 0; Z.r = HALF * 1.5; }
@@ -204,6 +219,10 @@ camera.fov = 60; camera.updateProjectionMatrix();
 const world = buildWorld(scene, 'atardecer', 22);
 world.lights.sun.shadow.camera.left = world.lights.sun.shadow.camera.bottom = -HALF - 4; world.lights.sun.shadow.camera.right = world.lights.sun.shadow.camera.top = HALF + 4; world.lights.sun.shadow.camera.updateProjectionMatrix();
 const parts = new Particles(scene, 640);
+let escenas = null; // v19: decorados por modo (se crea al empezar la primera partida)
+function setEscena(id) { if (!escenas) escenas = createEscenarios(scene, { N, TS, FY, HALF, tx, tz, pathX: PATHX, holeOf: k => ALLMAPS[k].hole, mergeInto });
+  const pit = scene.getObjectByName('pit'); if (pit) pit.visible = !id; balloons.forEach(b => { if (b.parent === scene) b.visible = !id; });
+  if (id) escenas.show(id, world); else escenas.hide(world); window.__escena = id || null; }
 const TILE_COLS = ['#ff9cc8', '#b9a2f7', '#7ee3c4', '#ffcf7a', '#9fd0ff'];
 
 // --- la sala: suelo de casillas, paredes decoradas, columnas, guirnaldas, farolillos
@@ -248,7 +267,7 @@ function syncTiles(pulse) { // vuelca la posición/giro de cada casilla a las 3 
 }
 // foso brillante bajo el suelo (se ve al caer las casillas)
 { const pit = new THREE.Mesh(new THREE.PlaneGeometry(N * TS + 2, N * TS + 2), new THREE.MeshStandardMaterial({ color: '#1d1430', emissive: '#2b1a52', emissiveIntensity: 0.35, roughness: 0.9 }));
-  pit.rotation.x = -Math.PI / 2; pit.position.y = FY - 1.45; scene.add(pit); // v8: foso oscuro justo bajo el suelo (por encima del mar) para que los agujeros se vean claros
+  pit.rotation.x = -Math.PI / 2; pit.position.y = FY - 1.45; pit.name = 'pit'; scene.add(pit); // v8: foso oscuro justo bajo el suelo (por encima del mar) para que los agujeros se vean claros
   const glow = new THREE.PointLight('#a98bff', 4, 14, 1.8); glow.position.set(0, FY - 1.2, 0); scene.add(glow); }
 // paredes y decoración
 const room = new THREE.Group(); scene.add(room);
@@ -299,7 +318,7 @@ function lolliPost(c) { const g = new THREE.Group();
   const lol = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.45, 16), P(c)); lol.rotation.x = Math.PI / 2; lol.position.y = 5.8; lol.castShadow = true; g.add(lol);
   mapAnim.push(t => { lol.rotation.y = t * 0.6; }); return g; }
 function buildMap(id) {
-  if (curMap === id) return; queueMicrotask(castMap); curMap = id; mapG.clear(); obsMeshes = []; mapAnim = []; const M = MAPS[id];
+  if (curMap === id) return; queueMicrotask(castMap); curMap = id; mapG.clear(); obsMeshes = []; mapAnim = []; const M = ALLMAPS[id];
   tiles.forEach((T, i) => { T.hole = M.hole(tx(i), tz(i)); T.g.visible = !T.hole; });
   mergeInto(mapG);
   const ob0 = M.obs(0);
@@ -553,7 +572,7 @@ function frame() {
     zoneWall.visible = true; zoneWall.position.set(cx, FY + 7, cz); zoneWall.scale.set(R, 22, R); zoneMat.uniforms.uT.value = t; zoneMat.uniforms.uR.value = R;
     nextRing.visible = st !== 2 && nr < r - 0.5; nextRing.position.set(ncx, FY + 0.08, ncz); nextRing.scale.setScalar(Math.max(0.6, nr)); nextRing.material.opacity = 0.6 + 0.4 * Math.sin(t * 5);
     if ((mmAcc += dt) > 0.12) { mmAcc = 0; drawMini(); } } else { zoneWall.visible = nextRing.visible = false; }
-  world.update(t); parts.update(dt); if (!NORENDER) composer.render();
+  world.update(t); if (escenas) escenas.update(t); parts.update(dt); if (!NORENDER) composer.render();
   // calidad adaptativa según FPS reales: solo baja, nunca sube
   if (playing && !NORENDER) { Q.acc += rdt; Q.n++; if (Q.acc > 1) { const avg = Q.acc / Q.n * 1000; Q.acc = 0; Q.n = 0; Q.last = avg;
     const setQ = lv => { Q.lv = lv; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dprs[lv])); renderer.setSize(innerWidth, innerHeight, false); parts.pts.visible = lv < 7; const sh = lv <= 3 && !/noshadows/.test(location.search); if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); } };
@@ -624,7 +643,8 @@ function setShowcase(chId) { if (showcase) scene.remove(showcase); showcase = ma
 function finish(res) { $('hud').classList.remove('on'); $('nums').classList.remove('on'); $('spect').classList.remove('on'); $('steerHint').classList.remove('on'); $('mm').classList.remove('on'); $('hopB').classList.remove('on'); $('hOut').classList.remove('on'); shell.end(res); }
 function start(cfg, api) {
   room.visible = decoG.visible = !OPEN[cfg.mode]; MD = null; tiles.forEach(T => T.mk = -1);
-  buildMap(cfg.map || 'tiovivo');
+  if (MODE_MAP[cfg.mode]) cfg.map = MODE_MAP[cfg.mode]; // v19: escenario propio del modo
+  buildMap(cfg.map || 'tiovivo'); setEscena(MODE_MAP[cfg.mode]);
   shell = api; roster = cfg.roster; online = cfg.online; me = api.myId; endSent = false; joyA = null; sentHd = undefined; camInit = false; specId = null; myCd = 0; myJcd = 0; simAcc = 0; snapBuf.length = 0;
   if (showcase) { scene.remove(showcase); showcase = null; }
   resetBoard(); buildChars(); $('spect').classList.remove('on');
@@ -633,7 +653,7 @@ function start(cfg, api) {
   playing = false; let n = 3; api.big('3', 0); Sfx.tick();
   const cd = setInterval(() => { n--; if (n > 0) { api.big(String(n), 0); Sfx.tick(); } else { clearInterval(cd); api.big('¡Ya!', 700); Sfx.go(); playing = true; } }, 750);
 }
-function stop() { room.visible = decoG.visible = true; playing = false; sim = null; S = null; MD = null; online = false; finishUI(); for (const c of chars.values()) { scene.remove(c.root); scene.remove(c.blob); } chars.clear(); resetBoard(); setShowcase(localStorage.getItem('ms_ch') || 'mochi'); }
+function stop() { room.visible = decoG.visible = true; setEscena(null); { const m0 = localStorage.getItem('hunde_map'); buildMap(MAPS[m0] ? m0 : 'tiovivo'); } playing = false; sim = null; S = null; MD = null; online = false; finishUI(); for (const c of chars.values()) { scene.remove(c.root); scene.remove(c.blob); } chars.clear(); resetBoard(); setShowcase(localStorage.getItem('ms_ch') || 'mochi'); }
 function finishUI() { ['hud', 'nums', 'spect', 'steerHint', 'mm', 'hOut', 'hopB'].forEach(id => $(id).classList.remove('on')); }
 
 createShell({
@@ -648,7 +668,7 @@ createShell({
     <li>Antes de caer, la casilla <b>se agrieta y tiembla</b> un segundo: si es la tuya, ¡sal de ahí!</li>
     <li>Si pisas un agujero, te caes. El martillo tarda un poco en recargarse.</li>
     <li>La sala <b>se encoge</b> cada poco y cada vez queda menos suelo. Gana el <b>último mochi en pie</b>.</li></ul>
-    <p><b>Modos:</b><br>💣 <b>Patata caliente</b>: pasa la bomba tocando a otro antes de que explote.<br>👑 <b>Rey de la cima</b>: quédate en las casillas doradas de la corona; suma segundos (90 s).<br>🎨 <b>Pinta el suelo</b>: pinta casillas de tu color al pisarlas; gana quien tenga más (90 s).<br>🍓 <b>Lluvia de fresas</b>: esquiva las sombras rojas, ¡caen fresas gigantes que rompen el suelo!<br>🙃 <b>Mundo al revés</b>: cada 12 s lo hundido vuelve a salir y otras zonas se hunden.<br>🏔️ <b>Carrera</b> y 🐢 <b>Relevo con tortuga</b>: en la pasarela de las alturas.</p>`,
+    <p><b>Modos:</b><br>💣 <b>Patata caliente</b> (sendero entre acantilados): pasa la bomba tocando a otro antes de que explote.<br>👑 <b>Rey de la cima</b> (cima de la montaña): quédate en las casillas doradas de la corona; suma segundos (90 s).<br>🎨 <b>Pinta el suelo</b> (paleta del pintor): pinta casillas de tu color al pisarlas; gana quien tenga más (90 s).<br>🍓 <b>Lluvia de fresas</b> (isla-huerto): esquiva las sombras rojas, ¡caen fresas gigantes que rompen el suelo!<br>🙃 <b>Mundo al revés</b> (cielo al revés): cada 12 s lo hundido vuelve a salir y otras zonas se hunden.<br>🏔️ <b>Carrera</b> y 🐢 <b>Relevo con tortuga</b>: en la pasarela de las alturas.</p>`,
   onPreview: chId => setShowcase(chId), start, stop, getMode: () => curMode,
   maps: Object.entries(MAPS).map(([k, m]) => [k, m.name]),
   onMap: v => { if (v !== 'random' && MAPS[v]) { buildMap(v); resetBoard(); } },
@@ -665,11 +685,11 @@ createShell({
 const MODE_CARDS = [
   ['clasico', '🏝️', 'Clásico', 'Hunde números y sé el último en pie', '#ff9cc8'],
   ['carrera', '🏔️', 'Carrera en las alturas', 'Corre, empuja al vacío y llega más lejos', '#7ecbff'],
-  ['patata', '💣', 'Patata caliente', 'Plataforma flotante: ¡pasa la bomba!', '#ffa673'],
-  ['rey', '👑', 'Rey de la cima', 'Isla en el cielo: quédate en la corona', '#f2c64e'],
-  ['fresas', '🍓', 'Lluvia de fresas', 'Isla flotante: esquiva las fresas gigantes', '#ff7f9a'],
-  ['pinta', '🎨', 'Pinta el suelo', 'Pinta más casillas que nadie', '#9789f2'],
-  ['reves', '🙃', 'Mundo al revés', 'Lo hundido sube, lo demás se hunde', '#4fcabb'],
+  ['patata', '💣', 'Patata caliente', 'Sendero entre acantilados: ¡pasa la bomba!', '#ffa673'],
+  ['rey', '👑', 'Rey de la cima', 'Cima de la montaña sobre las nubes', '#f2c64e'],
+  ['fresas', '🍓', 'Lluvia de fresas', 'Isla-huerto: esquiva las fresas gigantes', '#ff7f9a'],
+  ['pinta', '🎨', 'Pinta el suelo', 'Paleta del pintor: pinta más que nadie', '#9789f2'],
+  ['reves', '🙃', 'Mundo al revés', 'Cielo al revés: lo hundido sube', '#4fcabb'],
   ['tortuga', '🐢', 'Relevo con tortuga', 'Lleva la tortuga a la meta por las alturas', '#7fd08a']];
 { const st = document.createElement('style'); st.textContent = `#sModes{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;z-index:30}
 #sModes h2{margin:4px 0 8px;font-size:min(9vw,40px);color:#fff;text-shadow:0 4px 0 #f08cbc,0 8px 18px rgba(170,90,170,.35)}
@@ -695,4 +715,4 @@ const MODE_CARDS = [
 setShowcase(localStorage.getItem('ms_ch') || 'mochi'); { const m0 = localStorage.getItem('hunde_map'); buildMap(MAPS[m0] ? m0 : 'tiovivo'); } resetBoard();
 frame();
 window.__rend = () => { const c = chars.get(me); return c ? [c.root.position.x, c.root.position.z, c.root.rotation.y, c.alive ? 1 : 0] : null; };
-window.__hunde = { get sim() { return sim; }, get playing() { return playing; }, godMe(on) { if (sim) { sim.P[0].ai = on ? { goal: null, gt: 0, atk: 1, react: 0 } : null; sim.P[0].skill = 1; } } };
+window.__hunde = { get sim() { return sim; }, get playing() { return playing; }, set yaw(v) { camYaw = v; camYawV = 0; }, godMe(on) { if (sim) { sim.P[0].ai = on ? { goal: null, gt: 0, atk: 1, react: 0 } : null; sim.P[0].skill = 1; } } };
