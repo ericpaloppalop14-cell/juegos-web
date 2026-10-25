@@ -672,6 +672,7 @@
         this.ghost.flap = 0.14;
         this.beep(560 + Math.random() * 40, 0.07, "sine", 0.04);
         this.burst(this.ghost.x - 8, this.ghost.y + 10, "rgba(255,255,255,0.85)", 6);
+        if (window.FGParallax) window.FGParallax.flap(this.ghost.x, this.ghost.y);
       }
     }
     togglePause() {
@@ -880,6 +881,7 @@
           this.score += 1;
           this.beep(720, 0.09, "triangle", 0.045);
           this.burst(this.ghost.x + 20, this.ghost.y, "#ffe56b", 10);
+          if (window.FGParallax) window.FGParallax.score(this.ghost.x + 20, this.ghost.y);
         }
         if (this.invuln <= 0 && this.hitsDoor(d, r)) { this.die(); return; }
       }
@@ -1001,6 +1003,7 @@
       ctx.globalAlpha = 1;
       this.drawGems(ctx);
       this.drawGhost(ctx);
+      if (window.FGParallax) window.FGParallax.front(ctx);
       this.drawHud(ctx);
       if (this.flash > 0 && !this.skyEffects.motionQuery.matches) {
         ctx.fillStyle = `rgba(255,220,230,${this.flash / 0.16})`;
@@ -1046,6 +1049,7 @@
         );
       }
       this.drawMoon(ctx);
+      if (window.FGParallax) window.FGParallax.back(ctx, visibleX, visibleY, visibleW, visibleH, LW, LH, this.mode === "play", this.mode === "pause" || this.skyEffects.motionQuery.matches);
       this.skyEffects.draw(ctx);
       // Quiet, slow shimmer: no per-frame gradients or distracting speed streaks.
       for (const s of this.stars) {
@@ -1502,6 +1506,7 @@
       return window.NativeBridge.showRewarded({ purpose: 'continue', roundId: String(game.roundId) });
     }
   });
+  window.__fg = game;
   window.GhostUI.attach(game);
   game.start().then(()=>window.GhostUI.ready()).catch(()=>{
     const cover=document.getElementById('loading');if(!cover)return;
