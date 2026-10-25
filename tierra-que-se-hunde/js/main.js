@@ -6,12 +6,12 @@
 //  El anfitrión (o tú en solitario) simula; los demás reciben fotos.
 // ======================================================================
 import * as THREE from 'three';
-import { createRenderer, buildWorld, Particles } from './world.js?v=v16';
-import { makeCharacter, animCharacter } from './gfx.js?v=v16';
-import { chOf } from './chars.js?v=v16';
-import { createShell } from './shell.js?v=v16';
-import { Sfx } from './sfx.js?v=v16';
-import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v16';
+import { createRenderer, buildWorld, Particles } from './world.js?v=v17';
+import { makeCharacter, animCharacter } from './gfx.js?v=v17';
+import { chOf } from './chars.js?v=v17';
+import { createShell } from './shell.js?v=v17';
+import { Sfx } from './sfx.js?v=v17';
+import { buildCarousel, buildTeapot, buildCup, buildClockCenter, buildClockHand, gearGeo, buildJellyCake, buildFlan } from './props.js?v=v17';
 const PhysLite = class extends THREE.MeshStandardMaterial { constructor(o = {}) { const { clearcoat, clearcoatRoughness, transmission, thickness, ior, sheen, sheenColor, sheenRoughness, iridescence, specularIntensity, ...r } = o; super(r); } }; // más barato que MeshPhysical en móvil
 
 const $ = id => document.getElementById(id);
@@ -32,7 +32,7 @@ export const MAPS = {
     obs: T => [...H4.map(([a, b]) => ({ x: a * HALF * 0.5, z: b * HALF * 0.5, r: 5.6 })), { x: 0, z: 0, r: 2.2 + Math.sin(T * 2.4) * 0.5 }] },
 };
 // v16: versión visible y comprobación de versión nueva (fuerza recarga si el navegador sirve una copia vieja)
-export const VERSION = 16;
+export const VERSION = 17;
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('hunde_rl') !== String(j.v)) { sessionStorage.setItem('hunde_rl', String(j.v)); const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:99;background:#fff;color:#b0508a;font:700 18px Fredoka,sans-serif;padding:14px 20px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.2)'; d.textContent = '✨ Hay una versión nueva. Actualizando…'; document.body.appendChild(d); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => {});
 // v15: MODOS DE JUEGO
 export const MODES = { clasico: '🏝️ Clásico', patata: '💣 Patata caliente', rey: '👑 Rey de la cima', pinta: '🎨 Pinta el suelo', fresas: '🍓 Lluvia de fresas', reves: '🙃 Mundo al revés' };
