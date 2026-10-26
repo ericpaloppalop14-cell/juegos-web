@@ -2,122 +2,78 @@
 <html lang="es"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#12201f">
+<meta name="theme-color" content="#7fd3ff">
 <title>Relojería Rota</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <style>
+@font-face{font-family:Fredoka;src:url(lib/fredoka.woff2) format('woff2');font-weight:300 700}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
-html,body{margin:0;height:100%;overflow:hidden;background:#0b1514;font-family:Georgia,"Times New Roman",serif;color:#f6ecd2;touch-action:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#8fdcff;font-family:Fredoka,system-ui,sans-serif;color:#6a3a7e;touch-action:none}
 canvas#c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
-.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;background:radial-gradient(ellipse at center,rgba(10,25,24,.35),rgba(5,10,10,.8));z-index:5;overflow:auto}
+.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;background:linear-gradient(180deg,rgba(140,220,255,.12),rgba(255,214,240,.35));z-index:5;overflow:auto}
 .scr.on{display:flex}
-.logo{font-size:clamp(38px,9vw,78px);font-weight:900;letter-spacing:2px;text-align:center;line-height:.95;background:linear-gradient(180deg,#fff3c9 0%,#e8b061 35%,#b87333 60%,#5a2e10 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px rgba(255,60,200,.55)) drop-shadow(0 4px 0 #2a1406);transform:rotate(-3deg)}
-.logo span{display:block;font-size:.55em;letter-spacing:12px;background:linear-gradient(180deg,#bff7f1,#3FA7A0 60%,#174d4a);-webkit-background-clip:text;background-clip:text;transform:skewX(-8deg) translateY(4px)}
-.sub{font-style:italic;color:#bfe9e4;opacity:.85;font-size:15px;text-align:center}
-.btn{min-width:220px;padding:13px 22px;border-radius:14px;border:2px solid #f1c27d;background:linear-gradient(180deg,#d9954d,#B87333 50%,#7a4216);color:#fff8e6;font:700 19px Georgia,serif;text-shadow:0 2px 0 #4a250a;box-shadow:0 4px 0 #3d1f08,0 0 18px rgba(255,80,210,.25),inset 0 1px 0 #ffd9a0;cursor:pointer}
-.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #3d1f08}
-.btn.teal{background:linear-gradient(180deg,#5fd0c7,#3FA7A0 50%,#1d5e5a);border-color:#bff7f1;box-shadow:0 4px 0 #0e3330,0 0 18px rgba(63,167,160,.35)}
-.btn.mag{background:linear-gradient(180deg,#ff6fd8,#d0209f 55%,#6d0c52);border-color:#ffc4f0;box-shadow:0 4px 0 #3c0530,0 0 22px rgba(255,60,200,.5)}
-.btn.sm{min-width:0;padding:9px 14px;font-size:15px}
+.logo{font-size:clamp(40px,10vw,80px);font-weight:700;text-align:center;line-height:.95;color:#fff;text-shadow:0 4px 0 #ff7fbf,0 8px 0 #b05fd8,0 12px 24px rgba(120,60,160,.35);animation:bob 2.4s ease-in-out infinite}
+.logo span{display:block;font-size:.6em;color:#fff6a8;text-shadow:0 4px 0 #ffa64d,0 8px 0 #ff6f91}
+@keyframes bob{50%{transform:translateY(-8px) rotate(-1.5deg)}}
+.sub{color:#7a4a9e;font-size:16px;text-align:center;background:rgba(255,255,255,.7);padding:4px 14px;border-radius:20px}
+.btn{min-width:220px;padding:13px 22px;border-radius:26px;border:none;background:linear-gradient(180deg,#ffb3dc,#ff6fb5);color:#fff;font:700 20px Fredoka,sans-serif;text-shadow:0 2px 0 rgba(160,40,110,.4);box-shadow:0 5px 0 #d04a8f,0 8px 18px rgba(200,60,140,.3);cursor:pointer}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #d04a8f}
+.btn.teal{background:linear-gradient(180deg,#9ff5e4,#3fd1b5);box-shadow:0 5px 0 #23a08a,0 8px 18px rgba(30,160,140,.3)}
+.btn.yel{background:linear-gradient(180deg,#fff19a,#ffc23d);color:#8a4a00;text-shadow:none;box-shadow:0 5px 0 #e09a10,0 8px 18px rgba(220,150,20,.3)}
+.btn.lil{background:linear-gradient(180deg,#d9c4ff,#a77bff);box-shadow:0 5px 0 #7a50d8}
+.btn.sm{min-width:0;padding:9px 14px;font-size:16px}
 .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-h2{margin:4px 0;font-size:28px;color:#f1c27d;text-shadow:0 0 12px rgba(255,60,200,.5)}
-.grid{display:grid;grid-template-columns:repeat(5,minmax(54px,72px));gap:10px}
-.lv{aspect-ratio:1;border-radius:50%;border:3px solid #f1c27d;background:radial-gradient(circle at 35% 30%,#fff1d0,#e0b878 35%,#8a5523);color:#3a1d06;font:900 22px Georgia;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 0 3px #4a2a0e,0 4px 10px #000;cursor:pointer;position:relative}
-.lv small{font-size:11px;letter-spacing:1px;color:#b0188a}
-.lv.lock{filter:grayscale(1) brightness(.45);cursor:default}
-.w2 .lv{background:radial-gradient(circle at 35% 30%,#ffe0f6,#ff7ad6 40%,#5d1f73);border-color:#a8ffd9;color:#2a0630}
+h2{margin:4px 0;font-size:30px;color:#fff;text-shadow:0 3px 0 #ff7fbf,0 6px 12px rgba(150,60,160,.3)}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(52px,68px));gap:10px}
+.lv{aspect-ratio:1;border-radius:50%;border:4px solid #fff;background:radial-gradient(circle at 35% 30%,#fffbe0,#ffd66b);color:#8a4a00;font:700 22px Fredoka;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 4px 0 #e0a020;cursor:pointer}
+.lv small{font-size:11px;color:#ff5fa8}
+.lv.lock{filter:grayscale(.8) opacity(.55);cursor:default}
+.w2 .lv{background:radial-gradient(circle at 35% 30%,#fff0fa,#ff9fd6);color:#8a1f5e;box-shadow:0 4px 0 #d05a9a}
+.wt{font-weight:700;color:#fff;background:#b07cff;border-radius:16px;padding:3px 14px}
+.w2 .wt{background:#ff6fb5}
 .chars{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
-.ch{width:170px;border-radius:16px;border:2px solid #6a4a22;background:linear-gradient(180deg,rgba(40,70,68,.9),rgba(15,25,25,.95));padding:8px;text-align:center;cursor:pointer}
-.ch.sel{border-color:#ff5fd3;box-shadow:0 0 22px rgba(255,60,200,.6)}
-.ch canvas{width:150px;height:150px}
-.ch b{display:block;color:#f1c27d;font-size:18px}
-.ch p{margin:4px 0 0;font-size:13px;color:#cdeee9;line-height:1.25}
+.ch{width:160px;border-radius:22px;border:4px solid #fff;background:rgba(255,255,255,.8);padding:10px;text-align:center;cursor:pointer;box-shadow:0 6px 16px rgba(150,80,180,.2)}
+.ch.sel{border-color:#ff6fb5;box-shadow:0 0 0 4px #ffd1ea,0 8px 20px rgba(255,100,180,.4);transform:scale(1.04)}
+.ch .em{font-size:46px}
+.ch b{display:block;color:#ff5fa8;font-size:19px}
+.ch p{margin:4px 0 0;font-size:13px;color:#6a4a8e;line-height:1.25}
 #hud{position:fixed;left:0;right:0;top:0;display:none;pointer-events:none;z-index:4;padding:max(8px,env(safe-area-inset-top)) 10px 0}
 #hud.on{display:block}
-#hud .top{display:flex;align-items:center;gap:8px}
-.pill{background:rgba(10,20,20,.72);border:1.5px solid #b87333;border-radius:20px;padding:5px 12px;font-weight:700;font-size:16px;pointer-events:auto}
-#shots{letter-spacing:2px}
-.ib{pointer-events:auto;width:44px;height:44px;border-radius:50%;border:2px solid #f1c27d;background:radial-gradient(circle at 35% 30%,#e8b061,#7a4216);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-#powers{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:10px;z-index:4}
-#powers.on{display:flex}
-.pw{width:64px;height:64px;border-radius:50%;border:3px solid #ffc4f0;background:radial-gradient(circle at 35% 30%,#ff9be6,#c0168f 60%,#4d0638);color:#fff;font:700 11px Georgia;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(255,60,200,.55);cursor:pointer;position:relative}
-.pw i{font-style:normal;font-size:24px;line-height:1}
-.pw.off{filter:grayscale(1) brightness(.5);box-shadow:none}
-.pw.hide{display:none}
-.pw .n{position:absolute;top:-4px;right:-4px;background:#3FA7A0;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;border:1px solid #fff}
-.pw.hint{animation:pulse .7s infinite alternate}
-@keyframes pulse{to{transform:scale(1.15);box-shadow:0 0 34px #ff3fd0}}
-#toast{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:9;font:900 clamp(22px,6vw,44px) Georgia;color:#fff;text-shadow:0 0 18px #ff3fd0,0 3px 0 #5a0b46;pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;white-space:nowrap}
-#toast.on{opacity:1}
-.stars{font-size:54px;letter-spacing:6px}
-.stars s{text-decoration:none;color:#3a3a3a;display:inline-block;transition:all .3s}
-.stars s.on{color:#ffd36b;text-shadow:0 0 20px #ff9a1f;transform:scale(1.2)}
-.card{background:linear-gradient(180deg,rgba(45,30,14,.95),rgba(20,14,8,.95));border:3px solid #b87333;border-radius:22px;padding:18px 22px;text-align:center;box-shadow:0 0 40px rgba(255,60,200,.35);max-width:92vw}
-.tabs{display:flex;gap:8px}
-.note{font-size:13px;opacity:.75;max-width:340px;text-align:center}
-#rep{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:6;display:none;font:700 18px Georgia;color:#ff9be6;text-shadow:0 0 10px #ff3fd0}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{background:rgba(255,255,255,.88);border-radius:20px;padding:5px 12px;font-weight:700;font-size:16px;color:#b04a8e;pointer-events:auto;box-shadow:0 3px 0 rgba(200,100,170,.35)}
+#pw{position:fixed;right:10px;bottom:max(14px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:10px;z-index:4}
+#hud.on~#pw{display:flex}
+.pb{width:62px;height:62px;border-radius:50%;border:4px solid #fff;font-size:26px;background:#9fe8ff;box-shadow:0 4px 0 #4fb0d8;position:relative;cursor:pointer}
+.pb.rew{background:#ffd6a0;box-shadow:0 4px 0 #e09a40}.pb.fast{background:#ffb3dc;box-shadow:0 4px 0 #d05a9a}
+.pb i{position:absolute;right:-4px;top:-4px;background:#ff5fa8;color:#fff;font:700 13px Fredoka;font-style:normal;border-radius:10px;padding:1px 6px}
+.pb.off{opacity:.35}
+#toast{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%);font:700 clamp(26px,7vw,48px) Fredoka;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 0 #b05fd8;pointer-events:none;z-index:6;opacity:0;transition:opacity .2s,transform .2s;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
+#ver{position:fixed;left:8px;bottom:6px;font:700 12px Fredoka;color:#fff;background:rgba(176,124,255,.75);border-radius:10px;padding:2px 8px;z-index:9;pointer-events:none}
+#tip{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(255,255,255,.92);color:#8a4ab0;border-radius:18px;padding:7px 14px;font-weight:600;font-size:15px;z-index:4;display:none;pointer-events:none;max-width:70vw;text-align:center}
+.stars{font-size:44px;letter-spacing:6px;color:#ffc23d;text-shadow:0 3px 0 #e08a10}
+.big{font-size:22px;color:#fff;font-weight:700;text-shadow:0 2px 0 #c060a0}
+#res,#pass{background:rgba(255,200,235,.35)}#res>*,#pass>*{position:relative}#res::before,#pass::before{content:'';position:absolute;width:min(92vw,560px);height:min(80vh,330px);background:rgba(255,255,255,.55);border-radius:36px;border:5px solid #fff;box-shadow:0 10px 30px rgba(180,80,160,.25);left:50%;top:50%;transform:translate(-50%,-50%)}
+#res .big,#pass .sub{color:#b0408e;text-shadow:none}
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="hud"><div class="top">
- <div class="ib" id="bPause">⏸</div>
- <div class="pill" id="lvName">Nivel 1</div>
- <div class="pill" id="shots"></div>
- <div class="pill" id="score">0</div>
- <div style="flex:1"></div>
- <div class="ib" id="bMute">🔊</div>
-</div></div>
-<div id="powers">
- <div class="pw" id="pFreeze"><i>❄</i>Congelar<span class="n">1</span></div>
- <div class="pw" id="pRew"><i>⏪</i>Rebobinar<span class="n">1</span></div>
- <div class="pw" id="pFast"><i>⏩</i>Acelerar</div>
+<div id="ver">v2 · 3D</div>
+<div id="toast"></div><div id="tip"></div>
+<div id="menu" class="scr on">
+ <div class="logo">Relojería<span>¡Rota!</span></div>
+ <div class="sub">¡Lanza mochis y rompe las torres de segundos! ⏰💥</div>
+ <button class="btn" id="bPlay">▶ Jugar</button>
+ <div class="row"><button class="btn yel sm" id="bDaily">⭐ Torre del día</button><button class="btn teal sm" id="bDuel">⚔ Duelo</button><button class="btn lil sm" id="bChars">🎀 Personajes</button></div>
+ <button class="btn sm lil" id="bMute">🔊</button>
 </div>
-<div id="toast"></div>
-<div id="rep">● REPETICIÓN · cámara lenta</div>
-
-<div class="scr on" id="sMenu">
- <div class="logo">Relojería<span>ROTA</span></div>
- <div class="sub">Rompe el tiempo. Derriba las torres de segundos.</div>
- <button class="btn" id="mPlay">▶ Jugar</button>
- <button class="btn teal" id="mDaily">🕰 Torre del día</button>
- <button class="btn mag" id="mDuel">⚔ Duelo</button>
- <button class="btn sm" id="mChar">Personaje: <span id="charName">Péndulo</span></button>
- <div class="note" id="mStars"></div>
-</div>
-<div class="scr" id="sChars">
- <h2>Elige desrelojero</h2>
- <div class="chars" id="charList"></div>
- <button class="btn" id="chOk">Listo</button>
-</div>
-<div class="scr" id="sMap">
- <div class="tabs"><button class="btn sm" id="tW1">Reloj de Bolsillo</button><button class="btn sm mag" id="tW2">Big Ben de Gelatina</button></div>
- <h2 id="wTitle"></h2>
- <div class="grid" id="lvGrid"></div>
- <button class="btn sm teal" id="mapBack">← Menú</button>
-</div>
-<div class="scr" id="sDuel">
- <h2>⚔ Duelo</h2>
- <div class="note">Misma torre para los dos, 3 tiros cada uno. Gana quien rompa más tiempo.</div>
- <button class="btn" id="dBot">Contra el Relojero Loco (bot)</button>
- <button class="btn teal" id="dLocal">2 jugadores en este móvil</button>
- <button class="btn sm" style="opacity:.55" id="dOnline">Sala por código · próximamente</button>
- <button class="btn sm teal" id="duelBack">← Menú</button>
-</div>
-<div class="scr" id="sResult"><div class="card">
- <h2 id="rTitle">¡Tiempo roto!</h2>
- <div class="stars" id="rStars"><s>★</s><s>★</s><s>★</s></div>
- <div id="rText" style="font-size:18px;margin:8px 0 14px"></div>
- <div class="row">
-  <button class="btn sm mag" id="rRep">🎞 Repetición</button>
-  <button class="btn sm teal" id="rRetry">↻ Otra vez</button>
-  <button class="btn sm" id="rNext">Siguiente ▶</button>
-  <button class="btn sm teal" id="rMenu">Menú</button>
- </div></div></div>
-<div class="scr" id="sPause"><div class="card">
- <h2>Pausa</h2>
- <div class="row"><button class="btn sm" id="pzGo">▶ Seguir</button><button class="btn sm teal" id="pzRetry">↻ Reiniciar</button><button class="btn sm teal" id="pzMenu">Menú</button></div>
- <div class="note" id="qNote" style="margin-top:10px"></div>
-</div></div>
-<script src="matter.min.js"></script>
-<script src="game.js"></script>
+<div id="levels" class="scr"><h2>Elige nivel</h2><div class="w1"><div class="wt">🕰 Mundo 1 · Reloj de Bolsillo</div><div class="grid" id="g1"></div></div><div class="w2"><div class="wt">🍮 Mundo 2 · Big Ben de Gelatina</div><div class="grid" id="g2"></div></div><button class="btn sm" data-back>← Volver</button></div>
+<div id="chars" class="scr"><h2>¿Quién lanza?</h2><div class="chars" id="chl"></div><button class="btn sm" data-back>¡Listo!</button></div>
+<div id="duel" class="scr"><h2>⚔ Duelo</h2><div class="sub">Misma torre para los dos. ¡Gana quien saque más puntos!</div><button class="btn" id="dBot">🤖 Contra el bot</button><button class="btn teal" id="d2p">👯 2 en un móvil</button><button class="btn lil sm" disabled style="opacity:.5">🌐 Online con código (próximamente)</button><button class="btn sm" data-back>← Volver</button></div>
+<div id="res" class="scr"><h2 id="rT"></h2><div class="stars" id="rS"></div><div class="big" id="rP"></div><div class="row"><button class="btn teal sm" id="rAgain">↻ Otra vez</button><button class="btn sm" id="rNext">Siguiente ▶</button><button class="btn lil sm" id="rMenu">🏠 Menú</button></div></div>
+<div id="pass" class="scr"><h2 id="pT"></h2><div class="sub" id="pS"></div><button class="btn" id="pGo">¡Vamos!</button></div>
+<div id="hud"><div class="top"><button class="pill" id="hBack">⏸</button><span class="pill" id="hName"></span><span class="pill" id="hShots"></span><span class="pill" id="hScore">0</span></div></div>
+<div id="pw"><button class="pb" id="pFreeze">❄<i>1</i></button><button class="pb rew" id="pRew">⏪<i>1</i></button><button class="pb fast" id="pFast">⏩<i>1</i></button></div>
+<script type="importmap">{"imports":{"three":"./lib/three.module.min.js","cannon":"./lib/cannon-es.js"}}</script>
+<script type="module" src="game.js?v=2"></script>
 </body></html>
