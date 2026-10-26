@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#12201f">
+<title>Relojería Rota</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b1514;font-family:Georgia,"Times New Roman",serif;color:#f6ecd2;touch-action:none}
+canvas#c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;background:radial-gradient(ellipse at center,rgba(10,25,24,.35),rgba(5,10,10,.8));z-index:5;overflow:auto}
+.scr.on{display:flex}
+.logo{font-size:clamp(38px,9vw,78px);font-weight:900;letter-spacing:2px;text-align:center;line-height:.95;background:linear-gradient(180deg,#fff3c9 0%,#e8b061 35%,#b87333 60%,#5a2e10 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px rgba(255,60,200,.55)) drop-shadow(0 4px 0 #2a1406);transform:rotate(-3deg)}
+.logo span{display:block;font-size:.55em;letter-spacing:12px;background:linear-gradient(180deg,#bff7f1,#3FA7A0 60%,#174d4a);-webkit-background-clip:text;background-clip:text;transform:skewX(-8deg) translateY(4px)}
+.sub{font-style:italic;color:#bfe9e4;opacity:.85;font-size:15px;text-align:center}
+.btn{min-width:220px;padding:13px 22px;border-radius:14px;border:2px solid #f1c27d;background:linear-gradient(180deg,#d9954d,#B87333 50%,#7a4216);color:#fff8e6;font:700 19px Georgia,serif;text-shadow:0 2px 0 #4a250a;box-shadow:0 4px 0 #3d1f08,0 0 18px rgba(255,80,210,.25),inset 0 1px 0 #ffd9a0;cursor:pointer}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #3d1f08}
+.btn.teal{background:linear-gradient(180deg,#5fd0c7,#3FA7A0 50%,#1d5e5a);border-color:#bff7f1;box-shadow:0 4px 0 #0e3330,0 0 18px rgba(63,167,160,.35)}
+.btn.mag{background:linear-gradient(180deg,#ff6fd8,#d0209f 55%,#6d0c52);border-color:#ffc4f0;box-shadow:0 4px 0 #3c0530,0 0 22px rgba(255,60,200,.5)}
+.btn.sm{min-width:0;padding:9px 14px;font-size:15px}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+h2{margin:4px 0;font-size:28px;color:#f1c27d;text-shadow:0 0 12px rgba(255,60,200,.5)}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(54px,72px));gap:10px}
+.lv{aspect-ratio:1;border-radius:50%;border:3px solid #f1c27d;background:radial-gradient(circle at 35% 30%,#fff1d0,#e0b878 35%,#8a5523);color:#3a1d06;font:900 22px Georgia;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 0 3px #4a2a0e,0 4px 10px #000;cursor:pointer;position:relative}
+.lv small{font-size:11px;letter-spacing:1px;color:#b0188a}
+.lv.lock{filter:grayscale(1) brightness(.45);cursor:default}
+.w2 .lv{background:radial-gradient(circle at 35% 30%,#ffe0f6,#ff7ad6 40%,#5d1f73);border-color:#a8ffd9;color:#2a0630}
+.chars{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.ch{width:170px;border-radius:16px;border:2px solid #6a4a22;background:linear-gradient(180deg,rgba(40,70,68,.9),rgba(15,25,25,.95));padding:8px;text-align:center;cursor:pointer}
+.ch.sel{border-color:#ff5fd3;box-shadow:0 0 22px rgba(255,60,200,.6)}
+.ch canvas{width:150px;height:150px}
+.ch b{display:block;color:#f1c27d;font-size:18px}
+.ch p{margin:4px 0 0;font-size:13px;color:#cdeee9;line-height:1.25}
+#hud{position:fixed;left:0;right:0;top:0;display:none;pointer-events:none;z-index:4;padding:max(8px,env(safe-area-inset-top)) 10px 0}
+#hud.on{display:block}
+#hud .top{display:flex;align-items:center;gap:8px}
+.pill{background:rgba(10,20,20,.72);border:1.5px solid #b87333;border-radius:20px;padding:5px 12px;font-weight:700;font-size:16px;pointer-events:auto}
+#shots{letter-spacing:2px}
+.ib{pointer-events:auto;width:44px;height:44px;border-radius:50%;border:2px solid #f1c27d;background:radial-gradient(circle at 35% 30%,#e8b061,#7a4216);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#powers{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:10px;z-index:4}
+#powers.on{display:flex}
+.pw{width:64px;height:64px;border-radius:50%;border:3px solid #ffc4f0;background:radial-gradient(circle at 35% 30%,#ff9be6,#c0168f 60%,#4d0638);color:#fff;font:700 11px Georgia;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(255,60,200,.55);cursor:pointer;position:relative}
+.pw i{font-style:normal;font-size:24px;line-height:1}
+.pw.off{filter:grayscale(1) brightness(.5);box-shadow:none}
+.pw.hide{display:none}
+.pw .n{position:absolute;top:-4px;right:-4px;background:#3FA7A0;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;border:1px solid #fff}
+.pw.hint{animation:pulse .7s infinite alternate}
+@keyframes pulse{to{transform:scale(1.15);box-shadow:0 0 34px #ff3fd0}}
+#toast{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:9;font:900 clamp(22px,6vw,44px) Georgia;color:#fff;text-shadow:0 0 18px #ff3fd0,0 3px 0 #5a0b46;pointer-events:none;opacity:0;transition:opacity .25s;text-align:center;white-space:nowrap}
+#toast.on{opacity:1}
+.stars{font-size:54px;letter-spacing:6px}
+.stars s{text-decoration:none;color:#3a3a3a;display:inline-block;transition:all .3s}
+.stars s.on{color:#ffd36b;text-shadow:0 0 20px #ff9a1f;transform:scale(1.2)}
+.card{background:linear-gradient(180deg,rgba(45,30,14,.95),rgba(20,14,8,.95));border:3px solid #b87333;border-radius:22px;padding:18px 22px;text-align:center;box-shadow:0 0 40px rgba(255,60,200,.35);max-width:92vw}
+.tabs{display:flex;gap:8px}
+.note{font-size:13px;opacity:.75;max-width:340px;text-align:center}
+#rep{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:6;display:none;font:700 18px Georgia;color:#ff9be6;text-shadow:0 0 10px #ff3fd0}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"><div class="top">
+ <div class="ib" id="bPause">⏸</div>
+ <div class="pill" id="lvName">Nivel 1</div>
+ <div class="pill" id="shots"></div>
+ <div class="pill" id="score">0</div>
+ <div style="flex:1"></div>
+ <div class="ib" id="bMute">🔊</div>
+</div></div>
+<div id="powers">
+ <div class="pw" id="pFreeze"><i>❄</i>Congelar<span class="n">1</span></div>
+ <div class="pw" id="pRew"><i>⏪</i>Rebobinar<span class="n">1</span></div>
+ <div class="pw" id="pFast"><i>⏩</i>Acelerar</div>
+</div>
+<div id="toast"></div>
+<div id="rep">● REPETICIÓN · cámara lenta</div>
+
+<div class="scr on" id="sMenu">
+ <div class="logo">Relojería<span>ROTA</span></div>
+ <div class="sub">Rompe el tiempo. Derriba las torres de segundos.</div>
+ <button class="btn" id="mPlay">▶ Jugar</button>
+ <button class="btn teal" id="mDaily">🕰 Torre del día</button>
+ <button class="btn mag" id="mDuel">⚔ Duelo</button>
+ <button class="btn sm" id="mChar">Personaje: <span id="charName">Péndulo</span></button>
+ <div class="note" id="mStars"></div>
+</div>
+<div class="scr" id="sChars">
+ <h2>Elige desrelojero</h2>
+ <div class="chars" id="charList"></div>
+ <button class="btn" id="chOk">Listo</button>
+</div>
+<div class="scr" id="sMap">
+ <div class="tabs"><button class="btn sm" id="tW1">Reloj de Bolsillo</button><button class="btn sm mag" id="tW2">Big Ben de Gelatina</button></div>
+ <h2 id="wTitle"></h2>
+ <div class="grid" id="lvGrid"></div>
+ <button class="btn sm teal" id="mapBack">← Menú</button>
+</div>
+<div class="scr" id="sDuel">
+ <h2>⚔ Duelo</h2>
+ <div class="note">Misma torre para los dos, 3 tiros cada uno. Gana quien rompa más tiempo.</div>
+ <button class="btn" id="dBot">Contra el Relojero Loco (bot)</button>
+ <button class="btn teal" id="dLocal">2 jugadores en este móvil</button>
+ <button class="btn sm" style="opacity:.55" id="dOnline">Sala por código · próximamente</button>
+ <button class="btn sm teal" id="duelBack">← Menú</button>
+</div>
+<div class="scr" id="sResult"><div class="card">
+ <h2 id="rTitle">¡Tiempo roto!</h2>
+ <div class="stars" id="rStars"><s>★</s><s>★</s><s>★</s></div>
+ <div id="rText" style="font-size:18px;margin:8px 0 14px"></div>
+ <div class="row">
+  <button class="btn sm mag" id="rRep">🎞 Repetición</button>
+  <button class="btn sm teal" id="rRetry">↻ Otra vez</button>
+  <button class="btn sm" id="rNext">Siguiente ▶</button>
+  <button class="btn sm teal" id="rMenu">Menú</button>
+ </div></div></div>
+<div class="scr" id="sPause"><div class="card">
+ <h2>Pausa</h2>
+ <div class="row"><button class="btn sm" id="pzGo">▶ Seguir</button><button class="btn sm teal" id="pzRetry">↻ Reiniciar</button><button class="btn sm teal" id="pzMenu">Menú</button></div>
+ <div class="note" id="qNote" style="margin-top:10px"></div>
+</div></div>
+<script src="matter.min.js"></script>
+<script src="game.js"></script>
+</body></html>
