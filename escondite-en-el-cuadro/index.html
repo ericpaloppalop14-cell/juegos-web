@@ -9,162 +9,109 @@
 <style>
 @font-face{font-family:Fredoka;src:url(lib/fredoka.woff2) format('woff2');font-weight:300 700}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
-html,body{margin:0;height:100%;overflow:hidden;background:#3b2a8f;font-family:Fredoka,system-ui,sans-serif;color:#5a2a7e;touch-action:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#3b2a6b;font-family:Fredoka,system-ui,sans-serif;color:#5a2a7e;touch-action:none}
 canvas#c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
-.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:11px;padding:14px;z-index:5;overflow:auto}
+.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;z-index:5;background:radial-gradient(circle at 50% 30%,rgba(255,220,170,.35),rgba(60,30,110,.55))}
 .scr.on{display:flex}
-.logo{font-size:clamp(38px,9vw,74px);font-weight:700;text-align:center;line-height:.95;color:#fff;text-shadow:0 4px 0 #ff6fb5,0 8px 0 #7a5cff,0 12px 26px rgba(40,10,90,.45);animation:bob 2.4s ease-in-out infinite}
-.logo span{display:block;font-size:.62em;color:#fff38a;text-shadow:0 4px 0 #ff9f3d,0 8px 0 #ff5f8f}
-@keyframes bob{50%{transform:translateY(-8px) rotate(-1.5deg)}}
-.sub{color:#6a3aa0;font-size:15px;text-align:center;background:rgba(255,255,255,.85);padding:5px 14px;border-radius:20px;max-width:520px}
-.btn{min-width:210px;padding:12px 20px;border-radius:26px;border:none;background:linear-gradient(180deg,#ffb3dc,#ff6fb5);color:#fff;font:700 19px Fredoka,sans-serif;text-shadow:0 2px 0 rgba(160,40,110,.4);box-shadow:0 5px 0 #d04a8f,0 8px 18px rgba(200,60,140,.35);cursor:pointer}
+.logo{font-size:clamp(34px,8.5vw,64px);font-weight:700;text-align:center;line-height:.95;color:#fff;text-shadow:0 4px 0 #ff6fb5,0 8px 0 #7a5cff,0 12px 26px rgba(40,10,90,.45)}
+.logo span{display:block;font-size:.6em;color:#fff38a;text-shadow:0 4px 0 #ff9f3d,0 8px 0 #ff5f8f}
+.sub{color:#6a3aa0;font-size:16px;text-align:center;background:rgba(255,255,255,.9);padding:6px 14px;border-radius:20px;max-width:460px}
+.btn{min-width:230px;min-height:54px;padding:10px 20px;border-radius:28px;border:none;background:linear-gradient(180deg,#ffb3dc,#ff6fb5);color:#fff;font:700 21px Fredoka,sans-serif;text-shadow:0 2px 0 rgba(160,40,110,.4);box-shadow:0 5px 0 #d04a8f,0 8px 18px rgba(200,60,140,.35);cursor:pointer}
 .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #d04a8f}
-.btn.teal{background:linear-gradient(180deg,#9ff5e4,#3fd1b5);box-shadow:0 5px 0 #23a08a,0 8px 18px rgba(30,160,140,.3)}
+.btn.teal{background:linear-gradient(180deg,#9ff5e4,#3fd1b5);box-shadow:0 5px 0 #23a08a}
 .btn.yel{background:linear-gradient(180deg,#fff19a,#ffc23d);color:#8a4a00;text-shadow:none;box-shadow:0 5px 0 #e09a10}
 .btn.lil{background:linear-gradient(180deg,#d9c4ff,#a77bff);box-shadow:0 5px 0 #7a50d8}
-.btn.sm{min-width:0;padding:9px 14px;font-size:16px}
-.btn[disabled]{opacity:.55}
-.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px rgba(60,20,120,.4);text-align:center}
-.cards{display:grid;grid-template-columns:repeat(2,minmax(130px,190px));gap:12px}
-@media (orientation:landscape){.cards{grid-template-columns:repeat(4,minmax(120px,170px))}}
-.cd{border-radius:18px;border:6px solid #ffd45a;outline:3px solid #c98a1a;background:#fff;cursor:pointer;overflow:hidden;box-shadow:0 8px 20px rgba(30,10,80,.4);text-align:center}
-.cd img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
-.cd b{display:block;padding:5px 4px;font-size:15px;color:#7a3aa0}
-.cd.sel{transform:scale(1.05);border-color:#ff6fb5}
-#hud{position:fixed;left:0;right:0;top:0;display:none;pointer-events:none;z-index:4;padding:max(8px,env(safe-area-inset-top)) 10px 0}
+.btn.sm{min-width:0;min-height:48px;padding:8px 16px;font-size:18px}
+.btn[disabled]{background:#b9b3c6;box-shadow:0 5px 0 #8f8a9c;color:#eee;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+.lv{display:flex;background:rgba(255,255,255,.9);border-radius:26px;padding:4px;gap:4px}
+.lv button{border:none;border-radius:22px;min-height:46px;padding:6px 16px;font:700 18px Fredoka;background:transparent;color:#7a50d8}
+.lv button.on{background:#7a5cff;color:#fff}
+.ver{position:fixed;right:10px;bottom:8px;color:#fff;font-size:13px;opacity:.85;z-index:6}
+h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5;text-align:center}
+.tcard{background:#fff;border-radius:24px;padding:18px;max-width:360px;width:90%;text-align:center;box-shadow:0 10px 30px rgba(30,10,80,.4);border:6px solid #ffd45a}
+.tcard .em{font-size:66px;line-height:1.1}
+.tcard b{display:block;font-size:24px;color:#7a3aa0;margin:6px 0}
+.tcard p{margin:0;font-size:17px;color:#6a4a8a}
+.dots{display:flex;gap:8px}.dots i{width:12px;height:12px;border-radius:50%;background:#fff6;display:block}.dots i.on{background:#fff}
+#hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:3}
 #hud.on{display:block}
-.top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:center}
-.pill{background:rgba(255,255,255,.92);border-radius:20px;padding:5px 12px;font-weight:700;font-size:16px;color:#a03a9e;pointer-events:auto;box-shadow:0 3px 0 rgba(120,60,170,.35);border:none;font-family:Fredoka}
-#meter{margin:8px auto 0;width:min(86vw,380px);background:rgba(255,255,255,.92);border-radius:18px;padding:6px 10px;box-shadow:0 3px 0 rgba(120,60,170,.35);display:none}
-#meter.on{display:block}
-#mBar{height:14px;border-radius:8px;background:#eee;overflow:hidden}
-#mFill{height:100%;width:0;background:linear-gradient(90deg,#ff5f8f,#ffc23d,#3fd1b5);transition:width .25s}
-#mTxt{display:flex;justify-content:space-between;font-weight:700;font-size:15px;color:#7a3aa0;margin-bottom:3px}
-#joy{position:fixed;left:max(18px,env(safe-area-inset-left));bottom:max(22px,env(safe-area-inset-bottom));width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.22);border:4px solid rgba(255,255,255,.7);z-index:4;display:none;touch-action:none}
-#joy.on{display:block}
-#joy.act{background:rgba(255,255,255,.35)}
-#joyK{position:absolute;left:50%;top:50%;width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ffb3dc);transform:translate(-50%,-50%);box-shadow:0 4px 0 #d04a8f}
-#acts{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:9px;z-index:4;align-items:flex-end}
-#acts.on{display:flex}
-.ab{min-width:64px;height:64px;border-radius:32px;border:4px solid #fff;font:700 15px Fredoka;color:#fff;background:#7a5cff;box-shadow:0 4px 0 #4a2cb0;padding:0 12px;display:flex;align-items:center;gap:6px;justify-content:center;touch-action:none}
-.ab span{font-size:26px}
-.ab.c1{background:#3fd1b5;box-shadow:0 4px 0 #1f9a85}.ab.c2{background:#ff9f3d;box-shadow:0 4px 0 #c96a10}.ab.c3{background:#ff6fb5;box-shadow:0 4px 0 #c03a85}
-.ab.fire{width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd1ea,#ff3f8f);box-shadow:0 5px 0 #b02060}
-.ab.fire span{font-size:40px}
-.ab:active{transform:translateY(3px)}
-#cross{position:fixed;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 0 3px #ff3f8f,inset 0 0 0 3px #ff3f8f;z-index:3;display:none;pointer-events:none}
-#cross::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;background:#ff3f8f}
-#cross.on{display:block}#cross.hot{box-shadow:0 0 0 3px #3fd1b5,inset 0 0 0 3px #3fd1b5,0 0 18px #fff}
-#toast{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);font:700 clamp(26px,7.5vw,52px) Fredoka;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 0 #7a5cff,0 10px 20px rgba(0,0,0,.25);pointer-events:none;z-index:7;opacity:0;transition:opacity .2s,transform .25s cubic-bezier(.3,1.8,.5,1);text-align:center;width:94vw}
-#toast.on{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
-#toast small{display:block;font-size:.42em;color:#fff;text-shadow:0 2px 0 #7a5cff,0 0 8px #7a5cff,0 0 2px #5a2a9e}
-#bub{position:fixed;left:50%;bottom:max(170px,22vh);transform:translateX(-50%);background:#fff;color:#7a3aa0;border-radius:18px;padding:7px 14px;font-weight:700;font-size:16px;z-index:4;display:none;pointer-events:none;max-width:80vw;text-align:center;box-shadow:0 4px 0 rgba(120,60,170,.35)}
-#ver{position:fixed;left:8px;bottom:4px;font:700 11px Fredoka;color:#fff;background:rgba(122,92,255,.8);border-radius:10px;padding:2px 8px;z-index:9;pointer-events:none}
-#hud.on~#ver{bottom:auto;top:max(4px,env(safe-area-inset-top));left:auto;right:6px;opacity:.75}
-.glass{background:rgba(255,255,255,.9);border-radius:28px;border:5px solid #fff;padding:14px 18px;box-shadow:0 10px 30px rgba(40,10,90,.35);display:flex;flex-direction:column;align-items:center;gap:9px;max-width:560px}
-.glass h2{color:#ff5fa8;text-shadow:none}
-.big{font-size:20px;font-weight:700;color:#7a3aa0;text-align:center}
-#shareImg{max-width:min(70vw,260px);max-height:38vh;border-radius:14px;border:4px solid #ffd45a}
-.fadeFrame{position:fixed;inset:0;z-index:8;pointer-events:none;border:0 solid #ffd45a;opacity:0;transition:none}
-.how{font-size:14px;color:#6a3aa0;text-align:left;margin:0;padding-left:18px;line-height:1.35}
-
-#touch{position:fixed;inset:0;z-index:2;display:none;touch-action:none}#touch.on{display:block}
-#fade{position:fixed;inset:0;z-index:20;pointer-events:none;opacity:0;transition:opacity .35s;background:radial-gradient(circle,#ffd1ea,#7a5cff)}#fade.on{opacity:1}
-#joy{pointer-events:none;transition:opacity .2s;opacity:.55}#joy.act{opacity:1}#joy.float{left:0;bottom:auto}
-#menu{background:radial-gradient(ellipse at 50% 40%,rgba(255,240,210,.15),rgba(90,40,140,.35))}
-.mcard{display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:3px solid rgba(255,255,255,.7);border-radius:34px;padding:16px 16px 14px;box-shadow:0 20px 50px rgba(60,20,110,.35);max-width:560px;animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
-@keyframes pop{from{transform:scale(.8);opacity:0}}
-.ribbon{background:linear-gradient(90deg,#ffcf4a,#ff9f3d);color:#7a3a00;font-weight:700;padding:3px 16px;border-radius:14px;font-size:13px;letter-spacing:2px;box-shadow:0 3px 0 #c97a10}
-.btn.big{font-size:24px;min-width:250px;display:flex;flex-direction:column;align-items:center;animation:glow 2s ease-in-out infinite}.btn.big small{font-size:13px;opacity:.9;font-weight:600}
-@keyframes glow{50%{box-shadow:0 5px 0 #d04a8f,0 0 30px rgba(255,150,210,.9)}}
-.btn.ghost{background:rgba(255,255,255,.85);color:#7a3aa0;text-shadow:none;box-shadow:0 4px 0 rgba(120,60,170,.4)}
-.chip{font-size:13px;font-weight:700;color:#fff;background:rgba(122,92,255,.75);padding:4px 12px;border-radius:12px}
-.pill.warn{background:#ff5f8f;color:#fff;animation:beat .5s infinite}@keyframes beat{50%{transform:scale(1.12)}}
-.ab.pulse{animation:pulse .3s}@keyframes pulse{40%{transform:scale(1.18)}}
-.glass{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
-@media (orientation:landscape) and (max-height:520px){.mcard{padding:8px 14px;gap:6px;max-width:640px}.logo{font-size:38px}.logo span{font-size:.55em}.sub{display:none}.btn.big{font-size:20px;padding:8px 18px}.btn.sm{padding:7px 12px;font-size:15px}.ribbon{font-size:11px}.glass{padding:8px 14px;gap:6px}#shareImg{max-height:30vh}.glass h2{font-size:22px}.big{font-size:16px}}
-#mold{position:fixed;left:50%;top:max(96px,calc(env(safe-area-inset-top) + 92px));transform:translateX(-50%);z-index:6;display:none;flex-direction:column;gap:6px;background:rgba(255,255,255,.94);border-radius:20px;padding:8px 10px;box-shadow:0 4px 0 rgba(120,60,170,.35);width:min(94vw,420px);touch-action:none}
-#mold.on{display:flex}
-#mold .mrow{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
-#mold button{border:none;border-radius:14px;padding:6px 9px;font:700 14px Fredoka;background:#efe6ff;color:#7a3aa0}
-#mold button.sel{background:#ff6fb5;color:#fff}
-#mold label{display:flex;align-items:center;gap:8px;font:700 14px Fredoka;color:#7a3aa0}
-#mold input{flex:1;accent-color:#ff6fb5;height:26px}
-#mClose{background:#3fd1b5!important;color:#fff!important}
-#mFace small{font-size:12px;opacity:.9;margin-left:4px}
-@media (orientation:landscape) and (max-height:520px){#mold{top:auto;bottom:8px;left:auto;right:96px;transform:none;width:min(48vw,380px);padding:6px 8px;gap:3px}#mold button{padding:4px 7px;font-size:12px}}
-/* v5: menú fácil y botón de copiar corto */
-#menu .btn.sm{min-height:50px;font-size:18px;padding:10px 16px}
-#menu .btn.big{min-height:64px}
-.btn[disabled],.btn.off{background:#d6d2dc!important;color:#8a8494!important;box-shadow:0 4px 0 #aaa4b4!important;text-shadow:none!important;cursor:not-allowed;opacity:1;animation:none}
-.sub{font-size:15px;line-height:1.35;white-space:nowrap}
-#aCopy{position:relative}
-#aCopy .pill{font-style:normal;position:absolute;right:0;bottom:calc(100% + 4px);max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(255,255,255,.92);color:#1f7a6a;font:700 12px Fredoka,sans-serif;padding:3px 9px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.18);pointer-events:none}
-#aCopy .pill:empty{display:none}
-@media (orientation:landscape) and (max-height:520px){#menu .btn.sm{min-height:48px;font-size:16px;padding:8px 14px}}
-/* v6: panel moldear arriba a la derecha con vista previa, filas de estantería */
-#mold{left:auto!important;right:max(8px,env(safe-area-inset-right))!important;top:max(122px,calc(env(safe-area-inset-top) + 116px))!important;bottom:auto!important;transform:none!important;width:min(46vw,210px)!important;padding:6px!important;gap:4px!important;background:rgba(255,255,255,.86)!important}
-#mold{background:transparent!important;box-shadow:none!important}#mold>.mrow,#mold>label{background:rgba(255,255,255,.9);border-radius:12px;padding:3px 5px}
-#mPrev{width:100%;box-shadow:0 3px 0 rgba(120,60,170,.35);aspect-ratio:1/1;border-radius:14px;border:3px solid #ff6fb5;background:transparent;box-sizing:border-box}
-#mold button{padding:4px 6px!important;font-size:12px!important}#mold label{font-size:12px!important;gap:4px!important}#mold input{height:20px!important}
-@media (orientation:landscape) and (max-height:520px){#mold{top:8px!important;width:190px!important}#mPrev{aspect-ratio:4/3}}
-#rows{position:fixed;right:calc(max(12px,env(safe-area-inset-right)) + 150px);bottom:max(18px,env(safe-area-inset-bottom));z-index:5;display:none;flex-direction:column;gap:6px;align-items:center;background:rgba(255,255,255,.85);border-radius:18px;padding:6px;font:700 12px Fredoka;color:#7a3aa0}
-#rows.on{display:flex}#rows button{width:48px;height:44px;border:none;border-radius:14px;font:700 20px Fredoka;background:#efe6ff;color:#7a3aa0;touch-action:none}#rows button.sel{background:#ff6fb5;color:#fff}
-@media (orientation:portrait){#rows{right:auto;left:max(10px,env(safe-area-inset-left));bottom:auto;top:40%}}
-/* v7: sala de creación en directo (PiP) arriba a la derecha */
-#mold{display:none!important;width:min(24vw,150px)!important;top:max(168px,calc(env(safe-area-inset-top) + 164px))!important;padding:0!important;gap:3px!important}
-#mold.on{display:flex!important}#mold:not(.open)>.mrow,#mold:not(.open)>label{display:none!important}
-#mPrev{position:relative;touch-action:none;border-width:2px!important}
-#mTag{position:absolute;left:0;right:0;bottom:2px;text-align:center;font:700 9px Fredoka;color:#fff;text-shadow:0 1px 2px #7a3aa0;pointer-events:none}
-#mold .msh{display:grid!important;grid-template-columns:repeat(3,1fr);gap:2px!important;padding:2px!important}
-#mold .msh button{padding:3px 0!important;font-size:15px!important;min-height:30px}
-#mold label{font-size:13px!important}#mold input{min-width:0;width:100%}
-#mClose{width:100%;min-height:30px}
-@media (orientation:landscape) and (max-height:520px){#mold{top:6px!important;width:170px!important}#mPrev{aspect-ratio:4/3}}
-.act.sel,#acts button.sel{outline:3px solid #ff6fb5}
-@media (orientation:landscape) and (max-height:520px){#mold .msh{grid-template-columns:repeat(6,1fr)}body.molding #rows,body.molding #acts{display:none!important}}
-</style></head><body>
+#top{position:absolute;top:calc(8px + env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.pill{background:rgba(255,255,255,.92);border-radius:20px;padding:6px 14px;font-weight:700;font-size:18px;color:#6a3aa0;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+#sim{min-width:150px;text-align:center;position:relative;overflow:hidden}
+#simbar{position:absolute;left:0;top:0;bottom:0;background:#9ff5c0;z-index:-1;transition:width .15s}
+#msg{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:26px;font-weight:700;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 0 12px rgba(0,0,0,.4);text-align:center;opacity:0;transition:opacity .3s;width:90%}
+#bx{position:absolute;left:10px;top:calc(8px + env(safe-area-inset-top));pointer-events:auto;min-width:48px;min-height:48px;border-radius:50%;border:none;background:rgba(255,255,255,.9);font-size:22px}
+#acts{position:absolute;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;pointer-events:auto}
+#acts button,.pb{width:64px;height:64px;border-radius:50%;border:none;font-size:28px;background:rgba(255,255,255,.92);box-shadow:0 4px 0 #a77bff;color:#7a50d8;font-family:Fredoka}
+#acts button small{display:block;font-size:11px;margin-top:-4px}
+#pal{position:absolute;left:0;right:0;bottom:0;padding:8px 86px calc(8px + env(safe-area-inset-bottom)) 10px;background:linear-gradient(180deg,rgba(255,255,255,.0),rgba(255,255,255,.85) 18%);pointer-events:auto;display:none}
+#pal.on{display:block}
+#pal .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 12px}
+@media (orientation:landscape){#pal .g{grid-template-columns:repeat(6,1fr)}#pal{padding-right:86px}}
+#pal label{font-size:14px;font-weight:700;color:#6a3aa0;display:flex;flex-direction:column}
+#pal input[type=range]{width:100%;height:48px;margin:0;-webkit-appearance:none;background:transparent}
+#pal input[type=range]::-webkit-slider-runnable-track{height:14px;border-radius:7px;background:#e7dcff}
+#pal input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:#7a5cff;border:3px solid #fff;margin-top:-8px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+#pal .pr{display:flex;gap:8px;margin-bottom:4px;justify-content:center}
+#pal .pr button{min-height:48px;border-radius:22px;border:none;padding:4px 14px;font:700 16px Fredoka;background:#fff;color:#7a50d8;box-shadow:0 3px 0 #c9b6ff}
+#joy{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:4px solid rgba(255,255,255,.7);background:rgba(255,255,255,.18);display:none;z-index:2;pointer-events:none}
+#joy i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px;border-radius:50%;background:rgba(255,255,255,.9)}
+#res .big{font-size:60px}
+#res .tcard p{font-size:19px}
+input.code{font:700 26px Fredoka;width:140px;text-align:center;border-radius:20px;border:3px solid #a77bff;padding:6px;text-transform:uppercase}
+</style>
+</head><body>
 <canvas id="c"></canvas>
-<div id="ver">v7 · Colocación fina</div><div id="touch"></div><div id="fade"></div>
-<div id="toast"></div><div id="bub"></div><div id="cross"></div>
-<div id="frameFx" class="fadeFrame"></div>
-<div id="menu" class="scr on">
- <div class="mcard">
- <div class="ribbon">✦ Museo mágico ✦</div>
- <div class="logo">Escondite<span>en el Cuadro</span></div>
- <div class="sub">🏰 De noche el castillo cobra vida.<br>¡Hazte cuadro o libro y escóndete!</div>
- <button class="btn big" id="bPlay">▶ ¡Jugar!<small>te escondes y luego buscas</small></button>
- <div class="row"><button class="btn teal sm" id="bHide">🙈 Esconderme</button><button class="btn yel sm" id="bSeek">🧐 Ser El Crítico</button><button class="btn lil sm" id="b2p">👯 2 en un móvil</button></div>
- <div class="row"><button class="btn ghost sm" id="bOn" disabled>🌐 Sala online · pronto</button><button class="btn ghost sm" id="bHow">❓ Cómo se juega</button><button class="btn ghost sm" id="bMute">🔊</button></div>
- <div class="chip" id="mBest"></div>
- </div>
+<div id="joy"><i></i></div>
+
+<div class="scr on" id="menu">
+  <div class="logo">Escondite<span>en el Cuadro</span></div>
+  <div class="sub">Disfrázate de un objeto de la biblioteca y ajústalo hasta que sea igualito</div>
+  <div class="row"><button class="btn" id="bHide">🙈 Escóndete</button><button class="btn teal" id="bSeek">🔍 Busca</button></div>
+  <div class="lv" id="lv"><button data-l="0">Fácil</button><button data-l="1" class="on">Normal</button><button data-l="2">Difícil</button></div>
+  <div class="row"><button class="btn lil sm" id="bOnline" disabled>🌐 Online · pronto</button><button class="btn yel sm" id="bTuto">❓ Cómo se juega</button></div>
 </div>
-<div id="onlS" class="scr" style="background:linear-gradient(180deg,#7a5cff,#ff6fb5)"><div class="glass"><h2>🌐 Sala online</h2>
-<div class="big">Tu nombre: <input id="onName" maxlength="12" value="Mancha" style="font:700 18px Fredoka;width:9em;border-radius:12px;border:2px solid #a77bff;padding:4px 8px"></div>
-<div class="row"><button class="btn teal sm" id="onNew">✨ Crear sala</button></div>
-<div class="row"><input id="onCode" maxlength="4" placeholder="CÓDIGO" style="font:700 20px Fredoka;width:6em;text-transform:uppercase;text-align:center;border-radius:12px;border:2px solid #a77bff;padding:6px"><button class="btn yel sm" id="onJoin">🚪 Unirme</button></div>
-<div class="big">Código: <b id="onCodeShow">—</b></div><ul id="onList" class="how"></ul><div id="onSt" class="chip"></div>
-<div class="row"><button class="btn sm" id="onGo" style="display:none">▶ ¡Empezar ronda!</button><button class="btn lil sm" id="onBack">🏠 Volver</button></div></div></div>
-<div id="howS" class="scr"><div class="glass"><h2>Cómo se juega</h2><ul class="how">
-<li><b>Pon el dedo donde quieras</b>: aparece el joystick fijo ahí. Con otro dedo arrastra para girar la cámara (empujar a tope a un lado también gira).</li>
-<li>Eres una <b>Mancha</b> y tienes 45 segundos. Pulsa <b>🦘 Saltar</b> mirando a un cuadro, una lámpara de pared, una estantería, un escudo o una cortina: ¡saltas, te pegas y copias su textura!</li>
-<li>Pegada a la pared, el joystick te desliza por ella (y pasas del zócalo al papel o de una balda de libros a otra). Vuelve a pulsar 🦘 para bajar.</li>
-<li><b>🎨 Copiar</b> copia la textura de lo que tocas: la alfombra si estás encima, la pared o el mueble si estás pegada. El botón te dice qué vas a copiar.</li>
-<li><b>🎬 Sala de creación</b>: arriba a la derecha te ves en directo. Pegada a algo o en una fila, el joystick solo te mueve por esa zona y puedes arrastrarte con el dedo (en pantalla o en la ventanita) hasta el sitio exacto.</li><li><b>✋ Moldear</b>: cháfate en la alfombra, hazte lámina en un cuadro o libro en la estantería, y ajusta ancho, alto y grosor.</li>
-<li>Si te quedas quieta y bien camuflada, cierras los ojos y desapareces. El Crítico tendrá que acercarse muchísimo para verte.</li>
-<li>Cuando tú eres El Crítico: apunta al centro y pulsa <b>🎯</b>. Fíjate MUCHO: ojitos que asoman, un libro raro, una lámpara de más… 🤧</li></ul>
-<button class="btn" data-back>¡Entendido!</button></div></div>
-<div id="pass" class="scr" style="background:linear-gradient(180deg,#7a5cff,#ff6fb5)"><div class="glass"><h2 id="pT"></h2><div class="big" id="pS"></div><button class="btn" id="pGo">¡Listo!</button></div></div>
-<div id="res" class="scr" style="background:rgba(60,30,130,.35)"><div class="glass"><h2 id="rT"></h2><div class="big" id="rP"></div><img id="shareImg" alt=""><div class="row"><button class="btn yel sm" id="rShare">📸 Compartir mi escondite</button></div><div class="row"><button class="btn teal sm" id="rNext">Siguiente ▶</button><button class="btn lil sm" id="rMenu">🏠 Menú</button></div></div></div>
-<div id="hud"><div class="top"><button class="pill" id="hBack">⏸</button><span class="pill" id="hPhase"></span><span class="pill" id="hTime"></span><span class="pill" id="hInfo"></span></div>
-<div id="meter"><div id="mTxt"><span id="mFace">🙈</span><span id="mPct">0%</span></div><div id="mBar"><div id="mFill"></div></div></div></div>
-<div id="joy"><div id="joyK"></div></div>
-<div id="rows"></div>
-<div id="mold"><div id="mPrev"><span id="mTag">🎬 Sala de creación</span></div><div class="mrow msh"><button data-sh="gota" title="Gota">💧</button><button data-sh="chafada" title="Chafada">🥞</button><button data-sh="lamina" title="Lámina">📄</button><button data-sh="libro" title="Libro">📕</button><button data-sh="bola" title="Bola">🟠</button><button data-sh="alta" title="Alta">🗿</button></div>
-<label>↔<input type="range" id="mW" min="0.15" max="2.2" step="0.01"></label><label>↕<input type="range" id="mH" min="0.08" max="2.2" step="0.01"></label><label>⬌<input type="range" id="mD" min="0.05" max="2.2" step="0.01"></label><div class="mrow"><button id="mClose">✔</button></div></div>
-<div id="acts"></div>
-<script src="online-config.js"></script><script src="online-cf.js"></script>
+
+<div class="scr" id="tuto">
+  <div class="tcard"><div class="em" id="tEm"></div><b id="tTi"></b><p id="tTx"></p></div>
+  <div class="dots"><i></i><i></i><i></i></div>
+  <button class="btn" id="tNext">Siguiente ▶</button>
+</div>
+
+<div class="scr" id="onl">
+  <h2>🌐 Sala online</h2>
+  <div class="sub" id="oTx">Crea una sala o escribe el código de un amigo</div>
+  <div class="row"><button class="btn sm" id="oCrear">Crear sala</button><input class="code" id="oCode" maxlength="4" placeholder="ABCD"><button class="btn teal sm" id="oUnir">Entrar</button></div>
+  <div class="sub" id="oList" style="display:none"></div>
+  <div class="row"><button class="btn yel sm" id="oEmp" style="display:none">▶ Empezar</button><button class="btn lil sm" id="oSalir">Volver</button></div>
+</div>
+
+<div class="scr" id="res">
+  <div class="tcard"><div class="big" id="rEm"></div><b id="rTi"></b><p id="rTx"></p></div>
+  <div class="row"><button class="btn" id="rOtra">🔁 Otra vez</button><button class="btn lil sm" id="rMenu">Menú</button></div>
+</div>
+
+<div id="hud">
+  <div id="top"><span class="pill" id="tim">2:00</span><span class="pill" id="sim"><span id="simbar"></span><span id="simtx">Parecido —</span></span><span class="pill" id="pts">0 pts</span></div>
+  <button id="bx">✕</button>
+  <div id="msg"></div>
+  <div id="pal">
+    <div class="pr"><button id="pGota">💧 Cuentagotas</button><button id="pPat">Patrón: liso</button><button id="pOut">↩ Salir</button></div>
+    <div class="g">
+      <label>🌈 Tono<input type="range" id="sH" min="-100" max="100" value="0"></label>
+      <label>☀️ Claridad<input type="range" id="sL" min="-100" max="100" value="0"></label>
+      <label>💜 Saturación<input type="range" id="sS" min="-100" max="100" value="0"></label>
+      <label>↔️ Ancho<input type="range" id="sW" min="-100" max="100" value="0"></label>
+      <label>↕️ Alto<input type="range" id="sA" min="-100" max="100" value="0"></label>
+      <label>🔄 Girar<input type="range" id="sR" min="-100" max="100" value="0"></label>
+    </div>
+  </div>
+  <div id="acts"><button id="bPal">🎨<small>ajustar</small></button><button id="bWh">🎵<small>silbar</small></button><button id="bJump">🦘<small>saltar</small></button></div>
+</div>
+<div class="ver" id="ver"></div>
+<script src="online-config.js"></script>
+<script src="online-cf.js"></script>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=7"></script>
+<script type="module" src="game.js?v=8"></script>
 </body></html>
