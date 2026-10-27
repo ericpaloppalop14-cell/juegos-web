@@ -177,7 +177,7 @@ export function addStorm(T, Q, rnd = Math.random) {
   const faceTo = (x, z, i) => Math.atan2(S[i].p.x - x, S[i].p.z - z);
 
   // 1) pararrayos risueños con nube propia: rayos ramificados que caen a la vista
-  const nStrike = Math.round(7 * Math.max(0.7, lod));
+  const nStrike = Math.round(11 * Math.max(0.7, lod));
   const tower = merge([part(CYL, M(0, 3, 0, 1.4, 6, 1.4), '#ffffff', 1), part(CYL, M(0, 6.3, 0, 1.0, 0.6, 1.0), '#fff7d6'), part(SPH, M(0, 7.4, 0, 1.25), '#ffffff', 1), ...face(7.45, 1.15, 1.2),
     part(CYL, M(0, 9.4, 0, 0.12, 2.8, 0.12), '#fff7d6'), part(SPH, M(0, 10.9, 0, 0.45), '#ffe066'), part(TOR, M(0, 4.2, 0, 1.55, 1.55, 1.55, Math.PI / 2), '#ff5fd2'), part(TOR, M(0, 2.0, 0, 1.55, 1.55, 1.55, Math.PI / 2), '#5ff5ff')]);
   const towers = []; for (let k = 0; k < nStrike; k++) { const p = spot(14, 70, 6); if (!p) continue; occ.add(p.x, p.z, 7); towers.push(p); }
@@ -201,7 +201,7 @@ export function addStorm(T, Q, rnd = Math.random) {
 
   const keys = Object.keys(SPECIES), geos = {}; for (const k of keys) geos[k] = merge(SPECIES[k]());
   // 3) congas que cruzan la zona (paseando por las afueras, nunca por la pista)
-  const congas = Math.round(6 * Math.max(0.6, lod)), walkers = [];
+  const congas = Math.round(9 * Math.max(0.6, lod)), walkers = [];
   for (let c = 0; c < congas; c++) { let p = null; for (let t = 0; t < 120 && !p; t++) { const q = spot(18, 80, 15, 1); if (q && field(q.x, q.z).d > 30) p = q; } if (!p) continue;
     occ.add(p.x, p.z, 15); const n = 7, kind = keys[(c * 3) % keys.length]; for (let j = 0; j < n; j++) walkers.push({ c: p, r: 11, a0: j / n * Math.PI * 2 * 0.55, sp: (c % 2 ? 1 : -1) * (0.35 + rnd() * 0.2), kind, col: PAL[(c + j) % PAL.length] }); }
   const byKind = {}; for (const w of walkers) (byKind[w.kind] ||= []).push(w);
@@ -211,11 +211,11 @@ export function addStorm(T, Q, rnd = Math.random) {
       m4.compose(new V3(x, ground + hop, z), new THREE.Quaternion().setFromAxisAngle(new V3(0, 1, 0), -a + (w.sp > 0 ? 0 : Math.PI)), new V3(1.8, 1.8, 1.8)); im.setMatrixAt(i, m4); }); im.instanceMatrix.needsUpdate = true; }); }
 
   // 2) público loquísimo: lleno de personajes en las afueras
-  const total = Math.round(950 * lod), per = {}; keys.forEach(k => per[k] = []);
-  for (let n = 0; n < total; n++) { const sc = 1.35 + rnd() * 1.25, p = spot(3, 95, 1.4 * sc, 30); if (!p) continue; occ.add(p.x, p.z, 1.4 * sc); const sp = keys[n % keys.length];
+  const total = Math.round(1800 * lod), per = {}; keys.forEach(k => per[k] = []);
+  for (let n = 0; n < total; n++) { const sc = 1.35 + rnd() * 1.25, p = spot(3, 120, 1.4 * sc, 30); if (!p) continue; occ.add(p.x, p.z, 1.4 * sc); const sp = keys[n % keys.length];
     per[sp].push(M(p.x, ground, p.z, sc, sc, sc, 0, faceTo(p.x, p.z, p.i) + (rnd() - 0.5) * 0.6, 0)); }
   // por sectores para que la cámara descarte lo que no ve (frustum culling por bloque)
-  const SEC = 4; let cx = 0, cz = 0; for (const s of S) { cx += s.p.x; cz += s.p.z; } cx /= N; cz /= N;
+  const SEC = 8; let cx = 0, cz = 0; for (const s of S) { cx += s.p.x; cz += s.p.z; } cx /= N; cz /= N;
   const crowdMats = keys.map(() => crowdMat(1)); let placed = 0;
   keys.forEach((k, ki) => { const arr = per[k]; placed += arr.length; const buckets = Array.from({ length: SEC }, () => []); const v = new V3();
     for (const m of arr) { v.setFromMatrixPosition(m); const a = (Math.atan2(v.z - cz, v.x - cx) + Math.PI) / (Math.PI * 2); buckets[Math.min(SEC - 1, Math.floor(a * SEC))].push(m); }
@@ -223,7 +223,7 @@ export function addStorm(T, Q, rnd = Math.random) {
       b.forEach((m, i) => { im.setMatrixAt(i, m); im.setColorAt(i, new THREE.Color(PAL[Math.floor(rnd() * PAL.length)])); }); im.computeBoundingSphere(); root.add(im); } });
 
   // 4) globonautas cruzando por el cielo, muy por encima de rampas, dragones y arcoíris
-  const flyN = Math.round(10 * Math.max(0.6, lod)); let R0 = 0; for (const s of S) R0 = Math.max(R0, Math.hypot(s.p.x - cx, s.p.z - cz)); R0 += 60;
+  const flyN = Math.round(16 * Math.max(0.6, lod)); let R0 = 0; for (const s of S) R0 = Math.max(R0, Math.hypot(s.p.x - cx, s.p.z - cz)); R0 += 60;
   const balloons = merge([part(SPH, M(0, 6.5, 0, 1.3, 1.5, 1.3), '#ffffff', 1), part(SPH, M(-1.5, 6.0, 0.3, 1.1, 1.3, 1.1), '#ff8fc0'), part(SPH, M(1.5, 6.1, -0.2, 1.1, 1.3, 1.1), '#7ff5ff'), part(SPH, M(0.2, 8.1, 0.3, 1.0, 1.2, 1.0), '#ffe066'),
     part(CYL, M(0, 4.2, 0, 0.03, 4.4, 0.03), '#ffffff'), part(CYL, M(-0.7, 4.2, 0, 0.03, 4.4, 0.03, 0, 0, 0.32), '#ffffff'), part(CYL, M(0.7, 4.2, 0, 0.03, 4.4, 0.03, 0, 0, -0.32), '#ffffff')]);
   const flyK = keys.filter(k => k !== 'nube' && k !== 'seta'), fl = [];
@@ -236,6 +236,8 @@ export function addStorm(T, Q, rnd = Math.random) {
     fl.forEach((f, i) => { const p = flyPos(f, t); qq.setFromAxisAngle(new V3(0, 1, 0), Math.PI / 2 - f.a + Math.sin(t + i) * 0.2); m4.compose(p, qq, new V3(1.3, 1.3, 1.3)); fim.setMatrixAt(i, m4); }); fim.instanceMatrix.needsUpdate = true;
     for (const [im, a] of fIms) { a.forEach((f, i) => { const p = flyPos(f, t); qq.setFromAxisAngle(new V3(0, 1, 0), Math.PI / 2 - f.a + Math.sin(t + i) * 0.2); m4.compose(p, qq, new V3(0.9, 0.9, 0.9)); im.setMatrixAt(i, m4); }); im.instanceMatrix.needsUpdate = true; } });
 
+  // v45: lluvia neón alrededor del jugador y relámpagos de fondo en el cielo
+  try { stormRain(T, root, anims, lod); } catch (e) { console.warn('rain45', e); }
   // 5) más definición en la pista: bordes de neón con luz que corre, discontinua central y flechas en las curvas
   roadNeon(T, root, anims);
   T.anims.push((t, dt, race) => { U.uT.value = t; for (const a of anims) a(t, dt, race); });
@@ -291,4 +293,20 @@ function roadNeon(T, root, anims) {
     root.add(aim); const c = new THREE.Color();
     anims.push(t => { mat.uniforms.uT.value = t; const k = Math.floor(t * 6); for (const n of base) { const on = (n + k) % 4 === 0; aim.setColorAt(n, c.set(on ? '#ffffff' : '#9a7ac8')); } aim.instanceColor.needsUpdate = true; });
   } else anims.push(t => { mat.uniforms.uT.value = t; });
+}
+
+// v45: lluvia barata (un solo Points con shader, sigue a la cámara) + destellos de cielo
+function stormRain(T, root, anims, lod) {
+  const n = Math.round(1400 * Math.max(0.5, lod)), pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 90; pos[i * 3 + 1] = Math.random() * 40; pos[i * 3 + 2] = (Math.random() - 0.5) * 90; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uT: { value: 0 }, uC: { value: new V3() } },
+    vertexShader: `uniform float uT; uniform vec3 uC; varying float vA; void main(){ vec3 p = position; p.y = mod(p.y - uT * 38.0, 40.0); p.x = mod(p.x + uC.x + 45.0, 90.0) - 45.0 - uC.x; p.z = mod(p.z + uC.z + 45.0, 90.0) - 45.0 - uC.z; vec3 w = vec3(uC.x + p.x, uC.y - 8.0 + p.y, uC.z + p.z);
+      vec4 mv = viewMatrix * vec4(w, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = clamp(90.0 / -mv.z, 1.0, 5.0); vA = clamp(1.0 - (-mv.z) / 60.0, 0.0, 1.0); }`,
+    fragmentShader: `varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float a = smoothstep(0.12, 0.0, abs(c.x)) * (1.0 - abs(c.y) * 2.0); gl_FragColor = vec4(0.7, 0.85, 1.0, a * vA * 0.7); }` });
+  const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.userData.noOcc = true; pts.renderOrder = 3; root.add(pts);
+  const flash = new THREE.Mesh(new THREE.SphereGeometry(900, 16, 8), new THREE.MeshBasicMaterial({ color: '#b9a8ff', transparent: true, opacity: 0, side: THREE.BackSide, depthWrite: false, fog: false }));
+  flash.userData.noOcc = true; flash.frustumCulled = false; root.add(flash); let next = 2;
+  anims.push((t, dt, race) => { mat.uniforms.uT.value = t; const c = race && race.player; if (c) { mat.uniforms.uC.value.set(c.pos.x, c.y || 0, c.pos.z); flash.position.set(c.pos.x, 0, c.pos.z); }
+    if (t > next) next = t + 2.5 + Math.random() * 4; const f = next - t; flash.material.opacity = f > 2.3 ? 0.22 * Math.abs(Math.sin(f * 40)) : 0; });
 }
