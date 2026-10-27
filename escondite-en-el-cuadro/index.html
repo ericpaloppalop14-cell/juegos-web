@@ -103,9 +103,18 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 #aCopy .pill{font-style:normal;position:absolute;right:0;bottom:calc(100% + 4px);max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(255,255,255,.92);color:#1f7a6a;font:700 12px Fredoka,sans-serif;padding:3px 9px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.18);pointer-events:none}
 #aCopy .pill:empty{display:none}
 @media (orientation:landscape) and (max-height:520px){#menu .btn.sm{min-height:48px;font-size:16px;padding:8px 14px}}
+/* v6: panel moldear arriba a la derecha con vista previa, filas de estantería */
+#mold{left:auto!important;right:max(8px,env(safe-area-inset-right))!important;top:max(122px,calc(env(safe-area-inset-top) + 116px))!important;bottom:auto!important;transform:none!important;width:min(46vw,210px)!important;padding:6px!important;gap:4px!important;background:rgba(255,255,255,.86)!important}
+#mold{background:transparent!important;box-shadow:none!important}#mold>.mrow,#mold>label{background:rgba(255,255,255,.9);border-radius:12px;padding:3px 5px}
+#mPrev{width:100%;box-shadow:0 3px 0 rgba(120,60,170,.35);aspect-ratio:1/1;border-radius:14px;border:3px solid #ff6fb5;background:transparent;box-sizing:border-box}
+#mold button{padding:4px 6px!important;font-size:12px!important}#mold label{font-size:12px!important;gap:4px!important}#mold input{height:20px!important}
+@media (orientation:landscape) and (max-height:520px){#mold{top:8px!important;width:190px!important}#mPrev{aspect-ratio:4/3}}
+#rows{position:fixed;right:calc(max(12px,env(safe-area-inset-right)) + 150px);bottom:max(18px,env(safe-area-inset-bottom));z-index:5;display:none;flex-direction:column;gap:6px;align-items:center;background:rgba(255,255,255,.85);border-radius:18px;padding:6px;font:700 12px Fredoka;color:#7a3aa0}
+#rows.on{display:flex}#rows button{width:48px;height:44px;border:none;border-radius:14px;font:700 20px Fredoka;background:#efe6ff;color:#7a3aa0;touch-action:none}#rows button.sel{background:#ff6fb5;color:#fff}
+@media (orientation:portrait){#rows{right:auto;left:max(10px,env(safe-area-inset-left));bottom:auto;top:40%}}
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="ver">v5 · Camuflaje perfecto</div><div id="touch"></div><div id="fade"></div>
+<div id="ver">v6 · Escondite justo</div><div id="touch"></div><div id="fade"></div>
 <div id="toast"></div><div id="bub"></div><div id="cross"></div>
 <div id="frameFx" class="fadeFrame"></div>
 <div id="menu" class="scr on">
@@ -126,7 +135,7 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <div class="big">Código: <b id="onCodeShow">—</b></div><ul id="onList" class="how"></ul><div id="onSt" class="chip"></div>
 <div class="row"><button class="btn sm" id="onGo" style="display:none">▶ ¡Empezar ronda!</button><button class="btn lil sm" id="onBack">🏠 Volver</button></div></div></div>
 <div id="howS" class="scr"><div class="glass"><h2>Cómo se juega</h2><ul class="how">
-<li><b>Mitad izquierda</b>: joystick para moverte. <b>Arrastra por la derecha</b> para girar la cámara.</li>
+<li><b>Pon el dedo donde quieras</b>: aparece el joystick fijo ahí. Con otro dedo arrastra para girar la cámara (empujar a tope a un lado también gira).</li>
 <li>Eres una <b>Mancha</b> y tienes 45 segundos. Pulsa <b>🦘 Saltar</b> mirando a un cuadro, una lámpara de pared, una estantería, un escudo o una cortina: ¡saltas, te pegas y copias su textura!</li>
 <li>Pegada a la pared, el joystick te desliza por ella (y pasas del zócalo al papel o de una balda de libros a otra). Vuelve a pulsar 🦘 para bajar.</li>
 <li><b>🎨 Copiar</b> copia la textura de lo que tocas: la alfombra si estás encima, la pared o el mueble si estás pegada. El botón te dice qué vas a copiar.</li>
@@ -139,10 +148,11 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <div id="hud"><div class="top"><button class="pill" id="hBack">⏸</button><span class="pill" id="hPhase"></span><span class="pill" id="hTime"></span><span class="pill" id="hInfo"></span></div>
 <div id="meter"><div id="mTxt"><span id="mFace">🙈</span><span id="mPct">0%</span></div><div id="mBar"><div id="mFill"></div></div></div></div>
 <div id="joy"><div id="joyK"></div></div>
-<div id="mold"><div class="mrow"><button data-sh="gota">💧 Gota</button><button data-sh="chafada">🥞 Chafada</button><button data-sh="lamina">📄 Lámina</button><button data-sh="libro">📕 Libro</button><button data-sh="bola">🟠 Bola</button><button data-sh="alta">🗿 Alta</button></div>
+<div id="rows"></div>
+<div id="mold"><div id="mPrev"></div><div class="mrow"><button data-sh="gota">💧 Gota</button><button data-sh="chafada">🥞 Chafada</button><button data-sh="lamina">📄 Lámina</button><button data-sh="libro">📕 Libro</button><button data-sh="bola">🟠 Bola</button><button data-sh="alta">🗿 Alta</button></div>
 <label>↔ Ancho<input type="range" id="mW" min="0.15" max="2.2" step="0.01"></label><label>↕ Alto<input type="range" id="mH" min="0.08" max="2.2" step="0.01"></label><label>⬌ Grosor<input type="range" id="mD" min="0.05" max="2.2" step="0.01"></label><div class="mrow"><button id="mClose">✔ Listo</button></div></div>
 <div id="acts"></div>
 <script src="online-config.js"></script><script src="online-cf.js"></script>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=5"></script>
+<script type="module" src="game.js?v=6"></script>
 </body></html>
