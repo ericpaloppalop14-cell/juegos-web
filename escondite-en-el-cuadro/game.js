@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ONLINE_DISPONIBLE } from './net.js';
-const VERSION = 2;
+const VERSION = 3;
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -158,9 +158,47 @@ function buildCastle() {
   // arcos dorados de las puertas
   for (const r of rooms) { const [cx, cz] = r.c; if (r.i < COLS - 1) doorArch(cx + RS / 2, cz, Math.PI / 2); if (r.j < ROWS - 1) doorArch(cx, cz + RS / 2, 0); }
   rooms.forEach(r => r.def.build(r.id));
+  castleDetail();
   wallMeshes.forEach(m => { m.updateMatrixWorld(); });
   const n = 220, pg = new THREE.BufferGeometry(), pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { pos[i * 3] = rnd(XMIN, XMAX); pos[i * 3 + 1] = rnd(.5, 5.5); pos[i * 3 + 2] = rnd(ZMIN, ZMAX); } pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: .22, color: '#fff3b0', transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, map: dotTex() })); world.add(pts); decor.push({ o: pts, f: (o, t) => { o.position.y = Math.sin(t * .5) * .3; } });
+}
+
+// ---------- v3: detalle extra (instanciado, sin luces nuevas, sin colisión) ----------
+function castleDetail() {
+  const h = RS / 2, gm = GOLD(); const dm = new THREE.Object3D(); const inst = (geo, mat, list, shadow) => { const im = new THREE.InstancedMesh(geo, mat, list.length); list.forEach((t, i) => { dm.position.set(t[0], t[1], t[2]); dm.rotation.set(0, t[3] || 0, 0); dm.scale.set(t[4] || 1, t[5] || 1, t[4] || 1); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); }); im.castShadow = !!shadow; im.receiveShadow = true; world.add(im); return im; };
+  const cols = [], caps = [], bases = [], sconces = [], flames = [], bans = [], banT = [], bricks = [], tiles = [], pots = [], leaves = [], beams = [];
+  const stone = M('#f3e6d6', { roughness: .75 }), stoneD = M('#d9c4ae', { roughness: .85 });
+  const banCols = ['#ff6f9f', '#7fb8ff', '#b48cff', '#ffcf5a', '#7fe0a0', '#ff9a5a'];
+  for (const r of rooms) { const [cx, cz] = r.c, e = h - .55;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const x = cx + sx * e, z = cz + sz * e; cols.push([x, WH / 2, z]); caps.push([x, WH - .25, z]); bases.push([x, .2, z]); }
+    // apliques con vela en los muros, banderines y vigas
+    const wallsP = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    wallsP.forEach(([sx, sz], wi) => { for (const t of [-.62, .62]) { const along = t * h; const x = sz ? cx + along : cx + sx * (h - .42), z = sz ? cz + sz * (h - .42) : cz + along; const ry = sz ? (sz < 0 ? 0 : Math.PI) : (sx < 0 ? Math.PI / 2 : -Math.PI / 2);
+        sconces.push([x, 3.2, z, ry]); flames.push([x + (sz ? 0 : -sx * .12), 3.52, z + (sz ? -sz * .12 : 0), 0, 1, 1.6]);
+        bans.push([x + (sz ? 0 : -sx * .06), 4.75, z + (sz ? -sz * .06 : 0), ry]); }
+      for (let k = -3; k <= 3; k++) { const along = k * 2.2; const x = sz ? cx + along : cx + sx * (h - .2), z = sz ? cz + sz * (h - .2) : cz + along; bricks.push([x, .55 + (k & 1) * .02, z, sz ? 0 : Math.PI / 2]); } });
+    for (const k of [-1, 0, 1]) beams.push([cx, WH - .05, cz + k * 5, 0]);
+    // baldosas de borde alrededor del suelo (anillo de mármol)
+    for (let k = -7; k <= 7; k++) for (const s of [-1, 1]) { tiles.push([cx + k, .011, cz + s * (h - .85)]); tiles.push([cx + s * (h - .85), .011, cz + k]); }
+    // macetas con plantas junto a las puertas
+    for (const [px, pz] of [[cx - h + 1.2, cz - h + 1.2], [cx + h - 1.2, cz + h - 1.2]]) { pots.push([px, .3, pz]); leaves.push([px, .95, pz, rnd(0, 6), 1, 1]); leaves.push([px + .15, 1.25, pz - .1, rnd(0, 6), .7, .9]); }
+  }
+  inst(new THREE.CylinderGeometry(.26, .3, WH, 12), stone, cols);
+  inst(new THREE.BoxGeometry(.8, .4, .8), gm, caps); inst(new THREE.BoxGeometry(.8, .4, .8), stoneD, bases);
+  inst(new THREE.BoxGeometry(.32, .5, .22), gm, sconces);
+  inst(new THREE.SphereGeometry(.08, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffd27a' }), flames);
+  const glow = new THREE.SpriteMaterial({ map: dotTex(), color: '#ffc870', transparent: true, opacity: .75, blending: THREE.AdditiveBlending, depthWrite: false });
+  for (const f of flames) { const sp = new THREE.Sprite(glow); sp.position.set(f[0], f[1], f[2]); sp.scale.set(1.1, 1.1, 1); world.add(sp); }
+  decor.push({ o: glow, f: (o, t) => { o.opacity = .65 + Math.sin(t * 9) * .08 + Math.sin(t * 23) * .05; } });
+  // banderines: triángulo con color por posición
+  const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute([-.45, .55, 0, .45, .55, 0, 0, -.6, 0], 3)); bg.computeVertexNormals();
+  const bim = inst(bg, new THREE.MeshStandardMaterial({ color: '#fff', roughness: .7, side: THREE.DoubleSide }), bans); bans.forEach((_, i) => bim.setColorAt(i, new THREE.Color(banCols[i % banCols.length]))); bim.instanceColor.needsUpdate = true;
+  inst(new THREE.BoxGeometry(2, .3, .12), stoneD, bricks);
+  inst(new THREE.BoxGeometry(RS, .22, .3), M('#b0805a', { roughness: .8 }), beams);
+  const tim = inst(new THREE.PlaneGeometry(.96, .96).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#fff', roughness: .3, metalness: .05, polygonOffset: true, polygonOffsetFactor: -1 }), tiles); tiles.forEach((_, i) => tim.setColorAt(i, new THREE.Color(i & 1 ? '#fff4e6' : '#f1e2ff'))); tim.instanceColor.needsUpdate = true;
+  inst(new THREE.CylinderGeometry(.32, .24, .6, 12), M('#e07a5f', { roughness: .6 }), pots, true);
+  inst(new THREE.IcosahedronGeometry(.5, 1), M('#5fbf6f', { roughness: .7 }), leaves, true);
 }
 // los dinteles se añaden a walls con altura reducida; la colisión ignora los que empiezan por encima de 3 m
 function doorArch(x, z, ry) { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; const gm = GOLD(); const a = new THREE.Mesh(new THREE.TorusGeometry(DOOR / 2, .16, 10, 24, Math.PI), gm); a.position.y = 3.8 - DOOR / 2 + .1; a.scale.y = 1; g.add(a); for (const s of [-1, 1]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, 3.8 - DOOR / 2 + .1, 12), gm); c.position.set(s * DOOR / 2, (3.8 - DOOR / 2 + .1) / 2, 0); c.castShadow = true; g.add(c); } world.add(g); }
@@ -245,6 +283,7 @@ function makeMancha(col, name, isPlayer) {
     const lid = new THREE.Mesh(new THREE.SphereGeometry(.165, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat); lid.position.set(sx * .17, 0, 0); lid.scale.set(1, 1, .72); lid.rotation.x = -1.6; eyes.add(lid); lids.push(lid);
     const ck = new THREE.Mesh(new THREE.CircleGeometry(.07, 16), M('#ff7fb0', { transparent: true, opacity: .75 })); ck.position.set(sx * .31, -.13, .05); eyes.add(ck); }
   const mouth = new THREE.Mesh(new THREE.TorusGeometry(.05, .016, 8, 16, Math.PI), pm); mouth.rotation.z = Math.PI; mouth.position.set(0, -.13, .08); eyes.add(mouth);
+  const shine = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .55 })); shine.scale.set(1, .6, .4); shine.position.set(-.22, .78, .3); inner.add(shine);
   const drip = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 8), mat); drip.position.set(.35, .15, .2); inner.add(drip);
   world.add(g);
   const m = { g, inner, body, mat, eyes, lids, mouth, drip, name, isPlayer, c1: col, c2: col, pat: 'liso', pose: 'bolita', poseCur: [1, 1, 1], tumb: 0, x: 0, z: 0, yaw: 0, vx: 0, vz: 0, moving: false, alive: true, caught: false, camo: 0, hop: 0, blink: rnd(1, 4), sneeze: rnd(6, 14), shiver: 0, bot: null, spin: 0, still: 0, aimed: 0 };
@@ -445,7 +484,7 @@ function update(dt) {
   if (role === 'hide' && phase === 'seek') $('hInfo').textContent = `🙈 ${manchas.filter(m => m.alive).length} escondidas`;
   // entrada (joystick analógico o teclado) relativa a la cámara
   let ix = joyX, iy = joyY; const kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), ky = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0); if (kx || ky) { const l = Math.hypot(kx, ky); ix = kx / l; iy = ky / l; }
-  const fwX = Math.sin(camYaw), fwZ = Math.cos(camYaw); const rX = -fwZ, rZ = fwX; const wantX = fwX * iy - rX * ix, wantZ = fwZ * iy - rZ * ix; const mag = Math.min(1, Math.hypot(wantX, wantZ));
+  const fwX = Math.sin(camYaw), fwZ = Math.cos(camYaw); const rX = -fwZ, rZ = fwX; const wantX = fwX * iy + rX * ix, wantZ = fwZ * iy + rZ * ix; /* v3: derecha = derecha de la cámara */ const mag = Math.min(1, Math.hypot(wantX, wantZ));
   const sub = Math.max(1, Math.ceil(sdt / (1 / 120))), h = sdt / sub; // subpasos: colisiones estables a cualquier fps
   if (me && me.alive && role === 'hide') { const sp = 5.6; for (let s = 0; s < sub; s++) { const k = mag > .01 ? ex(11, h) : ex(14, h); me.vx += (wantX * sp - me.vx) * k; me.vz += (wantZ * sp - me.vz) * k; me.x += me.vx * h; me.z += me.vz * h; collide(me, .45); }
     const spd = Math.hypot(me.vx, me.vz); me.moving = spd > .6; if (spd > .25) me.yaw += wrap(Math.atan2(me.vx, me.vz) - me.yaw) * ex(12, sdt); me.still = me.moving ? 0 : me.still + sdt; me.wiggle = Math.max(0, (me.wiggle || 0) - sdt);
@@ -463,8 +502,8 @@ function update(dt) {
   // ---- cámara: más atrás y más alta, suave, sin atravesar paredes ----
   const port = innerHeight > innerWidth; const cp = Math.cos(camPitch), spP = Math.sin(camPitch); let tx, ty, tz, want, sh = 0;
   if (focus) { tx = focus.x; ty = .9; tz = focus.z; want = 4.5; }
-  else if (role === 'hide' && me) { tx = me.x; ty = 1.3; tz = me.z; want = port ? 8.6 : 7.4; }
-  else { tx = critic.x; ty = 4.7; tz = critic.z; want = port ? 7.4 : 6.4; sh = port ? 1.7 : 1.9; }
+  else if (role === 'hide' && me) { tx = me.x; ty = 1.3; tz = me.z; want = port ? 11.8 : 10.2; }
+  else { tx = critic.x; ty = 4.7; tz = critic.z; want = port ? 9.4 : 8.4; sh = port ? 1.7 : 1.9; }
   if (role === 'seek' && phase === 'hide') { const c0 = RC(0); camera.position.set(c0[0] - 5, 2.4, c0[1] - 5.2); camera.lookAt(c0[0] - 5 + Math.sin(T * .3) * 2, 4.5, c0[1] - 8); sun.position.set(c0[0] + 6, 30, c0[1] + 6); sun.target.position.set(c0[0], 0, c0[1]); return; }
   const fa = focus ? T * .6 : camYaw; const fx = Math.sin(fa), fz = Math.cos(fa);
   const dX = -fx * cp, dY = spP, dZ = -fz * cp; const lx = tx - rX * sh, lz = tz - rZ * sh;
