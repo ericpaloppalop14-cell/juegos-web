@@ -8,7 +8,7 @@
 // =====================================================================
 import * as THREE from 'three';
 import { SalaOnline, comprobarOnline } from './net.js';
-export const VERSION = 'v14 · Vista elevada';
+export const VERSION = 'v15 · Arreglos';
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 $('ver').textContent = VERSION;
@@ -174,12 +174,12 @@ function freeAt(x, z, r) { if (Math.abs(x) > W - .8 || Math.abs(z) > D - .8) ret
 function placeProp(type, x, z, ry) { const T = TYPES[type]; if (!freeAt(x, z, T.r)) return null; const vi = (R() * T.pal.length) | 0; const pat = T.pats ? T.pats[(R() * T.pats.length) | 0] : 0; const obj = buildProp(type, vi, pat); obj.position.set(x, 0, z); obj.rotation.y = ry; propRoot.add(obj); const p = { id: props.length, type, vi, pat, obj, x, z, ry, r: T.r }; obj.userData.prop = p; props.push(p); return p; }
 function scatter(type, n, cx, cz, rad) { let k = 0, tries = 0; while (k < n && tries++ < 80) { const a = R() * 6.28, d = R() * rad; if (placeProp(type, cx + Math.cos(a) * d, cz + Math.sin(a) * d, R() * 6.28)) k++; } }
 // agrupados con sentido: cojines en la alfombra, sillas junto a las mesas, pilas junto a estanterías...
-scatter('cojin', 6, 0, 4, 2.6); scatter('silla', 3, -6, .9, .6); scatter('silla', 3, 6, .9, .6); scatter('silla', 1, -6, -1.9, .5); scatter('silla', 1, 6, -1.9, .5);
+scatter('cojin', 6, 0, 4, 2.6); scatter('silla', 3, -6, .9, 1.1); scatter('silla', 3, 6, .9, 1.1); scatter('silla', 1, -6, -1.9, .9); scatter('silla', 1, 6, -1.9, .9);
 for (const x of [-8, -4, 0, 4, 8]) { scatter('pila', 1, x, -8.4, .6); scatter('libro', 2, x, -8, 1.2); }
 scatter('vela', 4, -3, 6.5, 3); scatter('vela', 3, 8, 6, 2); scatter('jarron', 3, -9.4, 6.9, 1.1); scatter('jarron', 2, 10, -6.5, 1.5);
-scatter('lampara', 2, -11, -6, 1.2); scatter('lampara', 2, 11, 6.5, 1.2); scatter('lampara', 1, 3, 2, .3);
-scatter('baul', 2, -8.6, 4.6, 1); scatter('baul', 1, 10, 4.5, 1); scatter('globo', 2, 4, 6.5, 2); scatter('globo', 1, -4, -5.5, 1);
-scatter('cuadro', 3, 9, 8.3, 2); scatter('cuadro', 2, -8, 8.4, 1.5); scatter('maceta', 3, 11, -8.2, 1.5); scatter('maceta', 3, -10.4, -7.5, .8); scatter('maceta', 2, 0, 8.6, 3);
+scatter('lampara', 2, -11.2, -3.6, .9); scatter('lampara', 2, 11, 6.5, 1.2); scatter('lampara', 1, 3, 2, .3);
+scatter('baul', 2, -8.6, 4.6, 1.8); scatter('baul', 1, 10, 4.5, 1); scatter('globo', 2, 4, 6.5, 2); scatter('globo', 1, -4, -5.5, 1);
+scatter('cuadro', 3, 9, 8.3, 2); scatter('cuadro', 2, -8, 8.4, 1.5); scatter('maceta', 3, 11, -8.2, 1.5); scatter('maceta', 3, -10.2, -7.2, 1.6); scatter('maceta', 2, 0, 8.6, 3);
 scatter('taburete', 3, -2, 1, 2.5); scatter('tetera', 2, -2.5, 4.5, 1.5); scatter('libro', 6, 0, 0, 8); scatter('pila', 2, -8, -3, 2); scatter('pila', 2, 8, -3, 2);
 // los objetos reales se dibujan fusionados por material (pocas llamadas); su grupo queda invisible para tocar/raycast
 const propStatic = new THREE.Group(); scene.add(propStatic); blockers.push(...mergeByMaterial(propRoot, propStatic)); propRoot.traverse(o => { if (o.isMesh) { o.material = o.material; o.visible = true; } }); propRoot.visible = false;
@@ -221,12 +221,24 @@ class Hider {
 
 // colisión círculo vs cajas y objetos; suelo = parte de arriba de lo que pises
 function bodies() { const l = []; if (player && player.vivo) l.push(player); if (critic && critic.r) l.push(critic); for (const b of bots) if (b.vivo) l.push(b); return l; }
-function moveCircle(e, dx, dz) {
-  let x = e.x + dx, z = e.z + dz; const r = e.r; let ground = 0;
-  for (const c of colliders) { if (c.top <= e.y + .35) { if (x > c.x0 && x < c.x1 && z > c.z0 && z < c.z1) ground = Math.max(ground, c.top); continue; } const cx = clamp(x, c.x0, c.x1), cz = clamp(z, c.z0, c.z1); const ddx = x - cx, ddz = z - cz, d = Math.hypot(ddx, ddz); if (d < r) { if (d > 1e-4) { x = cx + ddx / d * r; z = cz + ddz / d * r; } else { x = e.x; z = e.z; } } }
-  for (const p of props) { if (e.y > 1.1) continue; const ddx = x - p.x, ddz = z - p.z, d = Math.hypot(ddx, ddz), m = r + p.r; if (d < m && d > 1e-4) { x = p.x + ddx / d * m; z = p.z + ddz / d * m; } }
+function pushOut(e, x, z) { // devuelve [x,z,penetración máxima]
+  const r = e.r; let pen = 0;
+  for (const c of colliders) { if (c.top <= e.y + .35) continue; const cx = clamp(x, c.x0, c.x1), cz = clamp(z, c.z0, c.z1); const ddx = x - cx, ddz = z - cz, d = Math.hypot(ddx, ddz); if (d < r) { if (d > 1e-4) { x = cx + ddx / d * r; z = cz + ddz / d * r; } else { x = e.x; z = e.z; } } }
+  if (!(e.y > 1.1)) for (const p of props) { const ddx = x - p.x, ddz = z - p.z, d = Math.hypot(ddx, ddz), m = r + p.r; if (d < m && d > 1e-4) { x = p.x + ddx / d * m; z = p.z + ddz / d * m; } }
   for (const o of bodies()) { if (o === e) continue; const ddx = x - o.x, ddz = z - o.z, d = Math.hypot(ddx, ddz), m = r + (o.r || .45); if (d < m && d > 1e-4) { x = o.x + ddx / d * m; z = o.z + ddz / d * m; } }
-  e.x = clamp(x, -W + .5, W - .5); e.z = clamp(z, -D + .5, D - .5); return ground;
+  x = clamp(x, -W + .5, W - .5); z = clamp(z, -D + .5, D - .5);
+  for (const c of colliders) { if (c.top <= e.y + .35) continue; const d = Math.hypot(x - clamp(x, c.x0, c.x1), z - clamp(z, c.z0, c.z1)); pen = Math.max(pen, r - d); }
+  if (!(e.y > 1.1)) for (const p of props) pen = Math.max(pen, r + p.r - Math.hypot(x - p.x, z - p.z));
+  for (const o of bodies()) if (o !== e) pen = Math.max(pen, r + (o.r || .45) - Math.hypot(x - o.x, z - o.z));
+  return [x, z, pen];
+}
+function moveCircle(e, dx, dz) {
+  let x = e.x + dx, z = e.z + dz, ground = 0;
+  for (const c of colliders) if (c.top <= e.y + .35 && x > c.x0 && x < c.x1 && z > c.z0 && z < c.z1) ground = Math.max(ground, c.top);
+  let pen = 0; for (let i = 0; i < 5; i++) { [x, z, pen] = pushOut(e, x, z); if (pen < .02) break; }
+  if (pen > .03) { // encajonado entre dos cosas: no te hundes, te quedas donde estabas (o buscas un hueco libre)
+    const [a, b, p0] = pushOut(e, e.x, e.z); if (p0 < pen) { x = a; z = b; } else { x = e.x; z = e.z; } }
+  e.x = x; e.z = z; return ground;
 }
 
 // ------------------------------------------------------------ cámara (tercera persona estable)
@@ -248,7 +260,7 @@ function updCamera(dt, x, y, z, snap) {
   v3.set(cam.tx, cam.ty, cam.tz); const dir = camera.position.clone().sub(v3); const len = dir.length(); ray.set(v3, dir.normalize()); ray.far = len;
   if (blockers.length) { const bh = ray.intersectObjects(blockers, false)[0]; if (bh && bh.distance < len) { const nd = Math.max(1.1, bh.distance - .25); camera.position.copy(v3).addScaledVector(ray.ray.direction, nd); } }
   const hits = new Set(); for (const o of occluders) if (ray.intersectObject(o.obj, true).length) hits.add(o);
-  for (const o of occluders) { const t = hits.has(o) ? .22 : 1; o.fade = lerp(o.fade, t, 1 - Math.exp(-dt * 10)); for (const m of o.mats) { m.opacity = o.fade; m.depthWrite = o.fade > .95; } }
+  for (const o of occluders) { const t = hits.has(o) ? .05 : 1; o.fade = lerp(o.fade, t, 1 - Math.exp(-dt * 12)); o.obj.visible = o.fade > .07; for (const m of o.mats) { m.opacity = o.fade; m.depthWrite = o.fade > .95; } }
 }
 
 // ------------------------------------------------------------ entrada: joystick fijo donde pones el dedo + 2º dedo gira cámara + toque corto = tocar objeto
@@ -286,7 +298,7 @@ function pick(cx, cy, list) { const nd = new THREE.Vector2(cx / innerWidth * 2 -
 
 // ------------------------------------------------------------ HUD
 const ui = { pal: $('pal'), sim: $('simtx'), bar: $('simbar'), tim: $('tim'), pts: $('pts'), msg: $('msg') };
-let msgT = 0; function msg(t, s = 1.8) { ui.msg.textContent = t; ui.msg.style.opacity = 1; msgT = s; }
+let msgT = 0, msgTag = ''; function msg(t, s = 1.8, tag = '') { ui.msg.textContent = t; ui.msg.style.opacity = 1; msgT = s; msgTag = tag; }
 function show(id) { for (const s of document.querySelectorAll('.scr')) s.classList.toggle('on', s.id === id); $('hud').classList.toggle('on', !id); $('ver').style.display = id === 'menu' ? '' : 'none'; }
 const SL = { h: $('sH'), l: $('sL'), s: $('sS'), w: $('sW'), a: $('sA'), r: $('sR') };
 let LEVEL = 1; for (const b of document.querySelectorAll('#lv button')) b.onclick = () => { LEVEL = +b.dataset.l; for (const c of document.querySelectorAll('#lv button')) c.classList.toggle('on', c === b); SND.tick(); };
@@ -297,11 +309,11 @@ const LV = [{ n: 'Fácil', sp: 2.3, view: 7, k: .45, tap: 6, blind: .03, bots: 3
 // ------------------------------------------------------------ partida
 let G_ON = false, mode = null, phase = '', tLeft = 0, score = 0, player = null, critic = null, bots = [], whistles = 0, gotaUsada = false, wrongs = 0, found = 0, ai = null, net = null, remotes = new Map(), myRole = '';
 let base0 = null; // ajustes del jugador: corrección = slider * ERR_MAX
-function setPal(on) { requestAnimationFrame(() => $('hud').classList.toggle('palon', ui.pal.classList.contains('on'))); ui.pal.classList.toggle('on', !!on && mode !== 'seek' && myRole !== 'critic' && !!player?.copy && phase !== 'fin'); $('bPal').style.display = mode === 'seek' || myRole === 'critic' || !player?.copy || !player.vivo || phase === 'fin' ? 'none' : ''; }
+function setPal(on) { if (!on && msgTag === 'adj') { ui.msg.style.opacity = 0; msgT = 0; msgTag = ''; } requestAnimationFrame(() => $('hud').classList.toggle('palon', ui.pal.classList.contains('on'))); ui.pal.classList.toggle('on', !!on && mode !== 'seek' && myRole !== 'critic' && !!player?.copy && phase !== 'fin'); $('bPal').style.display = mode === 'seek' || myRole === 'critic' || !player?.copy || !player.vivo || phase === 'fin' ? 'none' : ''; }
 function sliderErr() { const e = Object.assign({}, base0); for (const k in SL) e[k] = base0[k] + (+SL[k].value / 100) * ERR_MAX[k] * 1.6; e.pat = player.err.pat; e.ry = base0.ry; return e; }
 for (const k in SL) SL[k].addEventListener('input', () => applyAdj());
 function setV(k, v, noApply) { SL[k].value = clamp(Math.round(v), -100, 100); if (!noApply) applyAdj(); }
-function applyAdj() { if (!player?.copy || !base0) return; player.err = sliderErr(); player.rebuild(); updAdj(); }
+function applyAdj() { if (!player?.copy || !base0) return; player.err = sliderErr(); player.rebuild(); moveCircle(player, 0, 0); updAdj(); }
 const HS = $('hStrip'), hctx = HS.getContext('2d'); let swOff = [];
 function mainCol() { const p = player.copy, T = TYPES[p.type]; return new THREE.Color(T.pal[p.vi % T.pal.length]); }
 function colAt(v) { const c = mainCol(), hsl = {}; c.getHSL(hsl); const e = player.err; const h = (hsl.h + (base0.h + v / 100 * ERR_MAX.h * 1.6) / 360 + 2) % 1; return new THREE.Color().setHSL(h, clamp(hsl.s + e.s, 0, 1), clamp(hsl.l + e.l, .03, .97)).getStyle(); }
@@ -331,7 +343,7 @@ $('hM').onclick = () => setV('h', +SL.h.value - 2); $('hP').onclick = () => setV
 $('pPat').onclick = () => { if (!player?.copy) return; player.err.pat = (player.err.pat + 1) % 3; player.rebuild(); updAdj(); $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; SND.tick(); };
 $('pGota').onclick = () => { if (!player?.copy || gotaUsada) return; gotaUsada = true; for (const k of ['h', 'l', 's']) { const cur = player.err[k]; const target = cur * .3; SL[k].value = clamp(Math.round(((target - base0[k]) / (ERR_MAX[k] * 1.6)) * 100), -100, 100); } player.err = sliderErr(); player.rebuild(); updAdj(); $('pGota').disabled = true; $('pGota').textContent = '💧 Gastado'; SND.pop(); msg('💧 ¡Color casi copiado! Afina tú el resto'); };
 $('pOut').onclick = () => { if (!player?.copy) return; player.quitar(); setPal(false); msg('Vuelves a ser Mancha'); };
-$('bPal').onclick = () => { setPal(!ui.pal.classList.contains('on')); requestAnimationFrame(updAdj); };
+$('bPal').onclick = () => { setPal(!ui.pal.classList.contains('on')); if (ui.pal.classList.contains('on') && msgTag === 'adj') { ui.msg.style.opacity = 0; msgT = 0; msgTag = ''; } requestAnimationFrame(updAdj); };
 $('bWh').onclick = () => { if (!G_ON || phase !== 'seek' || myRole === 'critic' || mode === 'seek') return; whistles++; score += 60; SND.whistle(); msg('🎵 +60 · ¡pero te ha oído!'); if (ai) ai.noise = { x: player.x, z: player.z, t: 4 }; noteFx(player.x, player.z); if (net) net.enviar({ t: 'silbo', x: player.x, z: player.z }); };
 $('bJump').onclick = () => doJump();
 function doJump() { if (G_ON && player && player.y <= player.gnd + .01 && !(myRole === 'critic' && phase === 'hide')) { player.vy = 5.2; SND.pop(); } }
@@ -371,7 +383,7 @@ function onTap(cx, cy) {
     else { wrongs++; tLeft = Math.max(0, tLeft - 5); SND.no(); msg('❌ ¡Era ' + art(pos.type) + ' de verdad! −5 s'); wake(); pos.obj.rotation.z = .3; setTimeout(() => pos.obj.rotation.z = 0, 200); if (net) net.enviar({ t: 'toque', ok: 0 }); }
   }
 }
-function disfrazarDe(p) { if (!p || !player.vivo || phase === 'fin') return; player.disfrazar(p); base0 = Object.assign({}, player.err); for (const k in SL) SL[k].value = 0; $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; newSwatches(); SND.pop(); msg('✨ ¡Eres ' + art(p.type) + '! Ajústate abajo · arrastra para mirar 360°', 2.6); setPal(true); requestAnimationFrame(updAdj); }
+function disfrazarDe(p) { if (!p || !player.vivo || phase === 'fin') return; player.disfrazar(p); moveCircle(player, 0, 0); base0 = Object.assign({}, player.err); for (const k in SL) SL[k].value = 0; $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; newSwatches(); SND.pop(); msg('✨ ¡Eres ' + art(p.type) + '! ' + (innerHeight > innerWidth ? 'Ajústate con los controles de abajo' : 'Ajústate con los paneles de la izquierda y de abajo') + ' · arrastra para mirar 360°', 2.6, 'adj'); setPal(true); requestAnimationFrame(updAdj); }
 let nearProp = null;
 $('bDisf').onclick = () => disfrazarDe(nearProp);
 function caught(b) { b.vivo = false; b.quitar(); b.body.scale.setScalar(1.2); found++; score += 150; SND.ok(); msg('🎉 ¡Pillado! +150'); confetti(b.x, b.z); }
@@ -481,7 +493,7 @@ function loop(now) {
     $('bWh').style.display = myRole === 'hider' ? '' : 'none';
     if (net && now - lastNet > 100) { lastNet = now; netSend(); }
   } else { // menú: cámara paseando por la biblioteca
-    if (innerHeight > innerWidth) { cam.yaw = Math.sin(t * .1) * .3; cam.pitch = .9; cam.dist = 7; updCamera(dt, 0, 0, 2.4); } else { cam.yaw = t * .08; cam.pitch = .45; cam.dist = 7; updCamera(dt, 0, 0, 2); } for (const r of rings) r.visible = false;
+    if (innerHeight > innerWidth) { cam.yaw = 1.45 + Math.sin(t * .1) * .2; cam.pitch = .62; cam.dist = 13; updCamera(dt, -2, 0, 2); } else { cam.yaw = t * .08; cam.pitch = .45; cam.dist = 7; updCamera(dt, 0, 0, 2); } for (const r of rings) r.visible = false;
   }
   { const w = innerWidth, h = innerHeight; if (h > w && ui.pal.classList.contains('on')) camera.setViewOffset(w, h, 0, h * .2, w, h); else if (camera.view && camera.view.enabled) camera.clearViewOffset(); }
   renderer.render(scene, camera);
@@ -514,4 +526,4 @@ let rondaN = 0;
 $('oEmp').onclick = () => { const js = net.jugadores(); const ids = js.map(j => j.id); const critico = ids[rondaN++ % ids.length]; const salida = ids.map((_, i) => [-6 + i * 2.4, 7]); const d = { t: 'ronda', n: rondaN, critico, ids, salida }; net.enviar(d); empezarRonda(d); };
 function netSend() { if (!player) return; if (myRole === 'critic') net.enviar({ t: 'cr', x: player.x, y: player.y, z: player.z, yaw: player.face }); else { const e = player.err; net.enviar({ t: 'st', x: player.x, y: player.y, z: player.z, o: player.copy ? player.copy.id : -1, e: player.copy ? [e.h, e.l, e.s, e.w, e.a, e.r, e.pat, e.ry].map(v => +(+v).toFixed(3)) : null, w: player.wobbling ? 1 : 0, v: player.vivo }); } }
 // hooks de prueba
-window.__esc = { minFade: () => Math.min(...occluders.map(o => o.fade)), W, colliders, camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
+window.__esc = { move: moveCircle, minFade: () => Math.min(...occluders.map(o => o.fade)), W, colliders, camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
