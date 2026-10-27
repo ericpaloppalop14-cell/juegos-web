@@ -8,7 +8,7 @@
 // =====================================================================
 import * as THREE from 'three';
 import { SalaOnline, comprobarOnline } from './net.js';
-export const VERSION = 'v13 · Arreglos';
+export const VERSION = 'v14 · Vista elevada';
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 $('ver').textContent = VERSION;
@@ -230,7 +230,9 @@ function moveCircle(e, dx, dz) {
 }
 
 // ------------------------------------------------------------ cámara (tercera persona estable)
-const cam = { yaw: Math.PI, pitch: .55, dist: 6, tx: 0, ty: 1, tz: 0 };
+// cámara de juego en perspectiva desde arriba: ~54° y mucha distancia; en vertical más lejos para ver parecida cantidad de mapa
+const PITCH0 = .95; const gameDist = () => innerHeight > innerWidth ? 17 : 11.5; const gamePitch = () => innerHeight > innerWidth ? 1.08 : PITCH0;
+const cam = { yaw: Math.PI, pitch: PITCH0, dist: 11.5, tx: 0, ty: 1, tz: 0 };
 const ray = new THREE.Raycaster(); const v3 = new THREE.Vector3();
 function updCamera(dt, x, y, z, snap) {
   cam.tx = lerp(cam.tx, x, snap ? 1 : 1 - Math.exp(-dt * 8)); cam.tz = lerp(cam.tz, z, snap ? 1 : 1 - Math.exp(-dt * 8)); cam.ty = lerp(cam.ty, y + 1, snap ? 1 : 1 - Math.exp(-dt * 6));
@@ -238,7 +240,7 @@ function updCamera(dt, x, y, z, snap) {
   // nunca fuera de la sala (las paredes no tapan) ni bajo el techo
   const k = Math.min(1, (W - .4 - Math.abs(cam.tx)) / Math.max(.01, Math.abs(cx - cam.tx)), (D - .4 - Math.abs(cam.tz)) / Math.max(.01, Math.abs(cz - cam.tz)));
   if (k < 1) { cx = cam.tx + (cx - cam.tx) * k; cz = cam.tz + (cz - cam.tz) * k; cy = cam.ty + (cy - cam.ty) * Math.max(k, .6) + (1 - k) * 1.2; }
-  cy = Math.min(cy, H - .4);
+  cy = Math.min(cy, 15);
   { let tt = 1, lifted = false; for (let t = .1; t <= 1.0001; t += .05) { const x = cam.tx + (cx - cam.tx) * t, y = cam.ty + (cy - cam.ty) * t, z = cam.tz + (cz - cam.tz) * t; let inside = null; for (const c of colliders) if (c.top < 90 && c.top > 1.5 && y < c.top + .3 && x > c.x0 - .25 && x < c.x1 + .25 && z > c.z0 - .25 && z < c.z1 + .25) { inside = c; break; } if (inside) { if (t < .45 && !lifted) { lifted = true; cy = Math.min(H - .4, inside.top + 1.2); cx = cam.tx + (cx - cam.tx) * .5; cz = cam.tz + (cz - cam.tz) * .5; break; } tt = Math.max(.15, t - .05); break; } }
     if (tt < 1) { cx = cam.tx + (cx - cam.tx) * tt; cy = cam.ty + (cy - cam.ty) * tt; cz = cam.tz + (cz - cam.tz) * tt; } }
   camera.position.set(cx, cy, cz); camera.lookAt(cam.tx, cam.ty, cam.tz);
@@ -267,7 +269,7 @@ canvas.addEventListener('pointerdown', e => {
     if (!hit && !joy.orbit) showJoy();
   } else if (joy.cam === null) { joy.cam = e.pointerId; joy.cx = e.clientX; joy.cy = e.clientY; }
 });
-function orbit(dx, dy) { cam.yaw -= dx * .011; cam.pitch = clamp(cam.pitch + dy * .005, .12, 1.25); }
+function orbit(dx, dy) { cam.yaw -= dx * .011; cam.pitch = clamp(cam.pitch + dy * .005, .45, 1.3); }
 addEventListener('pointermove', e => {
   if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pinch && ptrs.size >= 2 && adjusting()) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x); const k = (d / Math.max(20, pinch.d) - 1) * 70; setV('w', pinch.w + k, 1); setV('a', pinch.a + k, 1); setV('r', pinch.r + angDiff(ang, pinch.ang) * 180 / Math.PI * 1.25, 1); applyAdj(); return; }
@@ -344,11 +346,11 @@ function startGame(m, opts = {}) {
   resetWorld(); mode = m; score = 0; whistles = 0; wrongs = 0; found = 0; gotaUsada = false; $('pGota').disabled = false; $('pGota').textContent = '💧 Cuentagotas'; myRole = opts.role || (m === 'seek' ? 'critic' : 'hider');
   const L = LV[LEVEL]; G_ON = true; show(null); ai = null;
   if (myRole === 'hider') {
-    player = new Hider('#ff8fc8'); Object.assign(player, { gnd: 0 }, freeSpawn(opts.x ?? 0, opts.z ?? 7, player.r)); cam.yaw = 0; phase = 'hide'; tLeft = opts.hide ?? 20;
+    player = new Hider('#ff8fc8'); Object.assign(player, { gnd: 0 }, freeSpawn(opts.x ?? 0, opts.z ?? 7, player.r)); cam.yaw = 0; cam.pitch = gamePitch(); phase = 'hide'; tLeft = opts.hide ?? 20;
     if (!net) { critic = { g: mochi('#a77bff', true), x: 0, z: -6.2, y: 0, face: 0, r: .45, susp: 0, state: 'wait', tapT: L.tap, stun: 0, target: null, stuckT: 0, lx: 0, lz: 0 }; scene.add(critic.g); ai = { noise: null }; }
     msg('👆 Toca un objeto que brille para disfrazarte', 3);
   } else {
-    player = new Hider('#a77bff'); player.body.clear(); player.body.add(mochi('#a77bff', true)); Object.assign(player, { gnd: 0 }, freeSpawn(opts.x ?? 0, opts.z ?? 7, player.r)); cam.yaw = 0;
+    player = new Hider('#a77bff'); player.body.clear(); player.body.add(mochi('#a77bff', true)); Object.assign(player, { gnd: 0 }, freeSpawn(opts.x ?? 0, opts.z ?? 7, player.r)); cam.yaw = 0; cam.pitch = gamePitch();
     phase = 'hide'; tLeft = opts.hide ?? 3;
     if (!net) { for (let i = 0; i < L.bots; i++) { const b = new Hider('#9fd0ff'); let tries = 0; while (tries++ < 60) { const p = props[(Math.random() * props.length) | 0]; const a = Math.random() * 6.28, d = rand(1, 2.2); const x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d; if (Math.hypot(x - player.x, z - player.z) > 4 && freeAt(x, z, p.r) && !bots.some(o => Math.hypot(o.x - x, o.z - z) < 1.5)) { b.x = x; b.z = z; const target = rand(...L.bsim); const e = randErr(1); const sc = (1 - target / 100) / .55; for (const k in ERR_MAX) e[k] *= clamp(sc, .05, 1); e.pat = p.pat; e.ry = Math.random() * 6.28; b.disfrazar(p, e); b.wobMul = L.bwob; break; } } b.g.userData.hider = b; bots.push(b); } }
     msg('🔍 ¡Los bots se esconden! Busca objetos que no encajen', 3);
@@ -468,7 +470,7 @@ function loop(now) {
     const bd = $('bDisf'); bd.style.display = nearProp && !ui.pal.classList.contains('on') ? '' : 'none'; if (nearProp && bd.dataset.t !== nearProp.type) { bd.dataset.t = nearProp.type; bd.innerHTML = '✨ Disfrazarse<small>de ' + TYPES[nearProp.type].n + '</small>'; }
     for (; k < rings.length; k++) rings[k].visible = false; ringMat.opacity = .35 + Math.sin(t * 4) * .2;
     // cámara: mientras el Crítico cuenta (tú eres el Crítico) la cámara mira la sala desde arriba, no se mete en la lupa
-    if (myRole === 'critic' && phase === 'hide') { cam.pitch = .9; }
+    cam.dist = gameDist(); if (myRole === 'critic' && phase === 'hide') { cam.pitch = 1.0; }
     updCamera(dt, player.x, player.y, player.z);
     { const near = camera.position.distanceTo(player.g.position) < 2.6; player.g.traverse(o => { if (o.material && o.material.opacity !== undefined) { o.material.transparent = near || o.material.transparent; o.material.opacity = near ? .35 : 1; } }); }
     // HUD
@@ -479,7 +481,7 @@ function loop(now) {
     $('bWh').style.display = myRole === 'hider' ? '' : 'none';
     if (net && now - lastNet > 100) { lastNet = now; netSend(); }
   } else { // menú: cámara paseando por la biblioteca
-    if (innerHeight > innerWidth) { cam.yaw = Math.sin(t * .1) * .3; cam.pitch = .9; cam.dist = 7; updCamera(dt, 0, 0, 2.4); } else { cam.yaw = t * .08; cam.pitch = .45; cam.dist = 7; updCamera(dt, 0, 0, 2); } cam.dist = 6; for (const r of rings) r.visible = false;
+    if (innerHeight > innerWidth) { cam.yaw = Math.sin(t * .1) * .3; cam.pitch = .9; cam.dist = 7; updCamera(dt, 0, 0, 2.4); } else { cam.yaw = t * .08; cam.pitch = .45; cam.dist = 7; updCamera(dt, 0, 0, 2); } for (const r of rings) r.visible = false;
   }
   { const w = innerWidth, h = innerHeight; if (h > w && ui.pal.classList.contains('on')) camera.setViewOffset(w, h, 0, h * .2, w, h); else if (camera.view && camera.view.enabled) camera.clearViewOffset(); }
   renderer.render(scene, camera);
@@ -512,4 +514,4 @@ let rondaN = 0;
 $('oEmp').onclick = () => { const js = net.jugadores(); const ids = js.map(j => j.id); const critico = ids[rondaN++ % ids.length]; const salida = ids.map((_, i) => [-6 + i * 2.4, 7]); const d = { t: 'ronda', n: rondaN, critico, ids, salida }; net.enviar(d); empezarRonda(d); };
 function netSend() { if (!player) return; if (myRole === 'critic') net.enviar({ t: 'cr', x: player.x, y: player.y, z: player.z, yaw: player.face }); else { const e = player.err; net.enviar({ t: 'st', x: player.x, y: player.y, z: player.z, o: player.copy ? player.copy.id : -1, e: player.copy ? [e.h, e.l, e.s, e.w, e.a, e.r, e.pat, e.ry].map(v => +(+v).toFixed(3)) : null, w: player.wobbling ? 1 : 0, v: player.vivo }); } }
 // hooks de prueba
-window.__esc = { W, colliders, camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
+window.__esc = { minFade: () => Math.min(...occluders.map(o => o.fade)), W, colliders, camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
