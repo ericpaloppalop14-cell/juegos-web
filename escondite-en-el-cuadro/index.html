@@ -125,9 +125,10 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 .act.sel,#acts button.sel{outline:3px solid #ff6fb5}
 @media (orientation:landscape) and (max-height:520px){#mold .msh{grid-template-columns:repeat(6,1fr)}body.molding #rows,body.molding #acts{display:none!important}}
 #run{position:fixed;left:max(18px,env(safe-area-inset-left));bottom:max(24px,env(safe-area-inset-bottom));min-width:150px;height:68px;padding:0 22px;border-radius:34px;border:4px solid #fff;background:linear-gradient(#ff8a3d,#ff5a2a);color:#fff;font:700 28px Fredoka;box-shadow:0 5px 0 #b3340f,0 8px 18px rgba(0,0,0,.25);z-index:6;display:none;touch-action:none;cursor:pointer}#run.on{display:flex;align-items:center;justify-content:center;animation:runp 1.2s ease-in-out infinite}@keyframes runp{50%{transform:scale(1.06)}}body.hid #joy{display:none!important}
+#zoom{position:fixed;left:max(14px,env(safe-area-inset-left));top:46%;transform:translateY(-50%);display:none;flex-direction:column;gap:10px;z-index:5}#zoom.on{display:flex}#zoom button{width:52px;height:52px;border-radius:50%;border:3px solid #fff;background:rgba(122,92,255,.88);color:#fff;font:700 30px/1 Fredoka;box-shadow:0 3px 0 #4a2cb0;padding:0;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:pointer}#zoom button:active{transform:scale(.92)}#run.sm{bottom:calc(max(22px,env(safe-area-inset-bottom)) + 142px);min-width:130px;height:60px;font-size:24px;animation:none}@media (orientation:landscape){#run.sm{bottom:max(22px,env(safe-area-inset-bottom));left:calc(max(18px,env(safe-area-inset-left)) + 146px)}}
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="ver">v18 · ¡Corre! restaura</div><div id="touch"></div><div id="fade"></div>
+<div id="ver">v19 · Zoom libre</div><div id="touch"></div><div id="fade"></div>
 <div id="toast"></div><div id="bub"></div><div id="cross"></div>
 <div id="frameFx" class="fadeFrame"></div>
 <div id="menu" class="scr on">
@@ -153,6 +154,7 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <li>Pegada a la pared, el joystick te desliza por ella (y pasas del zócalo al papel o de una balda de libros a otra). Vuelve a pulsar 🦘 para bajar.</li>
 <li><b>🎨 Copiar</b> copia la textura de lo que tocas: la alfombra si estás encima, la pared o el mueble si estás pegada. El botón te dice qué vas a copiar.</li>
 <li><b>🎬 Sala de creación</b>: arriba a la derecha te ves en directo. Pegada a algo o en una fila, el joystick solo te mueve por esa zona y puedes arrastrarte con el dedo (en pantalla o en la ventanita) hasta el sitio exacto.</li><li><b>✋ Moldear</b>: cháfate en la alfombra, hazte lámina en un cuadro o libro en la estantería, y ajusta ancho, alto y grosor.</li>
+<li><b>Zoom</b>: pellizca con dos dedos (o rueda del ratón, o los botones + y −) para alejar la cámara hasta ver todo el castillo desde arriba. <b>¡Corre!</b> aparece en cuanto te pegas, te camuflas o cambias de forma, y te devuelve a tu forma normal.</li>
 <li><b>Escondida</b> (un par de segundos quieta): el joystick se esconde y deslizando el dedo por cualquier parte giras la cámara 360° alrededor de ti. Pulsa <b>¡Corre!</b> para volver a moverte.</li>
 <li>Si te quedas quieta y bien camuflada, cierras los ojos y desapareces. El Crítico tendrá que acercarse muchísimo para verte.</li>
 <li>Cuando tú eres El Crítico: apunta al centro y pulsa <b>🎯</b>. Fíjate MUCHO: ojitos que asoman, un libro raro, una lámpara de más… 🤧</li></ul>
@@ -161,12 +163,12 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <div id="res" class="scr" style="background:rgba(60,30,130,.35)"><div class="glass"><h2 id="rT"></h2><div class="big" id="rP"></div><img id="shareImg" alt=""><div class="row"><button class="btn yel sm" id="rShare">📸 Compartir mi escondite</button></div><div class="row"><button class="btn teal sm" id="rNext">Siguiente ▶</button><button class="btn lil sm" id="rMenu">🏠 Menú</button></div></div></div>
 <div id="hud"><div class="top"><button class="pill" id="hBack">⏸</button><span class="pill" id="hPhase"></span><span class="pill" id="hTime"></span><span class="pill" id="hInfo"></span></div>
 <div id="meter"><div id="mTxt"><span id="mFace">🙈</span><span id="mPct">0%</span></div><div id="mBar"><div id="mFill"></div></div></div></div>
-<div id="joy"><div id="joyK"></div></div><button id="run" type="button">¡Corre!</button>
+<div id="joy"><div id="joyK"></div></div><button id="run" type="button">¡Corre!</button><div id="zoom"><button id="zIn" type="button" aria-label="Acercar">+</button><button id="zOut" type="button" aria-label="Alejar">−</button></div>
 <div id="rows"></div>
 <div id="mold"><div id="mPrev"><span id="mTag">🎬 Sala de creación</span></div><div class="mrow msh"><button data-sh="gota" title="Gota">💧</button><button data-sh="chafada" title="Chafada">🥞</button><button data-sh="lamina" title="Lámina">📄</button><button data-sh="libro" title="Libro">📕</button><button data-sh="bola" title="Bola">🟠</button><button data-sh="alta" title="Alta">🗿</button></div>
 <label>↔<input type="range" id="mW" min="0.15" max="2.2" step="0.01"></label><label>↕<input type="range" id="mH" min="0.08" max="2.2" step="0.01"></label><label>⬌<input type="range" id="mD" min="0.05" max="2.2" step="0.01"></label><div class="mrow"><button id="mClose">✔</button></div></div>
 <div id="acts"></div>
 <script src="online-config.js"></script><script src="online-cf.js"></script>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=18"></script>
+<script type="module" src="game.js?v=19"></script>
 </body></html>
