@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { comprobarOnline, SalaOnline } from './net.js';
-const VERSION = 17;
+const VERSION = 18;
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -561,7 +561,11 @@ let pendingMode = 'full';
 // ---------- controles v2 (joystick flotante analógico + cámara por arrastre, multitáctil) ----------
 let camYawS = 0, camLift = 0; let joyX = 0, joyY = 0, camYaw = 0, camPitch = .38; const keys = {}; const ptrs = new Map(); let joyId = null, camId = null, dragId = null; let hidden = false, runT = 6; const HID_T = 1.8; // v17: escondido = quieto >1.8 s -> sin joystick, deslizar = órbita 360°, botón ¡Corre!
 function setHidden(v) { if (v === hidden) return; hidden = v; document.body.classList.toggle('hid', v); $('run').classList.toggle('on', v); if (v) { if (joyId !== null) { ptrs.delete(joyId); joyId = null; } joyX = joyY = 0; joyHome(); } }
-function doRun() { runT = 5; if (me) me.still = 0; setHidden(false); S.pop(); }
+// v18: «¡Corre!» = el personaje vuelve al instante a su forma y aspecto originales (sin camuflaje, sin moldeado, despegado, sin pose) y se puede mover ya
+function resetMancha(m) { if (!m) return; const wasAtt = !!m.att; m.leap = null; if (m.att) { const [nx, nz] = anchorNormal(m.att); m.att = null; m.x += nx * .6; m.z += nz * .6; }
+  applySkin(m, null); setShape(m, 'gota'); m.cur = SHAPES.gota.s.slice(); m.S = SHAPES.gota.s.slice(); m.camFree = false; m.camo = 0; m.camoD = null; m.camoT = 0; m.inv = false; m.eyeVis = 1; m.wiggle = 0; m.shiver = 0; m.hop = .35; m.spin = 0; m.vx = m.vz = 0; m.vy = 0; m.still = 0; m.moving = false;
+  m.y = Math.max(groundAt(m.x, m.z, m.y + 1), 0); m.grounded = true; m.g.position.set(m.x, m.y, m.z); m.mat.userData.u.uFlat.value = 0; m.deco.forEach(d => d.visible = true); m.eyes.visible = true; return wasAtt; }
+function doRun() { if (!me || !me.alive || role !== 'hide') return; moldOpen(false); resetMancha(me); try { moldSync(); } catch (e) { } lastPct = -1; runT = 6; hidden = true; setHidden(false); if (joyId !== null) { ptrs.delete(joyId); joyId = null; } joyX = joyY = 0; joyHome(); S.pop(); }
 const joy = $('joy'), knob = $('joyK'); const JR = 56;
 function joyHome() { joy.style.left = ''; joy.style.top = ''; joy.style.bottom = ''; joy.classList.remove('act', 'float'); knob.style.transform = 'translate(-50%,-50%)'; }
 const layer = $('touch');
@@ -724,7 +728,7 @@ function update(dt) {
   if (!(me && me.alive && role === 'hide')) setHidden(false);
   const sub = Math.max(1, Math.ceil(sdt / (1 / 120))), h = sdt / sub;
   if (me && me.alive && role === 'hide') { moveMancha(me, wantX, wantZ, mag, sdt, sub, h, 5.4, ix, iy);
-    me.still = me.moving ? 0 : me.still + sdt; if (joyId !== null || me.moving || me.leap) runT = Math.max(runT, 2); else runT = Math.max(0, runT - sdt); setHidden(!focus && joyId === null && runT <= 0 && me.still >= HID_T && !moldIsOpen); me.wiggle = Math.max(0, (me.wiggle || 0) - sdt);
+    me.still = me.moving ? 0 : me.still + sdt; if (joyId !== null || me.moving || me.leap) runT = Math.max(runT, 4); else runT = Math.max(0, runT - sdt); setHidden(!focus && joyId === null && runT <= 0 && me.still >= HID_T && !moldIsOpen); me.wiggle = Math.max(0, (me.wiggle || 0) - sdt);
     me.camoT -= dt; if (me.camoT <= 0) { me.camoT = .12; me.camoD = camoCalc(me); actT = 0; const s = me.camoD.s; const b = $('aCopy'); if (b) { const nm = s ? s.name.replace(/^(el|la|los|las|un|una) /, '') : ''; const lab = s && me.skin === s ? '✔ Copiado' : 'Copiar'; const key = lab + '|' + nm; if (b.dataset.k !== key) { b.dataset.k = key; b.innerHTML = `<span>🎨</span>${lab}<em class="pill">${nm}</em>`; } } }
     me.camo = lerp(me.camo, me.camoD ? me.camoD.v : 0, ex(6, dt)); const pct = Math.round(me.camo * 100); if (pct !== lastPct) { lastPct = pct; $('mPct').textContent = pct + '%'; $('mFill').style.width = pct + '%'; const D = me.camoD || {}; const ok = v => v > .8 ? '✅' : v > .45 ? '🟡' : '❌'; $('mFace').innerHTML = (pct < 40 ? '🙈 ¡Se te ve!' : pct < 65 ? '🤔 Casi' : pct < 85 ? '😏 ¡Bien!' : pct < 95 ? '🫥 ¡Casi invisible!' : '👻 ¡ERES EL DECORADO!') + ` <small>🎨${ok(D.skin || 0)} ✋${ok(D.shape || 0)} 🧘${ok(D.still || 0)}</small>`; if (pct >= 94 && !me.inv) { me.inv = true; S.fanfare(); } if (pct < 88) me.inv = false; }
     rowsUI(); const rid = roomOf(me.x, me.z); if (rid !== curRoom) { if (curRoom >= 0) { bub('📍 ' + rooms[rid].def.name, 1600); S.pop(); } curRoom = rid; } }
