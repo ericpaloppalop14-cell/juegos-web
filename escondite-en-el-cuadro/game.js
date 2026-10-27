@@ -8,7 +8,7 @@
 // =====================================================================
 import * as THREE from 'three';
 import { SalaOnline, comprobarOnline } from './net.js';
-export const VERSION = 'v10 · Arreglos';
+export const VERSION = 'v11 · Ajuste fácil';
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 $('ver').textContent = VERSION;
@@ -51,6 +51,7 @@ function ctex(w, h, draw, rep) { const c = document.createElement('canvas'); c.w
 // fusiona mallas (mismo material) en una sola: muchas menos llamadas de dibujo
 function mergeGeos(list) { const gs = list.map(([g, m]) => { const q = (g.index ? g.toNonIndexed() : g.clone()); q.applyMatrix4(m); return q; }); let n = 0; for (const g of gs) n += g.attributes.position.count; const P = new Float32Array(n * 3), N = new Float32Array(n * 3), U = new Float32Array(n * 2); let o = 0; for (const g of gs) { const c = g.attributes.position.count; P.set(g.attributes.position.array, o * 3); N.set(g.attributes.normal.array, o * 3); if (g.attributes.uv) U.set(g.attributes.uv.array, o * 2); o += c; g.dispose(); } const r = new THREE.BufferGeometry(); r.setAttribute('position', new THREE.BufferAttribute(P, 3)); r.setAttribute('normal', new THREE.BufferAttribute(N, 3)); r.setAttribute('uv', new THREE.BufferAttribute(U, 2)); r.computeBoundingSphere(); return r; }
 function mergeByMaterial(root, parent, rel) { root.updateMatrixWorld(true); const inv = rel ? rel.matrixWorld.clone().invert() : new THREE.Matrix4(); const by = new Map(); root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !o.userData.keep) { const m = o.matrixWorld.clone().premultiply(inv); (by.get(o.material) || by.set(o.material, []).get(o.material)).push([o.geometry, m]); } }); const out = []; for (const [mat, l] of by) { const mesh = new THREE.Mesh(mergeGeos(l), mat); mesh.castShadow = mesh.receiveShadow = true; parent.add(mesh); out.push(mesh); } return out; }
+const blockers = [];
 const std = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: .75, metalness: 0 }, o));
 
 // patrones (para cojines, jarrones, baúles...) en blanco: el color lo pone el material
@@ -115,7 +116,7 @@ const isl = shelf(0, -3.2, 0, 4);
 // búho bibliotecario dormido encima de la estantería central
 const owl = new THREE.Group(); { const b = new THREE.Mesh(new THREE.SphereGeometry(.35, 16, 12), std('#b98a5e')); b.scale.y = 1.15; owl.add(b); const bel = new THREE.Mesh(new THREE.SphereGeometry(.25, 12, 10), std('#f4dcb8')); bel.position.set(0, -.08, .17); owl.add(bel); for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.09, 10, 8), std('#3a2a3a')); e.position.set(s * .13, .14, .29); e.scale.y = .25; owl.add(e); owl.userData['e' + s] = e; } owl.position.set(1.2, 4.6, -3.2); world.add(owl); }
 // mesas (no copiables, son muebles)
-const tableMat = std('#fff', { map: woodTex, roughness: .5 }); for (const [x, z] of [[-6, -.5], [6, -.5]]) { const t = new THREE.Group(); const top = new THREE.Mesh(new THREE.BoxGeometry(2.6, .12, 1.3), tableMat); top.position.y = .8; t.add(top); for (const [a, b] of [[-1.15, -.5], [1.15, -.5], [-1.15, .5], [1.15, .5]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.12, .8, .12), tableMat); l.position.set(a, .4, b); t.add(l); } t.position.set(x, 0, z); world.add(t); mergeByMaterial(t, world); world.remove(t); addBox(x, z, 2.6, 1.3, .86); }
+const tableMat = std('#fff', { map: woodTex, roughness: .5 }); for (const [x, z] of [[-6, -.5], [6, -.5]]) { const t = new THREE.Group(); const top = new THREE.Mesh(new THREE.BoxGeometry(2.6, .12, 1.3), tableMat); top.position.y = .8; t.add(top); for (const [a, b] of [[-1.15, -.5], [1.15, -.5], [-1.15, .5], [1.15, .5]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.12, .8, .12), tableMat); l.position.set(a, .4, b); t.add(l); } t.position.set(x, 0, z); world.add(t); blockers.push(...mergeByMaterial(t, world)); world.remove(t); addBox(x, z, 2.6, 1.3, .86); }
 // velas flotantes (decoración, sin colisión)
 const floatCandles = []; const fcRoot = new THREE.Group(); fcRoot.userData.ph = 0; const fcG = new THREE.Group(); { const cm = std('#fff6e0'), fm = new THREE.MeshBasicMaterial({ color: '#ffcf6b' }); const cg = new THREE.CylinderGeometry(.06, .06, .3, 8), fg = new THREE.SphereGeometry(.05, 6, 5); for (let i = 0; i < 10; i++) { const c = new THREE.Group(); c.add(new THREE.Mesh(cg, cm)); const f = new THREE.Mesh(fg, fm); f.position.y = .2; f.scale.y = 1.6; c.add(f); c.position.set((R() * 2 - 1) * 9, 4.6 + R(), (R() * 2 - 1) * 6); fcG.add(c); } world.add(fcG); const ms = mergeByMaterial(fcG, fcRoot); world.remove(fcG); for (const m of ms) m.castShadow = false; } world.add(fcRoot); floatCandles.push(fcRoot);
 
@@ -181,7 +182,7 @@ scatter('baul', 2, -10, 5, 2); scatter('baul', 1, 10, 4.5, 1); scatter('globo', 
 scatter('cuadro', 3, 9, 8.3, 2); scatter('cuadro', 2, -8, 8.4, 1.5); scatter('maceta', 3, 11, -8.2, 1.5); scatter('maceta', 3, -11.3, -8.3, 1.3); scatter('maceta', 2, 0, 8.6, 3);
 scatter('taburete', 3, -2, 1, 2.5); scatter('tetera', 2, -2.5, 4.5, 1.5); scatter('libro', 6, 0, 0, 8); scatter('pila', 2, -8, -3, 2); scatter('pila', 2, 8, -3, 2);
 // los objetos reales se dibujan fusionados por material (pocas llamadas); su grupo queda invisible para tocar/raycast
-const propStatic = new THREE.Group(); scene.add(propStatic); mergeByMaterial(propRoot, propStatic); propRoot.traverse(o => { if (o.isMesh) { o.material = o.material; o.visible = true; } }); propRoot.visible = false;
+const propStatic = new THREE.Group(); scene.add(propStatic); blockers.push(...mergeByMaterial(propRoot, propStatic)); propRoot.traverse(o => { if (o.isMesh) { o.material = o.material; o.visible = true; } }); propRoot.visible = false;
 // (en v7 Estudio vio una vela tapando la estantería del este: aquí nada se coloca pegado a las estanterías laterales)
 
 // brillos suaves bajo los objetos copiables cercanos
@@ -240,6 +241,7 @@ function updCamera(dt, x, y, z, snap) {
   camera.position.set(cx, Math.min(cy, H - .4), cz); camera.lookAt(cam.tx, cam.ty, cam.tz);
   // muebles entre la cámara y el personaje => semitransparentes
   v3.set(cam.tx, cam.ty, cam.tz); const dir = camera.position.clone().sub(v3); const len = dir.length(); ray.set(v3, dir.normalize()); ray.far = len;
+  if (blockers.length) { const bh = ray.intersectObjects(blockers, false)[0]; if (bh && bh.distance < len) { const nd = Math.max(1.1, bh.distance - .25); camera.position.copy(v3).addScaledVector(ray.ray.direction, nd); } }
   const hits = new Set(); for (const o of occluders) if (ray.intersectObject(o.obj, true).length) hits.add(o);
   for (const o of occluders) { const t = hits.has(o) ? .22 : 1; o.fade = lerp(o.fade, t, 1 - Math.exp(-dt * 10)); for (const m of o.mats) { m.opacity = o.fade; m.depthWrite = o.fade > .95; } }
 }
@@ -249,20 +251,29 @@ const joy = { id: null, sx: 0, sy: 0, x: 0, y: 0, t: 0, moved: false, cam: null,
 const joyEl = $('joy'), joyK = joyEl.firstElementChild; const keys = {};
 function tapTargets() { if (myRole === 'hider') return props.filter(p => p !== player.copy && Math.hypot(p.x - player.x, p.z - player.z) < 4).map(p => p.obj); return props.map(p => p.obj).concat(bots.filter(b => b.vivo).map(b => b.g), [...remotes.values()].filter(r => r.h.vivo && r.h.copy).map(r => r.h.g)); }
 function showJoy() { joyEl.style.left = joy.sx + 'px'; joyEl.style.top = joy.sy + 'px'; joyEl.style.display = 'block'; joyK.style.transform = ''; joy.shown = true; }
+const adjusting = () => ui.pal.classList.contains('on') && !!player?.copy;
+const ptrs = new Map(); let pinch = null;
+function pinchStart() { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), w: +SL.w.value, a: +SL.a.value, r: +SL.r.value }; }
 canvas.addEventListener('pointerdown', e => {
-  if (!G_ON || !player) return;
+  if (!G_ON || !player) return; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (adjusting() && ptrs.size === 2) { pinchStart(); joy.id = null; joy.orbit = false; joyEl.style.display = 'none'; return; }
   if (joy.id === null) {
     // raycast al tocar: si hay un objeto debajo del dedo, esperamos a ver si es toque o arrastre
     const hit = phase !== 'fin' && (myRole === 'hider' || phase === 'seek') ? pick(e.clientX, e.clientY, tapTargets()) : null;
-    Object.assign(joy, { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: 0, y: 0, t: performance.now(), moved: false, shown: false, hit: !!hit });
-    if (!hit) showJoy();
+    Object.assign(joy, { id: e.pointerId, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, x: 0, y: 0, t: performance.now(), moved: false, shown: false, hit: !!hit, orbit: adjusting() });
+    if (!hit && !joy.orbit) showJoy();
   } else if (joy.cam === null) { joy.cam = e.pointerId; joy.cx = e.clientX; joy.cy = e.clientY; }
 });
+function orbit(dx, dy) { cam.yaw -= dx * .011; cam.pitch = clamp(cam.pitch + dy * .005, .12, 1.25); }
 addEventListener('pointermove', e => {
-  if (e.pointerId === joy.id) { const dx = e.clientX - joy.sx, dy = e.clientY - joy.sy, d = Math.hypot(dx, dy); if (d > 10) { joy.moved = true; if (!joy.shown) showJoy(); } if (!joy.shown) return; const m = Math.min(d, 50) / (d || 1); joy.x = dx * m / 50; joy.y = dy * m / 50; joyK.style.transform = `translate(${dx * m}px,${dy * m}px)`; }
-  else if (e.pointerId === joy.cam) { cam.yaw -= (e.clientX - joy.cx) * .008; cam.pitch = clamp(cam.pitch + (e.clientY - joy.cy) * .004, .25, 1.05); joy.cx = e.clientX; joy.cy = e.clientY; }
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size >= 2 && adjusting()) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x); const k = (d / Math.max(20, pinch.d) - 1) * 70; setV('w', pinch.w + k, 1); setV('a', pinch.a + k, 1); setV('r', pinch.r + angDiff(ang, pinch.ang) * 180 / Math.PI * 1.25, 1); applyAdj(); return; }
+  if (e.pointerId === joy.id) { const dx = e.clientX - joy.sx, dy = e.clientY - joy.sy, d = Math.hypot(dx, dy); if (d > 10) { joy.moved = true; if (!joy.shown && !joy.orbit) showJoy(); }
+    if (joy.orbit) { if (joy.moved) orbit(e.clientX - joy.lx, e.clientY - joy.ly); joy.lx = e.clientX; joy.ly = e.clientY; return; }
+    if (!joy.shown) return; const m = Math.min(d, 50) / (d || 1); joy.x = dx * m / 50; joy.y = dy * m / 50; joyK.style.transform = `translate(${dx * m}px,${dy * m}px)`; }
+  else if (e.pointerId === joy.cam) { orbit(e.clientX - joy.cx, e.clientY - joy.cy); joy.cx = e.clientX; joy.cy = e.clientY; }
 });
-function upP(e) { if (e.pointerId === joy.id) { const dt = performance.now() - joy.t; if (!joy.moved && (joy.hit ? dt < 600 : dt < 250)) onTap(joy.sx, joy.sy); joy.id = null; joy.x = joy.y = 0; joyEl.style.display = 'none'; } else if (e.pointerId === joy.cam) joy.cam = null; }
+function upP(e) { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (e.pointerId === joy.id) { const dt = performance.now() - joy.t; if (!joy.moved && (joy.hit ? dt < 600 : dt < 250)) onTap(joy.sx, joy.sy); joy.id = null; joy.x = joy.y = 0; joy.orbit = false; joyEl.style.display = 'none'; } else if (e.pointerId === joy.cam) joy.cam = null; }
 addEventListener('pointerup', upP); addEventListener('pointercancel', upP);
 addEventListener('keydown', e => { keys[e.code] = 1; if (e.code === 'Space') doJump(); }); addEventListener('keyup', e => keys[e.code] = 0);
 function inputVec() { let x = joy.x, y = joy.y; if (keys.KeyA || keys.ArrowLeft) x -= 1; if (keys.KeyD || keys.ArrowRight) x += 1; if (keys.KeyW || keys.ArrowUp) y -= 1; if (keys.KeyS || keys.ArrowDown) y += 1; if (keys.KeyQ) cam.yaw += .04; if (keys.KeyE) cam.yaw -= .04; const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; } return { x, y, l: Math.min(1, l) }; }
@@ -283,11 +294,39 @@ let G_ON = false, mode = null, phase = '', tLeft = 0, score = 0, player = null, 
 let base0 = null; // ajustes del jugador: corrección = slider * ERR_MAX
 function setPal(on) { ui.pal.classList.toggle('on', !!on && mode !== 'seek' && myRole !== 'critic' && !!player?.copy && phase !== 'fin'); $('bPal').style.display = mode === 'seek' || myRole === 'critic' || !player?.copy || !player.vivo || phase === 'fin' ? 'none' : ''; }
 function sliderErr() { const e = Object.assign({}, base0); for (const k in SL) e[k] = base0[k] + (+SL[k].value / 100) * ERR_MAX[k] * 1.6; e.pat = player.err.pat; e.ry = base0.ry; return e; }
-for (const k in SL) SL[k].addEventListener('input', () => { if (!player?.copy) return; player.err = sliderErr(); player.rebuild(); });
-$('pPat').onclick = () => { if (!player?.copy) return; player.err.pat = (player.err.pat + 1) % 3; player.rebuild(); $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; SND.tick(); };
-$('pGota').onclick = () => { if (!player?.copy || gotaUsada) return; gotaUsada = true; for (const k of ['h', 'l', 's']) { const cur = player.err[k]; const target = cur * .3; SL[k].value = clamp(Math.round(((target - base0[k]) / (ERR_MAX[k] * 1.6)) * 100), -100, 100); } player.err = sliderErr(); player.rebuild(); $('pGota').disabled = true; $('pGota').textContent = '💧 Gastado'; SND.pop(); msg('💧 ¡Color casi copiado! Afina tú el resto'); };
+for (const k in SL) SL[k].addEventListener('input', () => applyAdj());
+function setV(k, v, noApply) { SL[k].value = clamp(Math.round(v), -100, 100); if (!noApply) applyAdj(); }
+function applyAdj() { if (!player?.copy || !base0) return; player.err = sliderErr(); player.rebuild(); updAdj(); }
+const HS = $('hStrip'), hctx = HS.getContext('2d'); let swOff = [];
+function mainCol() { const p = player.copy, T = TYPES[p.type]; return new THREE.Color(T.pal[p.vi % T.pal.length]); }
+function colAt(v) { const c = mainCol(), hsl = {}; c.getHSL(hsl); const e = player.err; const h = (hsl.h + (base0.h + v / 100 * ERR_MAX.h * 1.6) / 360 + 2) % 1; return new THREE.Color().setHSL(h, clamp(hsl.s + e.s, 0, 1), clamp(hsl.l + e.l, .03, .97)).getStyle(); }
+const vStar = () => clamp(-base0.h / (ERR_MAX.h * 1.6) * 100, -100, 100);
+function newSwatches() { const o = [0, -10, 10, -22, 22]; for (let i = o.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [o[i], o[j]] = [o[j], o[i]]; } swOff = o; const sw = $('sw'); sw.innerHTML = ''; o.forEach((off, i) => { const b = document.createElement('button'); b.onclick = () => { setV('h', vStar() + off + (Math.random() * 4 - 2)); SND.tick(); }; sw.appendChild(b); }); }
+function updAdj() {
+  if (!player?.copy || !base0) return; const W2 = HS.width, H2 = HS.height;
+  for (let x = 0; x < W2; x += 3) { hctx.fillStyle = colAt(x / W2 * 200 - 100); hctx.fillRect(x, 0, 3, H2); }
+  const mx = (+SL.h.value + 100) / 200 * W2; hctx.fillStyle = '#fff'; hctx.fillRect(mx - 3, 0, 6, H2); hctx.strokeStyle = '#5a2a7e'; hctx.lineWidth = 2; hctx.strokeRect(mx - 4, 1, 8, H2 - 2);
+  [...$('sw').children].forEach((b, i) => b.style.background = colAt(clamp(vStar() + swOff[i], -100, 100)));
+  const e = player.err, ah = Math.abs(e.h), amt = a => a < 10 ? 'un poquito' : a < 25 ? 'un poco' : 'bastante';
+  let t = ah < 3 ? '✅ ¡Tono clavado!' : (e.h > 0 ? '◀ ' : '') + 'Tono: mueve ' + amt(ah) + (e.h > 0 ? '' : ' ▶');
+  if (Math.abs(e.l) > .04) t += e.l > 0 ? ' · ☀️ más oscuro' : ' · ☀️ más claro'; if (Math.abs(e.s) > .07) t += e.s > 0 ? ' · 💜 menos vivo' : ' · 💜 más vivo';
+  $('hint').textContent = t;
+  const pw = +SL.w.value, pa = +SL.a.value; const P = $('pad'); const S = P.clientWidth || 124;
+  $('padKnob').style.left = ((pw + 100) / 200 * S) + 'px'; $('padKnob').style.top = ((100 - pa) / 200 * S) + 'px';
+  $('padShape').style.width = (S * .42 * (1 + e.w)) + 'px'; $('padShape').style.height = (S * .42 * (1 + e.a)) + 'px';
+  const ang = (+SL.r.value) / 100 * Math.PI, Rr = (($('dial').clientWidth || 124) / 2) * .64, c0 = ($('dial').clientWidth || 124) / 2;
+  $('dialKnob').style.left = (c0 + Math.sin(ang) * Rr) + 'px'; $('dialKnob').style.top = (c0 - Math.cos(ang) * Rr) + 'px';
+  $('padShape').style.transform = `translate(-50%,-50%) rotate(${(+SL.r.value) * .8}deg)`;
+}
+function drag(el, f) { el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); f(e); e.preventDefault(); }); el.addEventListener('pointermove', e => { if (el.hasPointerCapture(e.pointerId)) f(e); }); }
+drag(HS, e => { const r = HS.getBoundingClientRect(); setV('h', ((e.clientX - r.left) / r.width) * 200 - 100); });
+drag($('pad'), e => { const r = $('pad').getBoundingClientRect(); setV('w', ((e.clientX - r.left) / r.width) * 200 - 100, 1); setV('a', 100 - ((e.clientY - r.top) / r.height) * 200, 1); applyAdj(); });
+drag($('dial'), e => { const r = $('dial').getBoundingClientRect(); const a = Math.atan2(e.clientX - r.left - r.width / 2, -(e.clientY - r.top - r.height / 2)); setV('r', a / Math.PI * 100); });
+$('hM').onclick = () => setV('h', +SL.h.value - 2); $('hP').onclick = () => setV('h', +SL.h.value + 2);
+$('pPat').onclick = () => { if (!player?.copy) return; player.err.pat = (player.err.pat + 1) % 3; player.rebuild(); updAdj(); $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; SND.tick(); };
+$('pGota').onclick = () => { if (!player?.copy || gotaUsada) return; gotaUsada = true; for (const k of ['h', 'l', 's']) { const cur = player.err[k]; const target = cur * .3; SL[k].value = clamp(Math.round(((target - base0[k]) / (ERR_MAX[k] * 1.6)) * 100), -100, 100); } player.err = sliderErr(); player.rebuild(); updAdj(); $('pGota').disabled = true; $('pGota').textContent = '💧 Gastado'; SND.pop(); msg('💧 ¡Color casi copiado! Afina tú el resto'); };
 $('pOut').onclick = () => { if (!player?.copy) return; player.quitar(); setPal(false); msg('Vuelves a ser Mancha'); };
-$('bPal').onclick = () => setPal(!ui.pal.classList.contains('on'));
+$('bPal').onclick = () => { setPal(!ui.pal.classList.contains('on')); requestAnimationFrame(updAdj); };
 $('bWh').onclick = () => { if (!G_ON || phase !== 'seek' || myRole === 'critic' || mode === 'seek') return; whistles++; score += 60; SND.whistle(); msg('🎵 +60 · ¡pero te ha oído!'); if (ai) ai.noise = { x: player.x, z: player.z, t: 4 }; noteFx(player.x, player.z); if (net) net.enviar({ t: 'silbo', x: player.x, z: player.z }); };
 $('bJump').onclick = () => doJump();
 function doJump() { if (G_ON && player && player.y <= player.gnd + .01 && !(myRole === 'critic' && phase === 'hide')) { player.vy = 5.2; SND.pop(); } }
@@ -326,7 +365,7 @@ function onTap(cx, cy) {
     else { wrongs++; tLeft = Math.max(0, tLeft - 5); SND.no(); msg('❌ ¡Era ' + art(pos.type) + ' de verdad! −5 s'); wake(); pos.obj.rotation.z = .3; setTimeout(() => pos.obj.rotation.z = 0, 200); if (net) net.enviar({ t: 'toque', ok: 0 }); }
   }
 }
-function disfrazarDe(p) { if (!p || !player.vivo || phase === 'fin') return; player.disfrazar(p); base0 = Object.assign({}, player.err); for (const k in SL) SL[k].value = 0; $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; SND.pop(); msg('✨ ¡Eres ' + art(p.type) + '! Ajusta 🎨 para parecerte más'); setPal(true); }
+function disfrazarDe(p) { if (!p || !player.vivo || phase === 'fin') return; player.disfrazar(p); base0 = Object.assign({}, player.err); for (const k in SL) SL[k].value = 0; $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; newSwatches(); SND.pop(); msg('✨ ¡Eres ' + art(p.type) + '! Ajústate abajo · arrastra para mirar 360°', 2.6); setPal(true); requestAnimationFrame(updAdj); }
 let nearProp = null;
 $('bDisf').onclick = () => disfrazarDe(nearProp);
 function caught(b) { b.vivo = false; b.quitar(); b.body.scale.setScalar(1.2); found++; score += 150; SND.ok(); msg('🎉 ¡Pillado! +150'); confetti(b.x, b.z); }
@@ -436,6 +475,7 @@ function loop(now) {
   } else { // menú: cámara paseando por la biblioteca
     cam.yaw = t * .08; cam.pitch = .45; cam.dist = 7; updCamera(dt, 0, 0, 2); cam.dist = 6; for (const r of rings) r.visible = false;
   }
+  { const w = innerWidth, h = innerHeight; if (h > w && ui.pal.classList.contains('on')) camera.setViewOffset(w, h, 0, h * .2, w, h); else if (camera.view && camera.view.enabled) camera.clearViewOffset(); }
   renderer.render(scene, camera);
 }
 requestAnimationFrame(loop);
