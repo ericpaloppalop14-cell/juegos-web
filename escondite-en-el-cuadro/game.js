@@ -8,7 +8,7 @@
 // =====================================================================
 import * as THREE from 'three';
 import { SalaOnline, comprobarOnline } from './net.js';
-export const VERSION = 'v11 · Ajuste fácil';
+export const VERSION = 'v12 · Arreglos';
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 $('ver').textContent = VERSION;
@@ -336,15 +336,16 @@ $('cNo').onclick = () => $('conf').classList.remove('on');
 let notes = []; function noteFx(x, z) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex(64, 64, g => { g.font = '48px serif'; g.fillText('🎵', 6, 50); }), transparent: true })); s.position.set(x, 1.8, z); s.scale.setScalar(.8); scene.add(s); notes.push({ s, t: 1.5 }); }
 
 function resetWorld() { for (const b of bots) b.dispose(); bots = []; if (player) player.dispose(); if (critic) scene.remove(critic.g); critic = null; for (const r of remotes.values()) r.h.dispose(); remotes.clear(); }
+function freeSpawn(x0, z0, r) { for (let k = 0; k < 200; k++) { const a = k * 2.4, d = k * .06; const x = x0 + Math.cos(a) * d, z = z0 + Math.sin(a) * d; if (freeAt(x, z, r + .1)) return { x, z }; } return { x: x0, z: z0 }; }
 function startGame(m, opts = {}) {
   resetWorld(); mode = m; score = 0; whistles = 0; wrongs = 0; found = 0; gotaUsada = false; $('pGota').disabled = false; $('pGota').textContent = '💧 Cuentagotas'; myRole = opts.role || (m === 'seek' ? 'critic' : 'hider');
   const L = LV[LEVEL]; G_ON = true; show(null); ai = null;
   if (myRole === 'hider') {
-    player = new Hider('#ff8fc8'); Object.assign(player, { x: opts.x ?? 0, z: opts.z ?? 7, gnd: 0 }); cam.yaw = 0; phase = 'hide'; tLeft = opts.hide ?? 20;
+    player = new Hider('#ff8fc8'); Object.assign(player, { gnd: 0 }, freeSpawn(opts.x ?? 0, opts.z ?? 7, player.r)); cam.yaw = 0; phase = 'hide'; tLeft = opts.hide ?? 20;
     if (!net) { critic = { g: mochi('#a77bff', true), x: 0, z: -6.2, y: 0, face: 0, r: .45, susp: 0, state: 'wait', tapT: L.tap, stun: 0, target: null, stuckT: 0, lx: 0, lz: 0 }; scene.add(critic.g); ai = { noise: null }; }
     msg('👆 Toca un objeto que brille para disfrazarte', 3);
   } else {
-    player = new Hider('#a77bff'); player.body.clear(); player.body.add(mochi('#a77bff', true)); Object.assign(player, { x: opts.x ?? 0, z: opts.z ?? 7, gnd: 0 }); cam.yaw = 0;
+    player = new Hider('#a77bff'); player.body.clear(); player.body.add(mochi('#a77bff', true)); Object.assign(player, { gnd: 0 }, freeSpawn(opts.x ?? 0, opts.z ?? 7, player.r)); cam.yaw = 0;
     phase = 'hide'; tLeft = opts.hide ?? 3;
     if (!net) { for (let i = 0; i < L.bots; i++) { const b = new Hider('#9fd0ff'); let tries = 0; while (tries++ < 60) { const p = props[(Math.random() * props.length) | 0]; const a = Math.random() * 6.28, d = rand(1, 2.2); const x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d; if (Math.hypot(x - player.x, z - player.z) > 4 && freeAt(x, z, p.r) && !bots.some(o => Math.hypot(o.x - x, o.z - z) < 1.5)) { b.x = x; b.z = z; const target = rand(...L.bsim); const e = randErr(1); const sc = (1 - target / 100) / .55; for (const k in ERR_MAX) e[k] *= clamp(sc, .05, 1); e.pat = p.pat; e.ry = Math.random() * 6.28; b.disfrazar(p, e); b.wobMul = L.bwob; break; } } b.g.userData.hider = b; bots.push(b); } }
     msg('🔍 ¡Los bots se esconden! Busca objetos que no encajen', 3);
@@ -414,6 +415,8 @@ function aiUpdate(dt) {
     else if (!c.wp || Math.hypot(c.wp.x - c.x, c.wp.z - c.z) < .8) { let t = 0; do c.wp = { x: rand(-W + 2, W - 2), z: rand(-D + 2, D - 2) }; while (!freeAt(c.wp.x, c.wp.z, .5) && t++ < 20); }
   }
   const tg = c.target ? (c.target.kind === 'p' ? p : c.target.kind === 'o' ? c.target.p : c.target) : c.wp;
+  { const key = c.target ? (c.target.kind === 'o' ? c.target.p : c.target.kind) : c.wp; if (!c.prog || c.prog.key !== key) c.prog = { key, best: 1e9, t: 0 }; const d0 = Math.hypot(tg.x - c.x, tg.z - c.z); if (d0 < c.prog.best - .3) { c.prog.best = d0; c.prog.t = 0; } else c.prog.t += dt;
+    if (c.prog.t > 3) { c.target = null; c.wp = null; c.det = 0; c.blk = 0; c.prog = null; c.susp = Math.min(c.susp, .6); return; } }
   const dx = tg.x - c.x, dz = tg.z - c.z, dd = Math.hypot(dx, dz);
   const reach = c.target && c.target.kind !== 'n' ? 1.1 + (tg.r || .4) : .7;
   if (dd > reach) { const sp = L.sp * (c.target ? 1.15 : .8) * dt; let ang = Math.atan2(dx, dz); if (c.det > 0) { c.det -= dt; ang += c.side * 1.25; } const ox = c.x, oz = c.z; moveCircle(c, Math.sin(ang) * sp, Math.cos(ang) * sp); const got = Math.hypot(c.x - ox, c.z - oz);

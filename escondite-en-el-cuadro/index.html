@@ -80,6 +80,13 @@ input.code{font:700 26px Fredoka;width:140px;text-align:center;border-radius:20p
  #pal .pc{position:absolute;left:0;top:calc(56px + env(safe-area-inset-top));width:min(310px,37vw);max-height:calc(100vh - 62px);overflow:auto;background:rgba(255,255,255,.9);border-radius:0 20px 20px 0;padding:6px 8px}
  #pal .ps{position:absolute;right:88px;bottom:calc(8px + env(safe-area-inset-bottom));margin:0;background:rgba(255,255,255,.85);border-radius:20px;padding:6px}
  .pad,.dial{width:112px;height:112px}}
+@media (orientation:landscape) and (max-height:380px){
+ #pal .pc{padding:3px 6px;max-height:calc(100vh - 58px);top:calc(52px + env(safe-area-inset-top))}
+ #pal .pr{flex-wrap:nowrap;gap:4px;margin-bottom:2px}#pal .pr button{font-size:13px;padding:2px 8px}
+ .hrow,.sw{margin:1px 0}.sw{gap:4px}.hint{font-size:12px;min-height:0}
+ #pal label{font-size:12px}#pal .g{gap:0 8px}
+ .pad,.dial{width:100px;height:100px}#pal .ps{padding:4px}
+ .scr{gap:6px;padding:6px}.tcard{padding:10px}.tcard .em{font-size:44px}#res .big{font-size:40px}}
 </style>
 </head><body>
 <canvas id="c"></canvas>
@@ -107,10 +114,10 @@ input.code{font:700 26px Fredoka;width:140px;text-align:center;border-radius:20p
   <div class="row"><button class="btn yel sm" id="oEmp" style="display:none">▶ Empezar</button><button class="btn lil sm" id="oSalir">Volver</button></div>
 </div>
 
-<div class="scr" id="conf"><div class="tcard"><b>¿Salir de la partida?</b><p>Perderás esta ronda.</p></div><div class="row"><button class="btn" id="cSi">Sí, salir</button><button class="btn teal sm" id="cNo">Seguir jugando</button></div></div>
+<div class="scr" id="conf"><div class="tcard"><b>¿Salir de la partida?</b><p>Perderás esta ronda.</p></div><div class="row"><button class="btn" id="cSi">Sí, salir</button><button class="btn teal" id="cNo">Seguir jugando</button></div></div>
 <div class="scr" id="res">
   <div class="tcard"><div class="big" id="rEm"></div><b id="rTi"></b><p id="rTx"></p></div>
-  <div class="row"><button class="btn" id="rOtra">🔁 Otra vez</button><button class="btn lil sm" id="rMenu">Menú</button></div>
+  <div class="row"><button class="btn" id="rOtra">🔁 Otra vez</button><button class="btn lil" id="rMenu">Menú</button></div>
 </div>
 
 <div id="hud">
@@ -141,5 +148,5 @@ input.code{font:700 26px Fredoka;width:140px;text-align:center;border-radius:20p
 <script src="online-config.js"></script>
 <script src="online-cf.js"></script>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=11"></script>
+<script type="module" src="game.js?v=12"></script>
 </body></html>
