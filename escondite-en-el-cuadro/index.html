@@ -68,23 +68,41 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 #shareImg{max-width:min(70vw,260px);max-height:38vh;border-radius:14px;border:4px solid #ffd45a}
 .fadeFrame{position:fixed;inset:0;z-index:8;pointer-events:none;border:0 solid #ffd45a;opacity:0;transition:none}
 .how{font-size:14px;color:#6a3aa0;text-align:left;margin:0;padding-left:18px;line-height:1.35}
+
+#touch{position:fixed;inset:0;z-index:2;display:none;touch-action:none}#touch.on{display:block}
+#fade{position:fixed;inset:0;z-index:20;pointer-events:none;opacity:0;transition:opacity .35s;background:radial-gradient(circle,#ffd1ea,#7a5cff)}#fade.on{opacity:1}
+#joy{pointer-events:none;transition:opacity .2s;opacity:.55}#joy.act{opacity:1}#joy.float{left:0;bottom:auto}
+#menu{background:radial-gradient(ellipse at 50% 40%,rgba(255,240,210,.15),rgba(90,40,140,.35))}
+.mcard{display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:3px solid rgba(255,255,255,.7);border-radius:34px;padding:16px 16px 14px;box-shadow:0 20px 50px rgba(60,20,110,.35);max-width:560px;animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:scale(.8);opacity:0}}
+.ribbon{background:linear-gradient(90deg,#ffcf4a,#ff9f3d);color:#7a3a00;font-weight:700;padding:3px 16px;border-radius:14px;font-size:13px;letter-spacing:2px;box-shadow:0 3px 0 #c97a10}
+.btn.big{font-size:24px;min-width:250px;display:flex;flex-direction:column;align-items:center;animation:glow 2s ease-in-out infinite}.btn.big small{font-size:13px;opacity:.9;font-weight:600}
+@keyframes glow{50%{box-shadow:0 5px 0 #d04a8f,0 0 30px rgba(255,150,210,.9)}}
+.btn.ghost{background:rgba(255,255,255,.85);color:#7a3aa0;text-shadow:none;box-shadow:0 4px 0 rgba(120,60,170,.4)}
+.chip{font-size:13px;font-weight:700;color:#fff;background:rgba(122,92,255,.75);padding:4px 12px;border-radius:12px}
+.pill.warn{background:#ff5f8f;color:#fff;animation:beat .5s infinite}@keyframes beat{50%{transform:scale(1.12)}}
+.ab.pulse{animation:pulse .3s}@keyframes pulse{40%{transform:scale(1.18)}}
+.glass{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+@media (orientation:landscape) and (max-height:520px){.mcard{padding:8px 14px;gap:6px;max-width:640px}.logo{font-size:38px}.logo span{font-size:.55em}.sub{display:none}.btn.big{font-size:20px;padding:8px 18px}.btn.sm{padding:7px 12px;font-size:15px}.ribbon{font-size:11px}.glass{padding:8px 14px;gap:6px}#shareImg{max-height:30vh}.glass h2{font-size:22px}.big{font-size:16px}}
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="ver">v1</div>
+<div id="ver">v2 · Castillo</div><div id="touch"></div><div id="fade"></div>
 <div id="toast"></div><div id="bub"></div><div id="cross"></div>
 <div id="frameFx" class="fadeFrame"></div>
 <div id="menu" class="scr on">
+ <div class="mcard">
+ <div class="ribbon">✦ Museo mágico ✦</div>
  <div class="logo">Escondite<span>en el Cuadro</span></div>
- <div class="sub">🎨 De noche, los cuadros del museo cobran vida. ¡Píntate igual que el cuadro y que El Crítico no te vea!</div>
- <button class="btn" id="bPlay">▶ Jugar (escondes y buscas)</button>
- <div class="row"><button class="btn teal sm" id="bHide">🙈 Solo esconderme</button><button class="btn yel sm" id="bSeek">🧐 Ser El Crítico</button></div>
- <div class="row"><button class="btn lil sm" id="b2p">👯 2 en un móvil</button><button class="btn lil sm" id="bOn">🌐 Sala online (próximamente)</button></div>
- <div class="row"><button class="btn sm" id="bHow">❓ Cómo se juega</button><button class="btn sm" id="bMute">🔊</button></div>
+ <div class="sub">🏰 De noche, el castillo cobra vida: retratos que te miran, cuadros que respiran y armaduras de gelatina. ¡Píntate igual que lo que tengas al lado y que El Crítico no te vea!</div>
+ <button class="btn big" id="bPlay">▶ ¡Jugar!<small>te escondes y luego buscas</small></button>
+ <div class="row"><button class="btn teal sm" id="bHide">🙈 Esconderme</button><button class="btn yel sm" id="bSeek">🧐 Ser El Crítico</button><button class="btn lil sm" id="b2p">👯 2 en un móvil</button></div>
+ <div class="row"><button class="btn ghost sm" id="bOn">🌐 Sala online · pronto</button><button class="btn ghost sm" id="bHow">❓ Cómo se juega</button><button class="btn ghost sm" id="bMute">🔊</button></div>
+ <div class="chip" id="mBest"></div>
+ </div>
 </div>
-<div id="pick" class="scr"><h2>¿En qué cuadro entramos?</h2><div class="cards" id="cards"></div><button class="btn sm lil" data-back>← Volver</button></div>
 <div id="howS" class="scr"><div class="glass"><h2>Cómo se juega</h2><ul class="how">
-<li><b>Mueve</b> con el joystick de la izquierda y <b>gira la cámara</b> arrastrando el dedo por la derecha.</li>
-<li>Eres una <b>Mancha</b>: tienes 30 segundos. Acércate a algo y pulsa <b>💧 Color</b> para chuparle el color y <b>🖌 Dibujo</b> para copiar sus rayas, lunares o cuadros.</li>
+<li><b>Pon el dedo en la mitad izquierda</b>: aparece el joystick y te mueves. <b>Arrastra por la derecha</b> para girar la cámara.</li>
+<li>Eres una <b>Mancha</b>: tienes 30 segundos. Pégate a un cuadro, tapiz, mueble o alfombra y pulsa <b>💧 Color</b> para chuparle el color y <b>🖌 Dibujo</b> para copiar sus rayas, lunares o cuadros.</li>
 <li>Pulsa <b>🧘 Pose</b> para ponerte bolita, alta, plana o tumbada como lo que imitas. ¡Mira el % de camuflaje!</li>
 <li>Luego llega <b>El Crítico</b>. Si te mueves, ¡te ve! Aguanta hasta el final.</li>
 <li>Cuando tú eres El Crítico, apunta al centro y pulsa <b>🎯</b>. Ojo: tienes pocos disparos. Las Manchas a veces estornudan… 🤧</li></ul>
@@ -96,5 +114,5 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <div id="joy"><div id="joyK"></div></div>
 <div id="acts"></div>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=1"></script>
+<script type="module" src="game.js?v=2"></script>
 </body></html>
