@@ -112,9 +112,21 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 #rows{position:fixed;right:calc(max(12px,env(safe-area-inset-right)) + 150px);bottom:max(18px,env(safe-area-inset-bottom));z-index:5;display:none;flex-direction:column;gap:6px;align-items:center;background:rgba(255,255,255,.85);border-radius:18px;padding:6px;font:700 12px Fredoka;color:#7a3aa0}
 #rows.on{display:flex}#rows button{width:48px;height:44px;border:none;border-radius:14px;font:700 20px Fredoka;background:#efe6ff;color:#7a3aa0;touch-action:none}#rows button.sel{background:#ff6fb5;color:#fff}
 @media (orientation:portrait){#rows{right:auto;left:max(10px,env(safe-area-inset-left));bottom:auto;top:40%}}
+/* v7: sala de creación en directo (PiP) arriba a la derecha */
+#mold{display:none!important;width:min(24vw,150px)!important;top:max(168px,calc(env(safe-area-inset-top) + 164px))!important;padding:0!important;gap:3px!important}
+#mold.on{display:flex!important}#mold:not(.open)>.mrow,#mold:not(.open)>label{display:none!important}
+#mPrev{position:relative;touch-action:none;border-width:2px!important}
+#mTag{position:absolute;left:0;right:0;bottom:2px;text-align:center;font:700 9px Fredoka;color:#fff;text-shadow:0 1px 2px #7a3aa0;pointer-events:none}
+#mold .msh{display:grid!important;grid-template-columns:repeat(3,1fr);gap:2px!important;padding:2px!important}
+#mold .msh button{padding:3px 0!important;font-size:15px!important;min-height:30px}
+#mold label{font-size:13px!important}#mold input{min-width:0;width:100%}
+#mClose{width:100%;min-height:30px}
+@media (orientation:landscape) and (max-height:520px){#mold{top:6px!important;width:170px!important}#mPrev{aspect-ratio:4/3}}
+.act.sel,#acts button.sel{outline:3px solid #ff6fb5}
+@media (orientation:landscape) and (max-height:520px){#mold .msh{grid-template-columns:repeat(6,1fr)}body.molding #rows,body.molding #acts{display:none!important}}
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="ver">v6 · Escondite justo</div><div id="touch"></div><div id="fade"></div>
+<div id="ver">v7 · Colocación fina</div><div id="touch"></div><div id="fade"></div>
 <div id="toast"></div><div id="bub"></div><div id="cross"></div>
 <div id="frameFx" class="fadeFrame"></div>
 <div id="menu" class="scr on">
@@ -139,7 +151,7 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <li>Eres una <b>Mancha</b> y tienes 45 segundos. Pulsa <b>🦘 Saltar</b> mirando a un cuadro, una lámpara de pared, una estantería, un escudo o una cortina: ¡saltas, te pegas y copias su textura!</li>
 <li>Pegada a la pared, el joystick te desliza por ella (y pasas del zócalo al papel o de una balda de libros a otra). Vuelve a pulsar 🦘 para bajar.</li>
 <li><b>🎨 Copiar</b> copia la textura de lo que tocas: la alfombra si estás encima, la pared o el mueble si estás pegada. El botón te dice qué vas a copiar.</li>
-<li><b>✋ Moldear</b>: cháfate en la alfombra, hazte lámina en un cuadro o libro en la estantería, y ajusta ancho, alto y grosor.</li>
+<li><b>🎬 Sala de creación</b>: arriba a la derecha te ves en directo. Pegada a algo o en una fila, el joystick solo te mueve por esa zona y puedes arrastrarte con el dedo (en pantalla o en la ventanita) hasta el sitio exacto.</li><li><b>✋ Moldear</b>: cháfate en la alfombra, hazte lámina en un cuadro o libro en la estantería, y ajusta ancho, alto y grosor.</li>
 <li>Si te quedas quieta y bien camuflada, cierras los ojos y desapareces. El Crítico tendrá que acercarse muchísimo para verte.</li>
 <li>Cuando tú eres El Crítico: apunta al centro y pulsa <b>🎯</b>. Fíjate MUCHO: ojitos que asoman, un libro raro, una lámpara de más… 🤧</li></ul>
 <button class="btn" data-back>¡Entendido!</button></div></div>
@@ -149,10 +161,10 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <div id="meter"><div id="mTxt"><span id="mFace">🙈</span><span id="mPct">0%</span></div><div id="mBar"><div id="mFill"></div></div></div></div>
 <div id="joy"><div id="joyK"></div></div>
 <div id="rows"></div>
-<div id="mold"><div id="mPrev"></div><div class="mrow"><button data-sh="gota">💧 Gota</button><button data-sh="chafada">🥞 Chafada</button><button data-sh="lamina">📄 Lámina</button><button data-sh="libro">📕 Libro</button><button data-sh="bola">🟠 Bola</button><button data-sh="alta">🗿 Alta</button></div>
-<label>↔ Ancho<input type="range" id="mW" min="0.15" max="2.2" step="0.01"></label><label>↕ Alto<input type="range" id="mH" min="0.08" max="2.2" step="0.01"></label><label>⬌ Grosor<input type="range" id="mD" min="0.05" max="2.2" step="0.01"></label><div class="mrow"><button id="mClose">✔ Listo</button></div></div>
+<div id="mold"><div id="mPrev"><span id="mTag">🎬 Sala de creación</span></div><div class="mrow msh"><button data-sh="gota" title="Gota">💧</button><button data-sh="chafada" title="Chafada">🥞</button><button data-sh="lamina" title="Lámina">📄</button><button data-sh="libro" title="Libro">📕</button><button data-sh="bola" title="Bola">🟠</button><button data-sh="alta" title="Alta">🗿</button></div>
+<label>↔<input type="range" id="mW" min="0.15" max="2.2" step="0.01"></label><label>↕<input type="range" id="mH" min="0.08" max="2.2" step="0.01"></label><label>⬌<input type="range" id="mD" min="0.05" max="2.2" step="0.01"></label><div class="mrow"><button id="mClose">✔</button></div></div>
 <div id="acts"></div>
 <script src="online-config.js"></script><script src="online-cf.js"></script>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=6"></script>
+<script type="module" src="game.js?v=7"></script>
 </body></html>
