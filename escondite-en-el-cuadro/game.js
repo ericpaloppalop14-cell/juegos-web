@@ -8,7 +8,7 @@
 // =====================================================================
 import * as THREE from 'three';
 import { SalaOnline, comprobarOnline } from './net.js';
-export const VERSION = 'v12 · Arreglos';
+export const VERSION = 'v13 · Arreglos';
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 $('ver').textContent = VERSION;
@@ -176,10 +176,10 @@ function scatter(type, n, cx, cz, rad) { let k = 0, tries = 0; while (k < n && t
 // agrupados con sentido: cojines en la alfombra, sillas junto a las mesas, pilas junto a estanterías...
 scatter('cojin', 6, 0, 4, 2.6); scatter('silla', 3, -6, .9, .6); scatter('silla', 3, 6, .9, .6); scatter('silla', 1, -6, -1.9, .5); scatter('silla', 1, 6, -1.9, .5);
 for (const x of [-8, -4, 0, 4, 8]) { scatter('pila', 1, x, -8.4, .6); scatter('libro', 2, x, -8, 1.2); }
-scatter('vela', 4, -3, 6.5, 3); scatter('vela', 3, 8, 6, 2); scatter('jarron', 3, -10, 7, 2); scatter('jarron', 2, 10, -6.5, 1.5);
+scatter('vela', 4, -3, 6.5, 3); scatter('vela', 3, 8, 6, 2); scatter('jarron', 3, -9.4, 6.9, 1.1); scatter('jarron', 2, 10, -6.5, 1.5);
 scatter('lampara', 2, -11, -6, 1.2); scatter('lampara', 2, 11, 6.5, 1.2); scatter('lampara', 1, 3, 2, .3);
-scatter('baul', 2, -10, 5, 2); scatter('baul', 1, 10, 4.5, 1); scatter('globo', 2, 4, 6.5, 2); scatter('globo', 1, -4, -5.5, 1);
-scatter('cuadro', 3, 9, 8.3, 2); scatter('cuadro', 2, -8, 8.4, 1.5); scatter('maceta', 3, 11, -8.2, 1.5); scatter('maceta', 3, -11.3, -8.3, 1.3); scatter('maceta', 2, 0, 8.6, 3);
+scatter('baul', 2, -8.6, 4.6, 1); scatter('baul', 1, 10, 4.5, 1); scatter('globo', 2, 4, 6.5, 2); scatter('globo', 1, -4, -5.5, 1);
+scatter('cuadro', 3, 9, 8.3, 2); scatter('cuadro', 2, -8, 8.4, 1.5); scatter('maceta', 3, 11, -8.2, 1.5); scatter('maceta', 3, -10.4, -7.5, .8); scatter('maceta', 2, 0, 8.6, 3);
 scatter('taburete', 3, -2, 1, 2.5); scatter('tetera', 2, -2.5, 4.5, 1.5); scatter('libro', 6, 0, 0, 8); scatter('pila', 2, -8, -3, 2); scatter('pila', 2, 8, -3, 2);
 // los objetos reales se dibujan fusionados por material (pocas llamadas); su grupo queda invisible para tocar/raycast
 const propStatic = new THREE.Group(); scene.add(propStatic); blockers.push(...mergeByMaterial(propRoot, propStatic)); propRoot.traverse(o => { if (o.isMesh) { o.material = o.material; o.visible = true; } }); propRoot.visible = false;
@@ -238,7 +238,10 @@ function updCamera(dt, x, y, z, snap) {
   // nunca fuera de la sala (las paredes no tapan) ni bajo el techo
   const k = Math.min(1, (W - .4 - Math.abs(cam.tx)) / Math.max(.01, Math.abs(cx - cam.tx)), (D - .4 - Math.abs(cam.tz)) / Math.max(.01, Math.abs(cz - cam.tz)));
   if (k < 1) { cx = cam.tx + (cx - cam.tx) * k; cz = cam.tz + (cz - cam.tz) * k; cy = cam.ty + (cy - cam.ty) * Math.max(k, .6) + (1 - k) * 1.2; }
-  camera.position.set(cx, Math.min(cy, H - .4), cz); camera.lookAt(cam.tx, cam.ty, cam.tz);
+  cy = Math.min(cy, H - .4);
+  { let tt = 1, lifted = false; for (let t = .1; t <= 1.0001; t += .05) { const x = cam.tx + (cx - cam.tx) * t, y = cam.ty + (cy - cam.ty) * t, z = cam.tz + (cz - cam.tz) * t; let inside = null; for (const c of colliders) if (c.top < 90 && c.top > 1.5 && y < c.top + .3 && x > c.x0 - .25 && x < c.x1 + .25 && z > c.z0 - .25 && z < c.z1 + .25) { inside = c; break; } if (inside) { if (t < .45 && !lifted) { lifted = true; cy = Math.min(H - .4, inside.top + 1.2); cx = cam.tx + (cx - cam.tx) * .5; cz = cam.tz + (cz - cam.tz) * .5; break; } tt = Math.max(.15, t - .05); break; } }
+    if (tt < 1) { cx = cam.tx + (cx - cam.tx) * tt; cy = cam.ty + (cy - cam.ty) * tt; cz = cam.tz + (cz - cam.tz) * tt; } }
+  camera.position.set(cx, cy, cz); camera.lookAt(cam.tx, cam.ty, cam.tz);
   // muebles entre la cámara y el personaje => semitransparentes
   v3.set(cam.tx, cam.ty, cam.tz); const dir = camera.position.clone().sub(v3); const len = dir.length(); ray.set(v3, dir.normalize()); ray.far = len;
   if (blockers.length) { const bh = ray.intersectObjects(blockers, false)[0]; if (bh && bh.distance < len) { const nd = Math.max(1.1, bh.distance - .25); camera.position.copy(v3).addScaledVector(ray.ray.direction, nd); } }
@@ -292,7 +295,7 @@ const LV = [{ n: 'Fácil', sp: 2.3, view: 7, k: .45, tap: 6, blind: .03, bots: 3
 // ------------------------------------------------------------ partida
 let G_ON = false, mode = null, phase = '', tLeft = 0, score = 0, player = null, critic = null, bots = [], whistles = 0, gotaUsada = false, wrongs = 0, found = 0, ai = null, net = null, remotes = new Map(), myRole = '';
 let base0 = null; // ajustes del jugador: corrección = slider * ERR_MAX
-function setPal(on) { ui.pal.classList.toggle('on', !!on && mode !== 'seek' && myRole !== 'critic' && !!player?.copy && phase !== 'fin'); $('bPal').style.display = mode === 'seek' || myRole === 'critic' || !player?.copy || !player.vivo || phase === 'fin' ? 'none' : ''; }
+function setPal(on) { requestAnimationFrame(() => $('hud').classList.toggle('palon', ui.pal.classList.contains('on'))); ui.pal.classList.toggle('on', !!on && mode !== 'seek' && myRole !== 'critic' && !!player?.copy && phase !== 'fin'); $('bPal').style.display = mode === 'seek' || myRole === 'critic' || !player?.copy || !player.vivo || phase === 'fin' ? 'none' : ''; }
 function sliderErr() { const e = Object.assign({}, base0); for (const k in SL) e[k] = base0[k] + (+SL[k].value / 100) * ERR_MAX[k] * 1.6; e.pat = player.err.pat; e.ry = base0.ry; return e; }
 for (const k in SL) SL[k].addEventListener('input', () => applyAdj());
 function setV(k, v, noApply) { SL[k].value = clamp(Math.round(v), -100, 100); if (!noApply) applyAdj(); }
@@ -389,7 +392,7 @@ $('bHide').onclick = () => { if (!localStorage.esc8tuto) return tuto(() => start
 $('bSeek').onclick = () => { if (!localStorage.esc8tuto) return tuto(() => startGame('seek')); startGame('seek'); };
 
 // ------------------------------------------------------------ tutorial 3 tarjetas
-const TUTO = [['👆✨', 'Toca un objeto', 'Los que brillan se pueden copiar. Te conviertes en algo PARECIDO a ese objeto.'], ['🎨🌈', 'Ajústate', 'Mueve Tono, Claridad, Saturación, Ancho, Alto y Girar, cambia el Patrón y usa 1 vez el 💧 cuentagotas. ¡Más PARECIDO = más puntos y tiemblas menos!'], ['🔍❌', 'El Crítico toca', 'Toca objetos sospechosos. Si acierta, te pilla. Si falla, pierde 5 s. Quieto es más difícil verte.']];
+const TUTO = [['👆✨', 'Toca un objeto', 'Los que brillan se pueden copiar. Te conviertes en algo PARECIDO a ese objeto.'], ['🎨🌈', 'Ajústate', 'Toca la tira de colores o una de las muestras, afina con ◀ ▶ y sigue la pista. Arrastra el tirador (ancho y alto), gira con el aro o pellizca y gira con dos dedos. ¡Más PARECIDO = más puntos!'], ['🔍❌', 'El Crítico toca', 'Toca objetos sospechosos. Si acierta, te pilla. Si falla, pierde 5 s. Quieto es más difícil verte.']];
 let tutoI = 0, tutoDone = null;
 function tuto(done) { tutoI = 0; tutoDone = done; drawTuto(); show('tuto'); }
 function drawTuto() { const t = TUTO[tutoI]; $('tEm').textContent = t[0]; $('tTi').textContent = t[1]; $('tTx').textContent = t[2]; document.querySelectorAll('.dots i').forEach((d, i) => d.classList.toggle('on', i === tutoI)); $('tNext').textContent = tutoI < 2 ? 'Siguiente ▶' : '¡A jugar!'; }
@@ -462,7 +465,7 @@ function loop(now) {
     // brillos de objetos copiables cercanos
     let k = 0; if (myRole === 'hider' && player.vivo) for (const p of props) { if (k >= rings.length) break; if (p !== player.copy && Math.hypot(p.x - player.x, p.z - player.z) < 4) { const r = rings[k++]; r.visible = true; r.position.x = p.x; r.position.z = p.z; r.scale.setScalar(p.r * 1.3); } }
     nearProp = null; if (myRole === 'hider' && player.vivo && phase !== 'fin') { let bd = 2.6; for (const p of props) { if (p === player.copy) continue; const d = Math.hypot(p.x - player.x, p.z - player.z) - p.r; if (d < bd) { bd = d; nearProp = p; } } }
-    const bd = $('bDisf'); bd.style.display = nearProp && !ui.pal.classList.contains('on') ? '' : 'none'; if (nearProp) bd.textContent = '✨ Disfrazarse de ' + TYPES[nearProp.type].n;
+    const bd = $('bDisf'); bd.style.display = nearProp && !ui.pal.classList.contains('on') ? '' : 'none'; if (nearProp && bd.dataset.t !== nearProp.type) { bd.dataset.t = nearProp.type; bd.innerHTML = '✨ Disfrazarse<small>de ' + TYPES[nearProp.type].n + '</small>'; }
     for (; k < rings.length; k++) rings[k].visible = false; ringMat.opacity = .35 + Math.sin(t * 4) * .2;
     // cámara: mientras el Crítico cuenta (tú eres el Crítico) la cámara mira la sala desde arriba, no se mete en la lupa
     if (myRole === 'critic' && phase === 'hide') { cam.pitch = .9; }
@@ -476,7 +479,7 @@ function loop(now) {
     $('bWh').style.display = myRole === 'hider' ? '' : 'none';
     if (net && now - lastNet > 100) { lastNet = now; netSend(); }
   } else { // menú: cámara paseando por la biblioteca
-    cam.yaw = t * .08; cam.pitch = .45; cam.dist = 7; updCamera(dt, 0, 0, 2); cam.dist = 6; for (const r of rings) r.visible = false;
+    if (innerHeight > innerWidth) { cam.yaw = Math.sin(t * .1) * .3; cam.pitch = .9; cam.dist = 7; updCamera(dt, 0, 0, 2.4); } else { cam.yaw = t * .08; cam.pitch = .45; cam.dist = 7; updCamera(dt, 0, 0, 2); } cam.dist = 6; for (const r of rings) r.visible = false;
   }
   { const w = innerWidth, h = innerHeight; if (h > w && ui.pal.classList.contains('on')) camera.setViewOffset(w, h, 0, h * .2, w, h); else if (camera.view && camera.view.enabled) camera.clearViewOffset(); }
   renderer.render(scene, camera);
@@ -509,4 +512,4 @@ let rondaN = 0;
 $('oEmp').onclick = () => { const js = net.jugadores(); const ids = js.map(j => j.id); const critico = ids[rondaN++ % ids.length]; const salida = ids.map((_, i) => [-6 + i * 2.4, 7]); const d = { t: 'ronda', n: rondaN, critico, ids, salida }; net.enviar(d); empezarRonda(d); };
 function netSend() { if (!player) return; if (myRole === 'critic') net.enviar({ t: 'cr', x: player.x, y: player.y, z: player.z, yaw: player.face }); else { const e = player.err; net.enviar({ t: 'st', x: player.x, y: player.y, z: player.z, o: player.copy ? player.copy.id : -1, e: player.copy ? [e.h, e.l, e.s, e.w, e.a, e.r, e.pat, e.ry].map(v => +(+v).toFixed(3)) : null, w: player.wobbling ? 1 : 0, v: player.vivo }); } }
 // hooks de prueba
-window.__esc = { W, camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
+window.__esc = { W, colliders, camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
