@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { comprobarOnline, SalaOnline } from './net.js';
-const VERSION = 16;
+const VERSION = 17;
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -543,7 +543,7 @@ function updBursts(dt) { for (let i = bursts.length - 1; i >= 0; i--) { const b 
 let toastT = 0; function toast(a, b = '', ms = 1400) { const t = $('toast'); t.innerHTML = a + (b ? `<small>${b}</small>` : ''); t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); }
 let bubT = 0; function bub(s, ms = 1800) { const b = $('bub'); b.textContent = s; b.style.display = 'block'; clearTimeout(bubT); bubT = setTimeout(() => b.style.display = 'none', ms); }
 function show(id) { document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); }
-function hud(on) { $('hud').classList.toggle('on', on); $('joy').classList.toggle('on', on); $('touch').classList.toggle('on', on); $('acts').classList.toggle('on', on); if (!on) { $('cross').classList.remove('on'); $('meter').classList.remove('on'); $('bub').style.display = 'none'; } }
+function hud(on) { $('hud').classList.toggle('on', on); $('joy').classList.toggle('on', on); $('touch').classList.toggle('on', on); $('acts').classList.toggle('on', on); if (!on) { setHidden(false); $('cross').classList.remove('on'); $('meter').classList.remove('on'); $('bub').style.display = 'none'; } }
 const tap = (id, f) => $(id).addEventListener('click', e => { audioInit(); S.tap(); f(e); });
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => { S.tap(); show('menu'); }));
 $('bMute').textContent = save.muted ? '🔇' : '🔊';
@@ -559,11 +559,13 @@ function camClear(fx, fy, fz, tx, ty, tz) { _a.set(fx, fy, fz); _b.set(tx - fx, 
 let pendingMode = 'full';
 ['bPlay', 'bHide', 'bSeek', 'b2p'].forEach((id, i) => tap(id, () => { startMatch(['full', 'hide', 'seek', '2p'][i]); }));
 // ---------- controles v2 (joystick flotante analógico + cámara por arrastre, multitáctil) ----------
-let camYawS = 0, camLift = 0; let joyX = 0, joyY = 0, camYaw = 0, camPitch = .38; const keys = {}; const ptrs = new Map(); let joyId = null, camId = null, dragId = null;
+let camYawS = 0, camLift = 0; let joyX = 0, joyY = 0, camYaw = 0, camPitch = .38; const keys = {}; const ptrs = new Map(); let joyId = null, camId = null, dragId = null; let hidden = false, runT = 6; const HID_T = 1.8; // v17: escondido = quieto >1.8 s -> sin joystick, deslizar = órbita 360°, botón ¡Corre!
+function setHidden(v) { if (v === hidden) return; hidden = v; document.body.classList.toggle('hid', v); $('run').classList.toggle('on', v); if (v) { if (joyId !== null) { ptrs.delete(joyId); joyId = null; } joyX = joyY = 0; joyHome(); } }
+function doRun() { runT = 5; if (me) me.still = 0; setHidden(false); S.pop(); }
 const joy = $('joy'), knob = $('joyK'); const JR = 56;
 function joyHome() { joy.style.left = ''; joy.style.top = ''; joy.style.bottom = ''; joy.classList.remove('act', 'float'); knob.style.transform = 'translate(-50%,-50%)'; }
 const layer = $('touch');
-layer.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); if (!playing) return; const left = (role === 'hide' ? true : e.clientX < innerWidth * .5) && !(role === 'seek' && phase === 'hide');
+layer.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); if (!playing) return; if (hidden) { if (camId === null) { camId = e.pointerId; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, kind: 'cam' }); try { layer.setPointerCapture(e.pointerId); } catch (x) { } } return; } const left = (role === 'hide' ? true : e.clientX < innerWidth * .5) && !(role === 'seek' && phase === 'hide');
   if (role === 'hide' && me && me.att && !me.att.fixed && !me.leap && dragId === null) { _v.set(me.cx, me.cy, me.cz).project(camera); const sx = (_v.x + 1) / 2 * innerWidth, sy = (1 - _v.y) / 2 * innerHeight; const rad = Math.max(56, Math.min(innerWidth, innerHeight) * .14); if (_v.z < 1 && Math.hypot(e.clientX - sx, e.clientY - sy) < rad) { dragId = e.pointerId; const dc = camera.clone(); dc.updateMatrixWorld(true); ptrs.set(e.pointerId, { kind: 'drag', cam: dc }); dragPlace(dc, e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1, true); try { layer.setPointerCapture(e.pointerId); } catch (x) { } return; } }
   if (left && joyId === null) { joyId = e.pointerId; ptrs.set(e.pointerId, { x0: e.clientX, y0: e.clientY, kind: 'joy' }); const jx = clamp(e.clientX, 70, innerWidth - 70), jy = clamp(e.clientY, 70, innerHeight - 70); ptrs.get(e.pointerId).x0 = jx; ptrs.get(e.pointerId).y0 = jy; joy.classList.add('act', 'float'); joy.style.left = (jx - 65) + 'px'; joy.style.top = (jy - 65) + 'px'; joy.style.bottom = 'auto'; knob.style.transform = 'translate(-50%,-50%)'; }
   else if (camId === null) { camId = e.pointerId; ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, kind: 'cam' }); } else return;
@@ -573,11 +575,12 @@ layer.addEventListener('pointermove', e => { const p = ptrs.get(e.pointerId); if
   if (p.kind === 'joy') { let dx = e.clientX - p.x0, dy = e.clientY - p.y0; const d = Math.hypot(dx, dy); if (d > JR) { // v6: base fija; el pomo se queda en el borde
       dx *= JR / d; dy *= JR / d; }
     knob.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`; const nd = Math.min(1, Math.hypot(dx, dy) / JR); const dz = .08; const m = nd < dz ? 0 : Math.pow((nd - dz) / (1 - dz), 1.25); const a = Math.atan2(dx, -dy); joyX = Math.sin(a) * m; joyY = Math.cos(a) * m; }
-  else { const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; const sens = (role === 'seek' ? .0048 : .0062) * (560 / Math.max(560, Math.min(innerWidth, innerHeight) * 1.2)); camYaw -= dx * sens * 1.2; if (me && me.att && Math.abs(dx) > 2) me.camFree = true; camPitch = clamp(camPitch + dy * .0042, role === 'seek' ? -.3 : .05, 1.0); } });
+  else { const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; const sens = (role === 'seek' ? .0048 : .0062) * (560 / Math.max(560, Math.min(innerWidth, innerHeight) * 1.2)); camYaw -= dx * sens * (hidden ? .9 : 1.2); if (me && me.att && Math.abs(dx) > 2) me.camFree = true; camPitch = clamp(camPitch + dy * (hidden ? .0034 : .0042), role === 'seek' ? -.3 : .12, 1.1); } });
 function ptrEnd(e) { const p = ptrs.get(e.pointerId); if (!p) return; ptrs.delete(e.pointerId); if (p.kind === 'drag') { dragId = null; S.pop(); } else if (p.kind === 'joy') { joyId = null; joyX = joyY = 0; joyHome(); } else camId = null; }
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => layer.addEventListener(ev, ptrEnd));
 addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') { if (role === 'hide') doJump(); else playerFire(); } if (e.code === 'KeyC') copySkin(); if (e.code === 'KeyM') toggleMold(); }); addEventListener('keyup', e => keys[e.code] = false);
 addEventListener('blur', () => { ptrs.clear(); joyId = camId = dragId = null; joyX = joyY = 0; joyHome(); });
+$('run').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); doRun(); });
 function mkActs(list) { const a = $('acts'); a.innerHTML = ''; list.forEach(([id, ico, txt, cls, f]) => { const b = document.createElement('button'); b.className = 'ab ' + (cls || ''); b.id = id; b.innerHTML = `<span>${ico}</span>${txt}`; b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); f(); }); a.appendChild(b); }); }
 // ---------- partida ----------
 let mode = 'full', role = 'hide', phase = 'idle', phaseT = 0, me = null, playing = false, round = 0, rounds = [], results = [], shotsLeft = 0, bestShot = null, bestPct = 0, slowmo = 1, focus = null, focusT = 0, p2score = [0, 0], lastPct = -1, hider2p = 0, curRoom = -1, actT = 0;
@@ -602,9 +605,9 @@ function setupRound(r) {
     for (let i = 0; i < nb; i++) { const b = makeMancha(cols2[i + 1], ['Pinti', 'Gotita', 'Borrón', 'Acuarela'][i], false); const a = i / nb * 6.28 + 1; b.x = start[0] + Math.cos(a) * 2.2; b.z = start[1] + 6 + Math.sin(a) * 1.2; botPlan(b, used); }
     netSpawn(); manchas.forEach(m => { if (!m.netId) { m.g.position.set(m.x, 0, m.z); setShape(m, 'gota'); } });
     phase = 'hide'; phaseT = HIDE_T; playing = true; critic.state = 'count'; const c0 = RC(0); critic.x = c0[0] - 5; critic.z = c0[1] - 3; critic.yaw = Math.PI; critic.y = 0;
-    camYaw = camYawS = me ? startYaw : Math.PI; camPitch = .42; camLift = 0; shotsLeft = 0; lastPct = -1; curRoom = -1; snapCam = true; moldOpen(false);
+    camYaw = camYawS = me ? startYaw : Math.PI; camPitch = .55; camLift = 0; shotsLeft = 0; lastPct = -1; curRoom = -1; snapCam = true; moldOpen(false);
     hud(true); $('hPhase').textContent = '🙈 ¡A esconderse!';
-    if (role === 'hide') { $('meter').classList.add('on'); $('cross').classList.remove('on'); hideActs(); $('hInfo').textContent = '🏰 Castillo de los Cuadros'; toast('¡Camúflate! 🎨', '🦘 Salta a un cuadro, lámpara o estantería · 🎨 Copia su textura · ✋ Moldéate', 3600); }
+    if (role === 'hide') { $('meter').classList.add('on'); $('cross').classList.remove('on'); hideActs(); $('hInfo').textContent = '🏰 Castillo de los Cuadros'; runT = 6; setHidden(false); }
     else { $('meter').classList.remove('on'); mkActs([]); $('hInfo').textContent = '🧐 Contando…'; toast('Eres El Crítico 🧐', 'Las Manchas se están camuflando… ¡no mires!', 2600); }
     musicMode = 'calm'; });
 }
@@ -651,7 +654,7 @@ function endHidePhase() {
   startSeek(); }
 function startSeek() {
   phase = 'seek'; phaseT = role === 'seek' ? 100 : 60; musicMode = 'seek'; critic.state = 'wander'; critic.think = 1.5; S.boing(); hud(true); snapCam = true;
-  if (role === 'hide') { $('hPhase').textContent = '🧐 ¡Viene El Crítico!'; toast('¡Llega El Crítico! 🧐', 'Quieta… muy quieta…', 2200); mkActs([['aJump', '🦘', 'Saltar', 'c3', doJump], ['aMold', '✋', 'Moldear', 'c2', toggleMold]]); }
+  if (role === 'hide') { $('hPhase').textContent = '🧐 ¡Viene El Crítico!'; mkActs([['aJump', '🦘', 'Saltar', 'c3', doJump], ['aMold', '✋', 'Moldear', 'c2', toggleMold]]); }
   else { shotsLeft = is2p() ? 6 : 10; $('meter').classList.remove('on'); $('cross').classList.add('on'); $('hPhase').textContent = '🎯 ¡A cazar!'; mkActs([['aFire', '🎯', '', 'fire', playerFire]]); toast('¡A cazar Manchas! 🎯', is2p() ? `Encuentra a ${P2[hider2p]}: mira de cerca cuadros, libros, lámparas y alfombras` : `4 escondidas · ${shotsLeft} disparos · busca ojitos que asoman 👀`, 3200); const c0 = RC(0); const st = clearStart(0, c0[0], c0[1] + 3, Math.PI / 2); critic.x = st.x; critic.z = st.z; critic.y = 0; camYaw = st.yaw; camPitch = .15; } }
 function captureHide() { if (!me) return; const pct = Math.round(me.camo * 100); let a = me.yaw, bd = 0;
   if (me.att) { const [nx, nz] = anchorNormal(me.att); a = Math.atan2(nx, nz); bd = 3.2; } else for (let k = 0; k < 12; k++) { const aa = me.yaw + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * .5236; const cd = Math.min(camClear(me.x, me.y + 1.2, me.z, me.x + Math.sin(aa) * 3.6, me.y + 2, me.z + Math.cos(aa) * 3.6), clearPropDist(me.x, me.z, Math.sin(aa), Math.cos(aa), 3.6)); if (cd > bd + .01) { bd = cd; a = aa; } if (cd >= 3.5) break; } const R = Math.max(1.6, Math.min(3.6, bd));
@@ -712,15 +715,16 @@ function update(dt) {
   if (focusT > 0) { focusT -= dt; if (focusT <= 0) { slowmo = 1; focus = null; } }
   const sdt = dt * slowmo;
   if (phase === 'hide' || phase === 'seek') { const prev = Math.ceil(phaseT); phaseT -= sdt; const sec = Math.ceil(phaseT); $('hTime').textContent = '⏱ ' + Math.max(0, sec); $('hTime').classList.toggle('warn', sec <= 5);
-    if (sec !== prev && sec <= 5 && sec >= 1) { S.tick(); if (phase === 'hide' && sec <= 3) toast(String(sec), role === 'hide' ? '¡A tu sitio!' : '', 600); }
+    if (sec !== prev && sec <= 5 && sec >= 1) { S.tick(); if (phase === 'hide' && sec <= 3 && role !== 'hide') toast(String(sec), '', 600); }
     if (!NET || NET.sala.host) { if (phase === 'hide' && phaseT <= 0) { if (NET) NET.sala.enviar({ t: 'fase', fase: 'seek' }); endHidePhase(); } else if (phase === 'seek' && phaseT <= 0 && focusT <= 0) { if (NET) NET.sala.enviar({ t: 'fase', fase: 'fin' }); endRound(); } } }
   if (role === 'seek' && phase === 'seek') $('hInfo').textContent = `🎯 ${shotsLeft} · 🙈 ${manchas.filter(m => m.alive).length}`;
   if (role === 'hide' && phase === 'seek') $('hInfo').textContent = `🙈 ${manchas.filter(m => m.alive).length} escondidas`;
   let ix = joyX, iy = joyY; const kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), ky = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0); if (kx || ky) { const l = Math.hypot(kx, ky); ix = kx / l; iy = ky / l; }
   if (role === 'hide' && me && !me.att && Math.abs(ix) > .55 && iy > -.3) camYaw -= Math.sign(ix) * (Math.abs(ix) - .55) * 2.4 * dt; if (role === 'hide' && me && me.att && camId === null) { const [anx, anz] = anchorNormal(me.att); const fwd = Math.sin(camYaw) * anx + Math.cos(camYaw) * anz; if (fwd > -.995 && !me.camFree) camYaw += wrap(Math.atan2(-anx, -anz) - camYaw) * ex(3.5, dt); } camYawS += wrap(camYaw - camYawS) * ex(14, dt); const fwX = Math.sin(camYawS), fwZ = Math.cos(camYawS); const rX = -fwZ, rZ = fwX; const wantX = fwX * iy + rX * ix, wantZ = fwZ * iy + rZ * ix; const mag = Math.min(1, Math.hypot(wantX, wantZ));
+  if (!(me && me.alive && role === 'hide')) setHidden(false);
   const sub = Math.max(1, Math.ceil(sdt / (1 / 120))), h = sdt / sub;
   if (me && me.alive && role === 'hide') { moveMancha(me, wantX, wantZ, mag, sdt, sub, h, 5.4, ix, iy);
-    me.still = me.moving ? 0 : me.still + sdt; me.wiggle = Math.max(0, (me.wiggle || 0) - sdt);
+    me.still = me.moving ? 0 : me.still + sdt; if (joyId !== null || me.moving || me.leap) runT = Math.max(runT, 2); else runT = Math.max(0, runT - sdt); setHidden(!focus && joyId === null && runT <= 0 && me.still >= HID_T && !moldIsOpen); me.wiggle = Math.max(0, (me.wiggle || 0) - sdt);
     me.camoT -= dt; if (me.camoT <= 0) { me.camoT = .12; me.camoD = camoCalc(me); actT = 0; const s = me.camoD.s; const b = $('aCopy'); if (b) { const nm = s ? s.name.replace(/^(el|la|los|las|un|una) /, '') : ''; const lab = s && me.skin === s ? '✔ Copiado' : 'Copiar'; const key = lab + '|' + nm; if (b.dataset.k !== key) { b.dataset.k = key; b.innerHTML = `<span>🎨</span>${lab}<em class="pill">${nm}</em>`; } } }
     me.camo = lerp(me.camo, me.camoD ? me.camoD.v : 0, ex(6, dt)); const pct = Math.round(me.camo * 100); if (pct !== lastPct) { lastPct = pct; $('mPct').textContent = pct + '%'; $('mFill').style.width = pct + '%'; const D = me.camoD || {}; const ok = v => v > .8 ? '✅' : v > .45 ? '🟡' : '❌'; $('mFace').innerHTML = (pct < 40 ? '🙈 ¡Se te ve!' : pct < 65 ? '🤔 Casi' : pct < 85 ? '😏 ¡Bien!' : pct < 95 ? '🫥 ¡Casi invisible!' : '👻 ¡ERES EL DECORADO!') + ` <small>🎨${ok(D.skin || 0)} ✋${ok(D.shape || 0)} 🧘${ok(D.still || 0)}</small>`; if (pct >= 94 && !me.inv) { me.inv = true; S.fanfare(); } if (pct < 88) me.inv = false; }
     rowsUI(); const rid = roomOf(me.x, me.z); if (rid !== curRoom) { if (curRoom >= 0) { bub('📍 ' + rooms[rid].def.name, 1600); S.pop(); } curRoom = rid; } }
@@ -736,20 +740,21 @@ function update(dt) {
   animCritic(sdt); owlTick(sdt); updShots(sdt); updBursts(sdt); updConf(sdt);
   const port = innerHeight > innerWidth; const cp = Math.cos(camPitch), spP = Math.sin(camPitch); let tx, ty, tz, want, sh = 0;
   if (focus) { tx = focus.cx; ty = focus.cy + .3; tz = focus.cz; want = 4.5; }
-  else if (role === 'hide' && me) { tx = me.cx; ty = me.cy + .9; tz = me.cz; want = port ? 7.6 : 6.6; sh = port ? .45 : .7; }
-  else { tx = critic.x; ty = (critic.y || 0) + 4.7; tz = critic.z; want = port ? 9.4 : 8.4; sh = port ? 1.7 : 1.9; }
-  if (role === 'seek' && phase === 'hide') { const c0 = RC(0); camera.position.set(c0[0] - 5, 2.4, c0[1] - 2.2); camera.lookAt(c0[0] - 5 + Math.sin(T * .3) * 2, 4.5, c0[1] - 8); sun.position.set(c0[0] + 6, 30, c0[1] + 6); sun.target.position.set(c0[0], 0, c0[1]); return; }
+  else if (role === 'hide' && me) { tx = me.cx; ty = me.cy + .9; tz = me.cz; want = port ? 9.2 : 8.0; sh = port ? .45 : .7; }
+  else { tx = critic.x; ty = (critic.y || 0) + 4.7; tz = critic.z; want = port ? 11.0 : 9.8; sh = port ? 1.7 : 1.9; }
+  if (role === 'seek' && phase === 'hide') { const c0 = RC(0); camera.position.set(c0[0] - 5 + Math.sin(T * .25) * 1.5, 5.4, c0[1] + 5.5); camera.lookAt(c0[0] - 5, 2.6, c0[1] - 4); sun.position.set(c0[0] + 6, 30, c0[1] + 6); sun.target.position.set(c0[0], 0, c0[1]); return; }
   const fa = focus ? T * .6 : camYawS; const fx = Math.sin(fa), fz = Math.cos(fa);
   let cpL = cp, spL = spP; if (role === 'hide' && me && !focus) { // v6: si un mueble tapa, la cámara sube (por encima del hombro)
     const pe = Math.min(1.25, camPitch + camLift * .6); const dx0 = -fx * Math.cos(pe), dy0 = Math.sin(pe), dz0 = -fz * Math.cos(pe); _a.set(tx, ty, tz); _b.set(dx0, dy0, dz0); losRay.set(_a, _b); losRay.far = want; const hp = losRay.intersectObjects(propMeshes, false).find(q => !(me.att && me.att.mesh && q.object.userData.prop && me.att.mesh.userData.prop === q.object.userData.prop) && q.distance > .5); camLift = clamp(camLift + (hp ? 1 : -.6) * dt * 1.6, 0, 1); cpL = Math.cos(pe); spL = Math.sin(pe); if (hp && camLift >= 1) want = Math.max(2.4, hp.distance - .3); }
   const dX = -fx * cpL, dY = spL, dZ = -fz * cpL; if (role === 'hide') sh *= clamp((camDist - 1.2) / 3, 0, 1); const lx = tx - rX * sh, lz = tz - rZ * sh;
   const free = camClear(lx, ty, lz, lx + dX * want, ty + dY * want, lz + dZ * want); const target = Math.min(want, free);
   camDist = target < camDist ? Math.max(target, lerp(camDist, target, ex(18, dt))) : lerp(camDist, target, ex(3, dt)); if (camDist > free + .05) camDist = lerp(camDist, free, ex(25, dt)); if (snapCam) camDist = target;
-  _v.set(lx + dX * camDist, Math.min(WH - 1.15, ty + dY * camDist + .4), lz + dZ * camDist);
+  _v.set(lx + dX * camDist, Math.min(WH - 1.15, ty + dY * camDist + (role === 'hide' ? 1.0 : .4)), lz + dZ * camDist);
   const lookAhead = role === 'seek' && !focus ? 10 : 1.2 * clamp((camDist - 1.6) / 3, 0, 1); _w.set(lx + fx * lookAhead * cp, ty + (role === 'seek' && !focus ? -Math.sin(camPitch) * 7 + .3 : .1 - .7 * clamp((3 - camDist) / 2, 0, 1)), lz + fz * lookAhead * cp);
   if (snapCam) { camPos.copy(_v); camLook.copy(_w); snapCam = false; } else { camPos.lerp(_v, ex(focus ? 4 : 8, dt)); camLook.lerp(_w, ex(focus ? 5 : 10, dt)); }
   camFrame++; { _a.copy(camPos); _b.set(tx - camPos.x, ty - camPos.y, tz - camPos.z); const L3 = _b.length(); _b.normalize(); losRay.set(_a, _b); losRay.far = Math.max(0, L3 - .3); for (const h of losRay.intersectObjects(propMeshes, false)) { const pp = h.object.userData.prop; if (pp) pp.rayHit = camFrame; } }
   { const ax = camPos.x, az = camPos.z, bx2 = tx, bz2 = tz, L = Math.hypot(bx2 - ax, bz2 - az) || 1; for (const p of props) { const t = clamp(((p.x - ax) * (bx2 - ax) + (p.z - az) * (bz2 - az)) / (L * L), 0, 1); const px = ax + (bx2 - ax) * t, pz = az + (bz2 - az) * t; const block = !(role === 'seek' && focus) && ((t < .995 && propDist(p, px, pz) < .55 && propDist(p, tx, tz) > .15) || (p.rayHit === camFrame && propDist(p, tx, tz) > .15)) && !(me && me.att && me.att.mesh && me.att.mesh.userData.prop === p); const f = block ? .28 : 1; if (Math.abs(p.fade - f) > .01) { p.fade = lerp(p.fade, f, ex(10, dt)); for (const m of p.mats) { m.transparent = p.fade < .98 || m.userData.tr; m.opacity = (m.userData.tr ? m.userData.op : 1) * p.fade; m.depthWrite = p.fade > .9; } } } }
+  if (role === 'seek' && critic) { const lcx = critic.x, lcy = (critic.y || 0) + 3.35, lcz = critic.z; const dxl = camPos.x - lcx, dyl = camPos.y - lcy, dzl = camPos.z - lcz; const dl = Math.hypot(dxl, dyl, dzl); if (dl < 2.8) { const k = 2.8 / Math.max(.01, dl); camPos.set(lcx + dxl * k, lcy + dyl * k, lcz + dzl * k); } } // v17: nunca dentro de la lupa
   camera.position.copy(camPos); shake = Math.max(0, shake - dt * 1.5); if (shake > 0) camera.position.add(_v.set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).multiplyScalar(shake * .25)); camera.lookAt(camLook);
   sun.position.set(camLook.x + 6, 30, camLook.z + 6); sun.target.position.set(camLook.x, 0, camLook.z);
   if (window.__camO) { camera.position.copy(window.__camO.p); camera.lookAt(window.__camO.l); }
@@ -840,5 +845,5 @@ function loop(now) { requestAnimationFrame(loop); const dt = Math.min(.1, (now -
   update(dt); if (!playing && phase === 'idle') menuAnim(dt);
   renderer.render(scene, camera); const pipOn = !!(me && playing && role === 'hide' && me.alive && (phase === 'hide' || phase === 'seek')); if (pipOn !== pipShown) { pipShown = pipOn; $('mold').classList.toggle('on', pipOn); } if (pipOn) moldPreview();
   fpsAcc += dt; fpsN++; fpsT += dt; if (fpsT > 2.5) { const avg = fpsAcc / fpsN; fpsAcc = fpsN = fpsT = 0; const maxQ = Math.min(DPR, 2.25); if (avg > .024 && quality > .75) { quality = Math.max(.75, quality - .25); renderer.setPixelRatio(quality); resize(); } else if (avg < .0145 && quality < maxQ) { quality = Math.min(maxQ, quality + .25); renderer.setPixelRatio(quality); resize(); } } }
-window.__ec = { THREE, goRow, dragPlace, prevCam, get pipShown() { return pipShown; }, get moldIsOpen() { return moldIsOpen; }, get camYawS() { return camYawS; }, get camLift() { return camLift; }, get camYaw() { return camYaw; }, get phase() { return phase; }, get role() { return role; }, get me() { return me; }, get manchas() { return manchas; }, get critic() { return critic; }, get props() { return props; }, get anchors() { return anchors; }, get surfaces() { return surfaces; }, get cols() { return cols; }, setPhaseT: v => phaseT = v, camoCalc, contactSurf, applySkin, setShape, attach, findJump, doJump, copySkin, groundAt, catchMancha, camoPhrase, get camPos() { return camPos; }, get startYaw() { return startYaw; }, get net() { return NET; }, get shotsLeft() { return shotsLeft; }, setCam: (y, p) => { camYaw = y; camPitch = p; }, fire: () => playerFire(), get quality() { return quality; }, get playing() { return playing; }, roomOf, lineOfSight, get camPos() { return camera.position.clone(); }, setJoy: (x, y) => { joyX = x; joyY = y; }, snap: () => { snapCam = true; }, renderer, scene, camera };
+window.__ec = { get hidden() { return hidden; }, doRun, THREE, goRow, dragPlace, prevCam, get pipShown() { return pipShown; }, get moldIsOpen() { return moldIsOpen; }, get camYawS() { return camYawS; }, get camLift() { return camLift; }, get camYaw() { return camYaw; }, get phase() { return phase; }, get role() { return role; }, get me() { return me; }, get manchas() { return manchas; }, get critic() { return critic; }, get props() { return props; }, get anchors() { return anchors; }, get surfaces() { return surfaces; }, get cols() { return cols; }, setPhaseT: v => phaseT = v, camoCalc, contactSurf, applySkin, setShape, attach, findJump, doJump, copySkin, groundAt, catchMancha, camoPhrase, get camPos() { return camPos; }, get startYaw() { return startYaw; }, get net() { return NET; }, get shotsLeft() { return shotsLeft; }, setCam: (y, p) => { camYaw = y; camPitch = p; }, fire: () => playerFire(), get quality() { return quality; }, get playing() { return playing; }, roomOf, lineOfSight, get camPos() { return camera.position.clone(); }, setJoy: (x, y) => { joyX = x; joyY = y; }, snap: () => { snapCam = true; }, renderer, scene, camera };
 menuWorld(); requestAnimationFrame(loop);
