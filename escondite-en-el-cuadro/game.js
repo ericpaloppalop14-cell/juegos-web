@@ -8,7 +8,7 @@
 // =====================================================================
 import * as THREE from 'three';
 import { SalaOnline, comprobarOnline } from './net.js';
-export const VERSION = 'v9 · Toque fino';
+export const VERSION = 'v10 · Arreglos';
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 $('ver').textContent = VERSION;
@@ -36,7 +36,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#f6d9e8'); scene.fog = new THREE.Fog('#f6d9e8', 26, 48);
 const camera = new THREE.PerspectiveCamera(60, 1, .1, 80);
-function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 58; camera.updateProjectionMatrix(); }
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = 62; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 scene.add(new THREE.HemisphereLight('#fff6ee', '#ffd0f0', 1.1));
@@ -201,9 +201,9 @@ class Hider {
   constructor(col) { this.g = new THREE.Group(); this.body = mochi(col); this.g.add(this.body); this.disg = new THREE.Group(); this.g.add(this.disg); scene.add(this.g); this.x = 0; this.z = 0; this.y = 0; this.vy = 0; this.copy = null; this.err = null; this.patOk = true; this.sim = 0; this.vivo = true; this.wob = 0; this.nextWob = rand(3, 6); this.moving = 0; this.face = 0; this.r = .45; }
   disfrazar(p, err) {
     this.copy = p; this.err = err || randErr(); if (err == null) { this.err.pat = TYPES[p.type].pats && Math.random() < .65 ? (p.pat + 1 + ((Math.random() * 2) | 0)) % 3 : p.pat; this.err.ry = p.ry; }
-    this.rebuild(); this.body.visible = false; this.r = Math.max(.3, p.r * .9);
+    this.rebuild(); this.body.visible = false;
   }
-  rebuild() { const p = this.copy; this.disg.traverse(o => o.material && o.material.dispose()); this.disg.clear(); if (!p) return; const o = buildProp(p.type, p.vi, p.pat, this.err); o.scale.set(1 + this.err.w, 1 + this.err.a, 1 + this.err.w); o.rotation.y = this.err.ry + this.err.r * Math.PI / 180; this.disg.add(o); this.patOk = this.err.pat === p.pat; this.sim = parecido(this.err, this.patOk); }
+  rebuild() { const p = this.copy; this.disg.traverse(o => o.material && o.material.dispose()); this.disg.clear(); if (!p) return; const o = buildProp(p.type, p.vi, p.pat, this.err); o.scale.set(1 + this.err.w, 1 + this.err.a, 1 + this.err.w); o.rotation.y = this.err.ry + this.err.r * Math.PI / 180; this.disg.add(o); this.patOk = this.err.pat === p.pat; this.r = Math.max(.3, p.r * (1 + this.err.w)); this.sim = parecido(this.err, this.patOk); }
   quitar() { this.copy = null; this.disg.clear(); this.body.visible = true; this.sim = 0; this.r = .45; }
   update(dt) {
     this.g.position.set(this.x, this.y, this.z); if (!this.copy) this.body.rotation.y = this.face;
@@ -219,10 +219,12 @@ class Hider {
 }
 
 // colisión círculo vs cajas y objetos; suelo = parte de arriba de lo que pises
-function moveCircle(e, dx, dz, ignore) {
+function bodies() { const l = []; if (player && player.vivo) l.push(player); if (critic && critic.r) l.push(critic); for (const b of bots) if (b.vivo) l.push(b); return l; }
+function moveCircle(e, dx, dz) {
   let x = e.x + dx, z = e.z + dz; const r = e.r; let ground = 0;
   for (const c of colliders) { if (c.top <= e.y + .35) { if (x > c.x0 && x < c.x1 && z > c.z0 && z < c.z1) ground = Math.max(ground, c.top); continue; } const cx = clamp(x, c.x0, c.x1), cz = clamp(z, c.z0, c.z1); const ddx = x - cx, ddz = z - cz, d = Math.hypot(ddx, ddz); if (d < r) { if (d > 1e-4) { x = cx + ddx / d * r; z = cz + ddz / d * r; } else { x = e.x; z = e.z; } } }
-  for (const p of props) { if (p === ignore || e.y > 1.1) continue; const ddx = x - p.x, ddz = z - p.z, d = Math.hypot(ddx, ddz), m = r + p.r * .8; if (d < m && d > 1e-4) { x = p.x + ddx / d * m; z = p.z + ddz / d * m; } }
+  for (const p of props) { if (e.y > 1.1) continue; const ddx = x - p.x, ddz = z - p.z, d = Math.hypot(ddx, ddz), m = r + p.r; if (d < m && d > 1e-4) { x = p.x + ddx / d * m; z = p.z + ddz / d * m; } }
+  for (const o of bodies()) { if (o === e) continue; const ddx = x - o.x, ddz = z - o.z, d = Math.hypot(ddx, ddz), m = r + (o.r || .45); if (d < m && d > 1e-4) { x = o.x + ddx / d * m; z = o.z + ddz / d * m; } }
   e.x = clamp(x, -W + .5, W - .5); e.z = clamp(z, -D + .5, D - .5); return ground;
 }
 
@@ -279,7 +281,7 @@ const LV = [{ n: 'Fácil', sp: 2.3, view: 7, k: .45, tap: 6, blind: .03, bots: 3
 // ------------------------------------------------------------ partida
 let G_ON = false, mode = null, phase = '', tLeft = 0, score = 0, player = null, critic = null, bots = [], whistles = 0, gotaUsada = false, wrongs = 0, found = 0, ai = null, net = null, remotes = new Map(), myRole = '';
 let base0 = null; // ajustes del jugador: corrección = slider * ERR_MAX
-function setPal(on) { ui.pal.classList.toggle('on', !!on && mode !== 'seek' && myRole !== 'critic' && !!player?.copy && phase !== 'fin'); $('bPal').style.display = mode === 'seek' || myRole === 'critic' || !player?.copy ? 'none' : ''; }
+function setPal(on) { ui.pal.classList.toggle('on', !!on && mode !== 'seek' && myRole !== 'critic' && !!player?.copy && phase !== 'fin'); $('bPal').style.display = mode === 'seek' || myRole === 'critic' || !player?.copy || !player.vivo || phase === 'fin' ? 'none' : ''; }
 function sliderErr() { const e = Object.assign({}, base0); for (const k in SL) e[k] = base0[k] + (+SL[k].value / 100) * ERR_MAX[k] * 1.6; e.pat = player.err.pat; e.ry = base0.ry; return e; }
 for (const k in SL) SL[k].addEventListener('input', () => { if (!player?.copy) return; player.err = sliderErr(); player.rebuild(); });
 $('pPat').onclick = () => { if (!player?.copy) return; player.err.pat = (player.err.pat + 1) % 3; player.rebuild(); $('pPat').textContent = 'Patrón: ' + PATS[player.err.pat]; SND.tick(); };
@@ -289,7 +291,9 @@ $('bPal').onclick = () => setPal(!ui.pal.classList.contains('on'));
 $('bWh').onclick = () => { if (!G_ON || phase !== 'seek' || myRole === 'critic' || mode === 'seek') return; whistles++; score += 60; SND.whistle(); msg('🎵 +60 · ¡pero te ha oído!'); if (ai) ai.noise = { x: player.x, z: player.z, t: 4 }; noteFx(player.x, player.z); if (net) net.enviar({ t: 'silbo', x: player.x, z: player.z }); };
 $('bJump').onclick = () => doJump();
 function doJump() { if (G_ON && player && player.y <= player.gnd + .01 && !(myRole === 'critic' && phase === 'hide')) { player.vy = 5.2; SND.pop(); } }
-$('bx').onclick = () => { endGame(null, true); };
+$('bx').onclick = () => { if (!G_ON) return; $('conf').classList.add('on'); };
+$('cSi').onclick = () => { $('conf').classList.remove('on'); endGame(null, true); };
+$('cNo').onclick = () => $('conf').classList.remove('on');
 let notes = []; function noteFx(x, z) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex(64, 64, g => { g.font = '48px serif'; g.fillText('🎵', 6, 50); }), transparent: true })); s.position.set(x, 1.8, z); s.scale.setScalar(.8); scene.add(s); notes.push({ s, t: 1.5 }); }
 
 function resetWorld() { for (const b of bots) b.dispose(); bots = []; if (player) player.dispose(); if (critic) scene.remove(critic.g); critic = null; for (const r of remotes.values()) r.h.dispose(); remotes.clear(); }
@@ -334,7 +338,7 @@ function endGame(win, quit) {
   if (!G_ON) return; G_ON = false; phase = 'fin'; setPal(false); joy.id = null; joyEl.style.display = 'none';
   if (quit) { if (net) { net.salir(); net = null; } resetWorld(); show('menu'); return; }
   let em, ti, tx;
-  if (myRole === 'hider') { const sim = player.copy ? player.sim : 0; if (win) { score += 300; em = '🏆'; ti = '¡Sobreviviste!'; } else { em = '😵'; ti = '¡Te pillaron!'; } tx = `Parecido final: ${sim} %<br>Silbidos: ${whistles}<br><b style="font-size:26px">${Math.round(score)} puntos</b>` + (sim < 50 ? '<br>Consejo: usa 🎨 para subir el parecido' : sim >= 85 ? '<br>¡Disfraz de artista!' : ''); }
+  if (myRole === 'hider') { const sim = player.copy ? player.sim : 0; if (win && sim > 0) { score += 300; em = '🏆'; ti = '¡Sobreviviste!'; } else if (win) { score = 0; em = '🫥'; ti = 'Sin disfraz no hay premio'; } else { em = '😵'; ti = '¡Te pillaron!'; } tx = `Parecido final: ${sim} %<br>Silbidos: ${whistles}<br><b style="font-size:26px">${Math.round(score)} puntos</b>` + (sim < 50 ? '<br>Consejo: usa 🎨 para subir el parecido' : sim >= 85 ? '<br>¡Disfraz de artista!' : ''); }
   else { const tot = net ? remotes.size : bots.length; score += Math.round(tLeft * 3) - wrongs * 20; score = Math.max(0, score); em = win ? '🏆' : '🔍'; ti = win ? '¡Los encontraste a todos!' : `Encontraste ${found} de ${tot}`; tx = `Fallos: ${wrongs}<br><b style="font-size:26px">${score} puntos</b>`; }
   if (win) SND.win(); else SND.no();
   $('rEm').textContent = em; $('rTi').textContent = ti; $('rTx').innerHTML = tx; setTimeout(() => show('res'), 700);
@@ -345,7 +349,7 @@ $('bHide').onclick = () => { if (!localStorage.esc8tuto) return tuto(() => start
 $('bSeek').onclick = () => { if (!localStorage.esc8tuto) return tuto(() => startGame('seek')); startGame('seek'); };
 
 // ------------------------------------------------------------ tutorial 3 tarjetas
-const TUTO = [['👆✨', 'Toca un objeto', 'Los que brillan se pueden copiar. Te conviertes en algo PARECIDO a ese objeto.'], ['🎨🌈', 'Ajústate', 'Mueve Tono, Claridad, Ancho, Alto y Girar hasta que el PARECIDO llegue arriba. ¡Más parecido = más puntos y menos tiembles!'], ['🔍❌', 'El Crítico toca', 'Toca objetos sospechosos. Si acierta, te pilla. Si falla, pierde 5 s. Quieto es más difícil verte.']];
+const TUTO = [['👆✨', 'Toca un objeto', 'Los que brillan se pueden copiar. Te conviertes en algo PARECIDO a ese objeto.'], ['🎨🌈', 'Ajústate', 'Mueve Tono, Claridad, Saturación, Ancho, Alto y Girar, cambia el Patrón y usa 1 vez el 💧 cuentagotas. ¡Más PARECIDO = más puntos y tiemblas menos!'], ['🔍❌', 'El Crítico toca', 'Toca objetos sospechosos. Si acierta, te pilla. Si falla, pierde 5 s. Quieto es más difícil verte.']];
 let tutoI = 0, tutoDone = null;
 function tuto(done) { tutoI = 0; tutoDone = done; drawTuto(); show('tuto'); }
 function drawTuto() { const t = TUTO[tutoI]; $('tEm').textContent = t[0]; $('tTi').textContent = t[1]; $('tTx').textContent = t[2]; document.querySelectorAll('.dots i').forEach((d, i) => d.classList.toggle('on', i === tutoI)); $('tNext').textContent = tutoI < 2 ? 'Siguiente ▶' : '¡A jugar!'; }
@@ -354,7 +358,7 @@ $('bTuto').onclick = () => tuto(null);
 
 // ------------------------------------------------------------ IA del Crítico (justa por niveles)
 function seen(c, h) { const dx = h.x - c.x, dz = h.z - c.z, d = Math.hypot(dx, dz); if (d > LV[LEVEL].view) return 0; const a = Math.abs(angDiff(Math.atan2(dx, dz), c.face)); if (a > 1.2 && d > 2) return 0; // línea de visión (estanterías tapan)
-  for (const k of colliders) { if (k.top < 1.5) continue; for (let t = .15; t < 1; t += .15) { const x = c.x + dx * t, z = c.z + dz * t; if (x > k.x0 && x < k.x1 && z > k.z0 && z < k.z1) return 0; } } return d; }
+  for (const k of colliders) { if (k.top < 1.5) continue; for (let t = .04; t < 1; t += Math.min(.2, .25 / Math.max(d, .1))) { const x = c.x + dx * t, z = c.z + dz * t; if (x > k.x0 && x < k.x1 && z > k.z0 && z < k.z1) return 0; } } return d; }
 function aiUpdate(dt) {
   const c = critic, L = LV[LEVEL], p = player; if (!c) return;
   if (c.state === 'wait') { c.face = Math.PI; c.g.position.set(c.x, 0, c.z); c.g.rotation.y = c.face; c.g.userData.lupa.position.set(0, .5, .45); return; }
@@ -367,13 +371,16 @@ function aiUpdate(dt) {
   if (c.susp > 1) c.target = { kind: 'p' };
   c.tapT -= dt;
   if (!c.target) { // elige objeto sospechoso cercano o pasea
-    if (c.tapT <= 0) { const near = props.filter(q => Math.hypot(q.x - c.x, q.z - c.z) < 8); if (p.copy && Math.hypot(p.x - c.x, p.z - c.z) < 8 && Math.random() < L.blind * (1.6 - p.sim / 100) * 5) c.target = { kind: 'p' }; else if (near.length) c.target = { kind: 'o', p: near[(Math.random() * near.length) | 0] }; c.tapT = L.tap; }
+    if (c.tapT <= 0) { const near = props.filter(q => Math.hypot(q.x - c.x, q.z - c.z) < 8); if (p.copy && seen(c, p) && Math.random() < L.blind * (1.6 - p.sim / 100) * 5) c.target = { kind: 'p' }; else if (near.length) c.target = { kind: 'o', p: near[(Math.random() * near.length) | 0] }; c.tapT = L.tap; }
     else if (!c.wp || Math.hypot(c.wp.x - c.x, c.wp.z - c.z) < .8) { let t = 0; do c.wp = { x: rand(-W + 2, W - 2), z: rand(-D + 2, D - 2) }; while (!freeAt(c.wp.x, c.wp.z, .5) && t++ < 20); }
   }
   const tg = c.target ? (c.target.kind === 'p' ? p : c.target.kind === 'o' ? c.target.p : c.target) : c.wp;
   const dx = tg.x - c.x, dz = tg.z - c.z, dd = Math.hypot(dx, dz);
   const reach = c.target && c.target.kind !== 'n' ? 1.1 + (tg.r || .4) : .7;
-  if (dd > reach) { const sp = L.sp * (c.target ? 1.15 : .8) * dt; c.face = Math.atan2(dx, dz); const ox = c.x, oz = c.z; moveCircle(c, dx / dd * sp, dz / dd * sp); c.stuckT += dt; if (c.stuckT > 1.2) { if (Math.hypot(c.x - c.lx, c.z - c.lz) < .4) { c.target = null; c.wp = null; c.x += rand(-.3, .3); } c.stuckT = 0; c.lx = c.x; c.lz = c.z; } }
+  if (dd > reach) { const sp = L.sp * (c.target ? 1.15 : .8) * dt; let ang = Math.atan2(dx, dz); if (c.det > 0) { c.det -= dt; ang += c.side * 1.25; } const ox = c.x, oz = c.z; moveCircle(c, Math.sin(ang) * sp, Math.cos(ang) * sp); const got = Math.hypot(c.x - ox, c.z - oz);
+    if (got < sp * .35) { // bloqueado: rodea por un lado; si sigue, prueba el otro
+      if (!(c.det > 0)) { c.side = c.side ? -c.side : (Math.random() < .5 ? 1 : -1); c.det = .9; } c.blk = (c.blk || 0) + dt; if (c.blk > 2.5) { c.side = -c.side; c.det = 1.2; c.blk = 0; c.giveup = (c.giveup || 0) + 1; if (c.giveup > 2) { c.target = null; c.wp = null; c.giveup = 0; } } } else c.blk = Math.max(0, (c.blk || 0) - dt);
+    if (got > 1e-4) c.face = Math.atan2(c.x - ox, c.z - oz); }
   else if (c.target) { // ¡toca!
     if (c.target.kind === 'p') { if (p.vivo && (Math.hypot(p.x - c.x, p.z - c.z) < 2.2)) { p.vivo = false; c.target = null; msg('😱 ¡TE PILLÉ!', 3); SND.no(); confetti(p.x, p.z); setPal(false); setTimeout(() => endGame(false), 1200); phase = 'fin'; } else { c.target = null; c.susp = .5; } }
     else if (c.target.kind === 'o') { c.stun = 2.5; c.target.p.obj.rotation.z = .3; const o = c.target.p.obj; setTimeout(() => o.rotation.z = 0, 220); msg('El Crítico: «¡Uy! Era ' + art(c.target.p.type) + '» ⏳'); SND.no(); wake(); c.target = null; }
@@ -401,7 +408,7 @@ function loop(now) {
     const iv = canMove ? inputVec() : { x: 0, y: 0, l: 0 };
     const sp = (player.copy ? 3.4 : 4.2) * dt; const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
     const ox = player.x, oz = player.z;
-    player.gnd = moveCircle(player, (-fx * -iv.y + fz * iv.x) * sp, (-fz * -iv.y - fx * iv.x) * sp, player.copy);
+    player.gnd = moveCircle(player, (-fx * -iv.y + fz * iv.x) * sp, (-fz * -iv.y - fx * iv.x) * sp);
     player.moving = Math.hypot(player.x - ox, player.z - oz) / Math.max(dt, 1e-3) / 4;
     if (iv.l > .1) player.face = Math.atan2(player.x - ox, player.z - oz);
     player.vy -= 14 * dt; player.y += player.vy * dt; if (player.y <= player.gnd) { player.y = player.gnd; player.vy = 0; }
@@ -459,4 +466,4 @@ let rondaN = 0;
 $('oEmp').onclick = () => { const js = net.jugadores(); const ids = js.map(j => j.id); const critico = ids[rondaN++ % ids.length]; const salida = ids.map((_, i) => [-6 + i * 2.4, 7]); const d = { t: 'ronda', n: rondaN, critico, ids, salida }; net.enviar(d); empezarRonda(d); };
 function netSend() { if (!player) return; if (myRole === 'critic') net.enviar({ t: 'cr', x: player.x, y: player.y, z: player.z, yaw: player.face }); else { const e = player.err; net.enviar({ t: 'st', x: player.x, y: player.y, z: player.z, o: player.copy ? player.copy.id : -1, e: player.copy ? [e.h, e.l, e.s, e.w, e.a, e.r, e.pat, e.ry].map(v => +(+v).toFixed(3)) : null, w: player.wobbling ? 1 : 0, v: player.vivo }); } }
 // hooks de prueba
-window.__esc = { camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
+window.__esc = { W, camera, remotesList: () => [...remotes.values()].map(r => r.h), get player() { return player; }, get critic() { return critic; }, get bots() { return bots; }, props, startGame, onTap, cam, get phase() { return phase; }, set tLeft(v) { tLeft = v; }, get tLeft() { return tLeft; }, get score() { return score; }, info: () => renderer.info.render, setLevel: l => LEVEL = l, endGame, get net() { return net; } };
