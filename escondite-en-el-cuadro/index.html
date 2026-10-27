@@ -84,16 +84,26 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 .ab.pulse{animation:pulse .3s}@keyframes pulse{40%{transform:scale(1.18)}}
 .glass{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
 @media (orientation:landscape) and (max-height:520px){.mcard{padding:8px 14px;gap:6px;max-width:640px}.logo{font-size:38px}.logo span{font-size:.55em}.sub{display:none}.btn.big{font-size:20px;padding:8px 18px}.btn.sm{padding:7px 12px;font-size:15px}.ribbon{font-size:11px}.glass{padding:8px 14px;gap:6px}#shareImg{max-height:30vh}.glass h2{font-size:22px}.big{font-size:16px}}
+#mold{position:fixed;left:50%;top:max(96px,calc(env(safe-area-inset-top) + 92px));transform:translateX(-50%);z-index:6;display:none;flex-direction:column;gap:6px;background:rgba(255,255,255,.94);border-radius:20px;padding:8px 10px;box-shadow:0 4px 0 rgba(120,60,170,.35);width:min(94vw,420px);touch-action:none}
+#mold.on{display:flex}
+#mold .mrow{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+#mold button{border:none;border-radius:14px;padding:6px 9px;font:700 14px Fredoka;background:#efe6ff;color:#7a3aa0}
+#mold button.sel{background:#ff6fb5;color:#fff}
+#mold label{display:flex;align-items:center;gap:8px;font:700 14px Fredoka;color:#7a3aa0}
+#mold input{flex:1;accent-color:#ff6fb5;height:26px}
+#mClose{background:#3fd1b5!important;color:#fff!important}
+#mFace small{font-size:12px;opacity:.9;margin-left:4px}
+@media (orientation:landscape) and (max-height:520px){#mold{top:auto;bottom:8px;left:auto;right:96px;transform:none;width:min(48vw,380px);padding:6px 8px;gap:3px}#mold button{padding:4px 7px;font-size:12px}}
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="ver">v3 · Castillo</div><div id="touch"></div><div id="fade"></div>
+<div id="ver">v4 · Camuflaje total</div><div id="touch"></div><div id="fade"></div>
 <div id="toast"></div><div id="bub"></div><div id="cross"></div>
 <div id="frameFx" class="fadeFrame"></div>
 <div id="menu" class="scr on">
  <div class="mcard">
  <div class="ribbon">✦ Museo mágico ✦</div>
  <div class="logo">Escondite<span>en el Cuadro</span></div>
- <div class="sub">🏰 De noche, el castillo cobra vida: retratos que te miran, cuadros que respiran y armaduras de gelatina. ¡Píntate igual que lo que tengas al lado y que El Crítico no te vea!</div>
+ <div class="sub">🏰 De noche, el castillo cobra vida: retratos que te miran, cuadros que respiran y armaduras de gelatina. ¡Pégate a un cuadro, conviértete en un libro o cháfate en la alfombra para que El Crítico no te vea!</div>
  <button class="btn big" id="bPlay">▶ ¡Jugar!<small>te escondes y luego buscas</small></button>
  <div class="row"><button class="btn teal sm" id="bHide">🙈 Esconderme</button><button class="btn yel sm" id="bSeek">🧐 Ser El Crítico</button><button class="btn lil sm" id="b2p">👯 2 en un móvil</button></div>
  <div class="row"><button class="btn ghost sm" id="bOn">🌐 Sala online · pronto</button><button class="btn ghost sm" id="bHow">❓ Cómo se juega</button><button class="btn ghost sm" id="bMute">🔊</button></div>
@@ -101,18 +111,22 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
  </div>
 </div>
 <div id="howS" class="scr"><div class="glass"><h2>Cómo se juega</h2><ul class="how">
-<li><b>Pon el dedo en la mitad izquierda</b>: aparece el joystick y te mueves. <b>Arrastra por la derecha</b> para girar la cámara.</li>
-<li>Eres una <b>Mancha</b>: tienes 30 segundos. Pégate a un cuadro, tapiz, mueble o alfombra y pulsa <b>💧 Color</b> para chuparle el color y <b>🖌 Dibujo</b> para copiar sus rayas, lunares o cuadros.</li>
-<li>Pulsa <b>🧘 Pose</b> para ponerte bolita, alta, plana o tumbada como lo que imitas. ¡Mira el % de camuflaje!</li>
-<li>Luego llega <b>El Crítico</b>. Si te mueves, ¡te ve! Aguanta hasta el final.</li>
-<li>Cuando tú eres El Crítico, apunta al centro y pulsa <b>🎯</b>. Ojo: tienes pocos disparos. Las Manchas a veces estornudan… 🤧</li></ul>
+<li><b>Mitad izquierda</b>: joystick para moverte. <b>Arrastra por la derecha</b> para girar la cámara.</li>
+<li>Eres una <b>Mancha</b> y tienes 45 segundos. Pulsa <b>🦘 Saltar</b> mirando a un cuadro, una lámpara de pared, una estantería, un escudo o una cortina: ¡saltas, te pegas y copias su textura!</li>
+<li>Pegada a la pared, el joystick te desliza por ella (y pasas del zócalo al papel o de una balda de libros a otra). Vuelve a pulsar 🦘 para bajar.</li>
+<li><b>🎨 Copiar</b> copia la textura de lo que tocas: la alfombra si estás encima, la pared o el mueble si estás pegada. El botón te dice qué vas a copiar.</li>
+<li><b>✋ Moldear</b>: cháfate en la alfombra, hazte lámina en un cuadro o libro en la estantería, y ajusta ancho, alto y grosor.</li>
+<li>Si te quedas quieta y bien camuflada, cierras los ojos y desapareces. El Crítico tendrá que acercarse muchísimo para verte.</li>
+<li>Cuando tú eres El Crítico: apunta al centro y pulsa <b>🎯</b>. Fíjate MUCHO: ojitos que asoman, un libro raro, una lámpara de más… 🤧</li></ul>
 <button class="btn" data-back>¡Entendido!</button></div></div>
 <div id="pass" class="scr" style="background:linear-gradient(180deg,#7a5cff,#ff6fb5)"><div class="glass"><h2 id="pT"></h2><div class="big" id="pS"></div><button class="btn" id="pGo">¡Listo!</button></div></div>
 <div id="res" class="scr" style="background:rgba(60,30,130,.35)"><div class="glass"><h2 id="rT"></h2><div class="big" id="rP"></div><img id="shareImg" alt=""><div class="row"><button class="btn yel sm" id="rShare">📸 Compartir mi escondite</button></div><div class="row"><button class="btn teal sm" id="rNext">Siguiente ▶</button><button class="btn lil sm" id="rMenu">🏠 Menú</button></div></div></div>
 <div id="hud"><div class="top"><button class="pill" id="hBack">⏸</button><span class="pill" id="hPhase"></span><span class="pill" id="hTime"></span><span class="pill" id="hInfo"></span></div>
 <div id="meter"><div id="mTxt"><span id="mFace">🙈</span><span id="mPct">0%</span></div><div id="mBar"><div id="mFill"></div></div></div></div>
 <div id="joy"><div id="joyK"></div></div>
+<div id="mold"><div class="mrow"><button data-sh="gota">💧 Gota</button><button data-sh="chafada">🥞 Chafada</button><button data-sh="lamina">📄 Lámina</button><button data-sh="libro">📕 Libro</button><button data-sh="bola">🟠 Bola</button><button data-sh="alta">🗿 Alta</button></div>
+<label>↔ Ancho<input type="range" id="mW" min="0.15" max="2.2" step="0.01"></label><label>↕ Alto<input type="range" id="mH" min="0.08" max="2.2" step="0.01"></label><label>⬌ Grosor<input type="range" id="mD" min="0.05" max="2.2" step="0.01"></label><div class="mrow"><button id="mClose">✔ Listo</button></div></div>
 <div id="acts"></div>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=3"></script>
+<script type="module" src="game.js?v=4"></script>
 </body></html>
