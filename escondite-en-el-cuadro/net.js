@@ -4,20 +4,20 @@
 //  Con URL y /health = ok => se activa solo.
 //
 //  Partida: 2-6 jugadores por código de 4 letras. Por rondas: 1 jugador
-//  es El Crítico (buscador) y el resto Manchas disfrazadas de objetos; el papel de
+//  es El Crítico (buscador) y el resto Manchas (escondidos); el papel de
 //  Crítico rota cada ronda. El ANFITRIÓN manda el reloj y las fases.
 //  Mensajes (van dentro de {t:'all'|'to', d:...} del servidor relé):
 //   {t:'hola', nombre}                       al entrar
 //   {t:'ronda', n, critico:id, salida:[[x,z,yaw]...], ids:[...]} anfitrión
 //   {t:'fase', fase:'seek'|'fin', tiempo}    anfitrión
-//   {t:'st', x,y,z, o:idObjeto|-1, e:[tono,clar,sat,ancho,alto,giro,patron,rot]|null,
-//           w:tambaleo 0/1, v:vivo}                cada 100 ms (escondidos)
-//   {t:'cr', x,y,z,yaw}                       El Crítico, cada 100 ms
-//   {t:'toque', ok:0}                         El Crítico falla un objeto
+//   {t:'st', x,y,z,yaw, f:forma, S:[w,h,d], sk:idSuperficie|-1,
+//           at:idAncla|-1, mv:0/1, oj:0..1, v:vivo}       cada 100 ms
+//   {t:'cr', x,y,z,yaw,pitch}                 El Crítico, cada 100 ms
+//   {t:'disparo', o:[x,y,z], p:[x,y,z], hit:id|null}       El Crítico
 //   {t:'pillada', id}                        El Crítico (él decide)
-//   {t:'silbo', x,z}                         un escondido silba (pista)
-//  El disfraz viaja como id del objeto copiado + los ajustes (tono, claridad,
-//  saturación, ancho, alto, giro, patrón): la biblioteca es igual en todos.
+//   {t:'salto', at:idAncla}                  al pegarse (efecto/sonido)
+//  La textura copiada viaja como id de superficie (índice en surfaces),
+//  nunca como imagen: el castillo se construye igual en todos los móviles.
 // =====================================================================
 export const GAME_ID = 'escondite-en-el-cuadro';
 export function onlineURL() { const O = window.OnlineCF; return O ? O.base() : ''; }
