@@ -180,6 +180,28 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 #bI{right:calc(30px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:76px;height:76px;font-size:32px}
 #bB{right:calc(150px + env(safe-area-inset-right));bottom:calc(130px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:12px}
 }
+/* v44: en horizontal el HUD y los mandos iguales que en vertical */
+@media (orientation:landscape) and (max-height:560px){
+/* HUD */
+#hPos{font-size:44px;padding:2px 10px 4px;border-radius:18px}#hPos small{font-size:18px}
+#mini{top:calc(66px + env(safe-area-inset-top));width:96px;height:96px}
+#hLap{font-size:18px}#hLap span{font-size:13px}
+#hItem{width:62px;height:62px;font-size:34px;border-radius:18px}
+#hItemName{top:calc(74px + env(safe-area-inset-top));font-size:12px}
+#pauseB{right:calc(84px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));width:42px;height:42px;font-size:18px}
+#hSpd{top:calc(82px + env(safe-area-inset-top));bottom:auto;width:130px;font-size:16px}
+
+#count{font-size:96px}
+#wrong{font-size:20px;white-space:nowrap}
+
+/* controles táctiles */
+#bL{width:90px;height:90px;font-size:38px;bottom:calc(22px + env(safe-area-inset-bottom))}
+#bR{left:calc(116px + env(safe-area-inset-left));width:90px;height:90px;font-size:38px;bottom:calc(22px + env(safe-area-inset-bottom))}
+#stick{width:150px;height:150px}
+#bD{width:124px;height:124px;font-size:14px;bottom:calc(18px + env(safe-area-inset-bottom))}#bD .ico{width:44px;height:44px}
+#bI{right:calc(30px + env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:76px;height:76px;font-size:32px}
+#bB{right:calc(150px + env(safe-area-inset-right));bottom:calc(130px + env(safe-area-inset-bottom));width:60px;height:60px;font-size:12px
+}
 
 
 /* v6: repaso vertical de menús */

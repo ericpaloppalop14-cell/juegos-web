@@ -4,6 +4,7 @@ import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js';
 import { addDeco } from './deco.js';
 import { addSkyFloat } from './skyfloat.js';
 import { addXDeco } from './xdeco.js';
+import { addStorm, makeBolt, shockRing, stormCloud } from './storm.js';
 import { addHD } from './hd.js';
 import { addProps26, stands26, lanterns26 } from './props26.js';
 import { makeCritter, animCritter, CRITTER_COUNT } from './critters.js';
@@ -241,6 +242,7 @@ function buildVisuals(T, Q) {
   }
   try { lanterns26(T); } catch (e) { console.warn('lant26', e); addLanterns(T); } // v26: farolas con carita
   scenery(T, Q);
+  if (T.cup.id === 'tormenta' && !T.open) try { addStorm(T, Q, rnd); } catch (e) { console.warn('storm44', e); } // v44: Copa Tormenta a lo grande
 }
 
 function makeSign(text, color) {
@@ -367,9 +369,8 @@ function makeObstacle(T, kind, i, k) {
     o.ball = b; o.r = 2.3;
   } else if (kind === 'lightning') {
     const ring = mesh(new THREE.RingGeometry(3.2, 4, 28), new THREE.MeshBasicMaterial({ color: '#fff27a', transparent: true, opacity: 0.0, side: THREE.DoubleSide }), g, [0, 0.2, 0], [-Math.PI / 2, 0, 0]);
-    const bolt = new THREE.Group(); g.add(bolt);
-    const bm = new THREE.MeshBasicMaterial({ color: '#fffbe0' });
-    let y = 40, x = 0; for (let j = 0; j < 7; j++) { const nx = (j % 2 ? 1 : -1) * (1 + rnd() * 1.5), ny = y - 6; const len = Math.hypot(nx - x, 6); const seg = mesh(new THREE.CylinderGeometry(0.35, 0.35, len, 5), bm, bolt, [(x + nx) / 2, (y + ny) / 2, 0], [0, 0, Math.atan2(nx - x, 6)]); x = nx; y = ny; }
+    // v44: rayo ramificado de verdad (cinta cruzada con halo), nubecita kawaii que avisa, onda y chispas al caer
+    const bolt = makeBolt(40, 1.8, '#fffbe0', '#ff8ff0'); g.add(bolt); o.cloud = stormCloud(1.5); o.cloud.position.y = 43; g.add(o.cloud); o.shock = shockRing(g);
     bolt.visible = false; o.ring = ring; o.bolt = bolt; o.r = 4; o.period = 4.2 + k * 0.9; o.lat = 0;
   }
   o.update = (t, dt) => {
@@ -379,7 +380,12 @@ function makeObstacle(T, kind, i, k) {
       if (ph < dt * 1.5 || o.lat == null) o.lat = (rnd() - 0.5) * s.w * 1.4;
       const p = off(s, o.lat, 0); g.position.copy(p);
       o.ring.material.opacity = ph > warn ? 0.35 + 0.5 * Math.abs(Math.sin(t * 14)) : 0;
-      const strike = ph > o.period - 0.3; o.bolt.visible = strike; o.active = strike; o.strikeNow = strike;
+      const strike = ph > o.period - 0.3; o.active = strike; o.strikeNow = strike;
+      const sp = ph - (o.period - 0.3); if (strike && !o._jag) { o.bolt.rejag(rnd); o._jag = true; } if (!strike) o._jag = false;
+      if (strike && sp > 0.1 && sp < 0.13) o.bolt.rejag(rnd);
+      o.bolt.setI(strike ? (sp < 0.06 || (sp > 0.11 && sp < 0.2) ? 1 : 0.35) : 0);
+      o.shock.play(strike ? sp : 9);
+      o.cloud.position.y = 43 + Math.sin(t * 1.3 + o.ph) * 0.8; o.cloud.scale.setScalar(ph > warn ? 1 + Math.abs(Math.sin(t * 10)) * 0.08 : 1);
       return;
     }
     if (kind === 'critter') { // paseo lento de lado a lado, mirando hacia donde camina

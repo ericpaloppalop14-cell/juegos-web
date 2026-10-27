@@ -13,6 +13,7 @@ import { PowerFX, POWER, POWER_W } from './powerups.js';
 
 const V3 = THREE.Vector3;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const LAND_K = 0.62; // v44
 const lerp = (a, b, t) => a + (b - a) * t;
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const R = Math.random;
@@ -576,7 +577,7 @@ export class Race {
       cam.lookAt(k.pos.x, k.y + 1.6, k.pos.z); return;
     }
     const s = k.megaS, sf = clamp(k.fs / 45, 0, 1.4), back = 6.5 * (1 + (s - 1) * 0.9) + (k.boostT > 0 ? 0.9 : 0) + sf * 0.6 + this.kick * 0.8 + (k.flip && k.air ? 3.5 : 0), up = 2.85 * (1 + (s - 1) * 0.85) + (k.flip && k.air ? 2.2 : 0);
-    const pv = cam.aspect < 1, pB = pv ? 1.0 : 0.92, pU = pv ? 3.0 : 1.85, pA = pv ? 1.35 : 1.25; // v28: cámara más alta, mirando más desde arriba, aún cerca // v5: cámara vertical más alta y mirando más lejos (horizontal intacta)
+    const pv = true, pB = pv ? 1.0 : 0.92, pU = pv ? 3.0 : 1.85, pA = pv ? 1.35 : 1.25; // v28: cámara más alta, mirando más desde arriba, aún cerca // v5: cámara vertical más alta y mirando más lejos (horizontal intacta)
     const yaw = k.yaw + k.driftDir * 0.12;
     if (snap || this._cy == null) this._cy = yaw;
     this._cy += angDiff(this._cy, yaw) * (1 - Math.exp(-dt * 7));
@@ -590,7 +591,9 @@ export class Race {
     if (sh > 0) cam.position.add(new V3((R() - 0.5) * sh, (R() - 0.5) * sh, (R() - 0.5) * sh));
     cam.lookAt(this.camLook);
     const fov = 64 + Math.min(14, Math.max(0, k.fs - 18) * 0.45) + (k.boostT > 0 ? 8 : 0) + this.kick * 8;
-    cam.fov = lerp(cam.fov, fov, 1 - Math.exp(-dt * 5)); cam.updateProjectionMatrix();
+    // v44: en horizontal el mismo encuadre que en vertical: la imagen vertical, centrada y a la misma escala relativa
+    const fovW = cam.aspect < 1 ? fov : 2 * Math.atan(Math.tan(fov * Math.PI / 360) * LAND_K) * 180 / Math.PI;
+    cam.fov = lerp(cam.fov, fovW, 1 - Math.exp(-dt * 5)); cam.updateProjectionMatrix();
   }
   dispose() {
     Audio.engineStop();
