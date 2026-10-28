@@ -236,6 +236,34 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 #waveV{position:absolute;inset:0;opacity:0;background:linear-gradient(0deg,rgba(255,255,255,.95),rgba(255,190,220,.5) 18%,transparent 40%);transition:opacity .2s}
 #wrong.spec{background:rgba(139,92,194,.8);font-size:20px}
 @media (orientation:portrait){#modes,#lobby{justify-content:flex-end;padding-bottom:calc(16px + env(safe-area-inset-bottom))}#lList{grid-template-columns:1fr}.mbtns .btn{width:100%}}
+/* v50 copas online */
+.ocard{width:min(94vw,560px);display:flex;flex-direction:column;gap:8px;align-items:stretch;max-height:94vh;overflow:auto;touch-action:pan-y;padding:14px 18px}
+.ocrank{display:flex;gap:12px;align-items:center;background:#fff4fa;border-radius:20px;padding:8px 12px;box-shadow:0 3px 0 rgba(200,150,220,.35)}
+.ocrank .ri{font-size:38px;line-height:1}.ocrank .rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-weight:700;color:#6a4b8a}.ocrank .rt b{font-size:19px}.ocrank .rt span{font-size:14px;color:#8b5cc2}
+.ocrank .rb{height:10px;border-radius:6px;background:#e9d9f7;overflow:hidden}.ocrank .rb u{display:block;height:100%;background:linear-gradient(90deg,#ff8fc0,#ffd36b);border-radius:6px}.ocrank small{font-size:12px;font-weight:600;color:#8b5cc2}
+.occups{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.occ{font-family:inherit;border:3px solid transparent;background:#fff;border-radius:16px;padding:5px 4px;display:flex;flex-direction:column;align-items:center;gap:1px;color:#6a4b8a;font-weight:700;font-size:13px;box-shadow:0 3px 0 rgba(160,110,200,.4);cursor:pointer;min-width:0}
+.occ i{font-style:normal;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:18px;border:2px solid #fff;box-shadow:0 0 0 2px rgba(120,60,140,.18)}
+.occ span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.occ small{font-size:11px;color:#8b5cc2;white-space:nowrap}
+.occ.lock{opacity:.62;filter:saturate(.55)}.occ.sel{border-color:#ff6fa8;background:#fff0f8;opacity:1;filter:none;box-shadow:0 3px 0 #ff9cc6}.occ.dim:not(.sel){opacity:.45}
+.ocside{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.ocjoin{display:flex;gap:8px;justify-content:center;align-items:center}
+.ocjoin input,#ocCode{font-family:inherit;font-size:20px;font-weight:700;letter-spacing:3px;text-transform:uppercase;text-align:center;color:#6a4b8a;border:3px solid #ffc4e1;border-radius:16px;padding:5px 8px;width:min(34vw,140px);outline:none;user-select:text;-webkit-user-select:text;touch-action:auto;background:#fff}
+.olleft,.olright{display:flex;flex-direction:column;gap:8px;min-width:0}
+.olcodebox{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff4fa;border-radius:20px;padding:8px 12px;box-shadow:0 3px 0 rgba(200,150,220,.35);flex-wrap:wrap}
+.olc{display:flex;flex-direction:column;line-height:1.05}.olc small{font-size:12px;font-weight:700;color:#8b5cc2}.olc b{font-size:34px;letter-spacing:5px;color:#ff5f9e;font-weight:800}
+.olb{display:flex;gap:6px;flex-wrap:wrap}
+.olopts{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.olopts .btn.on{background:linear-gradient(180deg,#9df0d6,#5fc7a6);color:#fff;box-shadow:0 4px 0 #3fa585}
+#olList{display:grid;grid-template-columns:1fr 1fr;gap:6px}#olList .lp{font-size:14px;padding:6px 9px}#olList em{font-style:normal}
+@media (orientation:portrait){#ocmenu,#oclobby{justify-content:flex-end;padding-bottom:calc(10px + env(safe-area-inset-bottom))}.ocard .mbtns .btn{width:100%}}
+@media (orientation:landscape) and (max-height:520px){
+ .ocard{width:min(96vw,780px);padding:8px 14px;gap:6px}
+ #oclobby .ocard{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:4px;align-content:start}#oclobby .ocard>.title2{grid-column:1/3;font-size:20px!important}
+ #ocmenu .ocard{display:grid;grid-template-columns:1.1fr 1fr;column-gap:14px;row-gap:6px;align-content:start}#ocmenu .ocard>.title2{grid-column:1/3;font-size:20px!important}
+ #ocmenu .ocrank{grid-column:1}#ocmenu .occups{grid-column:1}#ocmenu .ocside{grid-column:2;grid-row:2/4;justify-content:center}
+ .ocrank .ri{font-size:30px}.occups{gap:4px}.occ{padding:3px 2px;font-size:12px}.occ i{width:22px;height:22px;font-size:13px}
+ .olc b{font-size:26px}#olList{grid-template-columns:1fr 1fr 1fr}.ocard .btn{font-size:16px;padding:7px 14px}.ocard .btn.sm{font-size:13px;padding:5px 10px}.ocard .mname{font-size:14px}
+}
 @media (max-height:480px){.mcard,.lcard{gap:6px;padding:10px 18px}.mhow{font-size:13px}#lList{grid-template-columns:1fr 1fr 1fr}}
 
 /* v8: «Elige copa» premium con carrusel 3D */
@@ -461,7 +489,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 #count.pop{animation:v21pop .9s cubic-bezier(.34,1.56,.64,1) forwards!important}
 @keyframes v21pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-12deg)}35%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(3deg)}60%{transform:translate(-50%,-50%) scale(1) rotate(0)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}}
 #pauseB{box-shadow:0 4px 12px rgba(120,60,150,.25),inset 0 1px 0 #fff;border:2px solid #fff!important}
-#orient .card,#modes .card,#lobby .card,#settings .card{border-radius:28px!important}
+#orient .card,#modes .card,#lobby .card,#settings .card,#ocmenu .card,#oclobby .card{border-radius:28px!important}
 .seg button{transition:transform .15s cubic-bezier(.34,1.56,.64,1)}.seg button:active{transform:scale(.9)}
 @media (max-height:500px){#settings .card{padding:10px 22px!important;max-height:94vh;overflow:auto}#settings .keys{display:none}#settings .set{margin:4px 0!important}}
 /* v23: 4 carreras por copa */
@@ -682,7 +710,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
   <div class="top"><button class="btn sec sm" id="uBack">‹ Volver</button><div class="title2">Elige copa</div><div style="width:90px"></div></div>
   <div id="cupSide">
     <div id="cupPanel"><div id="cupName"></div><div id="cupTrack"></div></div><div id="cupGrid"></div>
-    <div id="cupBtns"><button class="btn pgo" id="uGo"><span>¡A correr!</span></button><button class="btn pola" id="uOla"><b class="ic">🍦</b><span>Ola de Nata</span><em>ONLINE</em></button></div>
+    <div id="cupBtns"><button class="btn pgo" id="uGo"><span>¡A correr!</span></button><button class="btn pola" id="uOla"><b class="ic">🌐</b><span>Copas online</span><em>NUEVO</em></button></div>
   </div>
 </div>
 
@@ -717,6 +745,34 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
   <div class="mbtns"><button class="btn" id="mOnline">🌐 Jugar online</button><button class="btn mint" id="mSolo">🤖 Contra bots</button></div>
   <div id="mDay" class="msub"></div><div id="mRec" class="msub"></div>
   <div class="row" style="margin-top:8px"><button class="btn sec sm" id="mBack">‹ Volver a las copas</button></div>
+</div></div>
+
+<div id="ocmenu" class="screen"><div class="card ocard">
+  <div class="title2" style="text-align:center">🌐 Copas ONLINE</div>
+  <div id="ocRank" class="ocrank"></div>
+  <div id="ocCups" class="occups"></div>
+  <div class="ocside">
+    <label class="mname">Tu nombre <input id="ocName" maxlength="14" autocomplete="off" spellcheck="false"></label>
+    <div class="mbtns"><button class="btn" id="ocPriv">👥 Sala privada</button><button class="btn mint" id="ocPub">⚡ Partida pública</button></div>
+    <div class="ocjoin"><input id="ocCode" maxlength="6" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn sec sm" id="ocJoin">Unirme con código</button></div>
+    <div class="row"><button class="btn sec sm" id="ocOla">🍦 Ola de Nata</button><button class="btn sec sm" id="ocBack">‹ Volver</button></div>
+  </div>
+</div></div>
+
+<div id="oclobby" class="screen"><div class="card ocard">
+  <div class="title2" id="olTitle" style="text-align:center"></div>
+  <div class="olleft">
+    <div id="olCodeBox" class="olcodebox"><div class="olc"><small>Código de la sala</small><b id="olCode"></b></div><div class="olb"><button class="btn sm" id="olCopy">📋 Copiar enlace</button><button class="btn sec sm" id="olShare">📤 Compartir</button></div></div>
+    <div id="olInfo" class="msub"></div>
+    <div id="olList"></div>
+    <div id="olNote" class="msub" style="font-size:12px;opacity:.85"></div>
+  </div>
+  <div class="olright">
+    <div id="olCupsT" class="msub"></div>
+    <div id="olCups" class="occups"></div>
+    <div id="olOpts" class="olopts" style="display:none"><button class="btn sec sm" data-r="2">2 carreras</button><button class="btn sec sm" data-r="4">4 carreras</button><button class="btn sec sm" id="olBots">🤖 Con bots</button></div>
+    <div class="row"><button class="btn" id="olStart" style="display:none">¡Empezar!</button><button class="btn sec sm" id="olLeave">Salir</button></div>
+  </div>
 </div></div>
 
 <div id="lobby" class="screen"><div class="card lcard">
@@ -771,7 +827,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 <script>window.FX_NOCHE={z:2,n:16,vig:.14,rays:false}</script><script src="js/fx-noche.js?v=2"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script><script src="online-config.js?v=1"></script><script src="online-cf.js?v=1"></script>
-<script type="module" src="js/main.js?v=49"></script>
+<script type="module" src="js/main.js?v=50"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false, touched = false; for (const ev of ['pointerdown', 'touchstart', 'keydown']) addEventListener(ev, () => { touched = true; }, { capture: true, passive: true }); /* v43: no recargar si el jugador ya ha tocado algo (antes volvía a la pantalla de orientación); la versión nueva se aplica en el próximo arranque */ navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl && !touched) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=43', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>

@@ -57,7 +57,7 @@ export function makeBots(n, r = Math.random, taken = []) {
 }
 
 // ---------------- etiqueta de nombre ----------------
-function nameTag(text, color, me) {
+export function nameTag(text, color, me) {
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const x = cv.getContext('2d');
   x.font = '700 58px Fredoka, sans-serif'; const w = Math.min(500, x.measureText(text).width + 60);
   x.fillStyle = me ? 'rgba(255,111,176,.92)' : 'rgba(255,255,255,.88)'; x.beginPath(); x.roundRect(256 - w / 2, 18, w, 86, 43); x.fill();

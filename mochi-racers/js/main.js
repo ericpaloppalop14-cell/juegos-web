@@ -15,6 +15,8 @@ import { Audio } from './audio.js';
 import { EndlessRace, MATCH_T, daySeed, makeEndlessCup } from './endless.js';
 import { Online, soloMatch, MAX_PLAYERS } from './online.js';
 import { createCupCarousel } from './cupsel.js';
+import { OnlineCupRace } from './cuprace.js'; // v50: copas online
+import { initOcUI } from './ocui.js';
 import { buildPodium } from './podium.js';
 import { buildTitleFx, animTitleFx, buildSelBg, animSelBg, setSelColor, makePortraits, makePortraitsAsync, finishPortraits, ANIMS, animPreview } from './showcase.js';
 
@@ -193,7 +195,7 @@ const meInfo = () => ({ name: (save.nick || 'Piloto').slice(0, 14), ch: (app.pla
 btn('mSolo', () => { app.mode = 'solo'; startEndless(soloMatch(meInfo())); });
 btn('mOnline', () => { app.mode = 'online'; openLobby(); });
 btn('mBack', () => openCups());
-btn('uOla', () => openModes());
+btn('uOla', () => oc.openMenu());
 function openLobby() {
   show('lobby'); $('lList').innerHTML = ''; $('lInfo').textContent = 'Conectando…';
   online.wait(meInfo(), {
@@ -231,7 +233,7 @@ function showEndResults(order, stats) {
   $('rTable').innerHTML = h; $('rNext').textContent = app.mode === 'online' ? '🌐 Otra online' : '🔁 Otra partida'; $('rMenu').style.display = '';
 }
 const fmtS = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-btn('rMenu', () => { if (app.race) { app.race.dispose(); app.race = null; } online.stopRace(); online.close(); openModes(); });
+btn('rMenu', () => { if (app.mode === 'oc') { oc.leave(); return; } if (app.race) { app.race.dispose(); app.race = null; } online.stopRace(); online.close(); openModes(); });
 
 // ---------------- cups ----------------
 let uSel = 0;
@@ -249,7 +251,7 @@ function cupInfo() { const c = CUPS[uSel], un = cupUnlocked(c), tr = save.trophi
 }
 function setCup(i) { if (i === uSel || cupBusy) return; uSel = i; carousel.select(i); cupInfo(); }
 function openCups() {
-  if (app.match) { online.stopRace(); online.close(); } app.match = null; app.mode = null;
+  if (app.match) { online.stopRace(); online.close(); } if (app.oc) { app.oc.close(); app.oc = null; } app.match = null; app.mode = null;
   if (!carousel) carousel = createCupCarousel(renderer, CUPS);
   cupBusy = false; show('cups');
   if (!cupUnlocked(CUPS[uSel])) uSel = 0;
@@ -260,6 +262,7 @@ function openCups() {
     d.addEventListener('click', () => { Audio.init(); Audio.sfxPlay('select', i * 4); Audio.sfxPlay('swoosh'); setCup(i); }); G.appendChild(d); });
   carousel.setChar(app.playerChar || CHARS[0]);
   carousel.setState(uSel, c => ({ unlocked: cupUnlocked(c), tier: save.trophies[c.id] }));
+  if (ocPending) { const code = ocPending; ocPending = null; setTimeout(() => oc.joinCode(code), 60); }
   cupInfo();
   stage.clear(); menuKarts.length = 0; previewKart = null; trophyPreview = null;
 }
@@ -292,6 +295,7 @@ function startRace() {
   }, 30);
 }
 app.onRaceEnd = (order, stats) => {
+  if (app.race && app.race.oc) { oc.raceEnd(order); return; }
   if (app.race && app.race.endless) { app.lastResults = order; app.lastStats = stats; setTimeout(() => showEndResults(order, stats), 400); return; }
   app.lastOrder = order.map(o => o.ch);
   order.forEach((o, i) => { o.pts = CONFIG.points[i]; app.points[o.ch.id] += o.pts; });
@@ -309,13 +313,37 @@ function showResults(order) {
   $('rTable').innerHTML = h;
   $('rNext').textContent = last ? '🏆 Ver podio' : 'Siguiente carrera ›';
 }
-btn('rNext', () => { if (app.match) { if (app.race) { app.race.dispose(); app.race = null; } online.stopRace(); if (app.mode === 'online') openLobby(); else startEndless(soloMatch(meInfo())); return; } if (app.raceNo >= RACES_PER_CUP - 1) showPodium(); else { app.raceNo++; startRace(); } });
+btn('rNext', () => { if (app.mode === 'oc') { oc.next(); return; } if (app.match) { if (app.race) { app.race.dispose(); app.race = null; } online.stopRace(); if (app.mode === 'online') openLobby(); else startEndless(soloMatch(meInfo())); return; } if (app.raceNo >= RACES_PER_CUP - 1) showPodium(); else { app.raceNo++; startRace(); } });
+
+// ---------------- v50: copas online ----------------
+const oc = initOcUI({ app, save, persist, $, btn, show: id => show(id), CUPS, CHARS, Audio, esc: t => esc(t), fmtT: t => fmtT(t), meInfo: () => meInfo(), openCups: () => openCups(), openModes: () => openModes(),
+  startOcRace: (M, n, grid) => startOcRace(M, n, grid), showOcPodium: o => showOcPodium(o), celebrateOc: ids => { pendingUnlocks = ids.slice(); pendingChars = []; ocCel = true; celebrateUnlock(); } });
+let ocPending = null; try { const q = new URLSearchParams(location.search).get('copa'); if (q) ocPending = q; } catch (e) {}
+function startOcRace(M, n, grid) {
+  if (app.race) { app.race.dispose(); app.race = null; }
+  const cup = cupById(M.cup); app.cup = cup; app.raceNo = n; app.mode = 'oc';
+  const rc = cupForRace(cup, n);
+  $('loading').style.display = 'flex'; $('loading').textContent = 'Preparando ' + rc.track + '…';
+  const roster = M.roster.map((r, i) => M.gone.includes(i) ? { ...r, bot: true, lvl: 1, pid: null } : r);
+  const alive = roster.map((r, i) => i).filter(i => !roster[i].bot), sim = alive.length ? Math.min(...alive) === M.me : false; M.simBots = sim;
+  setTimeout(() => {
+    window.__mrLod = prLv >= 5 ? 0.35 : prLv >= 3 ? 0.55 : prLv >= 2 ? 0.7 : 0.85;
+    app.race = new OnlineCupRace(app, { cup: rc, reverse: n === 1, roster, grid, me: M.me, quality: { hi: qualityHi }, simBots: sim, cupIndex: CUPS.indexOf(cup) });
+    app.oc.attach(app.race, n);
+    try { app.race.mergedMeshes = mergeStatic(app.race); } catch (e) {} try { noche4(app.race); } catch (e) { console.warn('n4', e); } shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
+    show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>DERRAPE</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
+    app.ui.toast(cup.name + ' · Carrera ' + (n + 1) + '/' + M.races + ':\n' + raceNames(cup)[n], '#ffffff', true);
+    Audio.init(); Audio.playSong(cup.music, CUPS.indexOf(cup) * 7 + n + 1); Audio.engineStart();
+    buildMinimap();
+  }, 30);
+}
 
 // ---------------- podium (v11) ----------------
 const podCam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 900);
 let podData = null, podBand = [0.3, 0.85], podBandT = 0;
 function podMeasure() { const h = innerHeight, hd = $('podHead').getBoundingClientRect(), rw = $('podBtns').getBoundingClientRect(); podBand = [Math.min(0.6, (hd.bottom + 6) / h), Math.max(0.5, (rw.top - 6) / h)]; }
 function showPodium() {
+  $('pRetry').style.display = '';
   if (app.race) { app.race.dispose(); app.race = null; }
   const ranking = Object.entries(app.points).sort((a, b) => b[1] - a[1]).map(([id, p]) => ({ ch: CHARS.find(c => c.id === id), p }));
   const myPlace = ranking.findIndex(r => r.ch === app.playerChar);
@@ -343,15 +371,27 @@ function showPodium() {
   app.lastPodium = { ranking: ranking.map(r => r.ch.id), myPlace, tier };
   requestAnimationFrame(podMeasure); podBandT = 0;
 }
-btn('pOk', () => { podData = null; if (pendingUnlocks.length) celebrateUnlock(); else openCups(); });
+function showOcPodium(o) {
+  if (app.race) { app.race.dispose(); app.race = null; }
+  pendingUnlocks = []; pendingChars = []; const tier = o.tier;
+  podData = { p: buildPodium(o.cup, o.ranking, o.myPlace, tier) }; try { noche4Podium(podData.p); } catch (e) {}
+  podCam.aspect = innerWidth / innerHeight;
+  $('podium').classList.toggle('win', tier === 0); $('podium').classList.toggle('lose', tier < 0);
+  $('podBadge').textContent = tier === 0 ? '¡VICTORIA ONLINE!' : tier > 0 ? '¡AL PODIO!' : '¡BUENA CARRERA!';
+  $('podTitle').textContent = o.title; $('podPlace').textContent = o.place; $('podSub').textContent = o.sub; $('pRetry').style.display = 'none';
+  show('podium'); Audio.sfxPlay(tier === 0 ? 'victory' : tier > 0 ? 'fanfare' : 'finish');
+  requestAnimationFrame(podMeasure); podBandT = 0;
+}
+btn('pOk', () => { podData = null; if (app.mode === 'oc') { oc.afterPodium(); return; } if (pendingUnlocks.length) celebrateUnlock(); else openCups(); });
 // v46: celebración kawaii al abrir una copa nueva (una pantalla por copa, con confeti y sonido)
 let pendingUnlocks = [], pendingChars = [];
+let ocCel = false;
 function celebrateUnlock() {
   const id = pendingUnlocks.shift(), c = cupById(id), ov = $('unlockOv'), more = pendingUnlocks.length;
   const conf = Array.from({ length: 18 }, (_, i) => `<i style="left:${(i * 37 + 7) % 100}%;animation-delay:${(i % 6) * 0.25}s;animation-duration:${2.6 + (i % 5) * 0.4}s">${['🎉', '✨', '⭐', '💖', '🍬', '🎈'][i % 6]}</i>`).join('');
-  ov.innerHTML = `<div class="uconf">${conf}</div><div class="ucard" style="--cc:${c.color}"><div class="uh">¡Copa nueva!</div><div class="ut"><span class="ulk">🔒</span>${trophySVG(c.trophy, false)}</div><div class="un">${c.name}</div><div class="us">¡Ya puedes correr en ella!${!more && pendingChars.length ? '<br>⭐ Piloto nuevo: ' + pendingChars.join(', ') : ''}</div><button class="btn" id="uOk">${more ? '¡Siguiente! ▶' : '¡Vamos a verla! ▶'}</button></div>`;
+  ov.innerHTML = `<div class="uconf">${conf}</div><div class="ucard" style="--cc:${c.color}"><div class="uh">¡Copa nueva!</div><div class="ut"><span class="ulk">🔒</span>${trophySVG(c.trophy, false)}</div><div class="un">${c.name}</div><div class="us">${ocCel ? '¡Abierta para elegirla en el online!' : '¡Ya puedes correr en ella!'}${!more && pendingChars.length ? '<br>⭐ Piloto nuevo: ' + pendingChars.join(', ') : ''}</div><button class="btn" id="uOk">${more ? '¡Siguiente! ▶' : '¡Vamos a verla! ▶'}</button></div>`;
   ov.classList.add('on'); Audio.sfxPlay('fanfare'); setTimeout(() => Audio.sfxPlay('stars'), 350); setTimeout(() => Audio.sfxPlay('cheer'), 700);
-  $('uOk').onclick = () => { Audio.sfxPlay('select'); ov.classList.remove('on'); if (more) celebrateUnlock(); else { uSel = Math.max(0, CUPS.indexOf(c)); openCups(); } };
+  $('uOk').onclick = () => { Audio.sfxPlay('select'); ov.classList.remove('on'); if (more) celebrateUnlock(); else if (ocCel) { ocCel = false; oc.leave(); } else { uSel = Math.max(0, CUPS.indexOf(c)); openCups(); } };
 }
 btn('pRetry', () => { podData = null; startCup(app.cup); });
 
@@ -377,12 +417,13 @@ function applySettings() {
 btn('sOk', () => { if (setReturn === 'pause') show('pause'); else if (setReturn === 'title') { show('title'); } else show(setReturn); });
 
 // ---------------- pause ----------------
-function pause() { if (!app.race || app.state !== 'race') return; show('pause'); $('paRe').style.display = app.mode === 'online' ? 'none' : ''; $('paNote').style.display = app.mode === 'online' ? '' : 'none'; Audio.stopSong(); Audio.engineSet(0); }
+const isLiveOnl = () => app.mode === 'online' || app.mode === 'oc';
+function pause() { if (!app.race || app.state !== 'race') return; show('pause'); $('paRe').style.display = isLiveOnl() ? 'none' : ''; $('paNote').style.display = isLiveOnl() ? '' : 'none'; Audio.stopSong(); Audio.engineSet(0); }
 $('pauseB').addEventListener('pointerdown', e => { e.stopPropagation(); Audio.init(); pause(); });
 btn('paGo', () => { show(null); Audio.playSong(app.cup.music, app.match ? app.match.seed % 97 : CUPS.indexOf(app.cup) * 7 + app.raceNo + 1); });
 btn('paRe', () => { if (app.match && app.mode !== 'online') startEndless(soloMatch(meInfo())); else if (!app.match) startRace(); });
 btn('paSet', () => openSettings('pause'));
-btn('paQuit', () => { if (app.race) { app.race.dispose(); app.race = null; } Audio.stopSong(); if (app.match) { online.stopRace(); online.close(); openModes(); } else openCups(); });
+btn('paQuit', () => { if (app.mode === 'oc') { oc.leave(); return; } if (app.race) { app.race.dispose(); app.race = null; } Audio.stopSong(); if (app.match) { online.stopRace(); online.close(); openModes(); } else openCups(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
 // ---------------- input ----------------
@@ -536,7 +577,7 @@ function step(now) {
       if (lowFpsT >= 3 && prLv < PRL.length - 1) { lowFpsT = 0; prGood = 0; prLv++; applyPR(); if (!prWarned && prLv >= 5) { prWarned = true; app.ui.toast('Calidad ajustada para ir más fluido'); } }
       else if (fps > 57) { if (++prGood >= 6 && prLv > (isTouch ? 1 : 0)) { prGood = 0; prLv--; applyPR(); } } else prGood = 0; } }
   const t = now / 1000;
-  if (app.state === 'pause' && app.race && app.mode === 'online' && app.match) { acc += dt; let n = 0; app.race.input.steer = 0; app.race.input.drift = false; while (acc >= STEP && n < 6) { app.race.update(STEP); acc -= STEP; n++; } if (app.race) renderer.render(app.race.scene, app.race.camera); return; }
+  if (app.state === 'pause' && app.race && ((app.mode === 'online' && app.match) || app.mode === 'oc')) { acc += dt; let n = 0; app.race.input.steer = 0; app.race.input.drift = false; while (acc >= STEP && n < 6) { app.race.update(STEP); acc -= STEP; n++; } if (app.race) renderer.render(app.race.scene, app.race.camera); return; }
   if (app.state === 'race' && app.race) {
     readInput();
     acc += dt * app.speed; let n = 0;
@@ -611,6 +652,6 @@ window.__kart = {
     app.playerChar = CHARS.find(c => c.id === charId); app.cup = CUPS.find(c => c.id === cupId); app.match = null; app.points = {};
     const others = CHARS.filter(c => c !== app.playerChar && !c.premium).slice(0, CONFIG.racers - 1); const all = others.slice(); all.splice(Math.min(place, all.length), 0, app.playerChar);
     all.forEach((c, i) => app.points[c.id] = 40 - i * 4); showPodium(); },
-  openChars, openCups, showPodium, pickOrient, openOrient, openModes, openLobby, startEndless, soloMatch, meInfo, get match() { return app.match; },
+  get oc() { return app.oc; }, ocUI: oc, openChars, openCups, showPodium, pickOrient, openOrient, openModes, openLobby, startEndless, soloMatch, meInfo, get match() { return app.match; },
   trackShape(id, rev) { const T = buildTrack(CUPS.find(c => c.id === id), rev, { hi: false }); return { S: T.S.map(s => [s.p.x, s.p.z, s.w, s.wall, s.p.y]), sc: T.shortcuts.map(c => c.pts.map(p => [p.x, p.z])), feats: T.feats.map(f => [f.type, T.idxOf(f.t)]), L: T.L }; }, get quality() { return qualityHi ? 'alta' : 'baja'; },
 };
