@@ -31,6 +31,17 @@ export const CHARS = [
     stats: { vel: 4, acel: 3, man: 3, peso: 3 }, desc: 'Rápido y eléctrico. Truena al derrapar.', unlock: { cup: 'galaxia', text: 'Consigue la Copa Galaxia' } },
   { id: 'disco', name: 'Disco', color: '#ff8fd8', ears: 'cat', acc: 'shades', inner: 'disco', vehicle: 'discoball', vname: 'Bola de Discoteca',
     stats: { vel: 4, acel: 4, man: 3, peso: 2 }, desc: 'La fiesta sobre ruedas. ¡Que no pare!', unlock: { cup: 'tormenta', text: 'Consigue la Copa Tormenta' } },
+  // v46: 5 pilotos nuevos, gratis y locuelos
+  { id: 'pipoca', name: 'Pipoca', color: '#ffe566', inner: 'bubbles', vehicle: 'popbucket', vname: 'Cubo de Palomitas',
+    stats: { vel: 3, acel: 4, man: 3, peso: 2 }, desc: 'Una palomita de maíz con gafas de cine 3D que no para de saltar «¡pop!». Su cubo lanza palomitas al aire.', unlock: null },
+  { id: 'fresi', name: 'Fresi', color: '#ff6f86', inner: 'bubbles', vehicle: 'basket', vname: 'Cesta de Merienda',
+    stats: { vel: 3, acel: 3, man: 4, peso: 3 }, desc: 'Fresa con nata y corona de hojas helicóptero, con una abejita amiga que la sigue a todas partes.', unlock: null },
+  { id: 'pulpi', name: 'Pulpi', color: '#5fa8ff', inner: 'aquarium', vehicle: 'scallop', vname: 'Concha Perlada',
+    stats: { vel: 2, acel: 4, man: 4, peso: 2 }, desc: 'Pulpito DJ con cascos que brillan al ritmo, gafas de buceo y coletas de tentáculos que bailan. Hace burbujas de chicle.', unlock: null },
+  { id: 'dinito', name: 'Dinito', color: '#8fe06a', inner: 'lava', vehicle: 'egg', vname: 'Huevo con Lunares',
+    stats: { vel: 4, acel: 3, man: 2, peso: 4 }, desc: 'Bebé dino de caramelo con cáscara de huevo de sombrero, cresta arcoíris y flotador de donut. ¡Menea la cola!', unlock: null },
+  { id: 'lunita', name: 'Lunita', color: '#8a8ae8', inner: 'solar', vehicle: 'crescent', vname: 'Luna Creciente',
+    stats: { vel: 4, acel: 2, man: 4, peso: 2 }, desc: 'La dormilona del cielo: gorro de estrellas con pompón, Zzz flotantes y una estrella fugaz amiga.', unlock: null },
   // v19: pilotos premium (de pago; aún sin compra real)
   { id: 'capitan', name: 'Capitán Aletas', color: '#ffb36b', ears: 'fins', inner: 'aquarium', vehicle: 'whale', vname: 'Ballenita de Montar', premium: true, price: '1,99 €',
     stats: { vel: 4, acel: 3, man: 3, peso: 4 }, desc: 'Un pez muy elegante con chistera y monóculo que cabalga su ballenita.', unlock: null },
@@ -90,19 +101,19 @@ export const CUPS = [
     pts: [[0, 0, 0, 20], [200, 0, 0, 20], [300, 20, 2, 19], [335, 100, 6, 18], [285, 165, 8, 18], [185, 150, 4, 18], [130, 190, 2, 17], [150, 250, 4, 17], [80, 295, 8, 17], [-60, 285, 10, 18], [-200, 255, 6, 19], [-285, 170, 2, 19], [-265, 80, 0, 18], [-185, 60, 0, 18], [-150, 10, 0, 19], [-80, -10, 0, 20]],
     feats: [
       { t: 0.06, type: 'boxes' }, { t: 0.3, type: 'boxes' }, { t: 0.55, type: 'boxes' }, { t: 0.8, type: 'boxes' }, { t: 0.13, type: 'boost', off: -4 }, { t: 0.5, type: 'boost', off: 4 }, { t: 0.62, type: 'boost', off: 0 }, { t: 0.94, type: 'boost', off: 0 }, { t: 0.09, type: 'ramp' }, { t: 0.58, type: 'ramp' }, { t: 0.76, type: 'ramp' }, { t: 0.31, type: 'shortcut', t2: 0.46, label: 'Atajo del panal' }, { t: 0.22, type: 'obstacle', kind: 'bee' }, { t: 0.4, type: 'obstacle', kind: 'bee' }, { t: 0.7, type: 'obstacle', kind: 'bee' } ] },
-  { id: 'helada', name: 'Copa Helada', color: '#8fe0ff', trophy: '#6fd3ff', track: 'Pista Cucurucho', unlock: null,
+  { id: 'helada', name: 'Copa Helada', color: '#8fe0ff', trophy: '#6fd3ff', track: 'Pista Cucurucho', unlock: { cups: ['girasol'], stars: 0 },
     theme: 'ice', sky: ['#a8c8ff', '#f0f7ff'], fog: '#eef6ff', ground: '#f4f9ff', ground2: '#dcecff', road: '#a9d4ff', curbA: '#ff8fc0', curbB: '#ffffff',
     grip: 0.55, grav: 1, music: { bpm: 112, root: 65, scale: 'major' },
     pts: [[0, 0, 20, 20], [100, 10, 18, 19], [170, 60, 14, 18], [150, 130, 10, 17], [80, 150, 8, 17], [60, 210, 10, 17], [130, 250, 12, 17], [200, 230, 10, 17], [235, 290, 6, 17], [160, 345, 4, 18], [40, 335, 2, 18], [-50, 285, 4, 17], [-60, 200, 8, 17], [-130, 170, 12, 17], [-175, 100, 18, 18], [-120, 40, 22, 19], [-60, -10, 22, 20]],
     feats: [
       { t: 0.04, type: 'boxes' }, { t: 0.27, type: 'boxes' }, { t: 0.55, type: 'boxes' }, { t: 0.82, type: 'boxes' }, { t: 0.12, type: 'boost', off: 0 }, { t: 0.5, type: 'boost', off: 3 }, { t: 0.88, type: 'boost', off: -3 }, { t: 0.17, type: 'ramp' }, { t: 0.6, type: 'ramp' }, { t: 0.72, type: 'ramp' }, { t: 0.285, type: 'shortcut', t2: 0.375, label: 'Atajo de barquillo' }, { t: 0.2, type: 'obstacle', kind: 'snowball' }, { t: 0.45, type: 'obstacle', kind: 'snowball' }, { t: 0.66, type: 'obstacle', kind: 'snowball' }, { t: 0.92, type: 'obstacle', kind: 'snowball' } ] },
-  { id: 'galaxia', name: 'Copa Galaxia', color: '#b48cff', trophy: '#a77bff', track: 'Anillo de Saturnino', unlock: { needs: ['gominola', 'girasol'], text: 'Sube al podio en las copas Gominola y Girasol' },
+  { id: 'galaxia', name: 'Copa Galaxia', color: '#b48cff', trophy: '#a77bff', track: 'Anillo de Saturnino', unlock: null,
     theme: 'space', sky: ['#120a33', '#3b1f6e'], fog: '#2a1758', ground: null, road: '#d9ccff', curbA: '#7ff5ff', curbB: '#ff8fe0',
     grip: 0.9, grav: 0.45, music: { bpm: 126, root: 57, scale: 'dorian' },
     pts: [[270, 0, 28, 17], [230, -80, 32, 16], [140, -105, 34, 17], [70, -70, 34, 18], [0, 0, 34, 18], [-70, 70, 32, 18], [-150, 110, 28, 17], [-240, 80, 24, 17], [-270, 0, 20, 16], [-230, -80, 16, 16], [-140, -105, 13, 17], [-70, -70, 11, 18], [0, 0, 10, 18], [70, 70, 12, 18], [150, 110, 18, 17], [240, 80, 24, 17]],
     feats: [
       { t: 0.05, type: 'boxes' }, { t: 0.3, type: 'boxes' }, { t: 0.55, type: 'boxes' }, { t: 0.8, type: 'boxes' }, { t: 0.1, type: 'boost', off: 0 }, { t: 0.35, type: 'boost', off: 3 }, { t: 0.6, type: 'boost', off: -3 }, { t: 0.88, type: 'boost', off: 0 }, { t: 0.2, type: 'ramp' }, { t: 0.45, type: 'ramp' }, { t: 0.7, type: 'ramp' }, { t: 0.95, type: 'ramp' }, { t: 0.44, type: 'shortcut', t2: 0.54, label: 'Atajo del cometa' }, { t: 0.15, type: 'obstacle', kind: 'asteroid' }, { t: 0.62, type: 'obstacle', kind: 'asteroid' }, { t: 0.84, type: 'obstacle', kind: 'asteroid' } ] },
-  { id: 'tormenta', name: 'Copa Tormenta', color: '#6f8bff', trophy: '#5a7cff', track: 'Discoteca Relámpago', unlock: { needs: ['helada', 'galaxia'], text: 'Sube al podio en las copas Helada y Galaxia' },
+  { id: 'tormenta', name: 'Copa Tormenta', color: '#6f8bff', trophy: '#5a7cff', track: 'Discoteca Relámpago', unlock: { cups: [], stars: 10 },
     theme: 'storm', sky: ['#0b0820', '#33205c'], fog: '#1c1240', ground: '#2a1f4a', ground2: '#3a2a66', road: '#3b3266', curbA: '#ff5fd2', curbB: '#5ff5ff',
     grip: 0.95, grav: 1, music: { bpm: 138, root: 58, scale: 'minor' },
     // v44: Copa Tormenta rehecha: curvas amplias (radio mínimo 61 m, antes 2 m), colinas suaves, 5 rampas y atajo
@@ -118,7 +129,7 @@ CUPS.push(
     grip: 0.95, grav: 1, music: { bpm: 118, root: 64, scale: 'major' },
     pts: [[0, 0, 20, 19], [120, -10, 26, 18], [210, -60, 36, 17], [230, -150, 48, 17], [170, -215, 58, 17], [90, -190, 64, 17], [70, -120, 70, 17], [120, -80, 74, 17], [170, -110, 76, 17], [150, -170, 74, 16], [40, -250, 62, 17], [-80, -250, 50, 18], [-180, -190, 40, 18], [-230, -100, 32, 18], [-200, -20, 26, 18], [-110, 20, 22, 19]],
     feats: floatyFeats() },
-  { id: 'sueno', name: 'Copa Sueño', color: '#ffb36b', trophy: '#ffa94d', track: 'Sueño de Relojes Derretidos', unlock: null, look: 'dream',
+  { id: 'sueno', name: 'Copa Sueño', color: '#ffb36b', trophy: '#ffa94d', track: 'Sueño de Relojes Derretidos', unlock: { cups: ['cielo', 'biblioteca'], stars: 0 }, look: 'dream',
     theme: 'space', sky: ['#2c1a5a', '#ff9f7a'], fog: '#7a4a8a', ground: null, road: '#ffe2b8', curbA: '#ffb36b', curbB: '#8b5cc2',
     grip: 0.9, grav: 1, music: { bpm: 104, root: 55, scale: 'dorian' },
     pts: [[0, 0, 30, 19], [110, 20, 22, 18], [200, -20, 34, 17], [220, -110, 48, 17], [150, -170, 30, 17], [60, -140, 18, 17], [10, -200, 34, 17], [-70, -250, 52, 17], [-170, -220, 40, 18], [-230, -140, 26, 18], [-180, -70, 44, 17], [-210, 10, 30, 18], [-130, 60, 20, 18], [-60, 40, 26, 19]],
@@ -138,4 +149,6 @@ CUPS.push(
     feats: floatyFeats() },
 );
 // Cada copa: 2 carreras (ida y vuelta, el mismo circuito en sentido contrario)
+// v46: desbloqueo de copas estilo Mario Kart. Abiertas al empezar (unlock: null): Gominola, Girasol, Galaxia, Cielo, Ballena y Biblioteca. Cerradas: Helada, Sueño y Tormenta.
+// unlock.cups = copas donde hay que subir al podio (top 3, bronce o mejor); unlock.stars = estrellas de trofeos (oro 3 · plata 2 · bronce 1).
 export const RACES_PER_CUP = 4; // v23: ida, vuelta y dos circuitos nuevos (tracks2.js)

@@ -1,3 +1,4 @@
+import { addOutskirts } from './afueras.js';
 import { DriftFX } from './driftfx.js';
 import * as THREE from 'three';
 const DAYLOOK = ['sky', 'ocean', 'book']; // v14: mapas flotantes con luz de día
@@ -27,6 +28,7 @@ export class Race {
     this.scene.add(this.track.group);
     this.setupSky();
     this.surreal = addSurreal(this.track, quality, this.scene);
+    try { this.outskirts = addOutskirts(this); } catch (e) { console.warn('afueras', e); }
     this.kick = 0; this.shake = 0; this.fwT = 0;
     this.time = 0; this.raceT = 0; this.state = 'intro'; this.introT = 0; this.cdT = 0; this.finishT = 0;
     this.karts = []; this.projs = []; this.hazards = []; this.msgs = [];
@@ -134,6 +136,7 @@ export class Race {
     for (const o of T.obstacles) o.update(this.time, dt);
     this.lodCull();
     if (this.player) this.surreal.update(this.time, dt, this);
+    if (this.outskirts && this.camera) this.outskirts.update(this.time, dt, this.camera.position);
     for (const b of T.boxes) { if (b.t > 0) b.t -= dt; const vis = b.t <= 0; b.mesh.visible = vis; if (vis) { b.mesh.rotation.y = this.time * 1.4 + b.ph; b.mesh.rotation.x = Math.sin(this.time + b.ph) * 0.3; b.mesh.position.y = b.pos.y + Math.sin(this.time * 2.5 + b.ph) * 0.3; b.mesh.userData.cube.material.emissive.setHSL((this.time * 0.25 + b.ph * 0.2) % 1, 0.9, 0.55); const st = b.mesh.userData.star; if (st) { st.rotation.set(-b.mesh.rotation.x, this.time * 3, 0); } } }
     for (const p of T.pads) p.mesh.material.map.offset.y = -this.time * 1.2 % 1;
     if (running) {

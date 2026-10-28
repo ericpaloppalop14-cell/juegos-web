@@ -20,7 +20,9 @@ import { buildTitleFx, animTitleFx, buildSelBg, animSelBg, setSelColor, makePort
 
 const $ = id => document.getElementById(id);
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
-document.title = CONFIG.title; $('logo').firstChild.textContent = CONFIG.title;
+document.title = CONFIG.title;
+// v46: título con letras que bailan (una por una)
+{ const lg = $('logo'), sm = lg.querySelector('small'); let n = 0; lg.textContent = ''; CONFIG.title.split(' ').forEach(w => { const sp = document.createElement('span'); sp.className = 'w'; for (const ch of w) { const l = document.createElement('span'); l.className = 'l'; l.style.setProperty('--i', n++); l.textContent = ch; sp.appendChild(l); } lg.appendChild(sp); }); lg.setAttribute('aria-label', CONFIG.title); if (sm) lg.appendChild(sm); }
 
 // ---------------- save ----------------
 // v40: la copia de prueba (/mochi-racers-prueba/) guarda aparte; la primera vez copia la partida normal
@@ -29,10 +31,29 @@ if (SKEY !== 'mracers_save_v1' && !localStorage.getItem(SKEY) && localStorage.ge
 const save = Object.assign({ trophies: {}, char: 'mochi', settings: { sound: '1', music: '1', engine: '0', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' } }, JSON.parse(localStorage.getItem(SKEY) || '{}'));
 save.settings = Object.assign({ sound: '1', music: '1', engine: '0', controls: 'botones', quality: 'auto', fps: '0', autoDrift: '1' }, save.settings);
 const persist = () => localStorage.setItem(SKEY, JSON.stringify(save));
-const cupUnlocked = c => !c.unlock || c.unlock.needs.every(id => save.trophies[id] != null);
+// v46: desbloqueo de copas (estilo Mario Kart). Un trofeo ya ganado nunca se pierde: si tienes trofeo en una copa, esa copa
+// y las copas que hacían falta para llegar a ella siguen abiertas (así los jugadores de antes no pierden nada).
+const cupStars = () => Object.values(save.trophies).reduce((a, t) => a + (t == null ? 0 : 3 - t), 0);
+const cupById = id => CUPS.find(c => c.id === id);
+function cupOpenSet() {
+  const s = new Set(CUPS.filter(c => !c.unlock).map(c => c.id)), st = cupStars();
+  for (const c of CUPS) if (save.trophies[c.id] != null) s.add(c.id);
+  for (let ch = true; ch;) { ch = false; for (const c of CUPS) if (s.has(c.id) && c.unlock) for (const r of c.unlock.cups || []) if (!s.has(r)) { s.add(r); ch = true; } }
+  for (const c of CUPS) if (!s.has(c.id) && c.unlock && (c.unlock.cups || []).every(id => save.trophies[id] != null) && st >= (c.unlock.stars || 0)) s.add(c.id);
+  return s;
+}
+const cupUnlocked = c => cupOpenSet().has(c.id);
+const cupReqText = c => { const u = c.unlock; if (!u) return ''; const n = (u.cups || []).map(id => cupById(id).name);
+  return (n.length ? `Gana 🥉 bronce o mejor en la ${n.join(' y en la ')} para abrirla` : '') + (u.stars ? `Reúne ${u.stars} ⭐ con tus trofeos para abrirla` : ''); };
+function lockCardHTML(c) { const u = c.unlock, st = cupStars();
+  const req = (u.cups || []).map(id => { const ok = save.trophies[id] != null; return `<span class="rq ${ok ? 'ok' : 'no'}">${ok ? '✔' : '🏆'} ${cupById(id).name}${ok ? ' · ' + TIER[save.trophies[id]] : ''}</span>`; }).join('');
+  const bar = u.stars ? `<div class="rq stars"><b>⭐ ${Math.min(st, u.stars)} / ${u.stars}</b><i><u style="width:${Math.min(100, st / u.stars * 100)}%"></u></i><small>🥇 Oro = 3 ⭐ · 🥈 Plata = 2 ⭐ · 🥉 Bronce = 1 ⭐</small></div>` : '';
+  return `<div class="lockcard"><div class="lbig">🔒</div><div class="lt">${cupReqText(c)}</div><div class="lreq">${req}${bar}</div></div>`; }
+if (!save.fresh) save.fresh = {};
 const charUnlocked = ch => !!ch.premium || (!ch.unlock || save.trophies[ch.unlock.cup] != null || DEBUG_ALL);
 const DEBUG_ALL = /[?&]debug=all/.test(location.search);
 if (DEBUG_ALL) CUPS.forEach(c => c.unlock = null);
+const TIER = ['🥇 Oro', '🥈 Plata', '🥉 Bronce'];
 
 // ---------------- renderer ----------------
 const params = new URLSearchParams(location.search);
@@ -123,6 +144,9 @@ btn('tPlay', () => { tryFullscreen(); openChars(); });
 // v28: elegir orientación desde el inicio (bloquea si se puede; si no, pide girar)
 function playIn(o) { save.settings.orient = o; persist(); syncSettings(); tryFullscreen(); lockOrient(); checkRotate(); openChars(); }
 btn('tV', () => playIn('v')); btn('tH', () => playIn('h'));
+// v46: sonido en cada botón de la portada (al tocar y al elegir)
+for (const id of ['tV', 'tH', 'tSet']) { const b = $(id); b.addEventListener('pointerdown', () => { try { Audio.init(); Audio.sfxPlay('select', id === 'tH' ? 6 : 2); Audio.sfxPlay('boing'); } catch (e) {} });
+  if (id !== 'tSet') b.addEventListener('click', () => { try { Audio.sfxPlay('boost'); setTimeout(() => Audio.sfxPlay('stars'), 140); } catch (e) {} }); }
 function markOri() { for (const k of ['v', 'h']) { const e = $('t' + k.toUpperCase()); if (e) e.classList.toggle('sel', save.settings.orient === k); } }
 btn('tSet', () => openSettings('title'));
 
@@ -212,15 +236,15 @@ btn('rMenu', () => { if (app.race) { app.race.dispose(); app.race = null; } onli
 // ---------------- cups ----------------
 let uSel = 0;
 const trophySVG = (col, dim) => `<svg viewBox="0 0 64 64"><path d="M18 8h28v10c0 10-6 18-14 18S18 28 18 18z" fill="${col}" stroke="#5a3a6e" stroke-width="2.5"/><path d="M18 12H9c0 9 5 14 11 14M46 12h9c0 9-5 14-11 14" fill="none" stroke="${col}" stroke-width="4"/><rect x="28" y="36" width="8" height="10" fill="${col}" stroke="#5a3a6e" stroke-width="2"/><rect x="18" y="46" width="28" height="9" rx="3" fill="#fff4fa" stroke="#5a3a6e" stroke-width="2.5"/>${dim ? '' : '<path d="M32 14l2.4 5 5.4.6-4 3.7 1.1 5.3-4.9-2.7-4.9 2.7 1.1-5.3-4-3.7 5.4-.6z" fill="#fff" opacity=".9"/>'}</svg>`;
-const TIER = ['🥇 Oro', '🥈 Plata', '🥉 Bronce'];
 let carousel = null, cupBusy = false;
-function cupInfo() { const c = CUPS[uSel], un = cupUnlocked(c), tr = save.trophies[c.id];
+function cupInfo() { const c = CUPS[uSel], un = cupUnlocked(c), tr = save.trophies[c.id], op = CUPS.filter(cupUnlocked).length;
   $('cupName').textContent = c.name; $('cupName').style.setProperty('--cc', un ? c.color : '#b8a8d0');
-  $('cupTrack').innerHTML = '<div class="tminis"></div>' + (un ? (tr != null ? `<span class="pill gold">${TIER[tr]}</span>` : '<span class="pill">Sin trofeo</span>') : `<span class="pill lk">🔒 ${c.unlock.text}</span>`);
+  $('cupPanel').classList.toggle('isLock', !un);
+  $('cupTrack').innerHTML = (un ? '<div class="tminis"></div>' : lockCardHTML(c)) + `<span class="pill${un && tr != null ? ' gold' : ''}">${un ? (tr != null ? TIER[tr] : 'Sin trofeo') : '🔒 Cerrada'}</span> <span class="pill cnt">🔓 ${op}/${CUPS.length} copas · ⭐ ${cupStars()}</span>`;
   // v40: 4 ilustraciones fijas por copa (una por circuito), cargadas solo al mostrar la copa
-  $('cupTrack').firstChild.innerHTML = raceNames(c).map((n, i) => `<div class="tmini${un ? '' : ' lk'}" style="--cc:${c.color};animation-delay:${i * 0.06}s"><img src="img/circuitos/${c.id}-${i + 1}.webp" alt="" decoding="async" onload="this.parentNode.classList.add('ready')"><div class="tmn"><b>${i + 1}</b><span>${n}</span></div>${i === 1 ? '<i class="tmrev">⟲</i>' : ''}</div>`).join('');
+  if (un) $('cupTrack').firstChild.innerHTML = raceNames(c).map((n, i) => `<div class="tmini" style="--cc:${c.color};animation-delay:${i * 0.06}s"><img src="img/circuitos/${c.id}-${i + 1}.webp" alt="" decoding="async" onload="this.parentNode.classList.add('ready')"><div class="tmn"><b>${i + 1}</b><span>${n}</span></div>${i === 1 ? '<i class="tmrev">⟲</i>' : ''}</div>`).join('');
   [...$('cupGrid').children].forEach((d, i) => d.classList.toggle('sel', i === uSel));
-  $('uGo').classList.toggle('locked', !un); $('uGo').innerHTML = un ? '<span>¡A correr!</span>' : '<span>🔒 Bloqueada</span>';
+  $('uGo').classList.toggle('locked', !un); $('uGo').innerHTML = un ? '<span>¡A correr!</span>' : '<span>🔒 ¿Cómo la abro?</span>';
   $('cupPanel').classList.remove('swap'); void $('cupPanel').offsetWidth; $('cupPanel').classList.add('swap');
 }
 function setCup(i) { if (i === uSel || cupBusy) return; uSel = i; carousel.select(i); cupInfo(); }
@@ -231,7 +255,7 @@ function openCups() {
   if (!cupUnlocked(CUPS[uSel])) uSel = 0;
   const G = $('cupGrid'); G.innerHTML = '';
   CUPS.forEach((c, i) => { const un = cupUnlocked(c), tr = save.trophies[c.id];
-    const d = document.createElement('button'); d.className = 'ccard' + (un ? '' : ' lock'); d.style.setProperty('--cc', c.color); d.style.animationDelay = (i * 0.05) + 's';
+    const d = document.createElement('button'); d.className = 'ccard' + (un ? '' : ' lock') + (un && save.fresh[c.id] ? ' fresh' : ''); d.style.setProperty('--cc', c.color); d.style.animationDelay = (i * 0.05) + 's';
     d.innerHTML = `<div class="cic">${trophySVG(un ? c.trophy : '#8f80ad', !un)}${un ? '' : '<b class="lki">🔒</b>'}${un && tr != null ? `<b class="md">${['🥇', '🥈', '🥉'][tr]}</b>` : ''}</div><div class="cn">${c.name.replace('Copa ', '')}</div>`;
     d.addEventListener('click', () => { Audio.init(); Audio.sfxPlay('select', i * 4); Audio.sfxPlay('swoosh'); setCup(i); }); G.appendChild(d); });
   carousel.setChar(app.playerChar || CHARS[0]);
@@ -240,7 +264,8 @@ function openCups() {
   stage.clear(); menuKarts.length = 0; previewKart = null; trophyPreview = null;
 }
 btn('uBack', () => { if (!cupBusy) openChars(); });
-btn('uGo', () => { const c = CUPS[uSel]; if (cupBusy) return; if (!cupUnlocked(c)) { app.ui.toast('🔒 ' + c.unlock.text); return; }
+btn('uGo', () => { const c = CUPS[uSel]; if (cupBusy) return; if (!cupUnlocked(c)) { Audio.sfxPlay('boing'); app.ui.toast('🔒 ' + cupReqText(c)); const l = document.querySelector('#cupTrack .lockcard'); if (l) { l.classList.remove('shake'); void l.offsetWidth; l.classList.add('shake'); } return; }
+  if (save.fresh[c.id]) { delete save.fresh[c.id]; persist(); }
   cupBusy = true; Audio.sfxPlay('boost'); $('cups').classList.add('going'); carousel.choose(() => { $('cups').classList.remove('going'); startCup(c); }); });
 
 // ---------------- cup flow ----------------
@@ -296,6 +321,7 @@ function showPodium() {
   const myPlace = ranking.findIndex(r => r.ch === app.playerChar);
   const cup = app.cup;
   const tier = myPlace <= 2 ? myPlace : -1;
+  pendingUnlocks = []; pendingChars = [];
   podData = { p: buildPodium(cup, ranking, myPlace, tier) }; try { noche4Podium(podData.p); } catch (e) {}
   podCam.aspect = innerWidth / innerHeight;
   $('podium').classList.toggle('win', tier === 0); $('podium').classList.toggle('lose', tier < 0);
@@ -305,7 +331,7 @@ function showPodium() {
     const prev = save.trophies[cup.id]; const newUnlocks = [];
     const beforeC = CUPS.filter(cupUnlocked).map(c => c.id), beforeCh = CHARS.filter(charUnlocked).map(c => c.id);
     if (prev == null || tier < prev) save.trophies[cup.id] = tier; persist();
-    CUPS.filter(cupUnlocked).forEach(c => { if (!beforeC.includes(c.id)) newUnlocks.push('🏁 ' + c.name); });
+    pendingUnlocks = []; CUPS.filter(cupUnlocked).forEach(c => { if (!beforeC.includes(c.id)) { newUnlocks.push('🏁 ' + c.name); pendingUnlocks.push(c.id); save.fresh[c.id] = 1; } }); pendingChars = CHARS.filter(charUnlocked).filter(c => !beforeCh.includes(c.id)).map(c => c.name); persist();
     CHARS.filter(charUnlocked).forEach(c => { if (!beforeCh.includes(c.id)) newUnlocks.push('⭐ ' + c.name); });
     $('podTitle').textContent = `¡${cup.name}!`; $('podPlace').textContent = `${TIER[tier]} · ${myPlace + 1}º con ${ranking[myPlace].p} puntos`;
     $('podSub').textContent = newUnlocks.length ? '¡Desbloqueado: ' + newUnlocks.join(' · ') + '!' : '¡Copa guardada en tu vitrina!';
@@ -317,7 +343,16 @@ function showPodium() {
   app.lastPodium = { ranking: ranking.map(r => r.ch.id), myPlace, tier };
   requestAnimationFrame(podMeasure); podBandT = 0;
 }
-btn('pOk', () => { podData = null; openCups(); });
+btn('pOk', () => { podData = null; if (pendingUnlocks.length) celebrateUnlock(); else openCups(); });
+// v46: celebración kawaii al abrir una copa nueva (una pantalla por copa, con confeti y sonido)
+let pendingUnlocks = [], pendingChars = [];
+function celebrateUnlock() {
+  const id = pendingUnlocks.shift(), c = cupById(id), ov = $('unlockOv'), more = pendingUnlocks.length;
+  const conf = Array.from({ length: 18 }, (_, i) => `<i style="left:${(i * 37 + 7) % 100}%;animation-delay:${(i % 6) * 0.25}s;animation-duration:${2.6 + (i % 5) * 0.4}s">${['🎉', '✨', '⭐', '💖', '🍬', '🎈'][i % 6]}</i>`).join('');
+  ov.innerHTML = `<div class="uconf">${conf}</div><div class="ucard" style="--cc:${c.color}"><div class="uh">¡Copa nueva!</div><div class="ut"><span class="ulk">🔒</span>${trophySVG(c.trophy, false)}</div><div class="un">${c.name}</div><div class="us">¡Ya puedes correr en ella!${!more && pendingChars.length ? '<br>⭐ Piloto nuevo: ' + pendingChars.join(', ') : ''}</div><button class="btn" id="uOk">${more ? '¡Siguiente! ▶' : '¡Vamos a verla! ▶'}</button></div>`;
+  ov.classList.add('on'); Audio.sfxPlay('fanfare'); setTimeout(() => Audio.sfxPlay('stars'), 350); setTimeout(() => Audio.sfxPlay('cheer'), 700);
+  $('uOk').onclick = () => { Audio.sfxPlay('select'); ov.classList.remove('on'); if (more) celebrateUnlock(); else { uSel = Math.max(0, CUPS.indexOf(c)); openCups(); } };
+}
 btn('pRetry', () => { podData = null; startCup(app.cup); });
 
 // ---------------- settings ----------------
