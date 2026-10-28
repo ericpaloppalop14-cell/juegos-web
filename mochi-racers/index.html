@@ -127,7 +127,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 #rotate{position:fixed;inset:0;z-index:20;background:linear-gradient(180deg,#ffd6ec,#d9c8ff);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:16px}
 #rotate .ph{font-size:70px;animation:rot 2s ease-in-out infinite}
 @keyframes rot{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
-#loading{position:fixed;inset:0;z-index:30;background:linear-gradient(180deg,#ffd6ec,#d9c8ff);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#c0508a}
+#loading{position:fixed;inset:0;z-index:30;background:linear-gradient(180deg,#ffd6ec,#d9c8ff);display:flex;align-items:center;justify-content:center;text-align:center;padding:0 28px;box-sizing:border-box;line-height:1.25;font-size:26px;font-weight:700;color:#c0508a}
 .keys{font-size:13px;color:#a080c0;margin-top:8px;text-align:center}
 @media (max-height:500px){#settings .card{display:grid!important;grid-template-columns:1fr 1fr;column-gap:22px;row-gap:0;width:min(94vw,860px);max-width:94vw}#settings .title2,#settings .keys,#settings .row{grid-column:1/-1}#settings .keys{font-size:12px}#settings .set{gap:10px}}
 
@@ -169,6 +169,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 #pauseB{right:calc(84px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));width:42px;height:42px;font-size:18px}
 #hSpd{top:calc(82px + env(safe-area-inset-top));bottom:auto;width:130px;font-size:16px}
 #toast{font-size:24px;top:26%;white-space:normal;width:90vw;text-align:center}
+#toast.mid{top:50%;transform:translate(-50%,-50%);white-space:pre-line;line-height:1.18}
 #count{font-size:96px}
 #wrong{font-size:20px;white-space:nowrap}
 #startHint{white-space:normal;width:86vw;text-align:center;font-size:15px;bottom:34%}
@@ -770,7 +771,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 <script>window.FX_NOCHE={z:2,n:16,vig:.14,rays:false}</script><script src="js/fx-noche.js?v=2"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script><script src="online-config.js?v=1"></script><script src="online-cf.js?v=1"></script>
-<script type="module" src="js/main.js?v=48"></script>
+<script type="module" src="js/main.js?v=49"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false, touched = false; for (const ev of ['pointerdown', 'touchstart', 'keydown']) addEventListener(ev, () => { touched = true; }, { capture: true, passive: true }); /* v43: no recargar si el jugador ya ha tocado algo (antes volvía a la pantalla de orientación); la versión nueva se aplica en el próximo arranque */ navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl && !touched) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=43', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>

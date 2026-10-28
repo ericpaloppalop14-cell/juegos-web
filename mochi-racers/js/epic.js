@@ -135,7 +135,7 @@ P0.use = function (k, it) {
   k.puppetT = k.duckT = k.cannonT = k.octoT = 0; k.spinT = 0; k.squashT = 0; k.flyT = 0; k.morphT = 0; k.sharkT = 0; k.drillT = k.dragonT = k.rainT = 0;
   switch (it) {
     case 'taladro': k.drillT = 5; k.drillAge = 0; k.drillSpace = isSpace(RC); k.dropT = 0; if (P) RC.msg(k.drillSpace ? '🌀 ¡TALADRÍN! Túnel de energía 5 s' : '🌀 ¡TALADRÍN! 5 s bajo tierra', k, '#c9a7ff'); burst(k.drillSpace ? ['#7ff5ff', '#ff9cf0', '#ffffff'] : ['#c69a72', '#e0b88f', '#8fe08a'], 26, 7, 0.5); if (near) Audio.sfxPlay('drillStart'); break;
-    case 'dragon': k.dragonT = 5.2; k.dragonAge = 0; if (P) { RC.msg('🐉 ¡DRAGÓN COLOSAL! ¡Arre!', k, '#ffb347'); } burst(['#ff5a3a', '#ffb347', '#ffe066', '#ff4f8a'], 30, 10); if (near) Audio.sfxPlay('dragonRoar'); break;
+    case 'dragon': k.dragonT = 5.2; k.dragonAge = 0; if (P) { RC.msg('🐉 ¡DRAGÓN COLOSAL! ¡Arre!', k, '#ff8fc4'); } burst(['#ff9cc8', '#c6a8ff', '#ffe27a', '#8fe8ff'], 30, 10); if (near) Audio.sfxPlay('dragonRoar'); break;
     case 'arcoiris': { const N = T.N, H = 15, cnt = Math.round(320 / T.STEP); const s = T.S[k.idx], lat = (k.pos.x - s.p.x) * s.right.x + (k.pos.z - s.p.z) * s.right.z;
       if (k.rbMesh) this.dropRainbow(k); k.rbMesh = buildRainbow(T, k.idx, cnt, lat, H); RC.scene.add(k.rbMesh); k.rainT = 6; k.rainAge = 0; k.rainI0 = k.idx; k.rainCnt = cnt; k.rainH = H; k.rainFade = 0;
       if (P) RC.msg('🌈 ¡TOBOGÁN ARCOÍRIS!', k, '#ffe66b'); burst(RB, 30, 10); if (near) Audio.sfxPlay('rainbow'); break; }

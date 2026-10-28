@@ -82,7 +82,7 @@ addEventListener('resize', () => resize()); addEventListener('orientationchange'
 const app = { race: null, state: 'title', autopilot: params.has('auto'), skipIntro: false, speed: 1, cup: null, raceNo: 0, points: {}, lastOrder: null, playerChar: null };
 let toastT = 0;
 app.ui = {
-  toast(text, color = '#ffffff') { const t = $('toast'); t.textContent = text; t.style.color = color; t.style.opacity = 1; toastT = 1.6; },
+  toast(text, color = '#ffffff', mid = false) { const t = $('toast'); t.classList.toggle('mid', mid); t.textContent = text; t.style.color = color; t.style.opacity = 1; toastT = 1.6; },
   countdown(txt) { const c = $('count'); c.textContent = txt; c.dataset.n = txt; c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); if (txt === '¡YA!') $('startHint').style.display = 'none'; },
   finishBanner(place) { this.toast(place === 1 ? '¡HAS GANADO!' : `¡Meta! ${place}º`, place <= 3 ? '#ffd84a' : '#ffffff'); },
 };
@@ -286,7 +286,7 @@ function startRace() {
     window.__mrLod = prLv >= 5 ? 0.35 : prLv >= 3 ? 0.55 : prLv >= 2 ? 0.7 : 0.85; app.race = new Race(app, { cup: rc, reverse: app.raceNo === 1, playerChar: app.playerChar, rivals: app.rivals, grid, cupIndex: CUPS.indexOf(app.cup), quality: { hi: qualityHi } });
     try { app.race.mergedMeshes = mergeStatic(app.race); } catch (e) {} try { noche4(app.race); } catch (e) { console.warn('n4', e); } shadowLock = false; applyPR(); try { app.race.fx.prewarm(renderer, app.race.camera); renderer.compile(app.race.scene, app.race.camera); } catch (e) {} $('loading').style.display = 'none';
     show(null); $('startHint').style.display = 'block'; $('startHint').innerHTML = isTouch ? 'Toca <b>DERRAPE</b> justo al «¡YA!» para salir con turbo' : 'Pulsa <b>Espacio</b> justo al «¡YA!» para salir con turbo';
-    app.ui.toast(app.cup.name + ' · Carrera ' + (app.raceNo + 1) + '/' + RACES_PER_CUP + ': ' + raceNames(app.cup)[app.raceNo], '#ffffff');
+    app.ui.toast(app.cup.name + ' · Carrera ' + (app.raceNo + 1) + '/' + RACES_PER_CUP + ':\n' + raceNames(app.cup)[app.raceNo], '#ffffff', true);
     Audio.init(); Audio.playSong(app.cup.music, CUPS.indexOf(app.cup) * 7 + app.raceNo + 1); Audio.engineStart();
     buildMinimap();
   }, 30);
@@ -573,10 +573,14 @@ function step(now) {
 // ---------------- orientation / fullscreen ----------------
 let rotAny = false;
 // v5: el jugador elige vertical u horizontal al abrir; se guarda en ajustes (localStorage)
-function checkRotate() { const o = save.settings.orient, portrait = innerHeight > innerWidth * 1.05, land = innerWidth > innerHeight * 1.05;
-  const bad = isTouch && !$('orient').classList.contains('on') && ((o === 'h' && portrait) || (o === 'v' && land));
-  $('rotate').style.display = bad ? 'flex' : 'none';
-  if (bad) { $('rotMsg').textContent = o === 'h' ? 'Has elegido jugar en horizontal: gira el móvil.' : 'Has elegido jugar en vertical: gira el móvil.'; $('rotate').querySelector('.ph').classList.toggle('pv', o === 'v'); } }
+// v49: elegir orientación ya NO abre otra pantalla ni bloquea: se va directo al juego. Si el móvil sigue girado al revés
+// (no se pudo bloquear), solo sale un aviso pequeño y sin botones que no tapa nada ni lleva a ningún menú.
+let rotTimer = 0, rotHide = 0, rotEl = null;
+function rotMismatch() { const o = save.settings.orient; return isTouch && ((o === 'h' && innerHeight > innerWidth * 1.05) || (o === 'v' && innerWidth > innerHeight * 1.05)); }
+function checkRotate() { $('rotate').style.display = 'none'; clearTimeout(rotTimer);
+  rotTimer = setTimeout(() => { if (!rotMismatch() || app.state === 'race') return; const o = save.settings.orient;
+    if (!rotEl) { rotEl = document.createElement('div'); rotEl.style.cssText = 'position:fixed;left:50%;top:calc(62px + env(safe-area-inset-top));transform:translateX(-50%);z-index:25;pointer-events:none;background:rgba(255,255,255,.94);color:#c0508a;font-weight:700;font-size:14px;padding:7px 14px;border-radius:999px;box-shadow:0 6px 18px rgba(120,60,160,.25);transition:opacity .4s;white-space:nowrap;max-width:92vw;opacity:0'; document.body.appendChild(rotEl); }
+    rotEl.textContent = o === 'h' ? '📱↻ Gira el móvil: horizontal' : '📱↻ Gira el móvil: vertical'; rotEl.style.opacity = '1'; clearTimeout(rotHide); rotHide = setTimeout(() => { rotEl.style.opacity = '0'; }, 3600); }, 900); }
 function lockOrient() { const o = save.settings.orient; try { if (o && screen.orientation && screen.orientation.lock && document.fullscreenElement) screen.orientation.lock(o === 'v' ? 'portrait' : 'landscape').catch(() => {}); } catch (e) {} }
 function pickOrient(o) { save.settings.orient = o; persist(); $('orient').classList.remove('on'); syncSettings(); tryFullscreen(); lockOrient(); checkRotate(); }
 btn('oV', () => pickOrient('v')); btn('oH', () => pickOrient('h'));
