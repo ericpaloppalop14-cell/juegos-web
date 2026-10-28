@@ -126,7 +126,7 @@ const menuCam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 9
     else { const b = mesh(new THREE.SphereGeometry(2.2, 16, 12), toon(cols[i % 5], { opacity: 0.9, rim: 0.6 }), g, [0, 1.4, 0], null, [1, 0.9, 1]); } }
   menuScene.fog = new THREE.Fog('#ffe3f1', 60, 300);
 }
-const titleFx = buildTitleFx(menuScene), selBg = buildSelBg(menuScene); let portraits = Object.assign({ __done: true }, Object.fromEntries(CHARS.map(c => [c.id, 'icons/p/' + c.id + '.png?v=24']))); // v23: retratos ya horneados (sin trabajo al pulsar «¡Jugar!») // v18 (v23: se generan en segundo plano)
+const titleFx = buildTitleFx(menuScene), selBg = buildSelBg(menuScene); let portraits = Object.assign({ __done: true }, Object.fromEntries(CHARS.map(c => [c.id, 'icons/p/' + c.id + '.png?v=47']))); // v23: retratos ya horneados (sin trabajo al pulsar «¡Jugar!») // v18 (v23: se generan en segundo plano)
 const stage = new THREE.Group(); menuScene.add(stage);
 const menuKarts = []; let charPopT = -9; let previewKart = null, trophyPreview = null;
 function setTitleStage() {

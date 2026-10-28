@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { premiumChar, premiumVehicle } from './premium.js';
 import { classicChar, classicVehicle } from './classic.js';
 import { nuevosChar, nuevosVehicle } from './nuevos.js';
+import { detalleChar } from './detalle47.js';
 import { addCompi } from './compis.js';
 import { deco } from './itemdeco.js';
 
@@ -240,7 +241,7 @@ export function makeCharacter(ch, opts = {}) {
   if (X === 'disco') { add(tor(0.07, 32), gold, [0, 0.42, 0.04], [Math.PI / 2 + 0.15, 0, 0], [0.86, 0.86, 0.86]);
     const med = add(starGeoS(), gold, [0, 0.3, 0.92], [0.2, 0, 0], 0.1); root.userData.medal = med;
     for (const s of [-1, 1]) add(sph(8), toon('#ff8fd8', { emissive: '#ff4fb0', ei: 0.6, rim: 0 }), [s * 0.82, 0.92, 0.2], null, 0.06); }
-  premiumChar(X, rig, root, H); classicChar(X, rig, root, H); nuevosChar(X, rig, root, H); addCompi(X, rig, root);
+  premiumChar(X, rig, root, H); classicChar(X, rig, root, H); nuevosChar(X, rig, root, H); addCompi(X, rig, root); detalleChar(X, rig, root, H);
   Object.assign(root.userData, { body, inner, rig, eyes, mouth, open, happy, xx, strain, ohMouth, sweat, stars, arms, ears, earParts, feet, face, ph: Math.random() * 6 });
   return root;
 }
@@ -316,7 +317,7 @@ export function animCharacter(c, t, k = 1, expr = '', sp = 0) {
   if (u.scarf) u.scarf.rotation.x = 0.3 + Math.sin(t * 6) * 0.15 + sp * 0.8;
   if (u.tuft) u.tuft.visible = (t * 1.7 + ph) % 3 > 0.12;
   if (u.medal) u.medal.rotation.y = Math.sin(t * 2) * 0.6;
-  if (u.extra) for (const f of u.extra) f(t);
+  if (u.extra) for (const f of u.extra) f(t, sp);
   if (u.bubs) u.bubs.forEach((b, i) => { b.position.y = 1.45 + ((t * 0.4 + i * 0.33) % 1) * 0.7; });
 }
 
