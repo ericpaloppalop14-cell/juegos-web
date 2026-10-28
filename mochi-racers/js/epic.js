@@ -10,6 +10,7 @@ import { toon, mesh, outline, glowTex } from './gfx.js';
 import { Audio } from './audio.js';
 import { Race } from './race.js';
 import { deco } from './itemdeco.js';
+import { buildDragon } from './dragon48.js';
 export const makeDriller = (...a) => deco(makeDriller__(...a), 'driller');
 export const makeClump = (...a) => deco(makeClump__(...a), 'clump');
 export const makeRing = (...a) => deco(makeRing__(...a), 'ring');
@@ -97,60 +98,7 @@ function makeClump__() { const g = new THREE.Group(); const c = toon('#c69a72', 
 function makeRing__() { const m = new THREE.Mesh(tor(), new THREE.MeshBasicMaterial({ color: '#7ff5ff', transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); const g = new THREE.Group(); g.add(m); g.userData.m = m; return g; }
 
 // ---------- 2) DRAGÓN COLOSAL: escamas, cuernos, alas, cola ondulante, silla y riendas ----------
-function makeDragon__() {
-  const g = new THREE.Group(), u = g.userData;
-  const skin = toon('#8fe3c4', { rim: 0.6 }), skin2 = toon('#6fd0b0', { rim: 0.5 }), belly = toon('#fff1c9', { rim: 0.4 }), spike = toon('#ff9cc8', { rim: 0.6 }), horn = toon('#ffe7a8', { rim: 0.7 }), OL = '#4fae90';
-  const root = new THREE.Group(); root.position.y = -3.7; g.add(root); u.root = root;
-  // cuerpo (cadena de esferas) con barriga de placas
-  const spine = [[0, 2.2, -1.2, 2.2], [0, 2.4, 0.6, 2.3], [0, 2.6, 2.4, 1.9], [0, 3.1, 3.9, 1.35], [0, 3.8, 5.1, 1.05]];
-  spine.forEach(([x, y, z, r], i) => { const m = mesh(sph(), skin, root, [x, y, z], null, [r, r * 0.92, r * 1.1]); outline(m, OL, 1.035); if (i < 3) mesh(sph(), belly, root, [x, y - r * 0.35, z + 0.2], null, [r * 0.75, r * 0.6, r * 0.95]); });
-  for (let i = 0; i < 7; i++) mesh(geo('plate', () => new THREE.TorusGeometry(1, 0.12, 6, 18, Math.PI)), toon('#ffe2a8', { rim: 0.3 }), root, [0, 1.0 + i * 0.12, -2.4 + i * 1.0], [Math.PI / 2 + 0.2, 0, Math.PI], [1.3 - Math.abs(i - 3) * 0.12, 1.3, 1]);
-  // escamas instanciadas por el lomo y los costados
-  { const n = 90, im = new THREE.InstancedMesh(geo('scale', () => new THREE.SphereGeometry(1, 8, 6)), skin2, n), M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-    for (let i = 0; i < n; i++) { const sIdx = i % 3, a = (Math.floor(i / 3) / 30) * Math.PI * 1.1 - 0.15, sp = spine[sIdx], r = sp[3]; const side = (i % 2 ? 1 : -1);
-      const p = new V3(side * Math.cos(a) * r * 0.98, sp[1] + Math.sin(a) * r * 0.9, sp[2] + ((i * 7) % 11 - 5) * 0.17); e.set(0, side * 0.3, side * (Math.PI / 2 - a)); q.setFromEuler(e); M.compose(p, q, new V3(0.32, 0.12, 0.28)); im.setMatrixAt(i, M); }
-    root.add(im); }
-  // púas del lomo
-  for (let i = 0; i < 6; i++) mesh(cone(), spike, root, [0, 4.4 - (i < 2 ? 0 : 0.2) - (i > 4 ? 0.6 : 0), -2.4 + i * 1.0].map((v, j) => j === 1 ? spine[Math.min(2, Math.floor(i / 2))][1] + spine[Math.min(2, Math.floor(i / 2))][3] * 0.9 : v), [-0.2, 0, 0], [0.35, 0.8, 0.35]);
-  // cabeza simpática
-  const head = new THREE.Group(); head.position.set(0, 4.9, 6.9); head.scale.setScalar(1.45); root.add(head); u.head = head;
-  const hd = mesh(sph(), skin, head, [0, 0, 0], null, [1.55, 1.35, 1.45]); outline(hd, OL, 1.04);
-  const snout = mesh(sph(), skin, head, [0, -0.35, 1.25], null, [1.05, 0.75, 0.9]); outline(snout, OL, 1.05);
-  mesh(sph(), belly, head, [0, -0.62, 1.35], null, [0.85, 0.4, 0.75]);
-  for (const sd of [-1, 1]) { mesh(sph(), toon('#3a7a68', { rim: 0 }), head, [sd * 0.35, -0.1, 2.08], null, [0.09, 0.07, 0.05]); // fosas
-    const hn = new THREE.Group(); hn.position.set(sd * 0.75, 1.0, -0.3); hn.rotation.set(-0.6, 0, sd * -0.35); head.add(hn); const h1 = mesh(cone(), horn, hn, [0, 0.55, 0], null, [0.28, 1.1, 0.28]); outline(h1, '#d8b060', 1.06); mesh(cone(), horn, hn, [0, 1.15, -0.2], [-0.6, 0, 0], [0.16, 0.6, 0.16]);
-    const fin = mesh(cone(), spike, head, [sd * 1.35, 0.35, -0.3], [0, 0, sd * -1.2], [0.35, 0.9, 0.12]); }
-  const fc = new THREE.Group(); fc.position.set(0, 0.3, 1.18); head.add(fc); u.eyes = face(fc, 0.05, 0.12, 1.5, { mouth: '#d0507e' });
-  for (let i = 0; i < 4; i++) mesh(cone(), spike, head, [0, 1.25 - i * 0.12, -0.5 - i * 0.45], [-0.5, 0, 0], [0.22, 0.55, 0.22]);
-  u.mouth = new THREE.Object3D(); u.mouth.position.set(0, -0.5, 2.1); head.add(u.mouth);
-  // patas rechonchas con deditos redondos (sin garras)
-  for (const [x, z] of [[-1.6, 2.2], [1.6, 2.2], [-1.6, -1.6], [1.6, -1.6]]) { const l = mesh(cap(), skin, root, [x, 0.9, z], null, [0.95, 1.2, 0.95]); outline(l, OL, 1.05); for (let t = -1; t <= 1; t++) mesh(sph(), belly, root, [x + t * 0.28, 0.2, z + 0.5], null, 0.2); }
-  // alas: huesos + membrana festoneada translúcida
-  u.wings = [-1, 1].map(sd => { const w = new THREE.Group(); w.position.set(sd * 1.6, 3.8, 1.2); root.add(w);
-    const sh = new THREE.Shape(); sh.moveTo(0, -0.3); sh.quadraticCurveTo(4, -1.2, 8, -0.4); const tips = [[8, -0.4], [6.4, 2.6], [4.4, 3.4], [2.2, 3.0], [0, 1.6]];
-    for (let i = 1; i < tips.length; i++) { const [x0, y0] = tips[i - 1], [x1, y1] = tips[i]; sh.quadraticCurveTo((x0 + x1) / 2 - 0.2, (y0 + y1) / 2 - 0.9, x1, y1); } sh.lineTo(0, -0.3);
-    const mem = new THREE.Mesh(geo('wingG2', () => new THREE.ShapeGeometry(sh, 12)), new THREE.MeshToonMaterial({ color: '#cdb6ff', emissive: '#6a4ab0', emissiveIntensity: 0.15, transparent: true, opacity: 0.93, side: THREE.DoubleSide }));
-    mem.rotation.x = Math.PI / 2; mem.scale.x = sd; w.add(mem); // y de la forma -> hacia atrás (z negativo)
-    const bone = (x0, z0, x1, z1, r) => { const dx = x1 - x0, dz = z1 - z0, L = Math.hypot(dx, dz); mesh(cap(), skin2, w, [sd * (x0 + x1) / 2, 0.05, (z0 + z1) / 2], [Math.PI / 2, 0, -sd * Math.atan2(dx, -dz) + (sd > 0 ? 0 : 0)], [r, L, r]); };
-    { const m0 = mesh(cap(), skin2, w, [sd * 4, 0.05, 0.6], [0, 0, Math.PI / 2], [0.3, 3.8, 0.3]); m0.rotation.y = sd * 0.1; }
-    for (const [x, y] of tips.slice(1, 4)) { const dx = x - 0.5, dz = -y; const L = Math.hypot(dx, dz); const bm = mesh(cap(), skin2, w, [sd * (0.5 + dx / 2), 0.04, dz / 2], null, [0.14, L / 2, 0.14]); bm.rotation.set(Math.PI / 2, 0, 0); bm.rotation.z = 0; bm.quaternion.setFromUnitVectors(new V3(0, 1, 0), new V3(sd * dx, 0, dz).normalize()); }
-    mesh(sph(), spike, w, [sd * 8, 0.05, 0.4], null, 0.32); return w; });
-  // cola ondulante con corazón al final
-  u.tail = []; let par = root, pos = [0, 2.0, -3.2];
-  for (let i = 0; i < 9; i++) { const s = new THREE.Group(); s.position.set(...pos); par.add(s); const r = 1.5 * (1 - i / 10.5); const m = mesh(sph(), skin, s, [0, 0, -r * 0.6], null, [r, r * 0.9, r * 1.2]); outline(m, OL, 1.04); mesh(cone(), spike, s, [0, r * 0.85, -r * 0.6], [-0.4, 0, 0], [r * 0.25, r * 0.6, r * 0.25]); u.tail.push(s); par = s; pos = [0, -0.25, -r * 1.15]; }
-  { const hg = new THREE.Group(); hg.position.set(0, 0, -0.6); par.add(hg); for (const sd of [-1, 1]) mesh(sph(), spike, hg, [sd * 0.28, 0, 0], null, [0.4, 0.4, 0.25]); mesh(cone(), spike, hg, [0, -0.38, 0], [Math.PI, 0, 0], [0.55, 0.6, 0.25]); }
-  // silla de montar, manta con flecos y estribos
-  const saddle = new THREE.Group(); saddle.position.set(0, 4.25, 0.2); root.add(saddle);
-  mesh(sph(), toon('#ff7fa8', { rim: 0.5 }), saddle, [0, 0, 0], null, [1.4, 0.35, 1.6]); mesh(sph(), toon('#ff7fa8', { rim: 0.5 }), saddle, [0, 0.35, -1.2], null, [1.1, 0.45, 0.4]); mesh(sph(), toon('#ffd84a', { rim: 0.5 }), saddle, [0, 0.45, 1.25], null, [0.35, 0.45, 0.3]);
-  mesh(cyl(), toon('#9fd0ff', { rim: 0.3 }), saddle, [0, -0.25, 0], null, [2.3, 0.12, 2.1]);
-  for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283; mesh(sph(), toon(['#ffd84a', '#ffffff'][i % 2], { rim: 0.3 }), saddle, [Math.cos(a) * 2.25, -0.38, Math.sin(a) * 2.05], null, 0.13); }
-  for (const sd of [-1, 1]) { mesh(cyl(), toon('#c98d55', { rim: 0.3 }), saddle, [sd * 1.6, -1.0, 0.3], [0, 0, sd * 0.15], [0.06, 1.6, 0.06]); mesh(tor(), toon('#ffd84a', { rim: 0.6 }), saddle, [sd * 1.75, -1.85, 0.3], [0, Math.PI / 2, 0], 0.32); }
-  // riendas (se recolocan cada fotograma entre la boca y las manos del piloto)
-  u.reins = [-1, 1].map(() => mesh(cyl(), toon('#ff5f8f', { rim: 0.4 }), g, [0, 0, 0], null, [0.06, 1, 0.06]));
-  u.bit = [-1, 1].map(sd => { const o = new THREE.Object3D(); o.position.set(sd * 0.85, -0.55, 1.6); head.add(o); mesh(tor(), toon('#ffd84a', { rim: 0.6 }), o, [0, 0, 0], [0, Math.PI / 2, 0], 0.18); return o; });
-  const halo = glow('#c8fff0', 9, 0.18); halo.position.set(0, 3.5, 1); root.add(halo);
-  return g;
-}
+function makeDragon__() { return buildDragon(); } // v48: dragón épico en dragon48.js
 
 // ---------- 3) TOBOGÁN ARCOÍRIS: se construye sobre la pista que tienes delante ----------
 const RB = ['#ff8fb0', '#ffb36b', '#ffe66b', '#8fe8a0', '#8fcfff', '#c6a2ff'];
@@ -187,7 +135,7 @@ P0.use = function (k, it) {
   k.puppetT = k.duckT = k.cannonT = k.octoT = 0; k.spinT = 0; k.squashT = 0; k.flyT = 0; k.morphT = 0; k.sharkT = 0; k.drillT = k.dragonT = k.rainT = 0;
   switch (it) {
     case 'taladro': k.drillT = 5; k.drillAge = 0; k.drillSpace = isSpace(RC); k.dropT = 0; if (P) RC.msg(k.drillSpace ? '🌀 ¡TALADRÍN! Túnel de energía 5 s' : '🌀 ¡TALADRÍN! 5 s bajo tierra', k, '#c9a7ff'); burst(k.drillSpace ? ['#7ff5ff', '#ff9cf0', '#ffffff'] : ['#c69a72', '#e0b88f', '#8fe08a'], 26, 7, 0.5); if (near) Audio.sfxPlay('drillStart'); break;
-    case 'dragon': k.dragonT = 5.2; k.dragonAge = 0; if (P) { RC.msg('🐉 ¡DRAGÓN COLOSAL! ¡Arre!', k, '#8fe3c4'); } burst(['#8fe3c4', '#ff9cc8', '#ffe7a8', '#d4c2ff'], 30, 10); if (near) Audio.sfxPlay('dragonRoar'); break;
+    case 'dragon': k.dragonT = 5.2; k.dragonAge = 0; if (P) { RC.msg('🐉 ¡DRAGÓN COLOSAL! ¡Arre!', k, '#ffb347'); } burst(['#ff5a3a', '#ffb347', '#ffe066', '#ff4f8a'], 30, 10); if (near) Audio.sfxPlay('dragonRoar'); break;
     case 'arcoiris': { const N = T.N, H = 15, cnt = Math.round(320 / T.STEP); const s = T.S[k.idx], lat = (k.pos.x - s.p.x) * s.right.x + (k.pos.z - s.p.z) * s.right.z;
       if (k.rbMesh) this.dropRainbow(k); k.rbMesh = buildRainbow(T, k.idx, cnt, lat, H); RC.scene.add(k.rbMesh); k.rainT = 6; k.rainAge = 0; k.rainI0 = k.idx; k.rainCnt = cnt; k.rainH = H; k.rainFade = 0;
       if (P) RC.msg('🌈 ¡TOBOGÁN ARCOÍRIS!', k, '#ffe66b'); burst(RB, 30, 10); if (near) Audio.sfxPlay('rainbow'); break; }
@@ -252,7 +200,7 @@ P0.update = function (dt) {
         const fl = Math.sin(t * 6.5); q.wings.forEach((w, i) => { const sd = i ? 1 : -1; w.rotation.z = sd * (0.38 + fl * 0.3); w.rotation.y = sd * 0.1; });
         q.root.position.y = -3.7 + fl * 0.25; q.head.rotation.y = Math.sin(t * 1.3) * 0.12; q.head.rotation.x = Math.sin(t * 2.2) * 0.06;
         q.tail.forEach((s, i) => { s.rotation.y = Math.sin(t * 3 - i * 0.6) * 0.22; s.rotation.x = Math.sin(t * 2 - i * 0.5) * 0.05 + 0.05; });
-        const bl = (t % 3.1) < 0.13 ? 0.15 : 1; q.eyes.forEach(x => x.scale.y = bl);
+        const bl = (t % 3.1) < 0.13 ? 0.15 : 1; q.eyes.forEach(x => x.scale.y = bl); q.anim && q.anim(t, Math.max(0, Math.sin(t * 2.4) * 1.4 - 0.2) > 0.4 ? 1 : 0.15);
         d.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(d.matrixWorld).invert();
         q.reins.forEach((r, i) => { const sd = i ? 1 : -1, a = new V3().setFromMatrixPosition(q.bit[i].matrixWorld).applyMatrix4(inv), b = new V3(sd * 0.55, 1.35, 0.7); const dd = a.clone().sub(b); r.position.copy(b).addScaledVector(dd, 0.5); r.scale.set(0.06, dd.length(), 0.06); r.quaternion.setFromUnitVectors(UP, dd.normalize()); });
         if ((k.isPlayer || R() < 0.3) && Math.sin(t * 2.4) > 0.6) { const mp = new V3().setFromMatrixPosition(q.mouth.matrixWorld), fx = Math.sin(k.yaw), fz = Math.cos(k.yaw); for (let i = 0; i < 2; i++) RC.emit(mp, ['#ff8fd8', '#7ff5ff', '#ffe066', '#9dff7a', '#ffffff'][Math.floor(R() * 5)], 0.55, 0.55, new V3(fx * 14 + (R() - 0.5) * 4, 1 + R() * 3, fz * 14 + (R() - 0.5) * 4)); if (k.isPlayer && Math.floor(t / 2.6) !== k.brQ) { k.brQ = Math.floor(t / 2.6); Audio.sfxPlay('breath'); } } } }

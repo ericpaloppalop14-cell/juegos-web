@@ -22,7 +22,7 @@ const T = {
   shark: ['bubble', ['#bff4ff', '#7fd8ff'], 'rise'], star: ['star', ['#ffe066', '#ff8fd8', '#7ff5ff', '#b6ff9f'], 'orbit'], glider: ['star', ['#ffffff', '#ffe066'], 'swirl'],
   time: ['gem', ['#b98cff', '#7ff5ff'], 'orbit'], piano: ['note', ['#ffffff', '#ffe066', '#b98cff'], 'rise'], fish: ['bubble', ['#e8fbff', '#9fe6ff'], 'rise'],
   tea: ['heart', ['#fff6ec', '#ffd0e2'], 'rise'], rocket: ['star', ['#ffcf3a', '#ff6f3d'], 'swirl'], carpet: ['gem', ['#ffe066', '#ff6f9a', '#7fd8ff'], 'orbit'],
-  portal: ['star', ['#b98cff', '#7ff5ff', '#ff8fd8'], 'swirl'], bubble: ['bubble', ['#e8fbff', '#ffd0f2'], 'orbit'], mound: ['dot', ['#a0703a', '#c9905a'], 'rise'],
+  portal: ['star', ['#b98cff', '#7ff5ff', '#ff8fd8'], 'swirl'], bubble: ['bubble', ['#e8fbff', '#ffd0f2'], 'orbit'], mound: ['dot', ['#ffd23a', '#ffae4d', '#7ff5ff'], 'rise'],
   circus: ['star', ['#ff4f6a', '#ffe066', '#7fd8ff'], 'orbit'], dolphin: ['drop', ['#9fe6ff', '#ffffff'], 'rise'],
   hand: ['star', ['#ffe066', '#ffffff'], 'blink'], nose: ['bubble', ['#ff8fb8', '#ffd0e2'], 'blink'], bunny: ['heart', ['#ffb0d8', '#ffffff'], 'orbit'],
   hat: ['star', ['#ffe066', '#b98cff'], 'swirl'], disco: ['gem', ['#ff8fd8', '#7ff5ff', '#ffe066', '#b98cff'], 'orbit'], duck: ['bubble', ['#e8fbff', '#bff4ff'], 'rise'],

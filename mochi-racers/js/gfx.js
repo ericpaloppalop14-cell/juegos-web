@@ -3,6 +3,7 @@ import { premiumChar, premiumVehicle } from './premium.js';
 import { classicChar, classicVehicle } from './classic.js';
 import { nuevosChar, nuevosVehicle } from './nuevos.js';
 import { detalleChar } from './detalle47.js';
+import { detalleKart, markWheel } from './karts48.js';
 import { addCompi } from './compis.js';
 import { deco } from './itemdeco.js';
 
@@ -333,7 +334,7 @@ export function glowTex(color = '#ffffff') {
 export function makeVehicle(ch) {
   const g = new THREE.Group(); const C = ch.color; const OL = hex(col(C, -0.6));
   const wheels = []; let seat = 0.9; const anims = [];
-  const wheel = (x, z, r = 0.38, c = '#ffffff') => { const w = mesh(cyl(14), toon(c), g, [x, r, z], [0, 0, Math.PI / 2], [r, 0.3, r]); outline(w, OL, 1.08); wheels.push(w);
+  const wheel = (x, z, r = 0.38, c = '#ffffff') => { const w = mesh(cyl(14), toon(c), g, [x, r, z], [0, 0, Math.PI / 2], [r, 0.3, r]); outline(w, OL, 1.08); wheels.push(markWheel(w));
     mesh(cyl(10), toon(hex(col(C, -0.2))), w, [0, 0.0, 0], null, [0.5, 1.05, 0.5]); return w; };
   const V = ch.vehicle;
   if (V === 'teacup') {
@@ -434,7 +435,8 @@ export function makeVehicle(ch) {
     anims.push(t => { ball.material.emissive.setHSL((t * 0.25) % 1, 0.9, 0.35); lights.forEach((l, i) => l.material.color.setHSL((t * 0.5 + i / 6) % 1, 1, 0.6)); });
   } else { let st = premiumVehicle(V, g, wheel, anims, C, OL, H); if (st == null) st = nuevosVehicle(V, g, wheel, anims, C, OL, H); if (st != null) seat = st; }
   classicVehicle(V, g, anims, H);
-  g.userData = { wheels, seat, anims };
+  try { detalleKart(ch, g, wheels, anims); } catch (e) { console.warn('detalleKart', e); } // v48
+  g.userData = { wheels, seat: seat + 0.1, anims };
   return g;
 }
 

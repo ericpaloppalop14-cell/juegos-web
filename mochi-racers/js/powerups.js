@@ -253,24 +253,54 @@ function makeBubble__(color, hi) {
   return g;
 }
 
-// --- v12: Topo Excavador: montículo de tierra con terrones, hierba, una piedra, el hocico rosa y las garras del topo con casco de minero
+// --- v48: Hámster Excavador (antes un montículo marrón): hámster dorado con casco de minero y mochila con pico, asomando de un cráter de piedras y cristales
 function makeMound__() {
   const g = new THREE.Group();
-  const dirt = mat('dirt', () => toon('#8a5a3a', { rim: 0.25 })), dirt2 = mat('dirt2', () => toon('#a8714a', { rim: 0.25 })), grass = mat('grassT', () => toon('#7fd67a', { rim: 0.3 })), rock = mat('rockT', () => toon('#b8b0c8', { rim: 0.4 }));
+  const T = (c, o = {}) => mat('h48' + c + JSON.stringify(o), () => toon(c, { rim: 0.45, ...o }));
+  const fur = T('#ffae4d'), fur2 = T('#f08a2e'), cream = T('#fff2dc'), pink = T('#ff8fb0'), nose = T('#ff5f8e'), dark = T('#2a1538', { rim: 0 }), white = T('#ffffff', { rim: 0.2 });
+  const hatY = T('#ffd23a', { emissive: '#a07000', ei: 0.18 }), hatR = T('#ff4a5a'), steel = T('#cfd8ea', { rim: 0.6 }), pack = T('#37c6c0'), pack2 = T('#1f8f94'), wood = T('#c98a4a');
+  const OL = '#b5601c';
+  // cráter: aro de piedras facetadas + agujero oscuro + cristales + hierba (nada de montón marrón)
   const hill = new THREE.Group(); g.add(hill);
-  mesh(geo('moundG', () => { const gg = new THREE.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2); const p = gg.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); const n = 1 + Math.sin(x * 7 + z * 3) * 0.06 + Math.cos(z * 9 - x * 2) * 0.05; p.setXYZ(i, x * n, y * n, z * n); } gg.computeVertexNormals(); return gg; }), dirt, hill, [0, -0.1, 0], null, [2.1, 1.35, 2.6]);
-  for (let i = 0; i < 9; i++) { const a = i * 0.7, r = 1.2 + (i % 3) * 0.35; mesh(sph(7), i % 2 ? dirt2 : dirt, hill, [Math.cos(a) * r, 0.2 + (i % 4) * 0.18, Math.sin(a) * r * 1.2], null, 0.28 + (i % 3) * 0.1); }
-  for (let i = 0; i < 6; i++) { const a = i * 1.1 + 0.3; mesh(cone(4), grass, hill, [Math.cos(a) * 1.6, 0.55, Math.sin(a) * 1.9], [0.3 * Math.cos(a), 0, 0.3 * Math.sin(a)], [0.09, 0.5, 0.09]); }
-  mesh(sph(6), rock, hill, [0.8, 1.0, -0.6], [0.4, 0.2, 0], [0.35, 0.25, 0.3]);
-  // topo asomando por delante
-  const head = new THREE.Group(); head.position.set(0, 0.6, 2.2); g.add(head);
-  const fur = mat('moleFur', () => toon('#6a4a6e', { rim: 0.6 })), pink = mat('molePink', () => toon('#ff9fc0', { rim: 0.4 })), yel = mat('moleHat', () => toon('#ffd84a', { emissive: '#b08000', ei: 0.15, rim: 0.6 }));
-  mesh(sph(14), fur, head, [0, 0, 0], null, [0.85, 0.75, 0.8]);
-  mesh(sph(10), pink, head, [0, -0.05, 0.75], null, [0.3, 0.24, 0.3]);
-  for (const s of [-1, 1]) { mesh(sph(6), mat('moleEye', () => toon('#1a1030', { rim: 0 })), head, [s * 0.3, 0.25, 0.65], null, 0.08); mesh(sph(8), pink, head, [s * 0.75, -0.45, 0.45], null, [0.32, 0.16, 0.28]);
-    for (let c = -1; c <= 1; c++) mesh(cone(4), mat('claw', () => toon('#fff4e6')), head, [s * 0.75 + c * 0.12, -0.5, 0.75], [Math.PI / 2, 0, 0], [0.05, 0.18, 0.05]); }
-  mesh(sph(12), yel, head, [0, 0.45, -0.05], null, [0.75, 0.45, 0.75]); mesh(cyl(10), mat('lamp', () => new THREE.MeshBasicMaterial({ color: '#fff6c0' })), head, [0, 0.62, 0.62], [Math.PI / 2, 0, 0], [0.16, 0.1, 0.16]);
-  const lampGlow = sprite('#fff2b0', 2.2, 0.45); lampGlow.position.set(0, 0.62, 0.8); head.add(lampGlow);
+  mesh(cyl(24), T('#3a2456', { rim: 0 }), hill, [0, 0.03, 0], null, [2.45, 0.06, 2.6]);
+  mesh(cyl(24), T('#5a3c7a', { rim: 0 }), hill, [0, 0.07, 0], null, [1.95, 0.05, 2.05]);
+  const stone = [T('#e2c9a0'), T('#c9a578'), T('#f0dcc0'), T('#b99068')];
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + (i % 2) * 0.1, r = 2.3 + (i % 3) * 0.18, sz = 0.42 + (i * 37 % 5) * 0.07;
+    mesh(geo('h48ico', () => new THREE.IcosahedronGeometry(1, 0)), stone[i % 4], hill, [Math.cos(a) * r, 0.22 + (i % 3) * 0.08, Math.sin(a) * r * 1.08], [i, i * 2, 0], [sz * 1.1, sz * 0.75, sz]); }
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + 0.3, r = 2.9 + (i % 2) * 0.3; mesh(geo('h48ico', () => new THREE.IcosahedronGeometry(1, 0)), stone[(i + 1) % 4], hill, [Math.cos(a) * r, 0.1, Math.sin(a) * r * 1.1], [i, 0, i], [0.28, 0.2, 0.26]); }
+  const cc = ['#7ff5ff', '#ff9cf0', '#fff39a'];
+  for (let i = 0; i < 6; i++) { const a = i * 1.05 + 0.5, r = 2.35; const cm = mat('h48cr' + i % 3, () => toon(cc[i % 3], { emissive: cc[i % 3], ei: 0.55, rim: 0.7 }));
+    const cr = mesh(cone(5), cm, hill, [Math.cos(a) * r, 0.55, Math.sin(a) * r * 1.08], [0.35 * Math.sin(a), 0, -0.35 * Math.cos(a)], [0.16, 0.7 + (i % 2) * 0.3, 0.16]); }
+  for (let i = 0; i < 7; i++) { const a = i * 0.9 + 0.2; mesh(cone(4), T('#7fd67a'), hill, [Math.cos(a) * 2.05, 0.3, Math.sin(a) * 2.15], [0.35 * Math.cos(a), 0, 0.35 * Math.sin(a)], [0.09, 0.5, 0.09]); }
+  // hámster
+  const head = new THREE.Group(); head.position.set(0, 0.55, 0); g.add(head);
+  const B = mesh(sph(18), fur, head, [0, 0.95, -0.2], null, [1.15, 1.0, 1.3]); outline(B, OL, 1.04);
+  mesh(sph(14), cream, head, [0, 0.8, 0.45], null, [0.8, 0.75, 0.85]);                         // barriga
+  mesh(sph(12), fur2, head, [0, 1.85, -0.35], null, [0.34, 0.1, 1.0]);                          // raya del lomo
+  for (const sd of [-1, 1]) mesh(sph(8), fur2, head, [sd * 0.55, 1.55, -0.2], null, [0.18, 0.08, 0.55]);
+  const H = mesh(sph(18), fur, head, [0, 1.55, 0.9], null, [0.98, 0.85, 0.9]); outline(H, OL, 1.045); // cabeza
+  for (const sd of [-1, 1]) { const ch = mesh(sph(14), cream, head, [sd * 0.62, 1.32, 1.18], null, [0.46, 0.4, 0.44]); outline(ch, '#e0a868', 1.05);   // mofletes
+    mesh(sph(8), mat('h48blush', () => new THREE.MeshBasicMaterial({ color: '#ff9aa8', transparent: true, opacity: 0.8 })), head, [sd * 0.68, 1.28, 1.52], null, [0.17, 0.1, 0.05]);
+    const ear = mesh(sph(12), fur, head, [sd * 0.78, 2.2, 0.55], [0.2, 0, sd * 0.45], [0.34, 0.4, 0.14]); outline(ear, OL, 1.07); mesh(sph(10), pink, head, [sd * 0.79, 2.2, 0.66], [0.2, 0, sd * 0.45], [0.22, 0.28, 0.06]);
+    const e = new THREE.Group(); e.position.set(sd * 0.36, 1.72, 1.62); head.add(e); mesh(sph(12), dark, e, [0, 0, 0], null, [0.17, 0.21, 0.1]); mesh(sph(6), white, e, [-0.05 * sd, 0.08, 0.08], null, 0.075); mesh(sph(6), white, e, [0.05 * sd, -0.07, 0.08], null, 0.04);
+    for (let w = -1; w <= 1; w++) mesh(cyl(4), white, head, [sd * 0.98, 1.35 + w * 0.12, 1.5], [Math.PI / 2 + w * 0.12, 0, sd * Math.PI / 2 - w * 0.18 * sd + sd * 0.3], [0.012, 0.62, 0.012]);
+    // patitas delanteras cavando
+    const paw = new THREE.Group(); paw.position.set(sd * 0.7, 0.75, 1.55); head.add(paw); (head.userData.paws ||= []).push(paw);
+    mesh(sph(10), pink, paw, [0, 0, 0.1], null, [0.26, 0.22, 0.3]); for (let c = -1; c <= 1; c++) mesh(cone(4), white, paw, [c * 0.1, -0.05, 0.42], [Math.PI / 2, 0, 0], [0.05, 0.2, 0.05]);
+    mesh(sph(10), pink, head, [sd * 0.62, 0.3, -0.35], null, [0.28, 0.2, 0.42]); }              // patas traseras
+  mesh(sph(10), nose, head, [0, 1.5, 1.74], null, [0.12, 0.09, 0.09]);
+  for (const sd of [-1, 1]) mesh(box(), white, head, [sd * 0.055, 1.33, 1.7], null, [0.1, 0.2, 0.05]);
+  mesh(sph(8), cream, head, [0, 0.6, -1.5], null, 0.25);                                          // colita
+  // casco de minero con linterna
+  const hat = new THREE.Group(); hat.position.set(0, 2.08, 0.62); head.add(hat);
+  mesh(geo('h48dome', () => new THREE.SphereGeometry(1, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2)), hatY, hat, [0, 0, 0], null, [0.78, 0.55, 0.78]);
+  mesh(cyl(18), hatY, hat, [0, 0.02, 0], null, [0.9, 0.07, 0.9]); mesh(cyl(18), hatR, hat, [0, 0.1, 0], null, [0.79, 0.07, 0.79]); mesh(box(), hatR, hat, [0, 0.5, -0.05], null, [0.12, 0.1, 0.9]);
+  mesh(cyl(10), mat('h48lamp', () => new THREE.MeshBasicMaterial({ color: '#fffbd0' })), hat, [0, 0.22, 0.8], [Math.PI / 2, 0, 0], [0.17, 0.14, 0.17]); mesh(cyl(10), T('#ffffff'), hat, [0, 0.22, 0.7], [Math.PI / 2, 0, 0], [0.22, 0.1, 0.22]);
+  const lg = sprite('#fff2b0', 1.5, 0.25); lg.position.set(0, 0.22, 1.0); hat.add(lg);
+  // mochila con pico
+  mesh(box(), pack, head, [0, 1.2, -1.05], null, [0.9, 0.9, 0.45]); mesh(box(), pack2, head, [0, 1.05, -1.3], null, [0.8, 0.45, 0.1]); mesh(box(), pack2, head, [0, 1.7, -1.05], null, [0.95, 0.1, 0.5]);
+  mesh(cyl(6), wood, head, [0.55, 1.7, -1.2], [0, 0, -0.5], [0.06, 1.7, 0.06]);
+  mesh(geo('h48pick', () => new THREE.TorusGeometry(0.5, 0.07, 5, 10, Math.PI)), steel, head, [0.2, 2.45, -1.2], [0, 0, -0.9], 1);
   g.userData = { hill, head };
   return g;
 }
@@ -474,8 +504,8 @@ export class PowerFX {
     const mo = this.attach(k, 'mound', makeMound), bo = this.attach(k, 'ball', makeCircusBall), dl = this.attach(k, 'dolph', makeDolphin);
     mo.visible = on && k.morph === 'topo'; bo.visible = on && k.morph === 'bola'; dl.visible = on && k.morph === 'delfin';
     if (mo.visible) { const q = mo.userData, e = Math.min(1, age / 0.35) * Math.min(1, k.morphT / 0.25 + 0.2), w = 1 + Math.sin(t * 14) * 0.05;
-      mo.scale.set(e * w, e * (1 + Math.sin(t * 11) * 0.08), e * w); q.head.position.y = 0.55 + Math.abs(Math.sin(t * 6)) * 0.25; q.head.rotation.z = Math.sin(t * 7) * 0.2;
-      if (R() < 0.7) RC.emit(k.pos.clone().add(new V3((R() - 0.5) * 3, 0.6, (R() - 0.5) * 3)), ['#8a5a3a', '#a8714a', '#6a4430'][Math.floor(R() * 3)], 0.6 + R() * 0.3, 0.6, new V3(-k.vx * 0.15 + (R() - 0.5) * 5, 3 + R() * 4, -k.vz * 0.15 + (R() - 0.5) * 5)); }
+      mo.scale.set(e * w, e * (1 + Math.sin(t * 11) * 0.08), e * w); q.head.position.y = 0.45 + Math.abs(Math.sin(t * 6)) * 0.22; q.head.rotation.z = Math.sin(t * 7) * 0.07; q.head.userData.paws && q.head.userData.paws.forEach((pw, i) => pw.rotation.x = Math.sin(t * 15 + i * 3.14) * 0.6 - 0.2);
+      if (R() < 0.7) RC.emit(k.pos.clone().add(new V3((R() - 0.5) * 3, 0.6, (R() - 0.5) * 3)), ['#e2c9a0', '#c9a578', '#ffd8a0', '#fff1c0'][Math.floor(R() * 4)], 0.6 + R() * 0.3, 0.6, new V3(-k.vx * 0.15 + (R() - 0.5) * 5, 3 + R() * 4, -k.vz * 0.15 + (R() - 0.5) * 5)); }
     if (bo.visible) { const q = bo.userData, r = this.ballR(k); q.ball.scale.setScalar(r); q.halo.scale.setScalar(r * 1.1); bo.position.y = -r;
       q.ball.rotation.x += (k.fs || 0) * dt / r; q.halo.rotation.y = t * 0.6; q.stars.forEach((s, i) => { const a = t * 2.4 + i * 1.571; s.position.set(Math.cos(a) * (r + 0.9), -r + Math.sin(t * 3 + i) * 0.5 + 0.4, Math.sin(a) * (r + 0.9)); s.rotation.set(0, -a, t * 3); });
       if (R() < 0.35) RC.emit(k.pos.clone().add(new V3((R() - 0.5) * 2 * r, 0.5, (R() - 0.5) * 2 * r)), ['#ffd6ec', '#d6f0ff'][Math.floor(R() * 2)], 0.7, 0.5, new V3(0, 2, 0)); }
