@@ -137,8 +137,8 @@ P0.use = function (k, it) {
     case 'taladro': k.drillT = 5; k.drillAge = 0; k.drillSpace = isSpace(RC); k.dropT = 0; if (P) RC.msg(k.drillSpace ? '🌀 ¡TALADRÍN! Túnel de energía 5 s' : '🌀 ¡TALADRÍN! 5 s bajo tierra', k, '#c9a7ff'); burst(k.drillSpace ? ['#7ff5ff', '#ff9cf0', '#ffffff'] : ['#c69a72', '#e0b88f', '#8fe08a'], 26, 7, 0.5); if (near) Audio.sfxPlay('drillStart'); break;
     case 'dragon': k.dragonT = 5.2; k.dragonAge = 0; if (P) { RC.msg('🐉 ¡DRAGÓN COLOSAL! ¡Arre!', k, '#ff8fc4'); } burst(['#ff9cc8', '#c6a8ff', '#ffe27a', '#8fe8ff'], 30, 10); if (near) Audio.sfxPlay('dragonRoar'); break;
     case 'arcoiris': { const N = T.N, H = 15, cnt = Math.round(320 / T.STEP); const s = T.S[k.idx], lat = (k.pos.x - s.p.x) * s.right.x + (k.pos.z - s.p.z) * s.right.z;
-      if (k.rbMesh) this.dropRainbow(k); k.rbMesh = buildRainbow(T, k.idx, cnt, lat, H); RC.scene.add(k.rbMesh); k.rainT = 6; k.rainAge = 0; k.rainI0 = k.idx; k.rainCnt = cnt; k.rainH = H; k.rainFade = 0;
-      if (P) RC.msg('🌈 ¡TOBOGÁN ARCOÍRIS!', k, '#ffe66b'); burst(RB, 30, 10); if (near) Audio.sfxPlay('rainbow'); break; }
+      if (k.rbMesh) this.dropRainbow(k); try { k.rbMesh = buildRainbow(T, k.idx, cnt, lat, H); RC.scene.add(k.rbMesh); } catch (err) { console.warn('rainbow', err); k.rbMesh = null; } k.rainT = 6; k.rainAge = 0; k.rainI0 = k.idx; k.rainCnt = cnt; k.rainH = H; k.rainFade = 0;
+      if (P) { RC.msg('🌈 ¡TOBOGÁN ARCOÍRIS!', k, '#ffe66b'); RC.kick = 1; } k.boostT = Math.max(k.boostT, 0.6); burst(RB, 30, 10); if (near) Audio.sfxPlay('rainbow'); break; }
   }
   return true;
 };
@@ -154,7 +154,7 @@ P0.input = function (k, inp, dt) {
     if (k.isPlayer && Math.floor(k.dragonAge / 0.55) !== k.flapQ) { k.flapQ = Math.floor(k.dragonAge / 0.55); Audio.sfxPlay('flap'); }
     if (k.dragonT <= 0) { k.invT = Math.max(k.invT || 0, 0.8); if (k.isPlayer) { RC.msg('¡Gracias, dragoncito!', k, '#8fe3c4'); Audio.sfxPlay('landSpark'); } } }
   if (k.rainT > 0) { k.rainT -= dt; k.rainAge += dt; v = Math.max(v, 2.0); k.boostT = Math.max(k.boostT, 0.25); inp = this.auto(k, inp, dt); this.keepIn(k, 1.2);
-    const prog = T.open ? k.idx - k.rainI0 : (k.idx - k.rainI0 + T.N) % T.N; k.rainU = clamp(prog / k.rainCnt, 0, 1); if (prog > k.rainCnt * 1.5) k.rainU = 1;
+    let prog = k.idx - k.rainI0; if (!T.open) { prog %= T.N; if (prog > T.N / 2) prog -= T.N; if (prog < -T.N / 2) prog += T.N; } prog = Math.max(0, prog); // v51: si el kart retrocede un tramo al salir, no se acaba al instante k.rainU = clamp(prog / k.rainCnt, 0, 1); if (prog > k.rainCnt * 1.5) k.rainU = 1;
     if (k.isPlayer && Math.floor(k.rainAge / 0.4) !== k.slideQ) { k.slideQ = Math.floor(k.rainAge / 0.4); Audio.sfxPlay('slide'); }
     if (k.rainU >= 1 || k.rainT <= 0) { k.rainT = 0; k.boostT = Math.max(k.boostT, 1.2); k.invT = Math.max(k.invT || 0, 0.8); k.rainFade = 1; if (k.isPlayer) { RC.msg('¡Aterrizaje arcoíris! +turbo', k, '#ffe66b'); Audio.sfxPlay('landSpark'); } for (let i = 0; i < 22; i++) RC.emit(k.pos.clone().add(new V3(0, 1, 0)), RB[i % 6], 0.9, 0.7, new V3((R() - 0.5) * 12, 3 + R() * 8, (R() - 0.5) * 12)); } }
   k.fxV = v; return inp;

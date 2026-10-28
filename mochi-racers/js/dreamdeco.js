@@ -15,6 +15,14 @@ export function addDream(T, Q, rnd) {
   const M = (g, c, o) => new THREE.Mesh(g, toon(c, o));
   const spot = (minD, maxD, dy) => { const s = S[Math.floor(rnd() * N)], side = rnd() < 0.5 ? -1 : 1, d = s.w + minD + rnd() * (maxD - minD); return new V3(s.p.x + s.right.x * d * side, s.p.y + dy, s.p.z + s.right.z * d * side); };
   const n = hi ? 1 : 0.6;
+  // v51: el decorado grande (islas, planetas con anillo, nubes) nunca puede invadir la calzada ni el volumen de la cámara.
+  // Se comprueba contra TODA la pista (no solo contra el tramo elegido: la pista se acerca a sí misma) y se recoloca con un generador propio,
+  // así no cambia el reparto aleatorio del resto del decorado.
+  const clearOf = (p, rad) => { for (let i = 0; i < N; i += 2) { const s = S[i], dx = s.p.x - p.x, dy = s.p.y + 6 - p.y, dz = s.p.z - p.z, lim = rad + s.w + 8; if (dx * dx + dy * dy + dz * dz < lim * lim) return false; } return true; };
+  const placeClear = (g, rad, minD, maxD, dyF, seed) => { // dyF(r) -> desnivel respecto al tramo elegido
+    if (clearOf(g.position, rad)) return true; let q = seed * 7919 + 17; const lr = () => (q = (q * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 60; k++) { const s = S[Math.floor(lr() * N)], side = lr() < 0.5 ? -1 : 1, d = s.w + minD + lr() * (maxD - minD), p = new V3(s.p.x + s.right.x * d * side, s.p.y + dyF(lr()), s.p.z + s.right.z * d * side); if (clearOf(p, rad)) { g.position.copy(p); return true; } }
+    return false; };
   if (look === 'sky') {
     const grass = ['#a8f0c0', '#ffd6ec', '#c9b8ff', '#fff2a8'], rock = ['#e7c3ff', '#ffc4e1', '#b8e6ff'];
     for (let i = 0; i < 26 * n; i++) { // islas flotantes
@@ -23,16 +31,17 @@ export function addDream(T, Q, rnd) {
       const bot = M(cone, rock[i % 3]); bot.scale.set(r * 0.95, r * 1.4, r * 0.95); bot.rotation.x = Math.PI; bot.position.y = -r * 0.7 - 1; g.add(bot);
       for (let j = 0; j < 3; j++) { const t = M(sph, ['#ff8fc0', '#7ee3c4', '#ffd36b'][j]); const a = rnd() * 6.28, d = rnd() * r * 0.6; t.scale.setScalar(1.5 + rnd() * 2.5); t.position.set(Math.cos(a) * d, 2.5, Math.sin(a) * d); g.add(t); }
       if (rnd() < 0.5) { const w = M(cyl, '#bfeaff', { opacity: 0.7 }); w.scale.set(1.2, 40, 0.4); w.position.set(r * 0.8, -20, 0); g.add(w); }
-      g.userData = { y0: g.position.y, ph: rnd() * 6 }; G.add(g); anim.push(t => { g.position.y = g.userData.y0 + Math.sin(t * 0.5 + g.userData.ph) * 2.5; });
+      g.userData = { y0: g.position.y, ph: rnd() * 6 }; if (!placeClear(g, r * 1.5 + 5, 22, 160, u => -20 + u * 60, i + 1)) continue; g.userData.y0 = g.position.y; G.add(g); anim.push(t => { g.position.y = g.userData.y0 + Math.sin(t * 0.5 + g.userData.ph) * 2.5; });
     }
     for (let i = 0; i < 9 * n; i++) { // planetas de gominola
       const g = new THREE.Group(), r = 14 + rnd() * 34; g.position.copy(spot(120, 420, 30 + rnd() * 120));
       const b = M(sph, ['#ff9cc8', '#7fd8ff', '#ffd36b', '#b9a2f7', '#7ee3c4'][i % 5], { opacity: 0.92 }); b.scale.setScalar(r); g.add(b);
       if (i % 2 === 0) { const ring = M(tor, '#ffffff'); ring.scale.set(r * 1.6, r * 1.6, r * 3); ring.rotation.x = 1.2 + rnd() * 0.3; g.add(ring); }
       for (let j = 0; j < 6; j++) { const sp = M(sph, '#ffffff', { opacity: 0.6 }); sp.scale.setScalar(r * 0.12); const a = rnd() * 6.28, bb = rnd() * 3; sp.position.set(Math.cos(a) * Math.sin(bb) * r, Math.cos(bb) * r, Math.sin(a) * Math.sin(bb) * r); g.add(sp); }
+      if (!placeClear(g, (i % 2 === 0 ? r * 1.9 : r * 1.15) + 4, 120, 420, u => 30 + u * 120, i + 101)) continue; // el anillo gira: se cuenta toda su esfera
       G.add(g); anim.push(t => { g.rotation.y = t * 0.05 + i; });
     }
-    for (let i = 0; i < 30 * n; i++) { const c = M(sph, '#ffffff', { opacity: 0.85 }); c.scale.set(8 + rnd() * 10, 3 + rnd() * 3, 6 + rnd() * 6); c.position.copy(spot(10, 200, -30 - rnd() * 40)); G.add(c); }
+    for (let i = 0; i < 30 * n; i++) { const c = M(sph, '#ffffff', { opacity: 0.85 }); c.scale.set(8 + rnd() * 10, 3 + rnd() * 3, 6 + rnd() * 6); c.position.copy(spot(10, 200, -30 - rnd() * 40)); if (!placeClear(c, 20, 10, 200, u => -30 - u * 40, i + 201)) continue; G.add(c); }
   } else {
     const face = ['#fff6e0', '#ffe2b8', '#ffd0f0'], rim = ['#ffb36b', '#c9a2ff', '#7fd8ff'];
     const clock = (s) => { const g = new THREE.Group(); const f = M(cyl, face[Math.floor(rnd() * 3)]); f.scale.set(s, s * 0.12, s); f.rotation.x = Math.PI / 2; g.add(f);

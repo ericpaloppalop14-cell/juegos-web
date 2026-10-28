@@ -428,7 +428,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 
 // ---------------- input ----------------
 const keys = {}; const inp = { steer: 0, brake: false, drift: false, item: false };
-let driftPrev = false, itemPrev = false;
+let driftPrev = false, itemPrev = false, itemLatch = false; // v51: itemLatch guarda el toque del objeto hasta que un paso de simulación lo use (con 90/120 Hz hay fotogramas sin paso y se perdía)
 addEventListener('keydown', e => {
   if (e.repeat) { if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); return; }
   keys[e.code] = true; Audio.init();
@@ -442,7 +442,7 @@ addEventListener('keyup', e => { keys[e.code] = false; });
 const held = {};
 function holdBtn(id, name) {
   const el = $(id);
-  el.addEventListener('pointerdown', e => { e.preventDefault(); Audio.init(); el.setPointerCapture(e.pointerId); held[name] = true; el.classList.add('down'); if (name === 'drift' && app.race) app.race.pressAction(); });
+  el.addEventListener('pointerdown', e => { e.preventDefault(); Audio.init(); el.setPointerCapture(e.pointerId); held[name] = true; el.classList.add('down'); if (name === 'drift' && app.race) app.race.pressAction(); if (name === 'item') itemLatch = true; });
   const up = () => { held[name] = false; el.classList.remove('down'); };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
 }
@@ -472,7 +472,7 @@ function readInput() {
   const item = !!(keys.KeyX || keys.KeyE || keys.Enter || keys.KeyK || held.item);
   const r = app.race.input;
   r.steer = -steer; r.brake = !!(keys.ArrowDown || keys.KeyS || held.brake); r.throttle = 1;
-  r.drift = drift; r.driftEdge = drift && !driftPrev; r.itemEdge = item && !itemPrev; driftPrev = drift; itemPrev = item;
+  r.drift = drift; r.driftEdge = drift && !driftPrev; if (item && !itemPrev) itemLatch = true; r.itemEdge = itemLatch; driftPrev = drift; itemPrev = item;
 }
 
 // ---------------- HUD ----------------
@@ -581,7 +581,7 @@ function step(now) {
   if (app.state === 'race' && app.race) {
     readInput();
     acc += dt * app.speed; let n = 0;
-    while (acc >= STEP && n < 6 * app.speed) { app.race.update(STEP); acc -= STEP; n++; }
+    while (acc >= STEP && n < 6 * app.speed) { app.race.update(STEP); acc -= STEP; n++; if (itemLatch) { itemLatch = false; if (app.race) app.race.input.itemEdge = false; } }
     if (app.state === 'race' && app.race) { drawHUD(dt); if (document.body.dataset.st !== 'race') document.body.dataset.st = 'race'; renderer.render(app.race.scene, app.race.camera); }
     return;
   }

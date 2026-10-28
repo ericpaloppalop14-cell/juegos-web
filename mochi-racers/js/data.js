@@ -127,7 +127,7 @@ CUPS.push(
   { id: 'cielo', name: 'Copa Cielo', color: '#7fd8ff', trophy: '#5fcfff', track: 'Archipiélago de Gominola', unlock: null, look: 'sky',
     theme: 'space', sky: ['#5fb8ff', '#ffd0f0'], fog: '#e8d6ff', ground: null, road: '#fff0fa', curbA: '#7fd8ff', curbB: '#ffb3e0',
     grip: 0.95, grav: 1, music: { bpm: 118, root: 64, scale: 'major' },
-    pts: [[0, 0, 20, 19], [120, -10, 26, 18], [210, -60, 36, 17], [230, -150, 48, 17], [170, -215, 58, 17], [90, -190, 64, 17], [70, -120, 70, 17], [120, -80, 74, 17], [170, -110, 76, 17], [150, -170, 74, 16], [40, -250, 62, 17], [-80, -250, 50, 18], [-180, -190, 40, 18], [-230, -100, 32, 18], [-200, -20, 26, 18], [-110, 20, 22, 19]],
+    pts: [[0, 0, 20, 19], [120, -10, 26, 18], [210, -60, 36, 17], [230, -150, 48, 17], [170, -215, 44, 17], [90, -190, 50, 17], [70, -120, 68, 17], [120, -80, 78, 17], [170, -110, 90, 17], [150, -170, 88, 16], [40, -250, 62, 17], [-80, -250, 50, 18], [-180, -190, 40, 18], [-230, -100, 32, 18], [-200, -20, 26, 18], [-110, 20, 22, 19]],
     feats: floatyFeats() },
   { id: 'sueno', name: 'Copa Sueño', color: '#ffb36b', trophy: '#ffa94d', track: 'Sueño de Relojes Derretidos', unlock: { cups: ['cielo', 'biblioteca'], stars: 0 }, look: 'dream',
     theme: 'space', sky: ['#2c1a5a', '#ff9f7a'], fog: '#7a4a8a', ground: null, road: '#ffe2b8', curbA: '#ffb36b', curbB: '#8b5cc2',

@@ -827,7 +827,7 @@ h1.logo{filter:drop-shadow(0 8px 18px rgba(200,80,150,.35))}
 <script>window.FX_NOCHE={z:2,n:16,vig:.14,rays:false}</script><script src="js/fx-noche.js?v=2"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 <script src="turn-config.js?v=1"></script><script src="online-config.js?v=1"></script><script src="online-cf.js?v=1"></script>
-<script type="module" src="js/main.js?v=50"></script>
+<script type="module" src="js/main.js?v=51"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol === 'https:') { const hadCtl = !!navigator.serviceWorker.controller; let rl = false, touched = false; for (const ev of ['pointerdown', 'touchstart', 'keydown']) addEventListener(ev, () => { touched = true; }, { capture: true, passive: true }); /* v43: no recargar si el jugador ya ha tocado algo (antes volvía a la pantalla de orientación); la versión nueva se aplica en el próximo arranque */ navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl && !rl && !touched) { rl = true; location.reload(); } }); window.addEventListener('load', () => navigator.serviceWorker.register('sw.js?v=43', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {})); }
 </script>
