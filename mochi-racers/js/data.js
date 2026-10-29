@@ -110,7 +110,7 @@ export const CUPS = [
   { id: 'galaxia', name: 'Copa Galaxia', color: '#b48cff', trophy: '#a77bff', track: 'Anillo de Saturnino', unlock: null,
     theme: 'space', sky: ['#120a33', '#3b1f6e'], fog: '#2a1758', ground: null, road: '#d9ccff', curbA: '#7ff5ff', curbB: '#ff8fe0',
     grip: 0.9, grav: 0.45, music: { bpm: 126, root: 57, scale: 'dorian' },
-    pts: [[270, 0, 28, 17], [230, -80, 32, 16], [140, -105, 34, 17], [70, -70, 34, 18], [0, 0, 34, 18], [-70, 70, 32, 18], [-150, 110, 28, 17], [-240, 80, 24, 17], [-270, 0, 20, 16], [-230, -80, 16, 16], [-140, -105, 13, 17], [-70, -70, 11, 18], [0, 0, 10, 18], [70, 70, 12, 18], [150, 110, 18, 17], [240, 80, 24, 17]],
+    pts: [[270, 0, 28, 17], [230, -80, 32, 16], [140, -105, 34, 17], [70, -70, 38, 18], [0, 0, 42, 18], [-70, 70, 38, 18], [-150, 110, 28, 17], [-240, 80, 24, 17], [-270, 0, 20, 16], [-230, -80, 16, 16], [-140, -105, 13, 17], [-70, -70, 11, 18], [0, 0, 10, 18], [70, 70, 12, 18], [150, 110, 18, 17], [240, 80, 24, 17]],
     feats: [
       { t: 0.05, type: 'boxes' }, { t: 0.3, type: 'boxes' }, { t: 0.55, type: 'boxes' }, { t: 0.8, type: 'boxes' }, { t: 0.1, type: 'boost', off: 0 }, { t: 0.35, type: 'boost', off: 3 }, { t: 0.6, type: 'boost', off: -3 }, { t: 0.88, type: 'boost', off: 0 }, { t: 0.2, type: 'ramp' }, { t: 0.45, type: 'ramp' }, { t: 0.7, type: 'ramp' }, { t: 0.95, type: 'ramp' }, { t: 0.44, type: 'shortcut', t2: 0.54, label: 'Atajo del cometa' }, { t: 0.15, type: 'obstacle', kind: 'asteroid' }, { t: 0.62, type: 'obstacle', kind: 'asteroid' }, { t: 0.84, type: 'obstacle', kind: 'asteroid' } ] },
   { id: 'tormenta', name: 'Copa Tormenta', color: '#6f8bff', trophy: '#5a7cff', track: 'Discoteca Relámpago', unlock: { cups: [], stars: 10 },

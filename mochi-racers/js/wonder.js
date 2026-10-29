@@ -77,7 +77,7 @@ export function addWonder(T, Q, rnd) {
   const W = new THREE.Group(); group.add(W);
   const spot = (minD, maxD, dy) => { const s = S[Math.floor(rnd() * N)], side = rnd() < 0.5 ? -1 : 1, d = s.w + minD + rnd() * (maxD - minD); return new V3(s.p.x + s.right.x * d * side, s.p.y + dy, s.p.z + s.right.z * d * side); };
   const center = new V3(); for (const s of S) center.add(s.p); center.multiplyScalar(1 / N);
-  const gate = (tt, build) => { const i = Math.floor(tt * N) % N, s = S[i]; const g = new THREE.Group(); g.position.copy(s.p); g.rotation.y = Math.atan2(s.fl.x, s.fl.z); W.add(g); build(g, s.w + 3.5); return g; };
+  const gate = (tt, build) => { const i = Math.floor(tt * N) % N, s = S[i]; const g = new THREE.Group(); g.position.copy(s.p); g.rotation.y = Math.atan2(s.fl.x, s.fl.z); g.position.y += 18; /* v52: arcos flotando 18 m sobre la pista para no tapar la cámara */ W.add(g); build(g, s.w + 3.5); return g; };
   const gates = [0.08, 0.28, 0.56, 0.84];
   if (look === 'ocean') {
     // ballenas-faro que nadan en círculos enormes alrededor del circuito
@@ -137,7 +137,7 @@ export function addWonder(T, Q, rnd) {
     const L = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ?!&', lc = ['#ffd24a', '#ff8fc0', '#7fd8ff', '#b9f27a', '#ffffff'];
     for (let i = 0; i < 46 * n; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: letterTex(L[i % L.length], lc[i % 5]), transparent: true, depthWrite: false })); sp.scale.setScalar(2 + rnd() * 2.5); sp.position.copy(spot(4, 60, 5 + rnd() * 18)); W.add(sp); const y0 = sp.position.y, ph = rnd() * 6; anim.push(t => { sp.position.y = y0 + Math.sin(t * 0.9 + ph) * 2; sp.material.rotation = Math.sin(t * 0.7 + ph) * 0.5; }); }
     // arcos de página: una hoja gigante que se curva por encima de la pista
-    for (const tt of gates) gate(tt, (g, R) => { const pg = new THREE.Mesh(geo('pageArc', () => new THREE.CylinderGeometry(1, 1, 1, 30, 1, true, -Math.PI / 2, Math.PI)), toon('#fffaf0', { rim: 0.3, side: THREE.DoubleSide })); pg.scale.set(R, 3.2, R); pg.rotation.x = Math.PI / 2; g.add(pg);
+    for (const tt of gates) gate(tt, (g, R) => { const pg = new THREE.Mesh(geo('pageArc', () => new THREE.CylinderGeometry(1, 1, 1, 30, 1, true, -Math.PI / 2, Math.PI)), toon('#fffaf0', { rim: 0.3, side: THREE.DoubleSide })); pg.scale.set(R, 3.2, R); pg.rotation.x = -Math.PI / 2; /* v52: la hoja curva estaba boca abajo (colgaba por debajo de la pista); ahora es el arco de arriba, como decía el comentario */ g.add(pg);
       for (let k = 1; k < 8; k++) { const q = k / 8 * Math.PI; M(box(), '#c8b89a', { rim: 0 }, g, [Math.cos(q) * (R - 0.1), Math.sin(q) * (R - 0.1), 0], [1.6, 0.05, 2.6], [0, 0, q + Math.PI / 2]); }
       M(box(), '#c0392b', { rim: 0.4, emissive: '#ff4040', ei: 0.15 }, g, [0, R + 0.1, 0], [3, 0.6, 3.4]); });
   }
