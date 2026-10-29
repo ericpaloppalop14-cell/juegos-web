@@ -3,11 +3,11 @@
 //  bumerán · topos de lava · cuenta peces · ¡que no te vea! · bola caliente · salto de esquí ·
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=o42';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o42';
-import { mergedGeo } from './decor.js?v=o42';
-import { jungle } from './selva-lianas.js?v=o42';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o42';
+import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=o43';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o43';
+import { mergedGeo } from './decor.js?v=o43';
+import { jungle } from './selva-lianas.js?v=o43';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o43';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
@@ -251,52 +251,147 @@ export function caliente(cfg) {
 }
 
 // =====================================================================
-//  SALTO DE ESQUÍ — bajas por el trampolín: toca justo en el borde para saltar lejísimos y
-//  vuelve a tocar antes de aterrizar para un «telemark» (+5 m). 3 saltos, se suman los metros.
+//  SALTO DE ESQUÍ (rediseño o43) — control de UN solo toque:
+//   1) Bajas SOLO por la rampa. Toca cuando el marcador llegue a la zona VERDE (borde de la rampa):
+//      cuanto más cerca del punto dorado, más lejos vuelas (PERFECTO / ¡BIEN! / PRONTO / TARDE).
+//   2) En el aire, MANTÉN pulsado para planear (opcional); suelta para aterrizar. El aterrizaje siempre perdona.
+//  3 saltos, se suman los metros. Línea dorada = récord de la pista; una línea de color por rival.
 // =====================================================================
 export function esqui(cfg) {
-  const SP = 4, NR = 3, SL = 2.3, RZ = 16, RH = 7.5, EY = 1.4;
-  return base(cfg, { mode: 'puntos', maxT: cfg.maxT || 60,
+  const SP = 3.2, NR = 3, SL = 2.8, RZ = 16, RH = 7.5, EY = 1.4, WR = 2.3, LEN = 175, HALF = 15;
+  const ANG = Math.atan2(RH - EY, RZ), G = 11, GG = 3.2, STAM = 1.7, REC0 = 85, CEN = SL - .2, LATE = SL + .15;
+  const surf = d => RH - (RH - EY) * Math.min(1, Math.max(0, d) / RZ);
+  const dAt = ts => RZ * Math.pow(Math.min(1, Math.max(0, ts) / SL), 1.5);
+  const qOf = off => { const a = Math.abs(off); return a <= .2 ? 1 : a <= .55 ? 1 - (a - .2) / .35 * .35 : Math.max(.12, .65 - (a - .55) * .45); };
+  const sig = s => clamp(1 - .6 * s, .04, 1);          // desvío (s) del toque de la IA según su habilidad
+  const glideOf = s => clamp(.08 + s * .9 + rnd(-.2, .2), 0, 1) * STAM; // segundos de planeo que usa la IA
+  const lab = (q, off, forced) => forced ? ['TARDE', '#ffb0b0'] : q >= .99 ? ['¡PERFECTO!', '#ffe27a'] : Math.abs(off) <= .55 ? ['¡BIEN!', '#9bffd6'] : off < 0 ? ['PRONTO', '#ffd0ec'] : ['TARDE', '#ffb0b0'];
+  const sprite = (txt, col, w, h, big) => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = Math.round(256 * h / w); const x = cv.getContext('2d');
+    x.fillStyle = 'rgba(255,255,255,.92)'; x.strokeStyle = col; x.lineWidth = 10; const rr = 26; x.beginPath(); x.roundRect(6, 6, cv.width - 12, cv.height - 12, rr); x.fill(); x.stroke();
+    x.fillStyle = col; x.font = `700 ${big || 64}px Fredoka, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, cv.width / 2, cv.height / 2 + 4);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); s.scale.set(w, h, 1); return s; };
+  const setSprite = (s, txt, col, big) => { const cv = s.material.map.image, x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.fillStyle = 'rgba(255,255,255,.92)'; x.strokeStyle = col; x.lineWidth = 10; x.beginPath(); x.roundRect(6, 6, cv.width - 12, cv.height - 12, 26); x.fill(); x.stroke();
+    x.fillStyle = col; x.font = `700 ${big || 54}px Fredoka, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, cv.width / 2, cv.height / 2 + 4); s.material.map.needsUpdate = true; };
+  const slopeRot = -Math.PI / 2 - ANG;
+  const css = `#esqD{position:absolute;left:50%;transform:translateX(-50%);top:calc(92px + env(safe-area-inset-top));text-align:center;font-family:Fredoka,sans-serif;font-weight:700;color:#fff;line-height:1;text-shadow:0 3px 0 #6a3f9a,0 0 12px rgba(255,255,255,.6);-webkit-text-stroke:1.2px #6a3f9a;pointer-events:none}
+#esqD b{display:block;font-size:44px}#esqD small{display:block;font-size:13px;margin-top:3px;-webkit-text-stroke:0;color:#fff7c0;text-shadow:0 2px 0 #6a3f9a}
+#esqB{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(122px + env(safe-area-inset-bottom));width:min(88vw,430px);text-align:center;font-family:Fredoka,sans-serif;pointer-events:none;opacity:0;transition:opacity .2s}
+#esqB.on{opacity:1}#esqBig{font-size:32px;font-weight:700;color:#fff;-webkit-text-stroke:1.5px #3a8f6a;text-shadow:0 4px 0 #3a8f6a;height:42px;line-height:42px;white-space:nowrap}
+#esqBig.now{color:#fff7a0;-webkit-text-stroke:1.5px #c0508a;text-shadow:0 4px 0 #c0508a;animation:esqP .28s ease-in-out infinite alternate}
+@keyframes esqP{to{transform:scale(1.18)}}
+#esqT{position:relative;height:34px;border-radius:18px;background:linear-gradient(#cfe6ff,#9fc9f2);border:4px solid #fff;box-shadow:0 4px 0 rgba(90,70,150,.35),0 8px 18px rgba(90,70,150,.25);overflow:hidden}
+#esqG{position:absolute;top:0;bottom:0;background:linear-gradient(#7ef2b0,#2fcf7a)}#esqGold{position:absolute;top:0;bottom:0;background:linear-gradient(#fff3a0,#ffc93a);box-shadow:0 0 12px #ffe27a}
+#esqZ{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#0f5a38;letter-spacing:.2px;white-space:nowrap}
+#esqM{position:absolute;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ff8fc4);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+#esqW{height:34px;border-radius:18px;background:linear-gradient(#cfe6ff,#9fc9f2);border:4px solid #fff;box-shadow:0 4px 0 rgba(90,70,150,.35);overflow:hidden;position:relative;display:none}
+#esqWf{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(#9fe8ff,#4fb8f0)}#esqWt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#14507a}
+#esqJ{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%) scale(.3);font-family:Fredoka,sans-serif;font-size:58px;font-weight:700;color:#fff;-webkit-text-stroke:3px #c0508a;text-shadow:0 6px 0 #c0508a,0 0 18px rgba(255,255,255,.7);opacity:0;white-space:nowrap;text-align:center;pointer-events:none;line-height:1}
+#esqJ small{display:block;font-size:26px;margin-top:6px;-webkit-text-stroke:2px #c0508a}
+#esqJ.pop{animation:esqJ 1.5s ease-out forwards}@keyframes esqJ{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}14%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}26%{transform:translate(-50%,-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
+#esqTut{position:absolute;left:50%;top:41%;transform:translate(-50%,-50%);width:min(88vw,400px);background:linear-gradient(#fff,#ffeef8);border:4px solid #fff;border-radius:24px;box-shadow:0 8px 24px rgba(150,60,140,.3);padding:10px 14px 12px;text-align:center;font-family:Fredoka,sans-serif;color:#6a3f9a;pointer-events:none;transition:opacity .4s}
+#esqTut .h{font-size:20px;font-weight:700;color:#e0609f;line-height:1.1}#esqTut .r{font-size:15px;font-weight:600;line-height:1.2;margin-top:7px;text-align:left;display:flex;gap:8px;align-items:center}
+#esqTut .n{flex:none;width:26px;height:26px;border-radius:50%;background:#ff7eb6;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}#esqTut .g{color:#16a060}
+#esqTut .mini{display:flex;align-items:center;gap:8px;margin:6px 0 0 34px}#esqTut .bar{position:relative;flex:1;height:24px;border-radius:14px;background:linear-gradient(#cfe6ff,#9fc9f2);border:3px solid #fff;box-shadow:0 2px 0 rgba(90,70,150,.3)}
+#esqTut .bar i{position:absolute;right:0;top:0;bottom:0;width:34%;border-radius:0 11px 11px 0;background:linear-gradient(#7ef2b0,#2fcf7a)}
+#esqTut .bar b{position:absolute;top:50%;left:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ff8fc4);border:2px solid #fff;animation:esqDot 1.6s linear infinite}
+@keyframes esqDot{0%{left:2%}85%,100%{left:92%}}
+#esqTut .hand{flex:none;font-size:32px;line-height:1;animation:esqHand 1.6s ease-in-out infinite;transform-origin:50% 0}
+@keyframes esqHand{0%,60%{transform:translateY(8px) scale(1);opacity:.35}78%{transform:translateY(0) scale(.82);opacity:1}88%{transform:translateY(0) scale(1.06);opacity:1}100%{transform:translateY(8px) scale(1);opacity:.35}}
+#esqTut .hold{display:inline-block;animation:esqHold 1.2s ease-in-out infinite}@keyframes esqHold{50%{transform:translateY(-4px) scale(1.12)}}
+@media (orientation:landscape) and (max-height:500px){#esqD b{font-size:32px}#esqD{top:calc(72px + env(safe-area-inset-top))}#esqD small{font-size:12px;margin-top:1px}#esqD small+small{display:none}#esqB{left:auto;transform:none;right:calc(50% + 62px);bottom:calc(20px + env(safe-area-inset-bottom));width:min(40vw,350px)}#esqBig{font-size:24px;height:30px;line-height:30px}#esqT,#esqW{height:28px}#esqJ{font-size:44px;top:41%}#esqTut{top:46%;width:min(66vw,420px);padding:7px 12px 9px}#esqTut .h{font-size:17px}#esqTut .r{font-size:14px;margin-top:4px}#esqTut .bar{height:18px}#esqTut .mini{margin-top:3px}#esqTut .hand{font-size:26px}}`;
+  return Object.assign(base(cfg, { mode: 'puntos', maxT: cfg.maxT || 75,
     init(E) {
-      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 14, z1: -110, half: 16 } }); setButtons('m', { M: cfg.btn || '⛷️' });
-      const snow = T(cfg.ramp || '#f4fbff'), blue = T('#8fc8ff');
-      const len = Math.hypot(RZ, RH - EY), ang = Math.atan2(RH - EY, RZ);
-      racers(E, .42); E.racers.forEach((r, k) => { r.x = lineX(k, SP); r.score = 0; r.best = 0;
-        const rp = mesh(new THREE.BoxGeometry(2.2, .4, len), snow, sc, [r.x, (RH + EY) / 2 - .2, -RZ / 2], [ang, 0, 0]); outline(rp, '#6a9ac8', 1.01);
-        for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(.15, .5, len), blue, sc, [r.x + s * 1.1, (RH + EY) / 2 + .05, -RZ / 2], [ang, 0, 0]);
-        mesh(new THREE.BoxGeometry(2.4, RH, 1.2), T('#c8e4ff'), sc, [r.x, RH / 2 - .2, .4]);
-        r.ski = new THREE.Group(); r.obj.add(r.ski); for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(.12, .05, 1.6), T('#ff6fae'), r.ski, [s * .22, .02, 0]); });
-      // pista de aterrizaje con marcas cada 10 m
-      mesh(new THREE.PlaneGeometry(SP * 6 + 6, 110), T('#ffffff', { rim: 0 }), sc, [0, .02, -RZ - 55], [-Math.PI / 2, 0, 0]);
-      for (let m = 20; m <= 90; m += 10) { mesh(new THREE.PlaneGeometry(SP * 6 + 4, .25), T(m % 30 ? '#8fc8ff' : '#ff6fae', { rim: 0 }), sc, [0, .03, -RZ - m], [-Math.PI / 2, 0, 0]); for (const s of [-1, 1]) pm(m % 20 ? 'pino' : 'pinguino', sc, [s * (SP * 3 + 2.5), 0, -RZ - m], m % 20 ? 3 : 1.2, s > 0 ? -1.5 : 1.5); }
+      const sc = E.scene; this.W = buildWorld(E, cfg.mundo, { track: { z0: 14, z1: -LEN - 20, half: 17 } }); setButtons('m', { M: cfg.btn || '⛷️' });
+      // ---------- HUD propio ----------
+      const hud = $('hud'); const st = document.createElement('style'); st.id = 'esqCss'; st.textContent = css; document.head.appendChild(st);
+      const zs = (SL - .9) / LATE * 100, zg = (SL - .4) / LATE * 100, zw = (SL / LATE) * 100;
+      const h = document.createElement('div'); h.id = 'esqHud'; h.innerHTML = `<div id="esqD"><b>0 m</b><small></small><small></small></div><div id="esqJ"></div>
+        <div id="esqB"><div id="esqBig"></div><div id="esqT"><div id="esqG" style="left:${zs}%;right:0"></div><div id="esqGold" style="left:${zg}%;width:${zw - zg}%"></div><div id="esqZ" style="left:${zs}%;right:0">SALTA AQUÍ</div><div id="esqM" style="left:0"></div></div><div id="esqW"><div id="esqWf"></div><div id="esqWt">🪂 MANTÉN PULSADO PARA PLANEAR</div></div></div>
+        <div id="esqTut"><div class="h">⛷️ ¡Llega lo más lejos!</div><div class="r"><span class="n">1</span><span>Toca cuando la bolita llegue a la zona <b class="g">VERDE</b></span></div><div class="mini"><div class="bar"><i></i><b></b></div><span class="hand">👆</span></div><div class="r"><span class="n">2</span><span>En el aire, <b>mantén pulsado</b> <span class="hold">🪂</span> para planear</span></div></div>`;
+      hud.appendChild(h); this.h = h; this.q = s => h.querySelector(s); this.eD = this.q('#esqD b'); this.eDs = this.q('#esqD small'); this.eDs2 = this.q('#esqD small+small'); this.eB = this.q('#esqB'); this.eBig = this.q('#esqBig'); this.eM = this.q('#esqM'); this.eT = this.q('#esqT'); this.eW = this.q('#esqW'); this.eWf = this.q('#esqWf'); this.eJ = this.q('#esqJ'); this.eTut = this.q('#esqTut');
+      // ---------- escenario ----------
+      const snow = T(cfg.ramp || '#f6fbff'), blue = T('#8fc8ff'), tex = new THREE.Shape(); tex.moveTo(0, 0); tex.lineTo(0, RH); tex.lineTo(RZ, EY); tex.lineTo(RZ, 0); tex.closePath();
+      const wedge = new THREE.ExtrudeGeometry(tex, { depth: WR, bevelEnabled: false }); wedge.translate(0, 0, -WR / 2); wedge.rotateY(Math.PI / 2);
+      const len = Math.hypot(RZ, RH - EY), gtex = (a, b, txt, c1, c2, tc) => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256; const x = cv.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 256); g.addColorStop(0, c1); g.addColorStop(1, c2); x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+        x.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 3; i++) { const y = 28 + i * 74; x.beginPath(); x.moveTo(30, y); x.lineTo(128, y + 40); x.lineTo(226, y); x.lineTo(226, y + 16); x.lineTo(128, y + 56); x.lineTo(30, y + 16); x.closePath(); x.fill(); }
+        if (txt) { x.fillStyle = tc; x.font = '700 40px Fredoka,sans-serif'; x.textAlign = 'center'; x.fillText(txt, 128, 130); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({ map: t }); };
+      const dG0 = dAt(SL - .9), dG1 = RZ, dP0 = dAt(SL - .4);
+      const mG = gtex(0, 0, '', '#9bf5be', '#2fcf7a', '#176b44'), mP = gtex(0, 0, '¡YA!', '#fff6a8', '#ffc93a', '#b3640a');
+      racers(E, .5); E.racers.forEach((r, k) => { r.x = (k - 2.5) * SP; r.score = 0; r.best = 0;
+        const rp = new THREE.Mesh(wedge, snow); rp.position.set(r.x, 0, 0); sc.add(rp);
+        for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(.16, .45, len), blue, sc, [r.x + s * WR / 2, surf(RZ / 2) + .12, -RZ / 2], [-ANG, 0, 0]);
+        const pl = (d0, d1, mat, dy) => { const L = (d1 - d0) / Math.cos(ANG), dc = (d0 + d1) / 2; mesh(new THREE.PlaneGeometry(WR - .1, L), mat, sc, [r.x, surf(dc) + dy, -dc], [slopeRot, 0, 0]); };
+        pl(dG0, dG1 - .02, mG, .03); pl(dP0, dG1 - .02, mP, .05);
+        r.ski = new THREE.Group(); r.obj.add(r.ski); for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(.12, .05, 1.7), T('#ff6fae'), r.ski, [s * .22, .02, 0]);
+        r.wing = new THREE.Group(); r.obj.add(r.wing); for (const s of [-1, 1]) { const w = mesh(new THREE.BoxGeometry(.9, .05, .5), T('#ffffff'), r.wing, [s * .75, .55, 0]); w.userData.s = s; } r.wing.visible = false; });
+      // pista de aterrizaje con marcas cada 10 m y carteles cada 20 m
+      mesh(new THREE.PlaneGeometry(HALF * 2, LEN), T('#ffffff', { rim: 0 }), sc, [0, .02, -RZ - LEN / 2], [-Math.PI / 2, 0, 0]);
+      for (let m = 10; m <= LEN - 10; m += 10) { mesh(new THREE.PlaneGeometry(HALF * 2, m % 50 ? .22 : .5), T(m % 50 ? '#8fc8ff' : '#ff6fae', { rim: 0 }), sc, [0, .03, -RZ - m], [-Math.PI / 2, 0, 0]);
+        if (m % 20 === 0) for (const s of [-1, 1]) { const b = sprite(m + ' m', '#4a8fd8', 3.2, 1.6, 78); b.position.set(s * (HALF + .6), 1.3, -RZ - m); sc.add(b); }
+        if (m % 20 === 0) for (const s of [-1, 1]) pm(m % 40 ? 'pino' : 'pinguino', sc, [s * (HALF + 3), 0, -RZ - m], m % 40 ? 3.2 : 1.3, s > 0 ? -1.5 : 1.5); }
+      // marcas: récord (dorada) + una por rival
+      this.rec = REC0; this.recLine = mesh(new THREE.PlaneGeometry(HALF * 2, .7), new THREE.MeshBasicMaterial({ color: '#ffd23a' }), sc, [0, .06, -RZ - REC0], [-Math.PI / 2, 0, 0]);
+      this.recS = sprite('🏆 RÉCORD ' + REC0 + ' m', '#e0a000', 6.4, 1.5, 44); this.recS.position.set(0, 2.3, -RZ - REC0); sc.add(this.recS);
+      this.marks = E.racers.map(r => { const l = mesh(new THREE.PlaneGeometry(SP - .3, .35), new THREE.MeshBasicMaterial({ color: r.ch.color }), sc, [r.x, .07, 0], [-Math.PI / 2, 0, 0]); l.visible = false;
+        const s = sprite(r.ch.name, r.ch.color, 3.4, 1.15, 50); s.visible = false; s.userData.col = r.ch.color; sc.add(s); return { l, s }; });
       this.round = 0; this.start(E);
     },
-    start(E) { this.rt = 0; for (const r of E.racers) { r.st = 'wait'; r.u = 0; r.d = 0; r.tel = false; r.q = 0; r.delay = rnd(0, .6); r.err = null; } },
+    start(E) { this.rt = 0; this.ended = false; for (const r of E.racers) { r.st = 'wait'; r.ts = 0; r.d = 0; r.y = RH; r.q = 0; r.delay = rnd(0, .5); r.tgt = null; r.tl = 0; r.wing.visible = false; }
+      if (this.marks) this.marks.forEach(m => { m.l.visible = false; m.s.visible = false; }); },
+    judge(txt, col, sub) { const e = this.eJ; e.innerHTML = txt + (sub ? `<small>${sub}</small>` : ''); e.style.color = col || '#fff'; e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); },
     update(E, dt) {
       this.rt += dt; const t = this.rt;
       for (const r of E.racers) { const auto = !(r.me && !E.AUTO), s0 = sk(E, r), tap = auto ? false : tapped(E);
-        if (r.st === 'wait') { if (t > .8 + r.delay) { r.st = 'slide'; r.ts = 0; } }
-        else if (r.st === 'slide') { r.ts += dt; r.u = Math.min(1.25, r.ts / SL);
-          if (r.err == null) r.err = rnd(-1, 1) * (1.15 - Math.min(1.1, s0)) * .32;
-          const go = auto ? r.ts >= SL + r.err : tap;
-          if (go || r.u >= 1.18) { const off = r.ts - SL; r.q = go ? clamp(1 - Math.abs(off) / .42, 0, 1) : .05; r.st = 'fly'; r.tf = 0; r.D = 16 + 52 * r.q; r.FT = 1.3 + 1.1 * r.q; if (r.me) { Audio.sfxPlay('jump'); E.ui.toast(r.q > .85 ? '¡SALTO PERFECTO! 🚀' : r.q > .5 ? '¡Buen salto!' : r.q > .1 ? 'Saltito…' : '¡Toca en el borde!', r.q > .85 ? '#ffe27a' : '#bff4ff'); } } }
-        else if (r.st === 'fly') { r.tf += dt; const k = r.tf / r.FT;
-          const tl = auto ? (Math.random() < (.25 + .65 * Math.min(1, s0)) * dt * 4 && k > .72) : tap; if (tl && !r.tel && k > .45) { r.tel = k > .7; if (r.me) E.ui.toast(r.tel ? '¡Telemark! +5 m ✨' : '¡Demasiado pronto!', r.tel ? '#ffe27a' : '#ffd0ec'); if (!r.tel) r.telFail = true; }
-          if (k >= 1) { const m = r.D + (r.tel ? 5 : 0); r.score += m; r.best = Math.max(r.best, m); r.last = m; r.st = 'land'; r.tl = 0; r.land = .3; E.burst(v3(r.x, .3, -RZ - r.D), '#ffffff', 16, 5, .6, .5); if (r.me) { Audio.sfxPlay('land'); E.ui.toast(`${m.toFixed(1)} m`, '#ffffff'); } if (m > 55) cheer(r, .6); } }
-        else if (r.st === 'land') { r.tl += dt; }
-        r.prog = clamp((this.round + (r.st === 'land' ? 1 : 0)) / NR, 0, .99); }
-      if (E.racers.every(r => r.st === 'land' && r.tl > 1.1)) { this.round++; if (this.round >= NR) { if (!this.done) { this.done = true; scoreEnd(E, r => r.score.toFixed(1) + ' m'); } } else this.start(E); }
-      board(E, r => r.score.toFixed(0) + ' m'); info(`⛷️ Salto ${Math.min(NR, this.round + 1)}/${NR}<br>${E.me.score.toFixed(0)} m`);
+        if (r.st === 'wait') { if (t > (this.round ? .9 : 1.5) + r.delay) { r.st = 'slide'; r.ts = 0; if (r.me) Audio.sfxPlay('beep'); } }
+        else if (r.st === 'slide') { r.ts += dt;
+          let go = false, forced = false;
+          if (auto) { if (r.tgt == null) r.tgt = CEN + (rnd(-1, 1) + rnd(-1, 1)) * .5 * sig(Math.min(1.1, s0)); go = r.ts >= r.tgt; } else go = tap && r.ts > .25;
+          if (!go && r.ts >= LATE) { go = true; forced = true; }
+          if (go) { const off = r.ts - CEN; r.q = forced ? .3 : qOf(off); const [lt, lc] = lab(r.q, off, forced); r.d = dAt(Math.min(r.ts, SL)); r.y = surf(r.d); r.vz = 16 + 14 * r.q; r.vy = 5.5 + 3.5 * r.q; r.tf = 0; r.stam = STAM; r.gl = auto ? glideOf(Math.min(1.1, s0)) : STAM; r.glide = false; r.st = 'fly'; r.hop = 0;
+            E.burst(v3(r.x, r.y + .4, -r.d), '#ffffff', 10, 4, .5, .4);
+            if (r.me) { Audio.sfxPlay('jump'); this.judge(lt, lc, r.q >= .99 ? '¡salto máximo!' : r.q >= .6 ? '' : 'más cerca del borde'); } } }
+        else if (r.st === 'fly') { r.tf += dt;
+          const want = auto ? (r.vy <= 0 && r.tf > .25 && r.gl > 0) : holding(E);
+          const gl = r.vy <= 0 && want && r.stam > 0 && (auto ? r.gl > 0 : true); r.glide = gl; if (gl) { r.stam -= dt; r.gl -= dt; }
+          const g = r.vy > 0 ? G : gl ? GG : G * 1.1; r.vy -= g * dt; r.y += r.vy * dt; r.d += r.vz * dt;
+          const gy = r.d >= RZ ? 0 : surf(r.d);
+          if (r.y <= gy && r.vy < 0 && r.tf > .1) { const D = Math.max(0, r.d - RZ); r.y = gy; r.D = D; r.score += D; r.best = Math.max(r.best, D); r.last = D; r.st = 'land'; r.tl = 0; r.land = .3; r.rv = r.vz * .5; r.glide = false; r.wing.visible = false;
+            E.burst(v3(r.x, .3, -r.d), '#ffffff', 18, 5, .7, .5);
+            const m = this.marks[r.k != null ? r.k : E.racers.indexOf(r)]; m.l.position.z = -r.d; m.l.visible = true; m.s.position.set(r.x, 2.4, -r.d - .6); setSprite(m.s, `${r.ch.name} ${D.toFixed(0)} m`, m.s.userData.col, 44); m.s.visible = !r.me;
+            if (r.me) { Audio.sfxPlay('land'); const nr = D > this.rec; if (nr) { this.rec = D; this.recLine.position.z = -RZ - D; this.recS.position.z = -RZ - D; setSprite(this.recS, '🏆 RÉCORD ' + D.toFixed(0) + ' m', '#e0a000', 44); this.judge(D.toFixed(1) + ' m', '#ffe27a', '¡NUEVO RÉCORD! 🏆'); } else this.judge(D.toFixed(1) + ' m', '#ffffff', D > 60 ? '¡qué salto!' : D > 35 ? '¡bien!' : 'la próxima, más lejos'); }
+            if (D > 60) cheer(r, .7); } }
+        else if (r.st === 'land') { r.tl += dt; r.rv = Math.max(0, r.rv - 16 * dt); r.d += r.rv * dt; }
+        r.prog = clamp(r.score / (NR * 90), 0, .99); }
+      if (E.racers.every(r => r.st === 'land' && r.tl > 1.9)) { this.round++; if (this.round >= NR) { if (!this.done) { this.done = true; scoreEnd(E, r => r.score.toFixed(1) + ' m'); } } else { this.start(E); } }
+      const me = E.me;
+      // ---------- HUD propio ----------
+      if (this.eTut) this.eTut.style.opacity = (this.round === 0 && E.t < 1.6) ? 1 : 0;
+      const sl = me.st === 'slide', fl = me.st === 'fly'; this.eB.classList.toggle('on', sl || fl);
+      this.eT.style.display = sl ? 'block' : 'none'; this.eW.style.display = fl ? 'block' : 'none';
+      if (sl) { this.eM.style.left = Math.min(100, me.ts / LATE * 100) + '%'; const near = me.ts > SL - .55; this.eBig.textContent = near ? '¡TOCA AHORA!' : me.ts > SL - 1.4 ? 'Prepárate…' : 'Espera la zona verde…'; this.eBig.classList.toggle('now', near); }
+      if (fl) { this.eWf.style.width = Math.max(0, me.stam / STAM * 100) + '%'; this.eBig.classList.remove('now'); this.eBig.textContent = me.glide ? '🪂 ¡PLANEANDO!' : me.vy > 0 ? '¡Subiendo!' : me.stam > .05 ? '¡Mantén pulsado!' : '¡A aterrizar!'; }
+      const dist = fl ? Math.max(0, me.d - RZ) : me.st === 'land' ? me.D : 0; this.eD.textContent = dist.toFixed(0) + ' m'; this.eDs.textContent = `🏆 Récord ${this.rec.toFixed(0)} m`; this.eDs2.textContent = `Salto ${Math.min(NR, this.round + 1)}/${NR} · Total ${me.score.toFixed(0)} m`;
     },
-    rpos(r) { if (r.st === 'wait') return [RH + .1, .6];
-      if (r.st === 'slide') { const u = Math.min(1, r.u); return [RH - (RH - EY) * u + .15, -RZ * u - Math.max(0, r.u - 1) * 6]; }
-      if (r.st === 'fly') { const k = r.tf / r.FT; return [EY + .15 + (1 - EY) * 0 + Math.sin(k * Math.PI) * (2 + 4 * r.q) * (1 - k * .2) - k * (EY + .15), -RZ - r.D * k]; }
-      return [0, -RZ - r.D - Math.min(1, r.tl) * 4]; },
-    render(E, dt) { const t = E.t; this.W.tick(dt, camera);
-      for (const r of E.racers) { const [y, z] = this.rpos(r); r.obj.position.set(r.x, Math.max(0, y) + hopY(r, dt), z); r.obj.rotation.y = Math.PI; squash(r, dt);
-        r.obj.userData.pivot.rotation.x = r.st === 'slide' ? .45 : r.st === 'fly' ? -.25 + (r.tf / r.FT) * .2 : 0; if (r.st === 'slide' && Math.random() < .4) E.burst(r.obj.position.clone(), '#ffffff', 1, 1.5, .3, .3, 0); }
-      const me = E.me, [y, z] = this.rpos(me), pr = port(); camTo(E, dt, v3(me.x + .8, Math.max(2, y) + (pr ? 3.6 : 2.8), z + (pr ? 8.5 : 6.5)), v3(me.x, Math.max(0, y) * .6, z - 10), pr ? 72 : 58, 7); },
-  });
+    rpos(r) { if (r.st === 'wait') return [RH, 0];
+      if (r.st === 'slide') { const d = dAt(r.ts); return [surf(d), d]; }
+      return [Math.max(0, r.y), r.d]; },
+    render(E, dt) { this.W.tick(dt, camera);
+      if (E.celeb || E.phase === 'celebra' || E.phase === 'done') { if (this.h) this.h.style.display = 'none'; if (this.marks) this.marks.forEach(m => { m.s.visible = false; }); }
+      for (const r of E.racers) { const [y, d] = this.rpos(r); r.obj.position.set(r.x, y + (r.st === 'land' ? hopY(r, dt) : 0), -d); r.obj.rotation.y = Math.PI; squash(r, dt);
+        const pv = r.obj.userData.pivot, fl = r.st === 'fly';
+        pv.rotation.x = r.st === 'slide' ? -.5 : fl ? clamp(-r.vy * .045 - (r.glide ? .12 : .25), -.8, .45) : r.st === 'wait' ? -.2 : 0;
+        r.ski.rotation.x = r.st === 'slide' || r.st === 'wait' ? -ANG : fl ? clamp(-r.vy * .03, -.5, .3) : 0;
+        r.wing.visible = fl && r.glide; if (r.wing.visible) r.wing.children.forEach(w => { w.rotation.z = w.userData.s * (.1 + .12 * Math.sin(E.t * 14)); });
+        if (r.st === 'slide' && Math.random() < .5) E.burst(r.obj.position.clone(), '#ffffff', 1, 1.5, .3, .3, 0);
+        if (r.glide && Math.random() < .5) E.burst(r.obj.position.clone().add(v3(0, .5, 0)), '#bff4ff', 1, 1.2, .5, .35, 0); }
+      const me = E.me, [y, d] = this.rpos(me), z = -d, pr = port(), k = me.st === 'fly' ? 6 : 4.5;
+      // cámara: detrás y encima del pingüino; en el aire sube con él y mira hacia la pista de nieve
+      const ground = Math.max(0, y);
+      const cp = v3(me.x + (pr ? 0 : 1.2), (me.st === 'wait' || me.st === 'slide' ? y + (pr ? 3.8 : 3.2) : ground * .75 + (pr ? 4.4 : 3.6)), z + (pr ? 7 : 6));
+      const cl = v3(me.x, me.st === 'wait' || me.st === 'slide' ? y - 2.4 : ground * .45 + .4, z - (pr ? 13 : 14));
+      camTo(E, dt, cp, cl, pr ? 74 : 60, k); },
+    dispose() { const d = $('perf'); if (d) d.remove(); if (this.h) this.h.remove(); const s = document.getElementById('esqCss'); if (s) s.remove(); },
+  }), { how: '' });
 }
 
 // =====================================================================

@@ -1,4 +1,4 @@
-import { run } from './core3d.js?v=o42';
+import { run } from './core3d.js?v=o43';
 const p = new URLSearchParams(location.search).get('p') || 'planetas';
-const mod = await import(`./ev-${['planetas', 'vallas', 'caida', 'nado', 'anillos'].includes(p) ? p : 'planetas'}.js?v=o42`);
+const mod = await import(`./ev-${['planetas', 'vallas', 'caida', 'nado', 'anillos'].includes(p) ? p : 'planetas'}.js?v=o43`);
 run(mod.default);

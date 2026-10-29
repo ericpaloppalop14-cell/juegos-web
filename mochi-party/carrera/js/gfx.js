@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { crazyAccessories } from './accesorios.js?v=o42';
-import { buildDisco, fuzzTexture } from './disco.js?v=o42';
+import { crazyAccessories } from './accesorios.js?v=o43';
+import { buildDisco, fuzzTexture } from './disco.js?v=o43';
 
 // ---------- toon materials ----------
 let gradTex;
