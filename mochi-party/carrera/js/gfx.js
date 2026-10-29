@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { crazyAccessories } from './accesorios.js?v=o40';
-import { buildDisco, fuzzTexture } from './disco.js?v=o40';
+import { crazyAccessories } from './accesorios.js?v=o41';
+import { buildDisco, fuzzTexture } from './disco.js?v=o41';
 
 // ---------- toon materials ----------
 let gradTex;
@@ -194,7 +194,7 @@ export function makeCharacter(ch, opts = {}) {
     for (const s of [-1, 1]) { mesh(cyl(20), sm, root, [s * 0.36, 0.9, 1.0], [Math.PI / 2, 0, 0], [0.26, 0.06, 0.22]); mesh(tor(0.1, 20), toon('#ffd36b', { rim: 0.6 }), root, [s * 0.36, 0.9, 1.03], null, [0.26, 0.22, 0.2]); mesh(sph(8), whiteM, root, [s * 0.36 + 0.07, 0.97, 1.07], null, [0.05, 0.03, 0.01]); }
     mesh(box(), toon('#ffd36b'), root, [0, 0.93, 1.02], null, [0.3, 0.05, 0.05]); }
   ud.body = body; ud.inner = inner;
-  if (ch.id === 'disco') { try { buildDisco(root, ud, { toon, mesh, outline, sph, cyl, cone, box, tor, geo, bodyR, gradient }, ch, lite); } catch (e) { console.warn('disco', e); } }
+  if (ch.id === 'disco') { try { buildDisco(root, ud, { toon, mesh, outline, sph, cyl, cone, box, tor, geo, bodyR, gradient, glowTex }, ch, lite); } catch (e) { console.warn('disco', e); } }
   if (!lite) {
     const det = new THREE.Group(); det.name = 'detalle'; root.add(det); ud.det = det; // todo lo decorativo vive aquí: se puede apagar si el móvil va justo
     // brazos y pies de gelatina

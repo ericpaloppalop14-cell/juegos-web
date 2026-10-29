@@ -5,7 +5,7 @@
 //  y campo detallado (césped rayado, líneas reglamentarias, red en las porterías, banquillos).
 //  Todo queda FUERA del rectángulo de juego y por debajo de la cámara.
 // ======================================================================
-import { THREE, toon, outline, glowSprite } from '../core3d.js?v=o40';
+import { THREE, toon, outline, glowSprite } from '../core3d.js?v=o41';
 
 const PAL = ['#ff6fae', '#5fa8ff', '#ffe27a', '#7ee3c4', '#c9b2ff', '#ffb37a', '#ffffff', '#ff8a8a'];
 const FLAGC = [['#ff6fae', '#ffffff'], ['#5fa8ff', '#ffffff'], ['#ffe27a', '#ff6fae'], ['#7ee3c4', '#5fa8ff']];
