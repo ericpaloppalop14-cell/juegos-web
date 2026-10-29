@@ -4,8 +4,8 @@
 //   · contorno oscuro nítido, agua oscura detrás (máximo contraste), personajes con sombra y aro de color
 //   · NADA encima del tablero: sin nubes, niebla, nieve, aurora ni viñetas. Decorado solo en los bordes.
 // ======================================================================
-import { THREE, toon, glowTex, rnd, clamp, pick } from '../core3d.js?v=o45';
-import { mergedGeo } from './decor.js?v=o45';
+import { THREE, toon, glowTex, rnd, clamp, pick } from '../core3d.js?v=o46';
+import { mergedGeo } from './decor.js?v=o46';
 
 const cvs = (w, h = w) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
 const rr = (a, b) => a + Math.random() * (b - a);

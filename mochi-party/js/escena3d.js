@@ -8,20 +8,25 @@
 //   podio → podio 1-2-3 con caída de los mochis, el ganador salta de alegría y los demás aplauden
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS } from '../carrera/js/data.js?v=o45';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o45';
-import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o45';
+import { CHARS } from '../carrera/js/data.js?v=o46';
+import { makeGlowBatch } from './glowbatch.js?v=o46';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o46';
+import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o46';
+import { bakeStatic, megaMerge } from './batch3d.js?v=o46';
+const NOOP2 = { samples: 2 }, noop = () => {};
+const BT = [0, .3, .7, 1.3, 1.9, 2.6, 3.3, 4.2, 5.1, 6.7, 8.4, 12.2], BE = ['', 'happy', 'squash', 'sad', '', 'happy', 'sad', '', 'squash', 'happy', '', 'sad'];
+const bakeChar = c => bakeStatic(c, k => animCharacter(c, BT[k], 1, BE[k]), { samples: BT.length });
 
 const CH = id => CHARS.find(c => c.id === id) || CHARS[0];
 const rnd = (a, b) => a + Math.random() * (b - a), lerp = (a, b, t) => a + (b - a) * t;
 let renderer;
 try {
   const cv = document.createElement('canvas'); cv.id = 'st3d'; document.body.appendChild(cv);
-  renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: (devicePixelRatio || 1) < 2, alpha: true, powerPreference: 'high-performance' });
 } catch (e) { document.body.classList.add('no3d'); throw e; }
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; // sombras de verdad de los mochis sobre el escenario (o39)
-let DPR = Math.min(devicePixelRatio || 1, 1.5); // o45: tope 1.5 (antes 2 en móvil) renderer.setPixelRatio(DPR);
+let DPR = Math.min(devicePixelRatio || 1, 3); /* o46: resolución completa del dispositivo (sin topes) */ renderer.setPixelRatio(DPR);
 const size = () => renderer.setSize(innerWidth, innerHeight); addEventListener('resize', size); size();
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(36, 1, .1, 200);
 if (window.__fxNoche) window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: 0, env: .35 }); // noche 25-10: reflejos suaves
@@ -31,7 +36,7 @@ const back = new THREE.DirectionalLight('#ffd0f0', .9); back.position.set(-5, 6,
 
 // ---------- piezas comunes ----------
 const root = new THREE.Group(); scene.add(root);
-const glow = (c, s, op = 1) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(c), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.setScalar(s); return sp; };
+const GB = makeGlowBatch(scene), glow = (c, s, op = 1) => GB.make(c, s, op, false); // o46: todos los destellos = 1 sola llamada de dibujo
 function textSprite(text, color, me) {
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const x = cv.getContext('2d'); x.scale(2, 2); x.font = '700 64px Fredoka, sans-serif';
   const w = Math.min(500, x.measureText(text).width + 70), l = (512 - w) / 2; x.fillStyle = me ? '#f0609f' : 'rgba(90,50,130,.85)'; x.beginPath(); x.roundRect(l, 16, w, 92, 46); x.fill();
@@ -59,12 +64,12 @@ function stage(r = 3.2) {
   mesh(new THREE.TorusGeometry(r + .02, .06, 8, 72), toon('#ffffff', { rim: 0, emissive: '#ffffff', ei: .3 }), g, [0, 0, 0], [Math.PI / 2, 0, 0]);
   const bi = []; for (let i = 0; i < 34; i++) { const a = i / 34 * Math.PI * 2; bi.push([Math.cos(a) * (r + .36), -.48, Math.sin(a) * (r + .36), .085]); }
   for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; bi.push([Math.cos(a) * (r + .9), -.98, Math.sin(a) * (r + .9), .075]); }
-  g.userData.bulbs = bulbSet(g, bi, () => BULB_ON); return g;
+  bakeStatic(g, noop, NOOP2); g.userData.bulbs = bulbSet(g, bi, () => BULB_ON); return g;
 }
 // focos que barren
 function spots() { const g = new THREE.Group(); const L = [];
   for (const [x, c] of [[-3.4, '#ff9cc8'], [3.4, '#8fd0ff'], [0, '#ffe27a']]) { const cone = mesh(new THREE.ConeGeometry(1.5, 9, 24, 1, true), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .13, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), g, [x, 4.5, -2]); cone.geometry.translate(0, -4.5, 0); cone.position.y = 9; L.push(cone); }
-  g.userData.L = L; return g; }
+  g.userData.L = L; bakeStatic(g, k => L.forEach((c, i) => { c.rotation.z = Math.sin(BT[k] * .9 + i * 2) * .35; c.rotation.x = Math.cos(BT[k] * .7 + i) * .15; }), { samples: BT.length }); return g; }
 // ---------- decorado del plató: gradas con público, guirnaldas, banderines, arco iris, nubes y caramelos (o39) ----------
 let crowds = [], garlands = [], clouds = [], suns = [];
 function garland(x0, x1, y, z, n = 14, sag = .8) {
@@ -84,12 +89,12 @@ function candyPole(x, z, h, c1 = '#ff6fae', c2 = '#ffffff') {
   const g = new THREE.Group(); g.position.set(x, 0, z);
   const m = new THREE.MeshToonMaterial({ map: stripeTex(c1, c2), gradientMap: null }); const p = mesh(new THREE.CylinderGeometry(.16, .16, h, 14), toon('#ffffff', { rim: .4, nocache: true }), g, [0, h / 2, 0]); p.material.map = stripeTex(c1, c2); p.material.needsUpdate = true;
   const l = mesh(new THREE.SphereGeometry(.62, 24, 16), toon('#ffffff', { rim: .8, nocache: true, emissive: c1, ei: .12 }), g, [0, h + .5, 0], [0, 0, 0], [1, 1, .35]); const cv = document.createElement('canvas'); cv.width = cv.height = 128; const cx = cv.getContext('2d'); cx.translate(64, 64); for (let i = 0; i < 12; i++) { cx.fillStyle = i % 2 ? c2 : c1; cx.beginPath(); cx.moveTo(0, 0); cx.arc(0, 0, 90, i / 12 * 6.283, (i + 1) / 12 * 6.283); cx.fill(); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; l.material.map = t; l.material.needsUpdate = true; l.rotation.y = 0;
-  l.userData.spin = 1; return g;
+  l.userData.spin = 1; bakeStatic(g, noop, NOOP2); return g;
 }
-function rainbow(R = 8, z = -12, y = -1) { const g = new THREE.Group(); ['#ff8fa8', '#ffb36b', '#ffe27a', '#8fe8b0', '#8fd0ff', '#b9a2f7'].forEach((c, i) => mesh(new THREE.TorusGeometry(R - i * .42, .22, 8, 72, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .55 }), g, [0, y, z])); return g; }
+function rainbow(R = 8, z = -12, y = -1) { const g = new THREE.Group(); ['#ff8fa8', '#ffb36b', '#ffe27a', '#8fe8b0', '#8fd0ff', '#b9a2f7'].forEach((c, i) => mesh(new THREE.TorusGeometry(R - i * .42, .22, 8, 72, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .55 }), g, [0, y, z])); bakeStatic(g, noop, NOOP2); return g; }
 function scenery(kind) {
   const sets = { menu: { rows: 3, r0: 6.3, dr: 1.2, dh: .62, arc: 2.3, z: -1.2 }, chars: { rows: 2, r0: 5.6, dr: 1.2, dh: .6, arc: 2.1, z: -1.4 }, intro: { rows: 3, r0: 6.0, dr: 1.2, dh: .62, arc: 2.2, z: -1.4 }, podio: { rows: 3, r0: 6.6, dr: 1.2, dh: .62, arc: 2.2, z: -1.0 } }[kind];
-  const stands = makeStands({ ...sets, colors: ['#ffd6ea', '#dcd0ff', '#d2f3ff'] }); root.add(stands.group); stands.group.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
+  const stands = makeStands({ ...sets, colors: ['#ffd6ea', '#dcd0ff', '#d2f3ff'] }); root.add(stands.group); stands.group.traverse(o => { if (o.isMesh) o.receiveShadow = true; }); bakeStatic(stands.group, noop, NOOP2);
   const crowd = makeCrowd(crowdMembers(stands.slots, { scale: .5, kinds: kind === 'podio' ? ['bounce', 'bounce', 'wave'] : ['bounce', 'wave', 'sway', 'sway'] })); root.add(crowd); crowds.push(crowd);
   const gz = sets.z - sets.r0 - sets.rows * sets.dr * .35 - 1.0;
   root.add(rainbow(sets.r0 + sets.rows * sets.dr + 1.6, gz - 1.5, -.4));
@@ -115,9 +120,9 @@ let balOn = false;
 function updBal(dt, t) { bal.visible = str.visible = balOn; if (!balOn) return; balP.forEach((p, i) => { p.y += p.v * dt; if (p.y > 10) resetBal(p); const sw = Math.sin(t * 1.2 + p.ph) * .25; tmp.position.set(p.x + sw, p.y, p.z); tmp.rotation.set(0, 0, sw * .3); tmp.scale.setScalar(1); tmp.updateMatrix(); bal.setMatrixAt(i, tmp.matrix); tmp.position.set(p.x + sw * .8, p.y - 1.05, p.z); tmp.updateMatrix(); str.setMatrixAt(i, tmp.matrix); }); bal.instanceMatrix.needsUpdate = str.instanceMatrix.needsUpdate = true; }
 // chispas (estallidos): o45 — pool de sprites reutilizados (antes se creaba un Sprite+Material por chispa y se tiraba → tirones por GC)
 const sparks = [], sparkG = new THREE.Group(), POOL = []; scene.add(sparkG);
-for (let i = 0; i < 170; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sp.visible = false; sp.userData = { v: new THREE.Vector3(), t: 0, l: 1 }; sparkG.add(sp); POOL.push(sp); }
+for (let i = 0; i < 170; i++) { const sp = GB.make('#ffffff', 1, 1, true); sp.visible = false; sp.userData = { v: new THREE.Vector3(), t: 0, l: 1 }; sparkG.add(sp); POOL.push(sp); }
 const freeSpark = s => { s.visible = false; POOL.push(s); };
-function burst(p, c, n = 16, sp = 3) { const tx = glowTex(c); for (let i = 0; i < n; i++) { const s = POOL.pop(); if (!s) return; s.material.map = tx; s.scale.setScalar(rnd(.25, .5)); s.position.copy(p); s.material.opacity = 1; s.visible = true; const a = rnd(0, 6.28), b = rnd(-.3, 1.3), u = s.userData; u.v.set(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.5, 1)); u.t = 0; u.l = rnd(.6, 1.1); sparks.push(s); } }
+function burst(p, c, n = 16, sp = 3) { for (let i = 0; i < n; i++) { const s = POOL.pop(); if (!s) return; s.material.setCol(c); s.scale.setScalar(rnd(.25, .5)); s.position.copy(p); s.material.opacity = 1; s.visible = true; const a = rnd(0, 6.28), b = rnd(-.3, 1.3), u = s.userData; u.v.set(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.5, 1)); u.t = 0; u.l = rnd(.6, 1.1); sparks.push(s); } }
 function updSparks(dt) { for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i], u = s.userData; u.t += dt; if (u.t > u.l) { freeSpark(s); sparks[i] = sparks[sparks.length - 1]; sparks.pop(); continue; } u.v.y -= 4 * dt; s.position.addScaledVector(u.v, dt); s.material.opacity = 1 - u.t / u.l; } }
 
 // ---------- personajes ----------
@@ -125,6 +130,7 @@ function updSparks(dt) { for (let i = sparks.length - 1; i >= 0; i--) { const s 
 function actor(id, scale = 1, role = 'dance', seed = 0, opaque = false) {
   const g = new THREE.Group(), pivot = new THREE.Group(); g.add(pivot); const c = makeCharacter(CH(id)); c.userData.seed = seed; pivot.add(c);
   if (opaque) c.traverse(o => { if (o.material && !Array.isArray(o.material) && o.material.transparent && o.material.opacity >= .7 && o.material.opacity < 1) { o.material = o.material.clone(); o.material.opacity = 1; o.material.transparent = false; o.material.depthWrite = true; } }); // vitrina: copia opaca (en las pruebas sigue igual)
+  if (!opaque) (c.userData.casters || []).forEach(m => m.castShadow = true); bakeChar(c); // o46: personaje fundido en pocas mallas
   const sh = mesh(new THREE.CircleGeometry(.85, 24), new THREE.MeshBasicMaterial({ color: '#7a3a8a', transparent: true, opacity: .18, depthWrite: false }), g, [0, .01, 0], [-Math.PI / 2, 0, 0]);
   g.userData = { pivot, c, sh, scale, role, seed, enter: 0, flip: -9, expr: '' }; pivot.scale.setScalar(scale); if (!opaque) { sh.material.opacity = .1; (c.userData.casters || []).forEach(m => m.castShadow = true); } return g;
 }
@@ -158,9 +164,11 @@ function pose(a, t, dt) {
 const DET = new URLSearchParams(location.search).get('detalle'); let lowMode = DET === 'bajo';
 function applyLow() { const f = o => { if (o.name === 'detalle') o.visible = !lowMode; }; root.traverse(f); mScene.traverse(f); sun.castShadow = !lowMode; }
 let mode = null, actors = [], deco = null, t0 = 0, camT = { p: new THREE.Vector3(0, 2.4, 9), l: new THREE.Vector3(0, 1, 0) }, extra = {};
-function clear() { crowds.forEach(c => c.userData.dispose && c.userData.dispose()); crowds = []; garlands = []; clouds = []; suns = []; thumbCs = null; root.clear(); actors = []; deco = null; extra = {}; sparks.forEach(freeSpark); sparks.length = 0; }
+function clear() { if (MEGA) { MEGA.dispose(); MEGA = null; } crowds.forEach(c => c.userData.dispose && c.userData.dispose()); crowds = []; garlands = []; clouds = []; suns = []; thumbCs = null; root.clear(); actors = []; deco = null; extra = {}; sparks.forEach(freeSpark); sparks.length = 0; GB.reset(); }
 const now = () => performance.now() / 1000;
-function build(m, d) {
+let MEGA = null;
+function build(m, d) { build0(m, d); MEGA = megaMerge(scene); } // o46: fusiona entre sí todas las piezas horneadas (personajes, escenario, gradas…)
+function build0(m, d) {
   clear(); balOn = false; mode = m; t0 = now(); const T = 0;
   if (m === 'menu') {
     deco = stage(3.3); root.add(deco); root.add(spots()); confAmt = .8; balOn = true; scenery('menu');
@@ -173,10 +181,10 @@ function build(m, d) {
     // plató de presentación: pedestal con bombillas, focos, telón, estrellas, banderines, confeti y globos
     deco = stage(1.9); root.add(deco); root.add(spots()); confAmt = .55; balOn = true; scenery('chars');
     const col = CH(d.pj).color;
-    const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18 }), root, [0, .17, 0]); outline(ped, '#d58ab8', 1.03);
-    mesh(new THREE.TorusGeometry(1.3, .06, 8, 48), toon(col, { emissive: col, ei: .5, rim: 0 }), root, [0, .35, 0], [Math.PI / 2, 0, 0]);
+    const pedG = new THREE.Group(); root.add(pedG); const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18 }), pedG, [0, .17, 0]); outline(ped, '#d58ab8', 1.03);
+    mesh(new THREE.TorusGeometry(1.3, .06, 8, 48), toon(col, { emissive: col, ei: .5, rim: 0 }), pedG, [0, .35, 0], [Math.PI / 2, 0, 0]); bakeStatic(pedG, noop, NOOP2);
     const ring = glow(col, 4.2, .55); ring.position.set(0, .5, -.2); root.add(ring); extra.ring = ring;
-        const flags = []; for (let i = 0; i < 13; i++) { const x = (i - 6) * .75, y = 5.2 - Math.cos((i - 6) / 6 * 1.4) * .9; const f = mesh(new THREE.ConeGeometry(.2, .42, 3), toon(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7'][i % 5], { rim: .3 }), root, [x, y, -3.6], [Math.PI, 0, 0]); flags.push(f); } extra.flags = flags;
+        const flagsG = new THREE.Group(); root.add(flagsG); const flags = []; for (let i = 0; i < 13; i++) { const x = (i - 6) * .75, y = 5.2 - Math.cos((i - 6) / 6 * 1.4) * .9; const f = mesh(new THREE.ConeGeometry(.2, .42, 3), toon(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7'][i % 5], { rim: .3 }), flagsG, [x, y, -3.6], [Math.PI, 0, 0]); flags.push(f); } bakeStatic(flagsG, k => flags.forEach((f, i) => { f.rotation.z = Math.sin(BT[k] * 3 + i) * .15; }), { samples: BT.length }); extra.flags = flags;
     const stars = []; for (let i = 0; i < 18; i++) { const s0 = glow(['#ffe27a', '#ffffff', '#ff9cc8', '#8fd0ff'][i % 4], rnd(.3, .7), .9); s0.position.set(rnd(-5, 5), rnd(1, 6.5), rnd(-4.5, -3.2)); s0.userData.ph = rnd(0, 6); root.add(s0); stars.push(s0); } extra.stars = stars;
     const a = actor(d.pj, 1.15, 'dance', 0, true); a.position.y = .35; a.userData.roles = ['dance', 'hop', 'spin', 'wave', 'cheer', 'wiggle']; a.userData.per = 2.6; a.userData.enter = .05; a.userData.sh.visible = false; root.add(a); actors.push(a); extra.hero = a;
     if (d.prev) { burst(new THREE.Vector3(0, 1.4, 0), col, 26, 4); burst(new THREE.Vector3(0, 1.4, 0), '#ffffff', 14, 3); }
@@ -239,12 +247,12 @@ const FADE = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMater
 FADE.frustumCulled = false; FADE.renderOrder = 9999; FADE.visible = false; scene.add(FADE);
 const HALO = document.getElementById('stageHalo') || document.createElement('div');
 // ---------- bucle ----------
-let last = now(), shown = true, fpsN = 0, fpsT = now(), elC = null, elT = 0; const _dir = new THREE.Vector3(), _w3 = new THREE.Vector3();
+let last = now(), shown = true, fpsN = 0, fpsT = now(), elC = null, elT = 0, rEl = null, rAt = 0, rT = -9, rC = null; addEventListener('resize', () => { rT = -9; }); addEventListener('orientationchange', () => { rT = -9; }); const _dir = new THREE.Vector3(), _w3 = new THREE.Vector3();
 function frame() {
   requestAnimationFrame(frame);
   const t1 = now(), dt = Math.min(.05, t1 - last); last = t1;
-  fpsN++; if (t1 - fpsT > 2) { const f = fpsN / (t1 - fpsT); fpsN = 0; fpsT = t1; if (f < 45 && DPR > 1) { DPR = Math.max(1, DPR - .25); renderer.setPixelRatio(DPR); size(); } else if (f < 26 && DPR <= 1 && !lowMode && DET !== 'max') { lowMode = true; applyLow(); } }
-  if (!elC || t1 - elT > .25 || !elC.isConnected || !elC.closest('.scr.on')) { elC = document.querySelector('.scr.on .stage3d'); elT = t1; } const el = elC; let r = el && el.getBoundingClientRect(); // o45: sin querySelector por fotograma
+  // o46: sin regulador automático (ni baja la resolución ni oculta detalle)
+  if (!elC || t1 - elT > .25 || !elC.isConnected || !elC.closest('.scr.on')) { elC = document.querySelector('.scr.on .stage3d'); elT = t1; } const el = elC; if (elC !== rEl) { rEl = elC; rAt = t1; rT = -9; } if (t1 - rT > (t1 - rAt < 1.3 ? 0 : .12)) { rC = el && el.getBoundingClientRect(); rT = t1; } const r = rC; // o46: sin lectura de layout por fotograma (solo durante la animación de entrada y luego 8 veces/s)
   if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
   const want = el.dataset.mode; if (want !== mode || el.dataset.key !== extra.key) { build(want, JSON.parse(el.dataset.d || '{}')); extra.key = el.dataset.key; }
   shown = true; const t = t1 - t0;

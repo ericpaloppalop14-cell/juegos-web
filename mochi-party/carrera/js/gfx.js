@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { crazyAccessories } from './accesorios.js?v=o45';
-import { buildDisco, fuzzTexture } from './disco.js?v=o45';
+import { crazyAccessories } from './accesorios.js?v=o46';
+import { buildDisco, fuzzTexture } from './disco.js?v=o46';
 
 // ---------- toon materials ----------
 let gradTex;
@@ -22,7 +22,7 @@ export function toon(color, o = {}) {
     emissive: o.emissive || '#000000', emissiveIntensity: o.ei ?? 1, side: o.side || THREE.FrontSide, vertexColors: !!o.vc });
   if (o.opacity != null && o.opacity < 1) m.depthWrite = o.depthWrite ?? false;
   if (o.po) { m.polygonOffset = true; m.polygonOffsetFactor = -o.po; m.polygonOffsetUnits = -o.po * 2; }
-  const rim = o.rim ?? 0.35;
+  const rim = o.rim ?? 0.35; m.userData.rim = rim;
   if (rim > 0) {
     m.onBeforeCompile = sh => {
       sh.uniforms.rimStr = { value: rim }; sh.uniforms.glossStr = { value: rim >= 0.5 ? 0.9 : 0.14 }; sh.uniforms.sssStr = { value: rim >= 0.5 ? 1.0 : 0.35 };
@@ -92,10 +92,10 @@ function bodyR(y) {
 }
 function bodyGeo(low = false) {
   return geo(low ? 'body2low' : 'body2', () => {
-    const p = [], N = low ? 14 : 44;
+    const p = [], N = low ? 10 : 44;
     for (let i = 0; i <= N; i++) { const a = i / N, y = a * 1.62; p.push(new THREE.Vector2(bodyR(y), y)); }
     p.unshift(new THREE.Vector2(0.001, 0.02));
-    const g = new THREE.LatheGeometry(p, low ? 22 : 56); g.computeVertexNormals();
+    const g = new THREE.LatheGeometry(p, low ? 18 : 56); g.computeVertexNormals();
     // sombreado pintado en los vértices: arriba clarito, abajo algo más denso (la gelatina se espesa)
     const pos = g.attributes.position, c = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) { const y = pos.getY(i) / 1.62, k = 0.84 + 0.16 * Math.min(1, y * 1.25); c[i * 3] = k; c[i * 3 + 1] = k * 0.985; c[i * 3 + 2] = Math.min(1, k * 1.03); }

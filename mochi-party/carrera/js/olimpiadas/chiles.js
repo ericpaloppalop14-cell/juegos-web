@@ -3,9 +3,9 @@
 //  Ciclo visible: 😴 cerrada → 👀 se prepara (aviso) → 🔥 ¡ABIERTA, TOCA YA! → ñam. 8 chiles.
 //  Acierto: +2 (+3 si tocas en el centro de la ventana) · Fallo: rebota en el morro, 0.
 // ======================================================================
-import { THREE, camera, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=o45';
-import { buildWorld, MUNDOS } from './mundos.js?v=o45';
-import { T, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o45';
+import { THREE, camera, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=o46';
+import { buildWorld, MUNDOS } from './mundos.js?v=o46';
+import { T, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o46';
 
 const N = 8, SP = 3.45, DZ = -9, OPEN = 1.15, PREP = .7;
 const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .55, metalness: .05, ...o });

@@ -6,7 +6,7 @@
 // ======================================================================
 import * as THREE from 'three';
 import { CHARS } from './data.js';
-import { makeCharacter, animCharacter, glowTex } from './gfx.js?v=o45';
+import { makeCharacter, animCharacter, glowTex } from './gfx.js?v=o46';
 const TAU = Math.PI * 2;
 const C = (h) => new THREE.Color(h);
 const css = (c, a = 1) => `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${a})`;
