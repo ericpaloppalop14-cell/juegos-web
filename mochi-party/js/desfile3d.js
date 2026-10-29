@@ -3,6 +3,7 @@
 // profundidad real (parallax por distancia, niebla), PMREM para reflejos, calidad automática.
 // Solo usa las bandas de arriba/abajo de la pantalla para no tapar botones ni personajes.
 import * as THREE from 'three';
+import { buildWorld } from './mundo3d.js?v=o39';
 const CFG = window.__DESFILE3D || {};
 const isOn = window.__desfileOn || (() => { const m = document.getElementById('sMenu'), c = document.getElementById('sChars'); return !m || m.classList.contains('on') || (c && c.classList.contains('on')); });
 const cv = document.createElement('canvas'); cv.id = 'desfile'; cv.setAttribute('aria-hidden', 'true');
@@ -12,8 +13,8 @@ if (ref) ref.parentNode.insertBefore(cv, ref.nextSibling); else document.body.pr
 let rd;
 try { rd = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true, powerPreference: 'high-performance' }); } catch (e) { cv.remove(); throw e; }
 rd.setClearColor(0, 0); rd.outputColorSpace = THREE.SRGBColorSpace; rd.toneMapping = THREE.ACESFilmicToneMapping; rd.toneMappingExposure = 0.95;
-const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0xffd9ec, 20, 60);
-const cam = new THREE.PerspectiveCamera(34, 1, .5, 60);
+const scene = new THREE.Scene(); scene.fog = new THREE.Fog(0xf2c6ea, 50, 230);
+const cam = new THREE.PerspectiveCamera(34, 1, .5, 180);
 // --- entorno para reflejos (estudio pastel) ---
 { const env = new THREE.Scene(); const g = new THREE.SphereGeometry(10, 32, 16); const col = [], p = g.attributes.position;
   for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 10; const c = new THREE.Color().lerpColors(new THREE.Color(0xffc6e0), new THREE.Color(0xd8f0ff), y * .5 + .5); col.push(c.r, c.g, c.b); }
@@ -43,6 +44,7 @@ const M = {
   base: new THREE.MeshPhysicalMaterial({ color: 0x8f5cd8, roughness: .3, clearcoat: 1 }),
   shadow: new THREE.MeshBasicMaterial({ color: 0x7a3c8c, transparent: true, opacity: .16, depthWrite: false }),
 };
+M.glowT = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(.4, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); })();
 const MOCHI_COL = [0xffb3d1, 0xffe27a, 0x9fe7ff, 0xc9b2ff, 0xa8f0c6, 0xffc39e, 0xfff6fb, 0xff9c9c];
 const JELLY_COL = [0xff6fcf, 0x7f8cff, 0x3fd8c8, 0xff9f5a, 0xb07cff];
 const mochiMats = MOCHI_COL.map(c => new THREE.MeshPhysicalMaterial({ color: c, roughness: .42, sheen: 1, sheenColor: new THREE.Color(0xffffff), sheenRoughness: .4, clearcoat: .55, clearcoatRoughness: .3 }));
@@ -79,10 +81,16 @@ function makeCamel() {
   // alas
   const wings = [];
   for (const z of [1, -1]) { const pv = new THREE.Group(); pv.position.set(.05, .55, z * .35); b.add(pv); const w = new THREE.Mesh(wingGeo, M.wing); w.rotation.y = Math.PI / 2 * (z > 0 ? 1 : -1) * 0; w.scale.set(.9, .9 * 1, 1); w.rotation.z = .25; w.rotation.x = z * -.2; pv.add(w); pv.userData.z = z; wings.push(pv); }
-  root.userData = { b, legs, wings, tail, head };
+  // manta de rayas con borlas, gorro de fiesta, guirnalda de flores y un mochi jinete saludando
+  const bl = mesh(G.cap, new THREE.MeshPhysicalMaterial({ color: 0xff7ab6, roughness: .6, sheen: 1, sheenColor: new THREE.Color(0xffd0e8) }), [.36, .5, .3], [0, .72, 0]); bl.rotation.z = Math.PI / 2; b.add(bl);
+  for (let i = 0; i < 4; i++) b.add(mesh(G.sphL, M.gold, .045, [(i - 1.5) * .22, .55, .34])); for (let i = 0; i < 4; i++) b.add(mesh(G.sphL, M.gold, .045, [(i - 1.5) * .22, .55, -.34]));
+  const hat = new THREE.Mesh(new THREE.ConeGeometry(.17, .42, 16), new THREE.MeshPhysicalMaterial({ color: 0x7a5ce0, roughness: .4, clearcoat: .5 })); hat.position.set(-.02, .42, 0); hat.rotation.z = -.2; head.add(hat); head.add(mesh(G.sphL, M.shine, .07, [-.06, .65, 0]));
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; b.add(mesh(G.sphL, new THREE.MeshPhysicalMaterial({ color: [0xff7ab6, 0xffe27a, 0x9fe7ff, 0xc9b2ff][i % 4], roughness: .5 }), .07, [1.3 + Math.cos(a) * .22, .98, Math.sin(a) * .22])); }
+  const rider = makeMochi(); rider.scale.setScalar(.34); rider.position.set(0, .86, 0); rider.userData.sh.visible = false; b.add(rider);
+  root.userData = { b, legs, wings, tail, head, rider };
   return root;
 }
-function animCamel(o, t, ph) { const u = o.userData, f = t * 9 + ph;
+function animCamel(o, t, ph) { const u = o.userData, f = t * 9 + ph; if (u.rider) animMochi(u.rider, t, ph + 1, .016);
   for (const w of u.wings) { w.rotation.x = w.userData.z * (-.25 - .95 * (Math.sin(f) * .5 + .5)); }
   u.b.position.y = Math.sin(f) * .08; u.b.rotation.z = Math.sin(t * 1.6 + ph) * .06;
   for (const l of u.legs) { const s = Math.sin(t * 6 + ph + l.ph); l.hip.rotation.z = s * .5; l.knee.rotation.z = Math.max(0, -Math.cos(t * 6 + ph + l.ph)) * .9; }
@@ -104,7 +112,8 @@ function makeJelly() {
   const smile = new THREE.Mesh(new THREE.TorusGeometry(.06, .016, 6, 12, Math.PI), M.eye); smile.position.set(0, .24, .8); smile.rotation.z = Math.PI; bell.add(smile);
   const tm = new THREE.MeshPhysicalMaterial({ color: c, emissive: c, emissiveIntensity: .8, roughness: .3, transparent: true, opacity: .8, depthWrite: false });
   const tents = [];
-  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const g = (i % 2 ? tentGeo : tentGeo).clone(); const m = new THREE.Mesh(g, tm); m.position.set(Math.cos(a) * .75, -.05, Math.sin(a) * .75); m.userData = { base: g.attributes.position.array.slice(), ph: i * 1.3 }; root.add(m); tents.push(m); }
+  { const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: M.glowT, color: c, transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending })); gl.scale.setScalar(3.4); gl.position.y = .25; root.add(gl); for (let i = 0; i < 7; i++) bell.add(mesh(G.sphL, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .55 }), [.06, .035, .03], [Math.sin(i * 2.4) * .5, .55 + (i % 3) * .1, Math.cos(i * 2.4) * .5])); }
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; const g = (i % 2 ? tentGeo : tentGeo).clone(); const m = new THREE.Mesh(g, tm); m.position.set(Math.cos(a) * .75, -.05, Math.sin(a) * .75); m.userData = { base: g.attributes.position.array.slice(), ph: i * 1.3 }; root.add(m); tents.push(m); }
   for (let i = 0; i < 3; i++) { const g = armGeo.clone(); const m = new THREE.Mesh(g, inner); m.position.set((i - 1) * .22, 0, 0); m.userData = { base: g.attributes.position.array.slice(), ph: i * 2.1 + 5, arm: 1 }; root.add(m); tents.push(m); }
   root.userData = { bell, tents };
   return root;
@@ -124,6 +133,11 @@ function makeMochi() {
   eyes(inner, 0, .12, .6, .085, .22);
   inner.add(mesh(G.sphL, M.blush, [.11, .06, .03], [-.38, -.02, .55])); inner.add(mesh(G.sphL, M.blush, [.11, .06, .03], [.38, -.02, .55]));
   const mouth = new THREE.Mesh(new THREE.TorusGeometry(.06, .018, 6, 12, Math.PI), M.eye); mouth.position.set(0, -.04, .68); mouth.rotation.z = Math.PI; inner.add(mouth);
+  { const E = Math.random() * 3 | 0, em = mat;
+    for (const s of [-1, 1]) { if (E === 0) { const g = new THREE.Group(); g.position.set(s * .32, .52, 0); g.rotation.z = -s * .3; inner.add(g); g.add(mesh(G.sph, em, [.15, .5, .12], [0, .42, 0])); g.add(mesh(G.sphL, new THREE.MeshPhysicalMaterial({ color: 0xff9ec4, roughness: .5 }), [.08, .34, .06], [0, .4, .07])); }
+      else if (E === 1) inner.add(mesh(G.sph, em, [.2, .19, .12], [s * .5, .54, 0])); else { const c = mesh(new THREE.ConeGeometry(1, 1, 4), em, [.2, .34, .14], [s * .4, .64, 0]); c.rotation.z = -s * .3; inner.add(c); } }
+    if (Math.random() < .5) { const h = mesh(new THREE.ConeGeometry(1, 1, 12), new THREE.MeshPhysicalMaterial({ color: [0xff4f8f, 0x4fc3ff, 0xffd84a][Math.random() * 3 | 0], roughness: .4 }), [.22, .5, .22], [0, .8, 0]); h.rotation.z = .2; inner.add(h); inner.add(mesh(G.sphL, M.shine, .07, [.08, 1.05, 0])); }
+    for (const s of [-1, 1]) inner.add(mesh(G.sph, em, [.2, .1, .22], [s * .3, -.52, .22])); }
   const arms = []; for (const s of [-1, 1]) { const pv = new THREE.Group(); pv.position.set(s * .6, .0, .1); inner.add(pv); pv.add(mesh(G.cap, mat, [.12, .1, .12], [0, .14, 0])); pv.rotation.z = s * -2.3; pv.userData.s = s; arms.push(pv); }
   root.userData = { body, inner, arms, sh, wave: 0, mouth };
   return root;
@@ -151,7 +165,7 @@ function makeMedal() { const root = new THREE.Group(), g = new THREE.Group(); ro
   root.userData = { g, spin: 1 }; return root; }
 // ---------- GESTIÓN DEL DESFILE ----------
 const R = (a, b) => a + Math.random() * (b - a);
-let W = 1, H = 1, ents = [], quality = 1, PR = 1;
+let W = 1, H = 1, ents = [], quality = 1, PR = 1, lite = new URLSearchParams(location.search).get('detalle') === 'bajo';
 function size() { W = innerWidth; H = innerHeight; PR = Math.min(devicePixelRatio || 1, 1.75) * quality; rd.setPixelRatio(PR); rd.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix(); }
 addEventListener('resize', size);
 const TAN = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
@@ -160,7 +174,8 @@ const toWorld = (sx, sy, d, v) => v.set((sx * 2 - 1) * d * TAN * cam.aspect, (1 
 const band = (kind) => { const land = W > H, r = Math.random();
   if (kind === 'ground') return land ? .93 : .955;
   if (r < .58) return R(.05, land ? .17 : .12); return R(land ? .84 : .88, land ? .9 : .93); };
-const KINDS = { camel: { make: makeCamel, n: 2, s: 1.0 }, jelly: { make: makeJelly, n: 2, s: .9 }, mochi: { make: makeMochi, n: 3, s: 1.0 }, trophy: { make: makeTrophy, n: 1, s: .9 }, medal: { make: makeMedal, n: 1, s: .8 } };
+const KINDS = { camel: { make: makeCamel, n: 3, s: 1.0 }, jelly: { make: makeJelly, n: 4, s: .9 }, mochi: { make: makeMochi, n: 5, s: 1.0 }, trophy: { make: makeTrophy, n: 1, s: .9 }, medal: { make: makeMedal, n: 2, s: .8 } };
+const WORLD = buildWorld(scene, cam, {});
 function spawn(k, init) { const K = KINDS[k], o = K.make(), dir = Math.random() < .5 ? 1 : -1, d = R(10, 17);
   const e = { k, o, dir, d, ph: R(0, 9), sy: band(k === 'mochi' ? 'ground' : 'air'), sx: dir > 0 ? -.15 : 1.15, v: R(.045, .075) * 12 / d, s: K.s * R(.85, 1.1) };
   if (k === 'jelly') { e.sx = Math.random() < .5 ? R(.04, .16) : R(.84, .96); e.sy = 1.15; e.v = R(.03, .045) * 12 / d; }
@@ -172,18 +187,20 @@ function spawn(k, init) { const K = KINDS[k], o = K.make(), dir = Math.random() 
   if (k === 'camel' || k === 'mochi') o.rotation.y = dir > 0 ? (k === 'camel' ? -.35 : .5) : (k === 'camel' ? Math.PI + .35 : -.5);
   o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
   scene.add(o); return e; }
-function populate() { for (const e of ents) scene.remove(e.o); ents = []; for (const k in KINDS) for (let i = 0; i < KINDS[k].n; i++) ents.push(spawn(k, true)); }
+function populate() { WORLD.setLite(lite); WORLD.rebuild(); for (const e of ents) scene.remove(e.o); ents = []; for (const k in KINDS) for (let i = 0; i < KINDS[k].n; i++) { const e = spawn(k, true); e.idx = i; if (lite && i > 0) e.o.visible = false; ents.push(e); } }
 size(); populate(); addEventListener('orientationchange', () => setTimeout(() => { size(); populate(); }, 300));
 let lastLand = W > H; addEventListener('resize', () => { if ((W > H) !== lastLand) { lastLand = W > H; populate(); } });
+const PXs = { x: 0, y: 0, tx: 0, ty: 0 }; addEventListener('pointermove', e => { PXs.tx = (e.clientX / innerWidth - .5) * 2; PXs.ty = (e.clientY / innerHeight - .5) * -2; }, { passive: true }); addEventListener('deviceorientation', e => { if (e.gamma == null) return; PXs.tx = Math.max(-1, Math.min(1, e.gamma / 30)); PXs.ty = Math.max(-1, Math.min(1, (e.beta - 45) / 30)) * -1; }, { passive: true });
 const v = new THREE.Vector3(); let last = performance.now(), acc = 0, frames = 0;
 function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (now - last) / 1000); last = now;
   const on = isOn() && !document.hidden; cv.style.display = on ? '' : 'none'; if (!on) return;
   // calidad automática
-  acc += dt; frames++; if (acc > 2) { const fps = frames / acc; acc = 0; frames = 0; const q0 = quality; if (fps < 40 && quality > .55) quality -= .15; else if (fps > 57 && quality < 1) quality += .05; if (q0 !== quality) size(); }
+  acc += dt; frames++; if (acc > 2) { const fps = frames / acc; acc = 0; frames = 0; const q0 = quality; if (fps < 40 && quality > .55) quality -= .15; else if (fps > 57 && quality < 1) quality += .05; if (q0 !== quality) size(); if (quality <= .7 && fps < 32 && !lite) { lite = true; WORLD.setLite(true); ents.forEach((e, i) => { if (e.idx > 0) e.o.visible = false; }); } }
   const t = now / 1000;
+  PXs.x += (PXs.tx - PXs.x) * .04; PXs.y += (PXs.ty - PXs.y) * .04; cam.position.set(Math.sin(t * .17) * .5 + PXs.x * .8, Math.cos(t * .13) * .22 + PXs.y * .4, 0); cam.lookAt(0, 0, -20); WORLD.update(t, dt);
   for (let i = 0; i < ents.length; i++) { const e = ents[i], o = e.o;
-    if (e.k === 'jelly') { e.sy -= e.v * dt * (.5 + .7 * Math.max(0, Math.sin(t * 2.4 + e.ph - 1))); if (e.sy < -.2) { scene.remove(o); ents[i] = spawn('jelly'); continue; } }
-    else { e.sx += e.v * e.dir * dt; if (e.sx < -.25 || e.sx > 1.25) { scene.remove(o); ents[i] = spawn(e.k); continue; } }
+    if (e.k === 'jelly') { e.sy -= e.v * dt * (.5 + .7 * Math.max(0, Math.sin(t * 2.4 + e.ph - 1))); if (e.sy < -.2) { scene.remove(o); ents[i] = spawn('jelly'); ents[i].idx = e.idx; if (lite && e.idx > 0) ents[i].o.visible = false; continue; } }
+    else { e.sx += e.v * e.dir * dt; if (e.sx < -.25 || e.sx > 1.25) { scene.remove(o); ents[i] = spawn(e.k); ents[i].idx = e.idx; if (lite && e.idx > 0) ents[i].o.visible = false; continue; } }
     // trayectoria curva suave
     const wob = e.k === 'jelly' ? 0 : e.k === 'mochi' ? 0 : Math.sin(t * .9 + e.ph) * .015;
     toWorld(e.sx + (e.k === 'jelly' ? Math.sin(t * .7 + e.ph) * .02 : 0), e.sy + wob, e.d, v); o.position.copy(v);

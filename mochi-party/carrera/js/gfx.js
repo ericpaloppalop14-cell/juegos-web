@@ -1,12 +1,16 @@
 import * as THREE from 'three';
+import { crazyAccessories } from './accesorios.js?v=o39';
 
 // ---------- toon materials ----------
 let gradTex;
 function gradient() {
   if (gradTex) return gradTex;
-  const d = new Uint8Array([96, 96, 104, 255, 182, 178, 190, 255, 255, 255, 255, 255]);
-  gradTex = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat);
-  gradTex.minFilter = gradTex.magFilter = THREE.NearestFilter; gradTex.needsUpdate = true;
+  // rampa suave (sombreado progresivo, más realista que 3 escalones) con un suelo de luz para que no queden negros
+  const N = 128, d = new Uint8Array(N * 4);
+  for (let i = 0; i < N; i++) { const u = i / (N - 1), k = Math.min(1, Math.max(0, (u - 0.24) / 0.56)), sm = k * k * (3 - 2 * k), v = 0.36 + 0.64 * sm;
+    d[i * 4] = Math.round(255 * (v * 0.97 + 0.03 * (1 - sm) * 0.9)); d[i * 4 + 1] = Math.round(255 * (v * 0.95)); d[i * 4 + 2] = Math.round(255 * Math.min(1, v * 1.0 + 0.06 * (1 - sm))); d[i * 4 + 3] = 255; }
+  gradTex = new THREE.DataTexture(d, N, 1, THREE.RGBAFormat);
+  gradTex.minFilter = gradTex.magFilter = THREE.LinearFilter; gradTex.needsUpdate = true;
   return gradTex;
 }
 const matCache = new Map();
@@ -20,21 +24,31 @@ export function toon(color, o = {}) {
   const rim = o.rim ?? 0.35;
   if (rim > 0) {
     m.onBeforeCompile = sh => {
-      sh.uniforms.rimStr = { value: rim }; sh.uniforms.glossStr = { value: rim >= 0.5 ? 0.55 : 0.0 };
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float rimStr; uniform float glossStr;')
+      sh.uniforms.rimStr = { value: rim }; sh.uniforms.glossStr = { value: rim >= 0.5 ? 0.9 : 0.14 }; sh.uniforms.sssStr = { value: rim >= 0.5 ? 1.0 : 0.35 };
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float rimStr; uniform float glossStr; uniform float sssStr;')
         .replace('#include <opaque_fragment>', `
           { vec3 nn = normalize(normal), vv = normalize(vViewPosition);
-            float fr = 1.0 - clamp(dot(nn, vv), 0.0, 1.0);
+            float ndv = clamp(dot(nn, vv), 0.0, 1.0);
+            float fr = 1.0 - ndv;
             float up = 0.55 + 0.45 * clamp(nn.y * 0.8 + 0.35, 0.0, 1.0);
-            // contraluz: borde brillante algo cálido arriba y lila abajo (noche 3)
+            // contraluz: borde brillante algo cálido arriba y lila abajo
             vec3 rc = mix(vec3(0.85, 0.8, 1.0), vec3(1.0, 0.97, 0.9), clamp(nn.y * 0.5 + 0.5, 0.0, 1.0));
             outgoingLight += rc * smoothstep(0.5, 1.0, fr) * rimStr * up * 1.35;
-            // brillo de gelatina
-            vec3 hh = normalize(normalize(vec3(-0.45, 0.65, 0.6)) + vv);
-            outgoingLight += vec3(1.0) * pow(max(dot(nn, hh), 0.0), 48.0) * glossStr; }
+            // luz principal (brillo duro de gelatina + lóbulo suave) y luz de relleno de abajo-derecha
+            vec3 h1 = normalize(normalize(vec3(-0.45, 0.65, 0.6)) + vv);
+            float d1 = max(dot(nn, h1), 0.0);
+            outgoingLight += vec3(1.0) * (pow(d1, 70.0) * 1.1 + pow(d1, 12.0) * 0.16) * glossStr;
+            vec3 h2 = normalize(normalize(vec3(0.75, -0.25, 0.55)) + vv);
+            outgoingLight += vec3(1.0, 0.92, 0.98) * pow(max(dot(nn, h2), 0.0), 26.0) * 0.2 * glossStr;
+            // luz rebotada del suelo (rosada) y transmisión de luz por dentro (subsurface)
+            float below = clamp(-nn.y * 0.55 + 0.1, 0.0, 1.0);
+            outgoingLight += diffuseColor.rgb * vec3(1.0, 0.82, 0.95) * below * 0.2 * rimStr;
+            outgoingLight += mix(diffuseColor.rgb, vec3(1.0), 0.3) * pow(fr, 1.6) * 0.34 * sssStr;
+            // oclusión ambiental falsa: la parte baja de la figura, un pelín más oscura
+            outgoingLight *= 1.0 - 0.1 * clamp(-nn.y, 0.0, 1.0) * rimStr; }
           #include <opaque_fragment>`);
     };
-    m.customProgramCacheKey = () => 'rim3' + rim;
+    m.customProgramCacheKey = () => 'rim4' + rim;
   }
   if (!o.nocache) matCache.set(key, m);
   return m;
@@ -66,82 +80,133 @@ const tor = (r = 0.12, s = 24) => geo('tor' + r + s, () => new THREE.TorusGeomet
 const col = (c, k) => { const x = new THREE.Color(c); return k > 0 ? x.lerp(new THREE.Color('#ffffff'), k) : x.lerp(new THREE.Color('#3a2050'), -k); };
 const hex = c => '#' + c.getHexString();
 
-// jelly body profile (lathe), feet at y=0, height ~1.6, radius ~1
-function bodyGeo() {
-  return geo('body', () => {
-    const p = [];
-    for (let i = 0; i <= 20; i++) {
-      const a = i / 20; // 0 bottom -> 1 top
-      const y = a * 1.62;
-      let r = Math.sin(Math.PI * Math.min(1, 0.18 + a * 0.82)) * 1.0;
-      r = a < 0.12 ? 0.78 + a * 1.6 : r * (1 - Math.max(0, a - 0.6) * 0.25);
-      if (a > 0.97) r *= (1 - (a - 0.97) * 20);
-      p.push(new THREE.Vector2(Math.max(0.001, r), y));
-    }
+// perfil del cuerpo de gelatina (pies en y=0, altura ~1.62, radio ~1), suave y sin escalones
+function bodyR(y) {
+  const a = Math.min(1, Math.max(0, y / 1.62));
+  const sm = (e0, e1, x) => { const k = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return k * k * (3 - 2 * k); };
+  const tt = Math.min(1, 0.18 + a * 0.82), sn = Math.sin(Math.PI * tt), rMain = (tt > 0.5 ? Math.pow(sn, 0.62) : sn) * (1 - Math.max(0, a - 0.6) * 0.18), rSk = 0.78 + a * 1.6;
+  let r = rSk + (rMain - rSk) * sm(0.07, 0.19, a);
+  if (a > 0.97) r *= (1 - (a - 0.97) * 20);
+  return Math.max(0.001, r);
+}
+function bodyGeo(low = false) {
+  return geo(low ? 'body2low' : 'body2', () => {
+    const p = [], N = low ? 14 : 44;
+    for (let i = 0; i <= N; i++) { const a = i / N, y = a * 1.62; p.push(new THREE.Vector2(bodyR(y), y)); }
     p.unshift(new THREE.Vector2(0.001, 0.02));
-    const g = new THREE.LatheGeometry(p, 28); g.computeVertexNormals(); return g;
+    const g = new THREE.LatheGeometry(p, low ? 22 : 56); g.computeVertexNormals();
+    // sombreado pintado en los vértices: arriba clarito, abajo algo más denso (la gelatina se espesa)
+    const pos = g.attributes.position, c = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) { const y = pos.getY(i) / 1.62, k = 0.84 + 0.16 * Math.min(1, y * 1.25); c[i * 3] = k; c[i * 3 + 1] = k * 0.985; c[i * 3 + 2] = Math.min(1, k * 1.03); }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return g;
   });
 }
+export const bodyGeometry = bodyGeo, bodyRadius = bodyR;
+// punto sobre la superficie del cuerpo a altura y y ángulo phi (0 = de frente)
+const onBody = (y, phi, off = 1.0) => { const r = bodyR(y) * off; return [Math.sin(phi) * r, y, Math.cos(phi) * r]; };
+const IRIS = { mochi: '#ff5f9e', tiovivo: '#1fae85', atomo: '#3a74ff', cosmo: '#7a4cff', copito: '#3aa0ff', burbuja: '#0aa0c0', lava: '#ff5a1f', tictac: '#b8742a', trueno: '#6070b0', disco: '#ff2fb0' };
+let _blush, _gloss, _star4;
+const blushMat = () => _blush || (_blush = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, 'rgba(255,92,140,.85)'); g.addColorStop(.55, 'rgba(255,110,160,.45)'); g.addColorStop(1, 'rgba(255,120,170,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }); })());
+const glossMat = () => _gloss || (_gloss = (() => { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 128; const x = cv.getContext('2d'), g = x.createRadialGradient(32, 64, 2, 32, 64, 60);
+  g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(.5, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.save(); x.translate(32, 64); x.scale(.5, 1); x.translate(-32, -64); x.fillRect(0, 0, 64, 128); x.restore();
+  return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, opacity: .8 }); })());
+const decal = (parent, mat, y, phi, w, h, roll = 0, off = 1.012) => { const p = onBody(y, phi, off), m = new THREE.Mesh(geo('pl1', () => new THREE.PlaneGeometry(1, 1)), mat); m.scale.set(w, h, 1); m.position.set(...p); m.lookAt(p[0] * 2, y + (roll ? 0 : 0), p[2] * 2); m.rotateZ(roll); m.renderOrder = 4; parent.add(m); return m; };
 
 // ---------- characters ----------
 export function makeCharacter(ch, opts = {}) {
+  const lite = opts.lite ?? !ch.id;
   const root = new THREE.Group(); root.name = 'char';
-  const c = new THREE.Color(ch.color);
+  const ud = root.userData; ud.fx = []; ud.arms = []; ud.casters = []; ud.lite = lite;
   const inner = new THREE.Group(); root.add(inner);
   buildInner(ch.inner, inner, ch);
-  const body = mesh(bodyGeo(), toon(hex(col(ch.color, 0.05)), { opacity: 0.72, rim: 0.55, depthWrite: false }), root);
-  body.renderOrder = 2;
-  const ol = outline(body, hex(col(ch.color, -0.55)), 1.045); ol.renderOrder = 1;
-  // face (front = +z)
+  const OLC = hex(col(ch.color, -0.55));
+  const body = mesh(bodyGeo(), toon(hex(col(ch.color, 0.05)), { opacity: 0.74, rim: 0.55, vc: true, depthWrite: false }), root);
+  body.renderOrder = 2; ud.casters.push(body);
+  const ol = outline(body, OLC, 1.04); ol.renderOrder = 1;
   const eyeM = toon('#2a1838', { rim: 0 }), whiteM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+  const eyes = [];
+  // ----- ojos -----
   for (const s of [-1, 1]) {
-    const e = mesh(sph(14), eyeM, root, [s * 0.36, 0.86, 0.86], null, [0.17, 0.21, 0.1]);
-    mesh(sph(8), whiteM, e, [0.35, 0.4, 0.6], null, 0.38);
-    mesh(sph(8), whiteM, e, [-0.3, -0.35, 0.7], null, 0.17);
-    mesh(sph(10), toon('#ff7fae', { opacity: 0.75, rim: 0 }), root, [s * 0.6, 0.66, 0.74], [0, s * 0.6, 0], [0.16, 0.08, 0.05]);
+    const eg = new THREE.Group(); eg.position.set(s * 0.36, 0.86, 0.86); eg.rotation.y = s * 0.1; root.add(eg); eyes.push(eg);
+    if (lite) {
+      const e = mesh(sph(14), eyeM, eg, null, null, [0.17, 0.21, 0.1]);
+      mesh(sph(8), whiteM, eg, [0.06, 0.08, 0.07], null, 0.065); mesh(sph(8), whiteM, eg, [-0.05, -0.07, 0.08], null, 0.03);
+    } else {
+      mesh(sph(20), eyeM, eg, null, null, [0.2, 0.25, 0.11]);
+      const iris = mesh(sph(16), toon(IRIS[ch.id] || '#7a4cff', { rim: 0, emissive: IRIS[ch.id] || '#7a4cff', ei: 0.35 }), eg, [0, -0.045, 0.028], null, [0.15, 0.19, 0.095]);
+      mesh(sph(14), eyeM, eg, [0, 0.0, 0.06], null, [0.095, 0.125, 0.07]);
+      mesh(sph(10), whiteM, eg, [0.07, 0.1, 0.1], null, 0.07); mesh(sph(8), whiteM, eg, [-0.06, -0.085, 0.11], null, 0.034); mesh(sph(6), whiteM, eg, [0.09, -0.04, 0.105], null, 0.018);
+      for (let k = 0; k < 3; k++) mesh(box(), eyeM, eg, [s * (0.17 + k * 0.012), 0.11 + k * 0.045, 0.05], [0, 0, -s * (0.55 + k * 0.28)], [0.12, 0.022, 0.03]); // pestañas
+    }
+  }
+  // mejillas con degradado y pecas
+  for (const s of [-1, 1]) {
+    decal(root, blushMat(), 0.66, s * 0.66, lite ? 0.3 : 0.34, lite ? 0.19 : 0.21, 0, 1.01);
+    if (!lite) for (let k = 0; k < 3; k++) { const p = onBody(0.7 + (k % 2) * 0.04 - 0.02, s * (0.5 + k * 0.1), 1.0); mesh(sph(6), toon('#ff6a9a', { rim: 0 }), root, p, null, [0.022, 0.022, 0.012]); }
   }
   const mouth = mesh(tor(0.25, 12), eyeM, root, [0, 0.66, 0.93], [0.2, 0, Math.PI], [0.09, 0.07, 0.07]);
   mouth.geometry = geo('mouth', () => new THREE.TorusGeometry(1, 0.28, 6, 12, Math.PI));
-  root.userData.eyes = root.children.filter(m => m.material === eyeM && m !== mouth);
-  root.userData.mouth = mouth;
+  let tongue = null; if (!lite) { tongue = mesh(sph(8), toon('#ff7fa8', { rim: 0 }), root, [0, 0.6, 0.93], null, [0.06, 0.04, 0.03]); tongue.visible = false; }
+  ud.eyes = eyes; ud.mouth = mouth; ud.tongue = tongue;
   const happy = new THREE.Group(), xx = new THREE.Group(); root.add(happy); root.add(xx); happy.visible = xx.visible = false;
   const arcG = geo('arc', () => new THREE.TorusGeometry(1, 0.3, 6, 12, Math.PI));
   for (const s of [-1, 1]) {
     mesh(arcG, eyeM, happy, [s * 0.36, 0.84, 0.9], [0.2, 0, 0], [0.13, 0.13, 0.1]);
-    for (const r of [0.6, -0.6]) mesh(box(), eyeM, xx, [s * 0.36, 0.86, 0.92], [0.2, 0, r * (s > 0 ? 1 : -1) + (s > 0 ? 0 : 0)], [0.28, 0.06, 0.05]);
+    for (const r of [0.6, -0.6]) mesh(box(), eyeM, xx, [s * 0.36, 0.86, 0.92], [0.2, 0, r * (s > 0 ? 1 : -1)], [0.28, 0.06, 0.05]);
   }
-  const ohMouth = mesh(sph(10), eyeM, xx, [0, 0.62, 0.93], null, [0.1, 0.13, 0.05]);
-  root.userData.happy = happy; root.userData.xx = xx;
-  // ears
-  const earM = toon(hex(col(ch.color, -0.05)), { opacity: 0.85, rim: 0.5 });
-  const ears = new THREE.Group(); root.add(ears); root.userData.ears = ears;
+  mesh(sph(10), eyeM, xx, [0, 0.62, 0.93], null, [0.1, 0.13, 0.05]);
+  ud.happy = happy; ud.xx = xx;
+  // brillos de gelatina pintados en el cuerpo
+  decal(root, glossMat(), 1.18, -0.6, 0.26, 0.5, -0.5); decal(root, glossMat(), 0.52, -0.95, 0.12, 0.28, -0.3); decal(root, glossMat(), 1.38, -0.25, 0.1, 0.1, 0);
+  // ----- orejas -----
+  const earM = toon(hex(col(ch.color, -0.05)), { opacity: 0.88, rim: 0.5 }), innerM = toon(hex(col(ch.color, 0.55).lerp(new THREE.Color('#ff9ec4'), 0.35)), { rim: 0.2 });
+  const ears = new THREE.Group(); root.add(ears); ud.ears = ears;
   const E = ch.ears;
   for (const s of [-1, 1]) {
     if (E === 'bunny') { const g = new THREE.Group(); g.position.set(s * 0.42, 1.38, 0); g.rotation.z = -s * 0.35; ears.add(g);
-      const e = mesh(sph(12), earM, g, [0, 0.55, 0], null, [0.2, 0.62, 0.17]); outline(e, hex(col(ch.color, -0.55)), 1.08); }
-    if (E === 'bear') { const e = mesh(sph(12), earM, ears, [s * 0.62, 1.42, 0], null, [0.26, 0.24, 0.16]); outline(e, hex(col(ch.color, -0.55)), 1.08); }
-    if (E === 'cat') { const e = mesh(cone(4), earM, ears, [s * 0.5, 1.6, 0], [0, 0, -s * 0.3], [0.26, 0.42, 0.2]); outline(e, hex(col(ch.color, -0.55)), 1.1); }
-    if (E === 'horns') mesh(cone(8), toon('#fff3b0', { rim: 0.4 }), ears, [s * 0.45, 1.55, 0], [0, 0, -s * 0.45], [0.13, 0.38, 0.13]);
-    if (E === 'fins') mesh(cone(4), earM, ears, [s * 0.98, 0.85, -0.1], [0, 0, -s * 1.9], [0.3, 0.5, 0.06]);
+      const e = mesh(sph(16), earM, g, [0, 0.55, 0], null, [0.2, 0.62, 0.17]); outline(e, OLC, 1.08); mesh(sph(14), innerM, g, [0, 0.52, 0.07], null, [0.12, 0.46, 0.1]); ud.casters.push(e); }
+    if (E === 'bear') { const e = mesh(sph(16), earM, ears, [s * 0.62, 1.42, 0], null, [0.26, 0.24, 0.16]); outline(e, OLC, 1.08); mesh(sph(12), innerM, ears, [s * 0.62, 1.42, 0.07], null, [0.16, 0.15, 0.1]); }
+    if (E === 'cat') { const e = mesh(cone(4), earM, ears, [s * 0.5, 1.6, 0], [0, 0, -s * 0.3], [0.26, 0.42, 0.2]); outline(e, OLC, 1.1); mesh(cone(4), innerM, ears, [s * 0.5, 1.56, 0.08], [0, 0, -s * 0.3], [0.15, 0.3, 0.1]); }
+    if (E === 'horns') { const h = mesh(cone(10), toon('#fff3b0', { rim: 0.4 }), ears, [s * 0.45, 1.55, 0], [0, 0, -s * 0.45], [0.13, 0.38, 0.13]); outline(h, '#b89a40', 1.08);
+      mesh(tor(0.08, 12), toon('#e8d27a', { rim: 0.3 }), h, [0, -0.1, 0], [Math.PI / 2, 0, 0], [1.05, 1.05, 1.5]); mesh(tor(0.08, 12), toon('#e8d27a', { rim: 0.3 }), h, [0, 0.12, 0], [Math.PI / 2, 0, 0], [0.8, 0.8, 1.5]); }
+    if (E === 'fins') { const f = mesh(cone(4), earM, ears, [s * 0.98, 0.85, -0.1], [0, 0, -s * 1.9], [0.3, 0.5, 0.06]); outline(f, OLC, 1.1); for (let k = -1; k <= 1; k++) mesh(box(), innerM, f, [k * 0.18, 0.02, 0.6], [0, 0, k * 0.2], [0.04, 0.8, 0.5]); }
     if (E === 'antenna') { const g = new THREE.Group(); g.position.set(s * 0.32, 1.48, 0); g.rotation.z = -s * 0.3; ears.add(g);
-      mesh(cyl(6), toon('#7a6aa8', { rim: 0 }), g, [0, 0.25, 0], null, [0.03, 0.5, 0.03]);
-      mesh(sph(10), toon('#ffe066', { emissive: '#ffcc33', ei: 0.6 }), g, [0, 0.55, 0], null, 0.12); }
+      mesh(cyl(8), toon('#7a6aa8', { rim: 0 }), g, [0, 0.25, 0], null, [0.03, 0.5, 0.03]);
+      const bulb = mesh(sph(12), toon('#ffe066', { emissive: '#ffcc33', ei: 0.7 }), g, [0, 0.55, 0], null, 0.12); if (!lite) { const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffe066'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); gl.scale.setScalar(6); bulb.add(gl); } }
   }
-  // accessories
+  // ----- accesorios de siempre -----
   const A = ch.acc;
   if (A === 'flag') { mesh(cyl(6), toon('#8a6a4a', { rim: 0 }), root, [0, 1.85, 0], null, [0.03, 0.55, 0.03]);
-    mesh(geo('flag', () => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0.42, -0.12, 0, 0, -0.26, 0], 3)); g.computeVertexNormals(); return g; }),
-      toon('#ff6fa8', { side: THREE.DoubleSide, rim: 0 }), root, [0.02, 2.1, 0]); }
-  if (A === 'ring') { const r = mesh(tor(0.06, 32), toon('#ffe9a0', { emissive: '#ffd060', ei: 0.4 }), root, [0, 1.25, 0], [Math.PI / 2 - 0.25, 0, 0.2], [1.25, 1.25, 1.25]); root.userData.spin = r; }
-  if (A === 'beanie') { mesh(sph(16), toon('#ff8fb8'), root, [0, 1.42, 0], null, [0.78, 0.42, 0.78]);
-    mesh(sph(10), toon('#ffffff'), root, [0, 1.85, 0], null, 0.17); mesh(tor(0.3, 20), toon('#ffffff'), root, [0, 1.3, 0], [Math.PI / 2, 0, 0], [0.78, 0.78, 0.6]); }
-  if (A === 'lampcap') { mesh(cyl(16), toon('#c9a0ff'), root, [0, 1.62, 0], null, [0.45, 0.22, 0.45]); mesh(cyl(16), toon('#c9a0ff'), root, [0, 0.08, 0], null, [0.92, 0.16, 0.92]); }
-  if (A === 'key') { const k = new THREE.Group(); k.position.set(0, 0.95, -1.0); root.add(k); root.userData.spinKey = k;
-    mesh(cyl(8), toon('#d4a73f'), k, [0, 0, -0.15], [Math.PI / 2, 0, 0], [0.05, 0.3, 0.05]);
-    for (const s of [-1, 1]) mesh(tor(0.3, 14), toon('#e8bc52'), k, [s * 0.2, 0, -0.32], [0, Math.PI / 2, 0], 0.17); }
-  if (A === 'shades') { for (const s of [-1, 1]) mesh(cyl(16), toon('#2a1838', { rim: 0.8 }), root, [s * 0.36, 0.9, 0.92], [Math.PI / 2, 0, 0], [0.24, 0.05, 0.2]);
-    mesh(box(), toon('#2a1838'), root, [0, 0.95, 0.95], null, [0.3, 0.04, 0.04]); }
-  root.userData.body = body; root.userData.inner = inner;
+    const fl = mesh(geo('flag', () => { const g = new THREE.PlaneGeometry(0.46, 0.3, 8, 4); g.translate(0.23, 0, 0); return g; }), toon('#ff6fa8', { side: THREE.DoubleSide, rim: 0 }), root, [0.02, 2.0, 0]);
+    const base = fl.geometry.attributes.position.array.slice(); ud.fx.push(t => { const a = fl.geometry.attributes.position; for (let i = 0; i < a.count; i++) { const x = base[i * 3]; a.array[i * 3 + 2] = Math.sin(x * 14 - t * 8) * 0.05 * x * 2.2; } a.needsUpdate = true; }); }
+  if (A === 'ring') { const r = mesh(tor(0.06, 48), toon('#ffe9a0', { emissive: '#ffd060', ei: 0.5, rim: 0.7 }), root, [0, 1.25, 0], [Math.PI / 2 - 0.25, 0, 0.2], [1.25, 1.25, 1.25]); ud.spin = r; }
+  if (A === 'beanie') { mesh(sph(20), toon('#ff8fb8'), root, [0, 1.42, 0], null, [0.78, 0.42, 0.78]);
+    mesh(sph(14), toon('#ffffff'), root, [0, 1.85, 0], null, 0.17); mesh(tor(0.3, 24), toon('#ffffff'), root, [0, 1.3, 0], [Math.PI / 2, 0, 0], [0.78, 0.78, 0.6]); }
+  if (A === 'lampcap') { mesh(cyl(24), toon('#c9a0ff', { rim: 0.6 }), root, [0, 1.62, 0], null, [0.45, 0.22, 0.45]); mesh(cyl(24), toon('#c9a0ff', { rim: 0.6 }), root, [0, 0.08, 0], null, [0.92, 0.16, 0.92]); mesh(tor(0.1, 20), toon('#ffd36b', { rim: 0.6 }), root, [0, 1.52, 0], [Math.PI / 2, 0, 0], [0.45, 0.45, 0.6]); }
+  if (A === 'key') { const k = new THREE.Group(); k.position.set(0, 0.95, -1.0); root.add(k); ud.spinKey = k;
+    mesh(cyl(10), toon('#d4a73f', { rim: 0.6 }), k, [0, 0, -0.15], [Math.PI / 2, 0, 0], [0.05, 0.3, 0.05]);
+    for (const s of [-1, 1]) mesh(tor(0.3, 18), toon('#e8bc52', { rim: 0.6 }), k, [s * 0.2, 0, -0.32], [0, Math.PI / 2, 0], 0.17); }
+  if (A === 'shades') { const sm = toon('#2a1838', { rim: 0.9 });
+    for (const s of [-1, 1]) { mesh(cyl(20), sm, root, [s * 0.36, 0.9, 1.0], [Math.PI / 2, 0, 0], [0.26, 0.06, 0.22]); mesh(tor(0.1, 20), toon('#ffd36b', { rim: 0.6 }), root, [s * 0.36, 0.9, 1.03], null, [0.26, 0.22, 0.2]); mesh(sph(8), whiteM, root, [s * 0.36 + 0.07, 0.97, 1.07], null, [0.05, 0.03, 0.01]); }
+    mesh(box(), toon('#ffd36b'), root, [0, 0.93, 1.02], null, [0.3, 0.05, 0.05]); }
+  ud.body = body; ud.inner = inner;
+  if (!lite) {
+    const det = new THREE.Group(); det.name = 'detalle'; root.add(det); ud.det = det; // todo lo decorativo vive aquí: se puede apagar si el móvil va justo
+    // brazos y pies de gelatina
+    const limb = toon(hex(col(ch.color, -0.02)), { rim: 0.5 });
+    for (const s of [-1, 1]) {
+      const pv = new THREE.Group(); pv.position.set(s * 0.93, 0.78, 0.1); root.add(pv); ud.arms.push(pv); pv.userData.s = s;
+      const a = mesh(sph(14), limb, pv, [s * 0.1, -0.08, 0], [0, 0, s * 0.45], [0.17, 0.28, 0.17]); outline(a, OLC, 1.08); ud.casters.push(a);
+      const hnd = mesh(sph(10), limb, pv, [s * 0.2, -0.3, 0.02], null, 0.15); outline(hnd, OLC, 1.1);
+      const ft = mesh(sph(14), limb, root, [s * 0.4, 0.09, 0.5], null, [0.3, 0.16, 0.36]); outline(ft, OLC, 1.08); ud.casters.push(ft);
+    }
+    // purpurina de mochi: confeti pastel pegado al cuerpo
+    for (let i = 0; i < 9; i++) { const y = 0.25 + ((i * 0.6180339) % 1) * 1.1, ph = (i * 2.399) % 6.283, p = onBody(y, ph, 1.005); if (Math.cos(ph) < -0.1) continue;
+      mesh(sph(6), toon(['#ffffff', '#ffe27a', '#bff0ff', '#ffc2e0'][i % 4], { emissive: '#ffffff', ei: 0.35, rim: 0 }), det, p, null, [0.04, 0.04, 0.02]); }
+    if (ch.id) { try { crazyAccessories(ch, det, ud, { toon, mesh, outline, sph, cyl, cone, box, tor, geo, col, hex, glowTex, THREE, onBody, bodyR }); } catch (e) { console.warn('accesorios', e); } }
+  }
   return root;
 }
 
@@ -174,6 +239,7 @@ function buildInner(kind, g, ch) {
 export function animCharacter(c, t, k = 1, expr = '') {
   const u = c.userData;
   if (u.happy) { const sad = expr === 'sad'; u.happy.visible = expr === 'happy'; u.xx.visible = expr === 'squash'; for (const e of u.eyes) e.visible = !expr || sad; u.mouth.scale.set(expr === 'happy' ? 0.13 : 0.09, expr === 'happy' ? 0.11 : 0.07, 0.07); u.mouth.visible = expr !== 'squash';
+    if (u.tongue) u.tongue.visible = expr === 'happy';
     // cara triste: boca del revés y un poco más abajo
     if (u.mouthRZ == null) { u.mouthRZ = u.mouth.rotation.z; u.mouthY = u.mouth.position.y; }
     u.mouth.rotation.z = sad ? 0 : u.mouthRZ; u.mouth.position.y = sad ? u.mouthY - 0.07 : u.mouthY; }
@@ -189,8 +255,10 @@ export function animCharacter(c, t, k = 1, expr = '') {
   if (u.spin) u.spin.rotation.z = t * 0.6;
   if (u.spinKey) u.spinKey.rotation.z = t * 3;
   const blink = (t * 0.9 + ((u.seed || 0) % 7) * 0.3) % 3.4 < 0.12;
-  for (const e of u.eyes) e.scale.y = blink ? 0.03 : expr === 'sad' ? 0.13 : 0.21;
+  for (const e of u.eyes) e.scale.y = blink ? 0.12 : expr === 'sad' ? 0.62 : 1;
   u.ears.rotation.x = Math.sin(t * 6) * 0.08 * k;
+  if (u.arms) for (const a of u.arms) a.rotation.z = a.userData.s * (-0.12 - 0.12 * Math.sin(t * 5 + a.userData.s + (u.seed || 0)) - (expr === 'happy' ? 0.7 + 0.25 * Math.sin(t * 14 + a.userData.s) : 0));
+  if (u.fx) for (const f of u.fx) f(t, expr);
 }
 
 const glowCache = {};

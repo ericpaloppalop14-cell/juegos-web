@@ -5,6 +5,8 @@
 //  Todo sin niebla, sin escribir profundidad y detrás del juego: no toca la jugabilidad.
 // ======================================================================
 import * as THREE from 'three';
+import { CHARS } from './data.js';
+import { makeCharacter, animCharacter, glowTex } from './gfx.js?v=o39';
 const TAU = Math.PI * 2;
 const C = (h) => new THREE.Color(h);
 const css = (c, a = 1) => `rgba(${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0},${a})`;
@@ -58,6 +60,29 @@ function cloudTex(dark) {
       for (const ox of [0, -W, W]) { const g = x.createRadialGradient(px + ox, py, 0, px + ox, py, r); g.addColorStop(0, dark ? 'rgba(200,170,255,.35)' : 'rgba(255,255,255,.95)'); g.addColorStop(.7, dark ? 'rgba(180,150,255,.18)' : 'rgba(255,250,255,.6)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.arc(px + ox, py, r, 0, TAU); x.fill(); } } }
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; return t;
 }
+
+// ---- cielo vivo: mochis en globo / paracaídas / medusas flotando a lo lejos (decorado, no toca la jugabilidad) ----
+function cieloVivo(dark, lowRes) {
+  const g = new THREE.Group(); g.name = 'cieloVivo'; const items = [];
+  const n = lowRes ? 7 : 12, pal = ['#ff7aa8', '#7ee3c4', '#8fd0ff', '#ffd25a', '#b9a2f7', '#ff9d6a'];
+  for (let i = 0; i < n; i++) {
+    const ch = CHARS[i % CHARS.length], c = makeCharacter(ch, { lite: true }), it = new THREE.Group(), col = new THREE.Color(pal[i % pal.length]), a = i / n * TAU + R() * .4, rad = 62 + R() * 55, y = 14 + R() * 34, kind = i % 3;
+    c.scale.setScalar(2.4); c.position.y = -3.4; it.add(c);
+    const matM = new THREE.MeshToonMaterial({ color: col, fog: false });
+    if (kind < 2) { // globo
+      const b = new THREE.Mesh(new THREE.SphereGeometry(3.6, 14, 10), matM); b.position.y = 5.2; b.scale.y = 1.12; it.add(b);
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 5, 3), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false })); st.position.y = 1.4; it.add(st);
+      const hl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, opacity: .6, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); hl.scale.setScalar(3); hl.position.set(-1.2, 6.6, 2.4); it.add(hl);
+    } else { // paracaídas
+      const b = new THREE.Mesh(new THREE.SphereGeometry(4.2, 14, 8, 0, TAU, 0, Math.PI * .5), matM); b.material.side = THREE.DoubleSide; b.position.y = 5; it.add(b);
+      for (const sx of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, 5.2, 3), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false })); l.position.set(sx * 2, 2.4, 0); l.rotation.z = sx * -.38; it.add(l); }
+    }
+    it.userData = { a, rad, y, sp: (R() < .5 ? -1 : 1) * (.012 + R() * .012), ph: R() * TAU, c, i }; g.add(it); items.push(it);
+  }
+  g.userData.update = (t, cam) => { g.position.set(cam.position.x * .9, 0, cam.position.z * .9);
+    for (const it of items) { const u = it.userData, a = u.a + t * u.sp; it.position.set(Math.cos(a) * u.rad, u.y + Math.sin(t * .6 + u.ph) * 1.6, Math.sin(a) * u.rad); it.rotation.z = Math.sin(t * .8 + u.ph) * .06; it.lookAt(g.position.x * 0, it.position.y, 0); try { animCharacter(u.c, t + u.i, .6, 'happy'); } catch (e) {} } };
+  return g;
+}
 const STY = { espacio: 'space', desierto: 'dunes', nieve: 'mountains', mar: 'coral', selva: 'jungle', dulces: 'candy', suenos: 'dream', volcan: 'volcan' };
 // sky: la cúpula; top/mid/bot sus colores; mk: mundo (opcional)
 export function horizonte(scene, sky, top, mid, bot, mk) {
@@ -80,11 +105,13 @@ export function horizonte(scene, sky, top, mid, bot, mk) {
   const cm = new THREE.MeshBasicMaterial({ map: cloudTex(dark), transparent: true, depthWrite: false, fog: false, side: THREE.BackSide, opacity: dark ? .7 : .85 });
   cm.map.repeat.x = 2; const cl = new THREE.Mesh(new THREE.CylinderGeometry(470, 470, 150, 72, 1, true), cm); cl.position.y = 95; cl.renderOrder = -0.95; cl.frustumCulled = false;
   const cg = new THREE.Group(); cg.add(cl); g.add(cg);
+  const cv = cieloVivo(dark, lo()); g.add(cv);
   let last = performance.now();
   const prev = sky.onBeforeRender;
   sky.onBeforeRender = function (r, s, cam) { prev && prev.apply(this, arguments);
     const now = performance.now(), dt = Math.min(.1, (now - last) / 1000); last = now;
     for (const l of L) l.lay.position.set(cam.position.x * l.k, 0, cam.position.z * l.k);
+    cv.userData.update(now / 1000, cam);
     cg.position.set(cam.position.x * .97, 0, cam.position.z * .97); cm.map.offset.x += dt * .004; };
   return g;
 }
