@@ -2,7 +2,7 @@
 //  SUMO EN LA DUNA (o32) — suelo del ring con dos mochis luchando (textura canvas)
 //  y grada llena de público animado: saltos, brazos, ola, banderas y confeti.
 // ======================================================================
-import { THREE, toon, outline } from '../core3d.js?v=o44';
+import { THREE, toon, outline } from '../core3d.js?v=o45';
 
 function floorTex(base) {
   const S = 1024, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), C = S / 2;

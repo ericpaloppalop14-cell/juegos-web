@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js?v=o44';
+import { toon, mesh, outline, makeItemBox, starShape } from './gfx.js?v=o45';
 import { wobbleMat } from './edificios.js';
 
 const V3 = THREE.Vector3;

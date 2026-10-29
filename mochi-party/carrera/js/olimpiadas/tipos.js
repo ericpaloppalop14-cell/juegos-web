@@ -2,9 +2,9 @@
 //  MOCHI PARTY · OLIMPIADAS — los 8 tipos de prueba, configurables por cada olimpiada
 //  salto · esquiva · machaca · vuelo · punteria · recoge · ritmo · superv · empuje
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=o44';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o44';
-import { hieloFx } from './hielo-fx.js?v=o44';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=o45';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o45';
+import { hieloFx } from './hielo-fx.js?v=o45';
 
 const LW = 2.3;
 const lx = (l, n = 6) => (l - (n - 1) / 2) * LW;
@@ -378,7 +378,7 @@ export function superv(cfg) {
   return base(cfg, { mode: 'puntos', maxT: TT + 6,
     init(E) {
       setButtons(MODE === 'barrido' ? 'm' : null); if (MODE === 'barrido') $('bM').textContent = '⤴';
-      if (MODE === 'baldosas') { const M = MUNDOS[cfg.mundo]; this.W = buildWorld(E, cfg.mundo, { arena: { r: R + 3 } }); this.tiles = []; const s = 2.2;
+      if (MODE === 'baldosas') { const M = MUNDOS[cfg.mundo]; this.W = buildWorld(E, cfg.mundo, { arena: { r: R + 3 }, noAmb: cfg.id === 'hielo' }); this.tiles = []; const s = 2.2;
         this.W.ground.position.y = -6; this.W.spots.visible = false; this.W.deco.forEach(d => d.position.y = -2.5); this.W.rich.sets.forEach(q => q.im.position.y = -2.5); if (cfg.under) mesh(new THREE.CircleGeometry(R + 60, 40), GL(cfg.under, .55), E.scene, [0, -2.5, 0], [-Math.PI / 2, 0, 0]);
         for (let i = -6; i <= 6; i++) for (let j = -6; j <= 6; j++) { const x = i * s, z = j * s; if (Math.hypot(x, z) > R) continue; const m = mesh(BOX(), T((i + j) % 2 ? M.alt : (cfg.tile || M.ground), { rim: .3 }), E.scene, [x, -.3, z], null, [s - .12, .6, s - .12]); this.tiles.push({ x, z, m, st: 0, sh: 0, y: -.3 }); } this.ts = s; }
       else this.A = arena(E, cfg, R, cfg.floor);

@@ -2,9 +2,9 @@
 //  LIANAS DE LA SELVA — escenario inmersivo: selva en capas, río, cascada, flores,
 //  mariposas, pájaros, rayos de luz y hojas que caen. Todo instanciado (barato en móvil).
 // ======================================================================
-import { THREE, toon, mesh, rnd, pick } from '../core3d.js?v=o44';
-import { CYL, SPH, SPHL } from './mundos.js?v=o44';
-import { instSet } from './decor.js?v=o44';
+import { THREE, toon, mesh, rnd, pick } from '../core3d.js?v=o45';
+import { CYL, SPH, SPHL } from './mundos.js?v=o45';
+import { instSet } from './decor.js?v=o45';
 
 function stripeTex(c1, c2, n = 8) { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const x = cv.getContext('2d'); x.fillStyle = c1; x.fillRect(0, 0, 64, 256);
   for (let i = 0; i < n * 3; i++) { x.fillStyle = c2; x.globalAlpha = rnd(.25, .7); x.fillRect(rnd(0, 60), rnd(0, 256), rnd(2, 6), rnd(10, 40)); } const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; }

@@ -3,7 +3,7 @@
 // profundidad real (parallax por distancia, niebla), PMREM para reflejos, calidad automática.
 // Solo usa las bandas de arriba/abajo de la pantalla para no tapar botones ni personajes.
 import * as THREE from 'three';
-import { buildWorld } from './mundo3d.js?v=o44';
+import { buildWorld } from './mundo3d.js?v=o45';
 const CFG = window.__DESFILE3D || {};
 const isOn = window.__desfileOn || (() => { const m = document.getElementById('sMenu'), c = document.getElementById('sChars'); return !m || m.classList.contains('on') || (c && c.classList.contains('on')); });
 const cv = document.createElement('canvas'); cv.id = 'desfile'; cv.setAttribute('aria-hidden', 'true');
@@ -166,7 +166,7 @@ function makeMedal() { const root = new THREE.Group(), g = new THREE.Group(); ro
 // ---------- GESTIÓN DEL DESFILE ----------
 const R = (a, b) => a + Math.random() * (b - a);
 let W = 1, H = 1, ents = [], quality = 1, PR = 1, lite = new URLSearchParams(location.search).get('detalle') === 'bajo';
-function size() { W = innerWidth; H = innerHeight; PR = Math.min(devicePixelRatio || 1, 1.75) * quality; rd.setPixelRatio(PR); rd.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix(); }
+function size() { W = innerWidth; H = innerHeight; PR = Math.min(devicePixelRatio || 1, 1.25) * quality; /* o45: tope 1.25 (capa decorativa; antes 1.75) */ rd.setPixelRatio(PR); rd.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix(); }
 addEventListener('resize', size);
 const TAN = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
 // pantalla (sx,sy en 0..1) + profundidad d -> mundo
@@ -191,11 +191,13 @@ function populate() { WORLD.setLite(lite); WORLD.rebuild(); for (const e of ents
 size(); populate(); addEventListener('orientationchange', () => setTimeout(() => { size(); populate(); }, 300));
 let lastLand = W > H; addEventListener('resize', () => { if ((W > H) !== lastLand) { lastLand = W > H; populate(); } });
 const PXs = { x: 0, y: 0, tx: 0, ty: 0 }; addEventListener('pointermove', e => { PXs.tx = (e.clientX / innerWidth - .5) * 2; PXs.ty = (e.clientY / innerHeight - .5) * -2; }, { passive: true }); addEventListener('deviceorientation', e => { if (e.gamma == null) return; PXs.tx = Math.max(-1, Math.min(1, e.gamma / 30)); PXs.ty = Math.max(-1, Math.min(1, (e.beta - 45) / 30)) * -1; }, { passive: true });
-const v = new THREE.Vector3(); let last = performance.now(), acc = 0, frames = 0;
-function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (now - last) / 1000); last = now;
-  const on = isOn() && !document.hidden; cv.style.display = on ? '' : 'none'; if (!on) return;
+const v = new THREE.Vector3(); let last = performance.now(), acc = 0, frames = 0, cvOn = true, fr = 0;
+function frame(now) { requestAnimationFrame(frame);
+  const on = isOn() && !document.hidden; if (on !== cvOn) { cvOn = on; cv.style.display = on ? '' : 'none'; } if (!on) { last = now; return; }
+  if (now - last < 28) return; // o45: capa decorativa de fondo a 30 Hz estables (deja la mitad del presupuesto al escenario 3D y al resto de la pantalla)
+  const dt = Math.min(.07, (now - last) / 1000); last = now;
   // calidad automática
-  acc += dt; frames++; if (acc > 2) { const fps = frames / acc; acc = 0; frames = 0; const q0 = quality; if (fps < 40 && quality > .55) quality -= .15; else if (fps > 57 && quality < 1) quality += .05; if (q0 !== quality) size(); if (quality <= .7 && fps < 32 && !lite) { lite = true; WORLD.setLite(true); ents.forEach((e, i) => { if (e.idx > 0) e.o.visible = false; }); } }
+  acc += dt; frames++; if (acc > 2) { const fps = frames / acc; acc = 0; frames = 0; const q0 = quality; if (fps < 24 && quality > .55) quality -= .15; else if (fps > 27.5 && quality < 1) quality += .05; if (q0 !== quality) size(); if (quality <= .7 && fps < 20 && !lite) { lite = true; WORLD.setLite(true); ents.forEach((e, i) => { if (e.idx > 0) e.o.visible = false; }); } }
   const t = now / 1000;
   PXs.x += (PXs.tx - PXs.x) * .04; PXs.y += (PXs.ty - PXs.y) * .04; cam.position.set(Math.sin(t * .17) * .5 + PXs.x * .8, Math.cos(t * .13) * .22 + PXs.y * .4, 0); cam.lookAt(0, 0, -20); WORLD.update(t, dt);
   for (let i = 0; i < ents.length; i++) { const e = ents[i], o = e.o;
@@ -209,6 +211,6 @@ function frame(now) { requestAnimationFrame(frame); const dt = Math.min(.05, (no
     else if (e.k === 'mochi') animMochi(o, t, e.ph, dt);
     else { const g = o.userData.g; g.rotation.y = t * 1.4 + e.ph; g.position.y = Math.sin(t * 2 + e.ph) * .12; o.rotation.z = Math.sin(t * 1.3 + e.ph) * .15; }
   }
-  rd.render(scene, cam); }
+  fr++; rd.render(scene, cam); }
 requestAnimationFrame(frame);
-window.__desfile3d = { ents, scene, get quality() { return quality; } };
+window.__desfile3d = { ents, scene, get info() { return rd.info; }, get quality() { return quality; } };

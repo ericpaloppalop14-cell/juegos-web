@@ -3,11 +3,11 @@
 //  bumerán · topos de lava · cuenta peces · ¡que no te vea! · bola caliente · salto de esquí ·
 //  moldes de lava · ¿cuál es distinto? · lianas · para el reloj
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=o44';
-import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o44';
-import { mergedGeo } from './decor.js?v=o44';
-import { jungle } from './selva-lianas.js?v=o44';
-import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o44';
+import { THREE, camera, toon, outline, mesh, glowSprite, rnd, clamp, lerp, pick, Audio } from '../core3d.js?v=o45';
+import { buildWorld, prop, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o45';
+import { mergedGeo } from './decor.js?v=o45';
+import { jungle } from './selva-lianas.js?v=o45';
+import { T, GL, v3, $, sk, info, setButtons, racers, squash, say, scoreFinish, base } from './tipos.js?v=o45';
 
 const VCM = () => toon('#ffffff', { vc: true, rim: .35 });
 // objeto del decorado fundido (apoyado en el suelo) y escalado a una altura h
@@ -445,6 +445,8 @@ export function moldes(cfg) {
 //  ¿CUÁL ES DISTINTO? — en la bandeja hay muchas golosinas iguales y UNA diferente.
 //  Tócala antes que nadie. Si fallas, te quedas un momento mareado. 8 rondas.
 // =====================================================================
+const star3 = (r, col) => { const sh = new THREE.Shape(); for (let i = 0; i < 10; i++) { const q = i % 2 ? r * .45 : r, a = i / 10 * Math.PI * 2 + Math.PI / 2; sh[i ? 'lineTo' : 'moveTo'](Math.cos(a) * q, Math.sin(a) * q); } sh.closePath();
+  const g = new THREE.ExtrudeGeometry(sh, { depth: r * .35, bevelEnabled: true, bevelThickness: r * .08, bevelSize: r * .08, bevelSegments: 2 }); g.rotateX(-Math.PI / 2); const m = new THREE.Mesh(g, toon(col, { emissive: '#ffd24a', ei: .35, rim: .5 })); outline(m, '#c07a10', 1.06); return m; };
 const KINDS = ['caramelo', 'piruleta', 'cupcake', 'donut', 'osito', 'bastón', 'tarta'];
 export function distinto(cfg) {
   const NR = 8, CS = 1.55, PAIRS = cfg.pairs || [['caramelo', 'piruleta'], ['cupcake', 'donut'], ['osito', 'caramelo'], ['piruleta', 'bastón'], ['donut', 'tarta'], ['caramelo', 'cupcake'], ['osito', 'piruleta'], ['donut', 'cupcake']];
@@ -458,12 +460,15 @@ export function distinto(cfg) {
       this.items = []; this.round = 0; this.start(E);
     },
     /* la distinta es la MISMA golosina con un cambio sutil (matiz de color, tamaño, giro o inclinación) que se hace más fino ronda a ronda */
-    start(E) { for (const it of this.items) E.scene.remove(it.m); this.items = []; const R = this.round, k = R / (NR - 1), a = KINDS[(R * 3 + 1) % KINDS.length], n = R < 2 ? 3 : 4, odd = Math.floor(rnd(0, n * n));
-      const vars = ['tono', 'giro', 'tamaño', 'inclina']; const v = this.kind = R < 4 ? vars[R] : vars[Math.floor(rnd(0, 4))]; const ry0 = rnd(-.4, .4), sc0 = a === 'caramelo' ? .6 : a === 'bastón' ? 1.2 : 1.05, cs = n === 3 ? CS : CS * .95;
-      const tint = new THREE.Color().setHSL(rnd(0, 1), 1, .5);
-      for (let i = 0; i < n * n; i++) { const x = (i % n - (n - 1) / 2) * cs, z = (Math.floor(i / n) - (n - 1) / 2) * cs, o = i === odd; const m = pm(a, E.scene, [x, .4, z], sc0 * (n === 4 ? 1.2 : 1.35), ry0);
-        if (o) { if (v === 'tono') m.material.color.lerp(tint, lerp(.42, .16, k)); else if (v === 'giro') m.rotation.y += lerp(1, .4, k) * (Math.random() < .5 ? -1 : 1); else if (v === 'tamaño') m.scale.multiplyScalar(lerp(1.22, 1.09, k)); else m.rotation.x = lerp(.5, .2, k) * (Math.random() < .5 ? -1 : 1); }
-        this.items.push({ m, odd: o, x, z, ph: rnd(0, 6) }); }
+    start(E) { for (const it of this.items) { E.scene.remove(it.m); if (it.mk) E.scene.remove(it.mk); } this.items = []; const R = this.round, k = R / (NR - 1), a = KINDS[(R * 3 + 1) % KINDS.length], n = R < 2 ? 3 : 4, odd = Math.floor(rnd(0, n * n));
+      /* o45: la diferencia tiene que verse DESDE ARRIBA (cámara cenital): tono, tamaño o un detalle (estrella) en la cara superior */
+      const vars = ['tono', 'detalle', 'tamaño', 'combo']; const v = this.kind = R < 4 ? vars[R] : vars[Math.floor(rnd(0, 4))]; const ry0 = rnd(-.4, .4), sc0 = a === 'caramelo' ? .6 : a === 'bastón' ? 1.2 : 1.05, cs = n === 3 ? CS : CS * .95;
+      let tint = new THREE.Color().setHSL(rnd(0, 1), .75, .6);
+      { const cA = mergedGeo(a).attributes.color; if (cA) { const avg = new THREE.Color(0, 0, 0); for (let q = 0; q < cA.count; q++) { avg.r += cA.getX(q); avg.g += cA.getY(q); avg.b += cA.getZ(q); } avg.multiplyScalar(1 / cA.count); const hsl = {}; avg.getHSL(hsl); tint = new THREE.Color().setHSL((hsl.h + (Math.random() < .5 ? .36 : .64)) % 1, .8, .58); } } // tono claramente distinto del propio de la golosina
+      for (let i = 0; i < n * n; i++) { const x = (i % n - (n - 1) / 2) * cs, z = (Math.floor(i / n) - (n - 1) / 2) * cs, o = i === odd; const m = pm(a, E.scene, [x, .4, z], sc0 * (n === 4 ? 1.2 : 1.35), ry0); let mk = null;
+        if (o) { m.material = m.material.clone(); /* el material es compartido: sin clonar cambiaban TODAS */ if (v === 'tono') m.material.color.lerp(tint, lerp(.62, .4, k)); else if (v === 'combo') { m.material.color.lerp(tint, lerp(.4, .26, k)); m.scale.multiplyScalar(lerp(1.16, 1.1, k)); } else if (v === 'tamaño') m.scale.multiplyScalar(lerp(1.22, 1.14, k));
+          if (v === 'detalle' || (v === 'tamaño' && k > .5)) { const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()); const rr = Math.max(.16, Math.min(sz.x, sz.z) * lerp(.3, .24, k)); mk = star3(rr, v === 'detalle' ? '#fff3a0' : '#ffffff'); mk.userData.top = bb.max.y - m.position.y + .06; mk.position.set(x, m.position.y + mk.userData.top, z); E.scene.add(mk); } }
+        this.items.push({ m, mk, odd: o, x, z, ph: rnd(0, 6) }); }
       this.rt = 0; this.ph = 'go'; this.win = null; for (const r of E.racers) { r.ans = false; r.react = null; r.dz = 0; } },
     scr(p) { const v = p.clone().project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; },
     hint() { const it = this.items.find(i => i.odd); return it ? this.scr(it.m.position.clone().add(v3(0, .5, 0))) : null; },
@@ -481,7 +486,7 @@ export function distinto(cfg) {
       board(E, r => r.score + ' pts'); info(`🍬 Ronda ${Math.min(NR, this.round + 1)}/${NR}<br>${E.me.score} pts`);
     },
     render(E, dt) { const t = E.t; this.W.tick(dt, camera);
-      for (const it of this.items) { const s = it.odd && this.ph === 'rev' ? 1 + Math.abs(Math.sin(t * 8)) * .35 : 1; it.m.position.y = .4 + (it.odd && this.ph === 'rev' ? .3 : Math.sin(t * 2 + it.ph) * .04); it.m.scale.setScalar(it.m.userData.s0 || (it.m.userData.s0 = it.m.scale.x)); it.m.scale.multiplyScalar(s); it.m.rotation.z *= .9; }
+      for (const it of this.items) { const s = it.odd && this.ph === 'rev' ? 1 + Math.abs(Math.sin(t * 8)) * .35 : 1; it.m.position.y = .4 + (it.odd && this.ph === 'rev' ? .3 : Math.sin(t * 2 + it.ph) * .04); it.m.scale.setScalar(it.m.userData.s0 || (it.m.userData.s0 = it.m.scale.x)); it.m.scale.multiplyScalar(s); it.m.rotation.z *= .9; if (it.mk) { it.mk.position.set(it.x, it.m.position.y + it.mk.userData.top * s, it.z); it.mk.rotation.y = t * 1.2; it.mk.scale.setScalar(s); } }
       if (this.ph === 'rev') for (const it of this.items) if (it.odd && it.m.material.emissive) { it.m.material.emissive.setHSL(.14, 1, .25 + Math.abs(Math.sin(t * 8)) * .2); }
       for (const r of E.racers) { r.obj.position.set(Math.sin(r.a) * 6.2, hopY(r, dt), Math.cos(r.a) * 6.2 + .3); r.obj.rotation.y = r.a + Math.PI; r.obj.userData.pivot.rotation.z = r.dz > 0 ? Math.sin(t * 18) * .25 : 0; squash(r, dt); }
       const pr = port(); camTo(E, dt, v3(0, pr ? 13 : 9, pr ? 6.5 : 6), v3(0, 0, pr ? -.4 : -.8), pr ? 60 : 52, 3); },

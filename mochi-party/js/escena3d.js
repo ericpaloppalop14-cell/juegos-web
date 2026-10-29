@@ -8,9 +8,9 @@
 //   podio → podio 1-2-3 con caída de los mochis, el ganador salta de alegría y los demás aplauden
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS } from '../carrera/js/data.js?v=o44';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o44';
-import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o44';
+import { CHARS } from '../carrera/js/data.js?v=o45';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o45';
+import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o45';
 
 const CH = id => CHARS.find(c => c.id === id) || CHARS[0];
 const rnd = (a, b) => a + Math.random() * (b - a), lerp = (a, b, t) => a + (b - a) * t;
@@ -20,8 +20,8 @@ try {
   renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'high-performance' });
 } catch (e) { document.body.classList.add('no3d'); throw e; }
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; // sombras de verdad de los mochis sobre el escenario (o39)
-let DPR = Math.min(devicePixelRatio || 1, innerWidth * innerHeight > 600000 ? 1.5 : 2); renderer.setPixelRatio(DPR);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; // sombras de verdad de los mochis sobre el escenario (o39)
+let DPR = Math.min(devicePixelRatio || 1, 1.5); // o45: tope 1.5 (antes 2 en móvil) renderer.setPixelRatio(DPR);
 const size = () => renderer.setSize(innerWidth, innerHeight); addEventListener('resize', size); size();
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(36, 1, .1, 200);
 if (window.__fxNoche) window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: 0, env: .35 }); // noche 25-10: reflejos suaves
@@ -44,6 +44,11 @@ function numTex(n, c) { const cv = document.createElement('canvas'); cv.width = 
 // escenario redondo tipo plató de concurso: tarta de dos pisos con bombillas, estrella dorada y aros pintados
 const PASTEL = ['#ff9cc8', '#7ee3c4', '#ffe27a', '#b9a2f7', '#8fd0ff', '#ffb36b'], BULB_M = PASTEL.map(c => new THREE.MeshBasicMaterial({ color: c })), BULB_ON = new THREE.MeshBasicMaterial({ color: '#fff3b0' }), BULB_PK = new THREE.MeshBasicMaterial({ color: '#ff7fbf' });
 const STAR5 = (() => { const s = new THREE.Shape(); for (let i = 0; i < 10; i++) { const r = i % 2 ? .42 : 1, a = i / 10 * Math.PI * 2 + Math.PI / 2; s[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } return new THREE.ShapeGeometry(s); })();
+// o45: bombillas instanciadas (1 llamada de dibujo en vez de decenas); `material` en cada proxy cambia el color de su instancia
+const BULB_GEO = new THREE.SphereGeometry(1, 8, 6);
+function bulbSet(parent, items, init) { const im = new THREE.InstancedMesh(BULB_GEO, new THREE.MeshBasicMaterial({ color: '#ffffff' }), items.length), o = new THREE.Object3D(); im.frustumCulled = false;
+  const proxies = items.map((it, i) => { o.position.set(it[0], it[1], it[2]); o.scale.setScalar(it[3]); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, init(i).color); let cur = init(i); return { get material() { return cur; }, set material(m) { if (m !== cur) { cur = m; im.setColorAt(i, m.color); im.instanceColor.needsUpdate = true; } } }; });
+  parent.add(im); return proxies; }
 function stage(r = 3.2) {
   const g = new THREE.Group();
   const top = mesh(new THREE.CylinderGeometry(r, r, .35, 72), toon('#fff4fa', { rim: .3 }), g, [0, -.18, 0]); outline(top, '#d58ab8', 1.02); top.receiveShadow = true;
@@ -52,9 +57,9 @@ function stage(r = 3.2) {
   mesh(new THREE.CylinderGeometry(r + .25, r + .45, .55, 72), toon('#ff8fc4', { rim: .4 }), g, [0, -.6, 0]);
   mesh(new THREE.CylinderGeometry(r + .8, r + 1.0, .4, 72), toon('#b9a2f7', { rim: .4 }), g, [0, -1.05, 0]);
   mesh(new THREE.TorusGeometry(r + .02, .06, 8, 72), toon('#ffffff', { rim: 0, emissive: '#ffffff', ei: .3 }), g, [0, 0, 0], [Math.PI / 2, 0, 0]);
-  const bulbs = []; for (let i = 0; i < 34; i++) { const a = i / 34 * Math.PI * 2; const b = mesh(new THREE.SphereGeometry(.085, 8, 6), BULB_ON, g, [Math.cos(a) * (r + .36), -.48, Math.sin(a) * (r + .36)]); bulbs.push(b); }
-  for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; const b = mesh(new THREE.SphereGeometry(.075, 8, 6), BULB_ON, g, [Math.cos(a) * (r + .9), -.98, Math.sin(a) * (r + .9)]); bulbs.push(b); }
-  g.userData.bulbs = bulbs; return g;
+  const bi = []; for (let i = 0; i < 34; i++) { const a = i / 34 * Math.PI * 2; bi.push([Math.cos(a) * (r + .36), -.48, Math.sin(a) * (r + .36), .085]); }
+  for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; bi.push([Math.cos(a) * (r + .9), -.98, Math.sin(a) * (r + .9), .075]); }
+  g.userData.bulbs = bulbSet(g, bi, () => BULB_ON); return g;
 }
 // focos que barren
 function spots() { const g = new THREE.Group(); const L = [];
@@ -63,8 +68,9 @@ function spots() { const g = new THREE.Group(); const L = [];
 // ---------- decorado del plató: gradas con público, guirnaldas, banderines, arco iris, nubes y caramelos (o39) ----------
 let crowds = [], garlands = [], clouds = [], suns = [];
 function garland(x0, x1, y, z, n = 14, sag = .8) {
-  const g = new THREE.Group(), bulbs = [], pts = [];
-  for (let i = 0; i < n; i++) { const t = i / (n - 1), x = x0 + (x1 - x0) * t, yy = y - Math.sin(t * Math.PI) * sag; pts.push(new THREE.Vector3(x, yy + .07, z)); const b = mesh(new THREE.SphereGeometry(.1, 8, 6), BULB_M[i % 6], g, [x, yy, z]); bulbs.push(b); const h = glow(PASTEL[i % 6], .55, .6); h.position.copy(b.position); g.add(h); }
+  const g = new THREE.Group(), pts = [], bi = [];
+  for (let i = 0; i < n; i++) { const t = i / (n - 1), x = x0 + (x1 - x0) * t, yy = y - Math.sin(t * Math.PI) * sag; pts.push(new THREE.Vector3(x, yy + .07, z)); bi.push([x, yy, z, .1]); const h = glow(PASTEL[i % 6], .55, .6); h.position.set(x, yy, z); g.add(h); }
+  const bulbs = bulbSet(g, bi, i => BULB_M[i % 6]);
   g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#8a6aa8', transparent: true, opacity: .7 })));
   garlands.push(bulbs); return g;
 }
@@ -107,10 +113,12 @@ const balP = Array.from({ length: NB }, (_, i) => ({ x: 0, y: 0, z: 0, v: 0, ph:
 { const c = new THREE.Color(); balP.forEach((p, i) => { resetBal(p, true); bal.setColorAt(i, c.set(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7', '#ff9a5a', '#ff4f6f'][i % 7])); }); }
 let balOn = false;
 function updBal(dt, t) { bal.visible = str.visible = balOn; if (!balOn) return; balP.forEach((p, i) => { p.y += p.v * dt; if (p.y > 10) resetBal(p); const sw = Math.sin(t * 1.2 + p.ph) * .25; tmp.position.set(p.x + sw, p.y, p.z); tmp.rotation.set(0, 0, sw * .3); tmp.scale.setScalar(1); tmp.updateMatrix(); bal.setMatrixAt(i, tmp.matrix); tmp.position.set(p.x + sw * .8, p.y - 1.05, p.z); tmp.updateMatrix(); str.setMatrixAt(i, tmp.matrix); }); bal.instanceMatrix.needsUpdate = str.instanceMatrix.needsUpdate = true; }
-// chispas (estallidos)
-const sparks = [];
-function burst(p, c, n = 16, sp = 3) { for (let i = 0; i < n; i++) { const s = glow(c, rnd(.25, .5)); s.position.copy(p); const a = rnd(0, 6.28), b = rnd(-.3, 1.3); s.userData = { v: new THREE.Vector3(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.5, 1)), t: 0, l: rnd(.6, 1.1) }; root.add(s); sparks.push(s); } }
-function updSparks(dt) { for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i], u = s.userData; u.t += dt; if (u.t > u.l) { s.removeFromParent(); s.material.dispose(); sparks.splice(i, 1); continue; } u.v.y -= 4 * dt; s.position.addScaledVector(u.v, dt); s.material.opacity = 1 - u.t / u.l; } }
+// chispas (estallidos): o45 — pool de sprites reutilizados (antes se creaba un Sprite+Material por chispa y se tiraba → tirones por GC)
+const sparks = [], sparkG = new THREE.Group(), POOL = []; scene.add(sparkG);
+for (let i = 0; i < 170; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sp.visible = false; sp.userData = { v: new THREE.Vector3(), t: 0, l: 1 }; sparkG.add(sp); POOL.push(sp); }
+const freeSpark = s => { s.visible = false; POOL.push(s); };
+function burst(p, c, n = 16, sp = 3) { const tx = glowTex(c); for (let i = 0; i < n; i++) { const s = POOL.pop(); if (!s) return; s.material.map = tx; s.scale.setScalar(rnd(.25, .5)); s.position.copy(p); s.material.opacity = 1; s.visible = true; const a = rnd(0, 6.28), b = rnd(-.3, 1.3), u = s.userData; u.v.set(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.5, 1)); u.t = 0; u.l = rnd(.6, 1.1); sparks.push(s); } }
+function updSparks(dt) { for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i], u = s.userData; u.t += dt; if (u.t > u.l) { freeSpark(s); sparks[i] = sparks[sparks.length - 1]; sparks.pop(); continue; } u.v.y -= 4 * dt; s.position.addScaledVector(u.v, dt); s.material.opacity = 1 - u.t / u.l; } }
 
 // ---------- personajes ----------
 // cada mochi: grupo (posición) → pivot (animación) → personaje de la carrera (mismo modelo 3D que en las pruebas)
@@ -150,7 +158,7 @@ function pose(a, t, dt) {
 const DET = new URLSearchParams(location.search).get('detalle'); let lowMode = DET === 'bajo';
 function applyLow() { const f = o => { if (o.name === 'detalle') o.visible = !lowMode; }; root.traverse(f); mScene.traverse(f); sun.castShadow = !lowMode; }
 let mode = null, actors = [], deco = null, t0 = 0, camT = { p: new THREE.Vector3(0, 2.4, 9), l: new THREE.Vector3(0, 1, 0) }, extra = {};
-function clear() { crowds.forEach(c => c.userData.dispose && c.userData.dispose()); crowds = []; garlands = []; clouds = []; suns = []; root.clear(); actors = []; deco = null; extra = {}; sparks.length = 0; }
+function clear() { crowds.forEach(c => c.userData.dispose && c.userData.dispose()); crowds = []; garlands = []; clouds = []; suns = []; thumbCs = null; root.clear(); actors = []; deco = null; extra = {}; sparks.forEach(freeSpark); sparks.length = 0; }
 const now = () => performance.now() / 1000;
 function build(m, d) {
   clear(); balOn = false; mode = m; t0 = now(); const T = 0;
@@ -208,28 +216,35 @@ const mScene = new THREE.Scene(), mCam = new THREE.PerspectiveCamera(30, 1, .1, 
 mScene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.25)); { const l = new THREE.DirectionalLight('#fff4e8', 1.9); l.position.set(3, 6, 6); mScene.add(l); const b2 = new THREE.DirectionalLight('#ffd0f0', 1); b2.position.set(-4, 4, -6); mScene.add(b2); }
 const mAct = {}, MROLES = ['boing', 'wiggle', 'hop', 'wave', 'spin', 'taunt', 'dance', 'clap'];
 // fluido: todos los recuadros se pintan en el mismo fotograma, en una sola pasada (viewports en fila) y se copian de golpe
+let thumbLast = 0, thumbVisT = 0, thumbCs = null, thumbVis = [];
 function thumbs(t) {
   if (mode !== 'chars') return;
-  const cs = document.querySelectorAll('.scr.on #charGrid canvas, canvas[data-mini]'); if (!cs.length) return;
-  const tt = now(), gl = renderer.domElement, pr = renderer.getPixelRatio(), Sc = Math.floor(Math.min(64, gl.width / pr / cs.length)), S = Math.round(Sc * pr), H = gl.height;
+  const tt = now(); if (tt - thumbLast < .045) return; thumbLast = tt; // o45: miniaturas a ~22 Hz (eran un render por cada mochi y fotograma)
+  if (tt - thumbVisT > .3 || !thumbCs) { thumbCs = Array.from(document.querySelectorAll('.scr.on #charGrid canvas, canvas[data-mini]')); thumbVis = thumbCs.map(c => { const r = c.getBoundingClientRect(); return r.width > 0 && r.bottom > -30 && r.top < innerHeight + 30; }); thumbVisT = tt; } // lecturas de layout agrupadas, 3 veces/s
+  const cs = thumbCs; if (!cs.length) return;
+  const gl = renderer.domElement, pr = renderer.getPixelRatio(), Sc = Math.floor(Math.min(64, gl.width / pr / cs.length)), S = Math.round(Sc * pr), H = gl.height;
   renderer.setScissorTest(true); renderer.setClearColor(0, 0);
   for (const k in mAct) mAct[k].visible = false;
-  cs.forEach((c, i) => { const id = c.dataset.id;
+  cs.forEach((c, i) => { if (!thumbVis[i]) return; const id = c.dataset.id;
     let a = mAct[id]; if (!a) { a = mAct[id] = actor(id, 1, MROLES[i % MROLES.length], i * 3 + 1, true); a.userData.landed = true; a.userData.enter = -5; mScene.add(a); if (lowMode) applyLow(); }
     const on = c.parentElement.classList.contains('on'); a.userData.role = on ? 'dance' : MROLES[i % MROLES.length];
     pose(a, tt, 0); a.visible = true; a.userData.sh.visible = true;
     renderer.setViewport(i * Sc, 0, Sc, Sc); renderer.setScissor(i * Sc, 0, Sc, Sc); renderer.clear(); renderer.render(mScene, mCam); a.visible = false; });
-  cs.forEach((c, i) => { if (c.width !== S) { c.width = c.height = S; } const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, Math.round(i * Sc * pr), H - S, S, S, 0, 0, S, S); });
+  cs.forEach((c, i) => { if (!thumbVis[i]) return; if (c.width !== S) { c.width = c.height = S; } const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, Math.round(i * Sc * pr), H - S, S, S, 0, 0, S, S); });
   renderer.setScissorTest(false);
 }
+// fundido elíptico de bordes dentro de WebGL: multiplica el resultado por un alfa radial (equivale al antiguo mask-image: #000 62% → transparent 100%)
+const FADE = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { uC: { value: new THREE.Vector2() }, uE: { value: new THREE.Vector2(1, 1) } }, transparent: true, depthTest: false, depthWrite: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcAlphaFactor,
+  vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: 'uniform vec2 uC; uniform vec2 uE; void main(){ float d = length((gl_FragCoord.xy - uC) / uE); gl_FragColor = vec4(0., 0., 0., clamp((1. - d) / .38, 0., 1.)); }' }));
+FADE.frustumCulled = false; FADE.renderOrder = 9999; FADE.visible = false; scene.add(FADE);
 const HALO = document.getElementById('stageHalo') || document.createElement('div');
 // ---------- bucle ----------
-let last = now(), shown = true, fpsN = 0, fpsT = now();
+let last = now(), shown = true, fpsN = 0, fpsT = now(), elC = null, elT = 0; const _dir = new THREE.Vector3(), _w3 = new THREE.Vector3();
 function frame() {
   requestAnimationFrame(frame);
   const t1 = now(), dt = Math.min(.05, t1 - last); last = t1;
   fpsN++; if (t1 - fpsT > 2) { const f = fpsN / (t1 - fpsT); fpsN = 0; fpsT = t1; if (f < 45 && DPR > 1) { DPR = Math.max(1, DPR - .25); renderer.setPixelRatio(DPR); size(); } else if (f < 26 && DPR <= 1 && !lowMode && DET !== 'max') { lowMode = true; applyLow(); } }
-  const el = document.querySelector('.scr.on .stage3d'); let r = el && el.getBoundingClientRect();
+  if (!elC || t1 - elT > .25 || !elC.isConnected || !elC.closest('.scr.on')) { elC = document.querySelector('.scr.on .stage3d'); elT = t1; } const el = elC; let r = el && el.getBoundingClientRect(); // o45: sin querySelector por fotograma
   if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
   const want = el.dataset.mode; if (want !== mode || el.dataset.key !== extra.key) { build(want, JSON.parse(el.dataset.d || '{}')); extra.key = el.dataset.key; }
   shown = true; const t = t1 - t0;
@@ -248,8 +263,8 @@ function frame() {
   updConf(dt, t); updSparks(dt); updBal(dt, t);
   // cámara: encuadra el ancho de la escena en el hueco (vertical u horizontal) y se mece un poco
   const asp = r.width / r.height; camera.aspect = asp;
-  const fit = camT.w / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1.25, asp), dir = camT.p.clone().sub(camT.l).normalize();
-  const want3 = camT.l.clone().add(dir.multiplyScalar(Math.max(fit, 6))); want3.x += Math.sin(t * .35) * .6; want3.y += Math.sin(t * .5) * .15;
+  const fit = camT.w / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1.25, asp), dir = _dir.copy(camT.p).sub(camT.l).normalize();
+  const want3 = _w3.copy(camT.l).add(dir.multiplyScalar(Math.max(fit, 6))); want3.x += Math.sin(t * .35) * .6; want3.y += Math.sin(t * .5) * .15;
   extra.cam.lerp(want3, Math.min(1, dt * 2.6)); camera.position.copy(extra.cam); camera.lookAt(camT.l); camera.updateProjectionMatrix();
   thumbs(t);
   const free = mode === 'menu' || mode === 'chars', cv = renderer.domElement;
@@ -258,18 +273,22 @@ function frame() {
   renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
   if (free) { // sin marco: la escena se sale del hueco y se funde con el fondo
     camera.setViewOffset(r.width, r.height, -r.left, -r.top, innerWidth, innerHeight); camera.updateProjectionMatrix();
-    const m = `radial-gradient(ellipse ${Math.round(r.width * .78)}px ${Math.round(r.height * .82)}px at ${Math.round(r.left + r.width / 2)}px ${Math.round(r.top + r.height * .46)}px, #000 62%, transparent 100%)`;
-    if (cv._m !== m) { cv._m = m; cv.style.webkitMaskImage = cv.style.maskImage = m; }
+    // o45: el fundido de bordes (antes máscara CSS sobre el canvas completo = coste de compositor en cada fotograma) ahora se hace dentro del propio render
+    { const k = renderer.getPixelRatio(), U = FADE.material.uniforms; U.uC.value.set((r.left + r.width / 2) * k, (innerHeight - (r.top + r.height * .46)) * k); U.uE.value.set(r.width * .78 * k, r.height * .82 * k); FADE.visible = true; }
+    if (cv._m) { cv._m = ''; cv.style.webkitMaskImage = cv.style.maskImage = ''; }
     const cx = r.left + r.width / 2, cy = r.top + r.height * .46, ex = r.width * .78, ey = r.height * .82, x0 = Math.max(0, cx - ex), x1 = Math.min(innerWidth, cx + ex), y0 = Math.max(0, cy - ey), y1 = Math.min(innerHeight, cy + ey);
     renderer.setScissorTest(true); renderer.setScissor(x0, innerHeight - y1, x1 - x0, y1 - y0); // solo se pinta la zona visible de la máscara
-  } else { camera.clearViewOffset(); camera.updateProjectionMatrix(); if (cv._m) { cv._m = ''; cv.style.webkitMaskImage = cv.style.maskImage = ''; }
+  } else { FADE.visible = false; camera.clearViewOffset(); camera.updateProjectionMatrix(); if (cv._m) { cv._m = ''; cv.style.webkitMaskImage = cv.style.maskImage = ''; }
     const y = innerHeight - r.bottom; renderer.setScissorTest(true); renderer.setScissor(r.left, y, r.width, r.height); renderer.setViewport(r.left, y, r.width, r.height); }
   renderer.render(scene, camera);
 }
+// o45: precompila los shaders de TODAS las escenas antes de enseñar nada (así abrir «Elige tu mochi» no provoca un tirón de compilación)
+try { const pj = CHARS[0].id; FADE.visible = true; for (const m of ['chars', 'menu']) { build(m, { pj }); renderer.compile(scene, camera); } FADE.visible = false; const a = actor(pj, 1, 'dance', 0, true); mScene.add(a); renderer.compile(mScene, mCam); mScene.remove(a); clear(); mode = null; extra = {}; } catch (e) { console.warn('warmup', e); }
+document.body.classList.remove('no3d'); // si el módulo tardó más de 5 s, el 3D vuelve a mandar sobre el hero 2D de reserva
 requestAnimationFrame(frame);
 // tocar el escenario: voltereta del protagonista
 addEventListener('pointerdown', e => { const el = document.querySelector('.scr.on .stage3d'); if (!el || !extra.hero) return; const r = el.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return; const u = extra.hero.userData; if (now() - t0 - u.flip > .9) { u.flip = now() - t0; burst(extra.hero.position.clone().add(new THREE.Vector3(0, 1.5, 0)), '#ff9cc8', 14, 3); } });
-window.MP3D = { ok: true, thumbs3d: true, get info() { return renderer.info; }, get mode() { return mode; },
+window.MP3D = { ok: true, thumbs3d: true, get scene() { return scene; }, get info() { return renderer.info; }, get mode() { return mode; },
   // «¡Este!»: voltereta, explosión de confeti y chispas del color del mochi
   select() { if (mode !== 'chars' || !extra.hero) return false; const t = now() - t0; extra.sel = t; const p = extra.hero.position.clone().add(new THREE.Vector3(0, 1.6, 0));
     burst(p, '#ffe27a', 34, 5); burst(p, '#ff9cc8', 24, 4.2); burst(p, '#7ee3c4', 20, 3.6); for (const q of confP) { q.y = rnd(3, 9); } return true; } };
