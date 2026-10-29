@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { comprobarOnline, SalaOnline } from './net.js';
-const VERSION = 22;
+const VERSION = 23;
 const $ = id => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -10,7 +10,7 @@ const pick = a => a[Math.floor(Math.random() * a.length)];
 // autoactualización
 fetch('./version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { if (j.v > VERSION && sessionStorage.getItem('ec_rl') !== String(j.v)) { sessionStorage.setItem('ec_rl', String(j.v)); toast('✨ ¡Versión nueva!', 'actualizando…', 1500); setTimeout(() => location.replace(location.pathname + '?v=' + j.v), 1200); } }).catch(() => { });
 const SAVE_KEY = 'escondite-cuadro';
-const save = { muted: false, best: 0, wins: 0 };
+const save = { muted: false, best: 0, wins: 0, bestScore: 0 };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { }
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } };
 // audio alegre sintetizado
@@ -34,6 +34,8 @@ const S = {
   fanfare: () => { if (!AC) return; const t = AC.currentTime;[523, 659, 784, 1047, 784, 1047].forEach((f, i) => { osc('triangle', f, .01, .22, .3, 0, null, t + i * .11); osc('sine', f * 2, .01, .18, .08, 0, null, t + i * .11); }); },
   fail: () => { if (!AC) return; const t = AC.currentTime;[523, 494, 466, 392].forEach((f, i) => osc('triangle', f, .01, .28, .25, f * .97, null, t + i * .2)); },
   hmm: () => osc('sine', 220, .05, .4, .25, 180),
+  whistle: (v = 1) => { osc('sine', 1500, .01, .28, .34 * v, 2500); if (AC) { osc('sine', 2300, .01, .3, .3 * v, 1500, null, AC.currentTime + .22); osc('sine', 1900, .01, .22, .22 * v, 2600, null, AC.currentTime + .5); } },
+  point: () => osc('triangle', 1100, .003, .09, .14, 1700),
   tension: () => osc('sine', 98, .02, .6, .25, 92),
 };
 for (const k of ['shoot', 'splat', 'sneeze', 'boing', 'ay']) { const f = S[k]; S[k] = (...a) => { f(...a); try { owlNoise(camLook.x, camLook.z, k === 'shoot' || k === 'splat' ? 1.4 : 1); } catch (e) { } }; }
@@ -649,7 +651,7 @@ const _ei = new THREE.Vector3();
 function updEye() { const ind = $('eyeInd'), fb = $('zFol'); const can = !!(role === 'hide' && me && me.alive && critic && playing && phase === 'seek' && !focus); fb.classList.toggle('on', can); fb.classList.toggle('act', can && follow); if (!can) { if (follow && !(role === 'hide' && playing && phase === 'seek')) setFollow(false, true); ind.style.display = 'none'; return; }
   if (follow) { ind.style.display = 'none'; return; }
   _ei.set(critic.x, (critic.y || 0) + 3.9, critic.z).project(camera); const W = innerWidth, H = innerHeight; let behind = _ei.z > 1; let sx = (_ei.x * .5 + .5) * W, sy = (-_ei.y * .5 + .5) * H; if (behind) { sx = W - sx; sy = H - sy; }
-  const mx0 = 128, mx1 = W - 118, my0 = 96, my1 = H - 104; const inside = !behind && sx > mx0 && sx < mx1 && sy > my0 && sy < my1; let ang = 0, X = sx, Y = sy;
+  const mx0 = 128, mx1 = W - 172, my0 = 96, my1 = H - 104; const inside = !behind && sx > mx0 && sx < mx1 && sy > my0 && sy < my1; let ang = 0, X = sx, Y = sy;
   if (inside) { Y = sy - 8; } else { const cx = W / 2, cy = H / 2; let dx = sx - cx, dy = sy - cy; if (!dx && !dy) dx = 1; ang = Math.atan2(dy, dx); const k = Math.min((mx1 - cx) / Math.max(1e-3, Math.abs(dx)), (cy - my0) / Math.max(1e-3, Math.abs(dy)), (my1 - cy) / Math.max(1e-3, Math.abs(dy)), (cx - mx0) / Math.max(1e-3, Math.abs(dx))); X = cx + dx * k; Y = cy + dy * k; }
   const d = Math.round(Math.hypot(critic.x - me.x, critic.z - me.z)); ind.style.display = 'flex'; ind.style.transform = `translate(${X.toFixed(1)}px,${Y.toFixed(1)}px) translate(-50%,-50%)`; $('eiA').style.display = inside ? 'none' : 'block'; $('eiA').style.transform = `rotate(${ang}rad)`; if (ind.dataset.d !== String(d)) { ind.dataset.d = d; $('eiD').textContent = d + ' m'; }
   const al = (critic.state === 'go' || critic.state === 'aim') && critic.target === me; ind.classList.toggle('alert', al); ind.classList.toggle('near', d < 9); }
@@ -658,6 +660,7 @@ $('run').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropag
 function mkActs(list) { const a = $('acts'); a.innerHTML = ''; list.forEach(([id, ico, txt, cls, f]) => { const b = document.createElement('button'); b.className = 'ab ' + (cls || ''); b.id = id; b.innerHTML = `<span>${ico}</span>${txt}`; b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); f(); }); a.appendChild(b); }); }
 // ---------- partida ----------
 let mode = 'full', role = 'hide', phase = 'idle', phaseT = 0, me = null, playing = false, round = 0, rounds = [], results = [], shotsLeft = 0, bestShot = null, bestPct = 0, slowmo = 1, focus = null, focusT = 0, p2score = [0, 0], lastPct = -1, hider2p = 0, curRoom = -1, actT = 0;
+let score = 0, scoreF = 0, sightT = 0, sightTot = 0, whistleCd = 0, whistleBonus = 0, ptsT = 0, botWT = 15, sightC = false, sightCT = 0, lastPts = 0, susLv = 0; const beacons = [];
 let startYaw = Math.PI; const HIDE_T = 40; const P2 = ['Jugador 1', 'Jugador 2'];
 const is2p = () => rounds[round] && rounds[round].startsWith('2p');
 function startMatch(md) { mode = md; results = []; round = 0; bestShot = null; bestPct = 0; p2score = [0, 0]; rounds = md === 'full' ? ['hide', 'seek'] : md === 'hide' ? ['hide'] : md === 'seek' ? ['seek'] : ['2p-a', '2p-b']; nextRound(); }
@@ -679,7 +682,7 @@ function setupRound(r) {
     for (let i = 0; i < nb; i++) { const b = makeMancha(cols2[i + 1], ['Pinti', 'Gotita', 'Borrón', 'Acuarela'][i], false); const a = i / nb * 6.28 + 1; b.x = start[0] + Math.cos(a) * 2.2; b.z = start[1] + 6 + Math.sin(a) * 1.2; botPlan(b, used); }
     netSpawn(); manchas.forEach(m => { if (!m.netId) { m.g.position.set(m.x, 0, m.z); setShape(m, 'gota'); } });
     phase = 'hide'; phaseT = HIDE_T; playing = true; critic.state = 'count'; const c0 = RC(0); critic.x = c0[0] - 5; critic.z = c0[1] - 3; critic.yaw = Math.PI; critic.y = 0;
-    follow = false; panX = panZ = panVX = panVZ = 0; camYaw = camYawS = me ? startYaw : Math.PI; camPitch = .55; camZ = camZs = .3; camLift = 0; shotsLeft = 0; lastPct = -1; curRoom = -1; snapCam = true; moldOpen(false);
+    score = scoreF = sightT = sightTot = whistleCd = whistleBonus = ptsT = lastPts = susLv = 0; botWT = rnd(12, 20); follow = false; panX = panZ = panVX = panVZ = 0; camYaw = camYawS = me ? startYaw : Math.PI; camPitch = .55; camZ = camZs = .3; camLift = 0; shotsLeft = 0; lastPct = -1; curRoom = -1; snapCam = true; moldOpen(false);
     hud(true); $('hPhase').textContent = '🙈 ¡A esconderse!';
     if (role === 'hide') { $('meter').classList.add('on'); $('cross').classList.remove('on'); hideActs(); $('hInfo').textContent = '🏰 Castillo de los Cuadros'; runT = 6; setHidden(false); }
     else { $('meter').classList.remove('on'); mkActs([]); $('hInfo').textContent = '🧐 Contando…'; toast('Eres El Crítico 🧐', 'Las Manchas se están camuflando… ¡no mires!', 2600); }
@@ -728,7 +731,7 @@ function endHidePhase() {
   startSeek(); }
 function startSeek() {
   phase = 'seek'; phaseT = role === 'seek' ? 100 : 60; musicMode = 'seek'; critic.state = 'wander'; critic.think = 1.5; S.boing(); hud(true); snapCam = true;
-  if (role === 'hide') { $('hPhase').textContent = '🧐 ¡Viene El Crítico!'; mkActs([['aJump', '🦘', 'Saltar', 'c3', doJump], ['aMold', '✋', 'Moldear', 'c2', toggleMold]]); }
+  if (role === 'hide') { $('hPhase').textContent = '🧐 ¡Viene El Crítico!'; mkActs([['aJump', '🦘', 'Saltar', 'c3', doJump], ['aWhistle', '🎵', 'Silbar', 'c1', doWhistle], ['aMold', '✋', 'Moldear', 'c2', toggleMold]]); toast('¡Viene El Crítico! 🧐', 'Quieta = invisible · Silba 🎵 para ganar ×3 puntos (¡riesgo!)', 2600); }
   else { shotsLeft = is2p() ? 6 : 10; $('meter').classList.remove('on'); $('cross').classList.add('on'); $('hPhase').textContent = '🎯 ¡A cazar!'; mkActs([['aFire', '🎯', '', 'fire', playerFire]]); toast('¡A cazar Manchas! 🎯', is2p() ? `Encuentra a ${P2[hider2p]}: mira de cerca cuadros, libros, lámparas y alfombras` : `4 escondidas · ${shotsLeft} disparos · busca ojitos que asoman 👀`, 3200); const c0 = RC(0); const st = clearStart(0, c0[0], c0[1] + 3, Math.PI / 2); critic.x = st.x; critic.z = st.z; critic.y = 0; camYaw = st.yaw; camPitch = .15; } }
 function captureHide() { if (!me) return; const pct = Math.round(me.camo * 100); let a = me.yaw, bd = 0;
   if (me.att) { const [nx, nz] = anchorNormal(me.att); a = Math.atan2(nx, nz); bd = 3.2; } else for (let k = 0; k < 12; k++) { const aa = me.yaw + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * .5236; const cd = Math.min(camClear(me.x, me.y + 1.2, me.z, me.x + Math.sin(aa) * 3.6, me.y + 2, me.z + Math.cos(aa) * 3.6), clearPropDist(me.x, me.z, Math.sin(aa), Math.cos(aa), 3.6)); if (cd > bd + .01) { bd = cd; a = aa; } if (cd >= 3.5) break; } const R = Math.max(1.6, Math.min(3.6, bd));
@@ -751,18 +754,45 @@ function playerFire() { if (phase !== 'seek' || role !== 'seek' || shotsLeft <= 
   if (shotsLeft === 0) setTimeout(() => { if (phase === 'seek' && focusT <= 0) endRound(); }, 1700); }
 // El Crítico: con buen camuflaje solo te ve si se acerca MUCHO y mira con calma
 function criticThink(c, alive, dt) {
-  c.think -= dt; if (c.think <= 0) { c.think = .4;
-    for (const m of alive) { const dx = m.cx - c.x, dz = m.cz - c.z, d = Math.hypot(dx, dz); if (d > 15) continue; const ang = Math.abs(wrap(Math.atan2(dx, dz) - c.yaw)); if (ang > 1.2 && !m.moving) continue; if (!lineOfSight(c.x, c.z, m.cx, m.cz, Math.min(m.cy, 2.5))) continue;
-      const vis = Math.pow(1 - m.camo, 2.6) * 1.5 + (m.moving ? .6 : 0) + (m.wiggle > 0 ? .3 : 0) + m.eyeVis * .35 + .05; const near = d < 2.6 ? 1.4 : 1 - d / 16; let p = vis * near; if (m.camo > .88 && d > 2.6) p *= .35; if (Math.random() < p * .9) { c.state = 'go'; c.target = m; S.hmm(); if (m === me) bub('😳 ¡El Crítico te ha echado el ojo!', 1500); return; } }
-    if (Math.random() < .02) { const pr = props.filter(p => p.room === roomOf(c.x, c.z)); if (pr.length) { c.state = 'go'; c.target = pick(pr); } } }
+  c.think -= dt; if (c.think <= 0) { const step = .3; c.think = step;
+    for (const m of alive) { m.sus = m.sus || 0; const dx = m.cx - c.x, dz = m.cz - c.z, d = Math.hypot(dx, dz); let seen = false;
+      if (d <= 15) { const ang = Math.abs(wrap(Math.atan2(dx, dz) - c.yaw)); if (!(ang > 1.2 && !m.moving) && lineOfSight(c.x, c.z, m.cx, m.cz, Math.min(m.cy, 2.5))) seen = true; }
+      if (seen) { const vis = Math.pow(1 - m.camo, 2.6) * 1.5 + (m.moving ? .6 : 0) + (m.wiggle > 0 ? .3 : 0) + m.eyeVis * .35 + .05; const near = d < 2.6 ? 1.4 : 1 - d / 16; let p = vis * near; if (m.camo > .88 && d > 2.6) p *= .35;
+        m.sus = Math.min(1.5, m.sus + p * step * 2.0); // v23: la sospecha SE ACUMULA mientras te mira (como en Meccha Chameleon: mirar dos veces y marcharse)
+        if (m.sus >= 1) { m.sus = .6; c.state = 'go'; c.target = m; S.hmm(); if (m === me) bub('😳 ¡El Crítico te ha echado el ojo!', 1500); return; } }
+      else m.sus = Math.max(0, m.sus - step * .35); }
+    if (Math.random() < .015) { const pr = props.filter(p => p.room === roomOf(c.x, c.z)); if (pr.length) { c.state = 'go'; c.target = pick(pr); } } }
 }
+// ---------- v23 · puntos «a su cara», silbido, reveal ----------
+function popPts(t) { const e = $('pts'); e.textContent = t; e.classList.remove('on'); void e.offsetWidth; e.classList.add('on'); }
+function doWhistle() { if (!me || !me.alive || role !== 'hide' || phase !== 'seek' || !critic || focus) return; if (whistleCd > 0) { bub('🎵 Espera ' + Math.ceil(whistleCd) + ' s…', 900); return; } whistleCd = 10; whistleBonus = 9; S.whistle(); me.hop = .9; burst(new THREE.Vector3(me.x, 1.2, me.z), '#ffd23f'); critic.hear = { x: me.x, z: me.z, t: 1 }; if (critic.state === 'wander') { critic.wp = null; critic.lookT = 0; critic.looked = false; critic.wpT = 0; } bub('🎵 ¡Silbas! El Crítico viene a mirar… ×3 puntos si no te reconoce', 2400); popPts('🎵 ×3 puntos durante 9 s'); }
+function updPlay(dt) {
+  whistleCd = Math.max(0, whistleCd - dt); whistleBonus = Math.max(0, whistleBonus - dt);
+  const onH = role === 'hide' && phase === 'seek' && !!me, hs = $('hScore'); hs.style.display = onH ? '' : 'none';
+  const wb = $('aWhistle'); if (wb) { wb.classList.toggle('cd', whistleCd > 0); const lab = whistleCd > 0 ? Math.ceil(whistleCd) + ' s' : 'Silbar'; if (wb.dataset.k !== lab) { wb.dataset.k = lab; wb.innerHTML = `<span>🎵</span>${lab}`; } }
+  const vig = $('vig'), sus = $('sus');
+  if (onH && me.alive && critic && playing) { const d = Math.hypot(critic.x - me.cx, critic.z - me.cz); sightCT -= dt;
+    if (sightCT <= 0) { sightCT = .2; sightC = false; if (critic.state !== 'count' && d < 15) { const ang = Math.abs(wrap(Math.atan2(me.cx - critic.x, me.cz - critic.z) - critic.yaw)); if (ang < 1.15 && lineOfSight(critic.x, critic.z, me.cx, me.cz, Math.min(me.cy, 2.5))) sightC = true; } }
+    if (sightC && !focus) { sightT += dt; sightTot += dt; const mult = (1 + Math.min(sightT / 8, 1)) * (whistleBonus > 0 ? 3 : 1); scoreF += (3 + (1 - d / 15) * 15) * (.25 + me.camo * .95) * mult * dt; ptsT += dt; if (ptsT > 1.8) { ptsT = 0; const g = Math.floor(scoreF) - lastPts; if (g > 0) { popPts(`+${g} 👀 a su cara ×${mult.toFixed(1).replace('.0', '')}`); S.point(); } lastPts = Math.floor(scoreF); } } else sightT = Math.max(0, sightT - dt * 2);
+    const sc = Math.floor(scoreF); if (sc !== score) { score = sc; hs.textContent = '⭐ ' + score; }
+    const sv = me.sus || 0; sus.classList.toggle('on', sv > .04); $('susF').style.width = Math.min(100, sv * 100) + '%'; const lv = sv > .8 ? 2 : sv > .45 ? 1 : 0; if (lv > susLv) { lv === 2 ? S.tension() : S.hmm(); } susLv = lv;
+    const aimed = critic.state === 'aim' && critic.target === me; vig.style.opacity = clamp((sv - .35) * 1.1 + (aimed ? .45 : 0), 0, .85); }
+  else { sus.classList.remove('on'); vig.style.opacity = 0; }
+  if (role === 'seek' && phase === 'seek' && playing && !focus) { botWT -= dt; if (botWT <= 0) { botWT = rnd(16, 26); const al = manchas.filter(m => m.alive); if (al.length) { const m = pick(al); const dx = m.x - critic.x, dz = m.z - critic.z, d = Math.hypot(dx, dz); const fx = Math.sin(camYawS), fz = Math.cos(camYawS); const f = dx * fx + dz * fz, r = dx * -fz + dz * fx; const dir = Math.abs(f) > Math.abs(r) ? (f > 0 ? 'delante' : 'detrás') : (r > 0 ? 'a la derecha' : 'a la izquierda'); S.whistle(clamp(1.1 - d / 40, .25, 1)); m.hop = .6; bub(`🎵 ¡Un silbido ${dir}! (a unos ${Math.round(d / 5) * 5} m)`, 2400); } } } }
+function spotName(m) { return (m.att && m.att.name) || (m.skin && m.skin.name) || 'el suelo'; }
+function beacon(m) { const g = new THREE.Group(); g.position.set(m.x, m.y || 0, m.z); const mat = new THREE.MeshBasicMaterial({ color: '#ffd23f', transparent: true, opacity: .5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }); const ring = new THREE.Mesh(new THREE.TorusGeometry(1, .07, 8, 40), mat); ring.rotation.x = Math.PI / 2; ring.position.y = .06; g.add(ring); const col = new THREE.Mesh(new THREE.CylinderGeometry(.9, .9, 7, 24, 1, true), mat.clone()); col.material.opacity = .16; col.position.y = 3.5; g.add(col); world.add(g); beacons.push({ g, t: 0, ring, col }); }
+function updBeacons(dt) { for (let i = beacons.length - 1; i >= 0; i--) { const b = beacons[i]; b.t += dt; const k = 1 + Math.sin(b.t * 6) * .12; b.ring.scale.set(k, k, k); const f = b.t > 6 ? Math.max(0, 1 - (b.t - 6) / 1.5) : 1; b.ring.material.opacity = .55 * f; b.col.material.opacity = .16 * f; if (b.t > 7.5) { world.remove(b.g); beacons.splice(i, 1); } } }
 function criticAI(dt) { const c = critic; c.cool -= dt;
   if (c.state === 'count') { c.speed = lerp(c.speed, 0, Math.min(1, dt * 8)); return; }
   const alive = manchas.filter(m => m.alive); if (!alive.length) { c.speed = 0; return; }
   const goTo = (x, z, spd) => { const [nx, nz] = navTarget(c, x, z); const dx = nx - c.x, dz = nz - c.z; const fd = Math.hypot(x - c.x, z - c.z); if (fd > .3) { c.yaw += wrap(Math.atan2(dx, dz) - c.yaw) * (1 - Math.exp(-dt * 6)); c.speed = lerp(c.speed, spd, 1 - Math.exp(-dt * 5)); c.x += Math.sin(c.yaw) * c.speed * dt; c.z += Math.cos(c.yaw) * c.speed * dt; } else c.speed = lerp(c.speed, 0, 1 - Math.exp(-dt * 8)); collide(c, .5); c.y = groundAt(c.x, c.z, c.y || 0); return fd; };
   if (c.state === 'wander') criticThink(c, alive, dt);
   if (c.state === 'wander' && c.lookT > 0) { c.lookT -= dt; c.yaw += dt * 1.8 * (c.lookDir || 1); c.speed = lerp(c.speed, 0, ex(8, dt)); }
-  else if (c.state === 'wander') { if (c.wp && Math.hypot(c.wp.x - c.x, c.wp.z - c.z) < 1.5 && !c.looked) { c.lookT = 1.8; c.lookDir = Math.random() < .5 ? -1 : 1; c.looked = true; } if (!c.wp || Math.hypot(c.wp.x - c.x, c.wp.z - c.z) < 1.5 || (c.wpT -= dt) < 0) { c.looked = false; let tx, tz; if (me && me.alive && role === 'hide' && Math.random() < .35) { tx = me.cx; tz = me.cz; } else if (Math.random() < .5) { const a = pick(anchors); tx = a.x + a.nx * 2; tz = a.z + a.nz * 2; } else { const m = pick(alive); tx = m.cx; tz = m.cz; } c.wp = { x: clamp(tx + rnd(-3, 3), XMIN + 1.5, XMAX - 1.5), z: clamp(tz + rnd(-3, 3), ZMIN + 1.5, ZMAX - 1.5) }; c.wpT = 12; }
+  else if (c.state === 'wander') { if (c.wp && Math.hypot(c.wp.x - c.x, c.wp.z - c.z) < 1.5 && !c.looked) { c.lookT = 1.8; c.lookDir = Math.random() < .5 ? -1 : 1; c.looked = true; } if (!c.wp || Math.hypot(c.wp.x - c.x, c.wp.z - c.z) < 1.5 || (c.wpT -= dt) < 0) { c.looked = false; let tx, tz, jit = 1.5; if (c.hear && c.hear.t > 0) { tx = c.hear.x; tz = c.hear.z; c.hear.t = 0; jit = 1; } else { // v23: patrulla por salas en orden (barrido por zonas), inspecciona cada punto con calma
+      if (!c.route || !c.route.length) { c.route = rooms.map(r => r.id).sort(() => Math.random() - .5); if (c.routeRoom === c.route[c.route.length - 1]) c.route.reverse(); }
+      if (c.routeRoom == null || c.roomLeft <= 0) { c.routeRoom = c.route.pop(); c.roomLeft = 3 + (Math.random() * 2 | 0); } c.roomLeft--; const as = anchors.filter(a => a.room === c.routeRoom);
+      if (as.length && Math.random() < .78) { const a = pick(as); tx = a.x + a.nx * 2; tz = a.z + a.nz * 2; } else { const cc = RC(c.routeRoom); tx = cc[0] + rnd(-5, 5); tz = cc[1] + rnd(-5, 5); } }
+    c.wp = { x: clamp(tx + rnd(-jit, jit), XMIN + 1.5, XMAX - 1.5), z: clamp(tz + rnd(-jit, jit), ZMIN + 1.5, ZMAX - 1.5) }; c.wpT = 10; }
     if (!(c.lookT > 0)) goTo(c.wp.x, c.wp.z, 3.2); }
   else if (c.state === 'go') { const t = c.target; if (t.alive === false) { c.state = 'wander'; return; } const tx = t.cx ?? t.x, tz = t.cz ?? t.z; const d = goTo(tx, tz, t.moving ? 4.4 : 3.4); if (d < 4.6 && lineOfSight(c.x, c.z, tx, tz)) { c.state = 'aim'; c.aimT = 1.2; S.tension(); if (t === me) bub('😱 ¡Te está mirando! ¿Quieta o huyes?', 1200); } }
   else if (c.state === 'aim') { const t = c.target; const tx = t.cx ?? t.x, tz = t.cz ?? t.z; c.yaw += wrap(Math.atan2(tx - c.x, tz - c.z) - c.yaw) * (1 - Math.exp(-dt * 8)); c.speed = lerp(c.speed, 0, 1 - Math.exp(-dt * 10)); c.aimT -= dt;
@@ -788,10 +818,11 @@ function update(dt) {
   musicTick(dt);
   if (focusT > 0) { focusT -= dt; if (focusT <= 0) { slowmo = 1; focus = null; } }
   const sdt = dt * slowmo; updDust(T, camLook.x, camLook.z);
-  if (phase === 'hide' || phase === 'seek') { const prev = Math.ceil(phaseT); phaseT -= sdt; const sec = Math.ceil(phaseT); $('hTime').textContent = '⏱ ' + Math.max(0, sec); $('hTime').classList.toggle('warn', sec <= 5);
-    if (sec !== prev && sec <= 5 && sec >= 1) { S.tick(); if (phase === 'hide' && sec <= 3 && role !== 'hide') toast(String(sec), '', 600); }
+  if (phase === 'hide' || phase === 'seek') { const prev = Math.ceil(phaseT); phaseT -= sdt; const sec = Math.ceil(phaseT); $('hTime').textContent = '⏱ ' + Math.max(0, sec); const urg = phase === 'hide' ? 10 : 5; $('hTime').classList.toggle('warn', sec <= urg);
+    if (sec !== prev && sec <= urg && sec >= 1) { S.tick(); if (phase === 'hide' && sec <= 3 && role !== 'hide') toast(String(sec), '', 600); }
     if (!NET || NET.sala.host) { if (phase === 'hide' && phaseT <= 0) { if (NET) NET.sala.enviar({ t: 'fase', fase: 'seek' }); endHidePhase(); } else if (phase === 'seek' && phaseT <= 0 && focusT <= 0) { if (NET) NET.sala.enviar({ t: 'fase', fase: 'fin' }); endRound(); } } }
   if (role === 'seek' && phase === 'seek') $('hInfo').textContent = `🎯 ${shotsLeft} · 🙈 ${manchas.filter(m => m.alive).length}`;
+  updPlay(dt);
   if (role === 'hide' && phase === 'seek') $('hInfo').textContent = `🙈 ${manchas.filter(m => m.alive).length} escondidas`;
   let ix = joyX, iy = joyY; const kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), ky = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0); if (kx || ky) { const l = Math.hypot(kx, ky); ix = kx / l; iy = ky / l; }
   if (role === 'hide' && me && !me.att && Math.abs(ix) > .55 && iy > -.3) camYaw -= Math.sign(ix) * (Math.abs(ix) - .55) * 2.4 * dt; if (role === 'hide' && me && me.att && camId === null) { const [anx, anz] = anchorNormal(me.att); const fwd = Math.sin(camYaw) * anx + Math.cos(camYaw) * anz; if (fwd > -.995 && !me.camFree) camYaw += wrap(Math.atan2(-anx, -anz) - camYaw) * ex(3.5, dt); } camYawS += wrap(camYaw - camYawS) * ex(14, dt); const fwX = Math.sin(camYawS), fwZ = Math.cos(camYawS); const rX = -fwZ, rZ = fwX; const wantX = fwX * iy + rX * ix, wantZ = fwZ * iy + rZ * ix; const mag = Math.min(1, Math.hypot(wantX, wantZ));
@@ -812,7 +843,7 @@ function update(dt) {
     if (m !== me || role === 'seek') { m.camoT -= dt; if (m.camoT <= 0) { m.camoT = .3 + Math.random() * .2; m.camoD = camoCalc(m); m.camo = m.camoD.v; } } }
   if (role === 'seek' && phase === 'seek') { ray.setFromCamera(V0, camera); let hot = false; for (const m of manchas) { if (!m.alive) continue; _v.set(m.cx, m.cy, m.cz); const dist = _v.distanceTo(camera.position); if (ray.ray.distanceToPoint(_v) < .5 && dist < 30) { m.aimed += dt; if (m.camo < .7 || dist < 4) hot = true; if (m.aimed > .9 && m.camo < .75 && m.shiver <= 0) m.shiver = .3; } else m.aimed = 0; } $('cross').classList.toggle('hot', hot); }
   for (const m of manchas) animMancha(m, sdt);
-  animCritic(sdt); owlTick(sdt); updShots(sdt); updBursts(sdt); updConf(sdt);
+  animCritic(sdt); owlTick(sdt); updShots(sdt); updBursts(sdt); updBeacons(dt); updConf(sdt);
   const port = innerHeight > innerWidth; camZs = lerp(camZs, camZ, ex(10, dt)); const ztS = clamp((camZs - .32) / .6, 0, 1), zt = ztS * ztS * (3 - 2 * ztS); const pitchE = lerp(camPitch, 1.5, zt); const cp = Math.cos(pitchE), spP = Math.sin(pitchE); let tx, ty, tz, want, sh = 0;
   if (focus) { tx = focus.cx; ty = focus.cy + .3; tz = focus.cz; want = 4.5; }
   else if (role === 'hide' && me) { tx = me.cx; ty = me.cy + .9; tz = me.cz; want = port ? 9.2 : 8.0; sh = port ? .45 : .7; }
@@ -883,15 +914,17 @@ function animCritic(dt) { const c = critic; c.walk += dt * c.speed * 2.4; const 
 function endRound() { if (phase !== 'seek' && phase !== 'hide') return; phase = 'reveal'; hud(false); slowmo = 1; focus = null; focusT = 0;
   const r = rounds[round]; const aliveL = manchas.filter(m => m.alive); const total = manchas.length; let title, txt, win;
   if (r !== 'seek') { win = !!(me && me.alive); const pct = Math.round((me ? me.camo : 0) * 100);
-    if (r === 'hide') { title = win ? '🏆 ¡NO TE ENCONTRÓ!' : '🎨 ¡Te pilló El Crítico!'; txt = `Camuflaje: <b>${pct}%</b>${win ? ' · ' + camoPhrase(pct) : ''}<br>Manchas que aguantaron: ${aliveL.length}/${total}`; }
+    if (r === 'hide') { title = win ? '🏆 ¡NO TE ENCONTRÓ!' : '🎨 ¡Te pilló El Crítico!'; txt = `Camuflaje: <b>${pct}%</b>${win ? ' · ' + camoPhrase(pct) : ''}<br>⭐ Puntos «a su cara»: <b>${score}</b> · a la vista ${Math.round(sightTot)} s${score > save.bestScore ? ' · ¡récord!' : ''}<br>Manchas que aguantaron: ${aliveL.length}/${total}`; if (score > save.bestScore) save.bestScore = score; }
     else { title = win ? `🏆 ¡${P2[hider2p]} no fue encontrado!` : `🧐 ¡${P2[1 - hider2p]} lo encontró!`; txt = `Camuflaje de ${P2[hider2p]}: <b>${pct}%</b>`; if (win) p2score[hider2p]++; else p2score[1 - hider2p]++; txt += `<br>👯 Marcador: ${P2[0]} ${p2score[0]} – ${p2score[1]} ${P2[1]}`; }
     if (win) { save.wins++; S.fanfare(); confetti(me.x, 2, me.z, 160, 7); } }
-  else { const caught = total - aliveL.length; win = aliveL.length === 0; title = win ? '🏆 ¡Las pillaste a TODAS!' : caught ? `🧐 Pillaste ${caught} de ${total}` : '🙈 ¡No pillaste ninguna!'; txt = `Disparos sobrantes: ${shotsLeft}<br>${aliveL.length ? 'Se escondían: ' + aliveL.map(m => `${m.name} (${Math.round(m.camo * 100)}%)`).join(', ') : '¡Ojo de crítico de arte!'}`; if (caught) S.fanfare(); else S.fail(); }
+  else { const caught = total - aliveL.length; win = aliveL.length === 0; title = win ? '🏆 ¡Las pillaste a TODAS!' : caught ? `🧐 Pillaste ${caught} de ${total}` : '🙈 ¡No pillaste ninguna!'; txt = `Disparos sobrantes: ${shotsLeft}<br>${aliveL.length ? 'Se escondían: ' + aliveL.map(m => `${m.name} en ${spotName(m).replace(/^(el|la|los|las|un|una) /, '')} (${Math.round(m.camo * 100)}%)`).join(' · ') : '¡Ojo de crítico de arte!'}`; if (caught) S.fanfare(); else S.fail(); }
   results.push({ r, win }); if (bestShot && bestShot.pct > save.best) save.best = bestShot.pct; persist();
   // revelar dónde estaban: dan un salto y sacan confeti, y la cámara las enseña
   aliveL.forEach(m => { m.hop = 1.6; confetti(m.x, 1.2, m.z, 25, 4); m.lids.forEach(l => l.rotation.x = -1.6); });
-  const rv = aliveL.find(m => m !== me) || aliveL[0]; if (rv) { focus = rv; focusT = 1.2; }
-  setTimeout(() => { playing = false; focus = null; showResult(title, txt, r); }, 1300);
+  // v23 · reveal estilo Meccha Chameleon: la cámara va enseñando a cada escondida con un foco dorado y dónde estaba
+  const rq = aliveL.slice().sort((a, b) => (a === me ? -1 : 0) - (b === me ? -1 : 0)), stp = 1500;
+  rq.forEach((m, i) => setTimeout(() => { if (phase !== 'reveal') return; m.hop = 1.6; confetti(m.x, 1.2, m.z, 30, 4); beacon(m); focus = m; focusT = stp / 1000 + .05; slowmo = 1; S.pop(); toast(`✨ ${m === me ? 'Tú' : m.name} estaba ahí`, `${spotName(m)} · camuflaje ${Math.round(m.camo * 100)}%`, stp - 100); }, 250 + i * stp));
+  setTimeout(() => { playing = false; focus = null; showResult(title, txt, r); }, rq.length ? 500 + rq.length * stp : 1300);
 }
 function showResult(title, txt, r) { $('rT').textContent = title; $('rP').innerHTML = txt + (save.best ? `<br><small>Tu mejor camuflaje: ${save.best}%</small>` : ''); const img = $('shareImg'); if (bestShot && r !== 'seek') { img.src = bestShot.img; img.style.display = 'block'; } else img.style.display = 'none'; $('rShare').style.display = bestShot ? '' : 'none';
   round++; $('rNext').textContent = round < rounds.length ? (rounds[round] === 'seek' ? '🧐 ¡Ahora buscas tú!' : rounds[round].startsWith('2p') ? '🔄 ¡Cambio de papeles!' : 'Siguiente ▶') : '🔁 Otra partida'; show('res'); }
@@ -939,5 +972,5 @@ function loop(now) { requestAnimationFrame(loop); const dt = Math.min(.1, (now -
   update(dt); if (!playing && phase === 'idle') menuAnim(dt);
   renderer.render(scene, camera); const pipOn = !!(me && playing && role === 'hide' && me.alive && (phase === 'hide' || phase === 'seek')); if (pipOn !== pipShown) { pipShown = pipOn; $('mold').classList.toggle('on', pipOn); } if (pipOn) moldPreview();
   fpsAcc += dt; fpsN++; fpsT += dt; if (fpsT > 2.5) { const avg = fpsAcc / fpsN; fpsAcc = fpsN = fpsT = 0; const maxQ = Math.min(DPR, 2.25); if (!window.__lockQ && avg > .024 && quality > .75) { quality = Math.max(.75, quality - .25); renderer.setPixelRatio(quality); resize(); if (quality <= 1 && sun.shadow.mapSize.x > 1024) { sun.shadow.mapSize.set(1024, 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } } } else if (avg < .0145 && quality < maxQ) { quality = Math.min(maxQ, quality + .25); renderer.setPixelRatio(quality); resize(); } } }
-window.__ec = { get follow() { return follow; }, setFollow, get critic2() { return critic; }, setQ: v => { window.__lockQ = 1; quality = v; renderer.setPixelRatio(v); resize(); }, get gfx() { return { quality, shadow: sun.shadow.mapSize.x, ...(window.__gfx || {}), ts: TS }; }, get pan() { return [panX, panZ]; }, get panning() { return panning; }, get wpp() { return [panWX, panWY]; }, get wallOps() { return wallMeshes.filter(w => (w.userData.wf ?? 1) < .99).map(w => +(w.userData.wf).toFixed(2)); }, get nWalls() { return wallMeshes.length; }, get exempt() { return exemptWalls.length; }, get hidden() { return hidden; }, get dbg() { return { joyId, camId, dragId, pp: pp.size, ptrs: ptrs.size, runT, hidden }; }, doRun, collide, get camZ() { return camZ; }, setZoom: v => { camZ = v; }, get camZs() { return camZs; }, XMIN, XMAX, ZMIN, ZMAX, RC, THREE, goRow, dragPlace, prevCam, get pipShown() { return pipShown; }, get moldIsOpen() { return moldIsOpen; }, get camYawS() { return camYawS; }, get camLift() { return camLift; }, get camYaw() { return camYaw; }, get phase() { return phase; }, get role() { return role; }, get me() { return me; }, get manchas() { return manchas; }, get critic() { return critic; }, get props() { return props; }, get anchors() { return anchors; }, get surfaces() { return surfaces; }, get cols() { return cols; }, setPhaseT: v => phaseT = v, camoCalc, contactSurf, applySkin, setShape, attach, findJump, doJump, copySkin, groundAt, catchMancha, camoPhrase, get camPos() { return camPos; }, get startYaw() { return startYaw; }, get net() { return NET; }, get shotsLeft() { return shotsLeft; }, setCam: (y, p) => { camYaw = y; camPitch = p; }, fire: () => playerFire(), get quality() { return quality; }, get playing() { return playing; }, roomOf, lineOfSight, get camPos() { return camera.position.clone(); }, setJoy: (x, y) => { joyX = x; joyY = y; }, snap: () => { snapCam = true; }, renderer, scene, camera };
+window.__ec = { get v23() { return { score, whistleCd, whistleBonus, sus: me && me.sus, beacons: beacons.length, room: critic && critic.routeRoom, st: critic && critic.state, sight: sightC }; }, get follow() { return follow; }, setFollow, get critic2() { return critic; }, setQ: v => { window.__lockQ = 1; quality = v; renderer.setPixelRatio(v); resize(); }, get gfx() { return { quality, shadow: sun.shadow.mapSize.x, ...(window.__gfx || {}), ts: TS }; }, get pan() { return [panX, panZ]; }, get panning() { return panning; }, get wpp() { return [panWX, panWY]; }, get wallOps() { return wallMeshes.filter(w => (w.userData.wf ?? 1) < .99).map(w => +(w.userData.wf).toFixed(2)); }, get nWalls() { return wallMeshes.length; }, get exempt() { return exemptWalls.length; }, get hidden() { return hidden; }, get dbg() { return { joyId, camId, dragId, pp: pp.size, ptrs: ptrs.size, runT, hidden }; }, doRun, collide, get camZ() { return camZ; }, setZoom: v => { camZ = v; }, get camZs() { return camZs; }, XMIN, XMAX, ZMIN, ZMAX, RC, THREE, goRow, dragPlace, prevCam, get pipShown() { return pipShown; }, get moldIsOpen() { return moldIsOpen; }, get camYawS() { return camYawS; }, get camLift() { return camLift; }, get camYaw() { return camYaw; }, get phase() { return phase; }, get role() { return role; }, get me() { return me; }, get manchas() { return manchas; }, get critic() { return critic; }, get props() { return props; }, get anchors() { return anchors; }, get surfaces() { return surfaces; }, get cols() { return cols; }, setPhaseT: v => phaseT = v, camoCalc, contactSurf, applySkin, setShape, attach, findJump, doJump, copySkin, groundAt, catchMancha, camoPhrase, get camPos() { return camPos; }, get startYaw() { return startYaw; }, get net() { return NET; }, get shotsLeft() { return shotsLeft; }, setCam: (y, p) => { camYaw = y; camPitch = p; }, fire: () => playerFire(), get quality() { return quality; }, get playing() { return playing; }, roomOf, lineOfSight, get camPos() { return camera.position.clone(); }, setJoy: (x, y) => { joyX = x; joyY = y; }, snap: () => { snapCam = true; }, renderer, scene, camera };
 menuWorld(); requestAnimationFrame(loop);
