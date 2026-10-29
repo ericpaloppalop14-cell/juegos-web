@@ -19,7 +19,7 @@ const CHARS = [
   { id: 'lava', name: 'Lava', color: '#ffb36b', ears: null, inner: '#ff6a3d', pers: 'Competitiva y calentita', lines: ['¡Voy a fundir el récord!', 'Ardo en deseos de ganarte.', 'Quema, ¿eh? Es mi estela.'] },
   { id: 'tictac', name: 'Tictac', color: '#ffd98a', ears: 'bear', inner: '#d9a74a', pers: 'Puntual y gruñón', lines: ['Llegas tarde. Como siempre.', 'Tic, tac… se te acaba el tiempo.', 'He calculado tu derrota al segundo.'] },
   { id: 'trueno', name: 'Trueno', color: '#a9b4d6', ears: 'horns', inner: '#5b6aa0', pers: 'Ruidoso y dramático', lines: ['¡¡BROOOM!! Perdón, me emociono.', 'Se avecina tormenta… ¡de victorias!', '¡Escucha mi rugido de gelatina!'] },
-  { id: 'disco', name: 'Disco', color: '#ff8fd8', ears: 'cat', inner: '#ffe27a', pers: 'Fiestera y presumida', lines: ['¿Has visto mis gafas? Brillan más que tú.', 'Ganar es mi baile favorito.', '¡Que suene la música de la meta!'] },
+  { id: 'disco', name: 'Disco', color: '#f3a0b2', ears: 'cat', inner: '#ffe27a', pers: 'Fiestera y presumida', lines: ['¿Has visto mis gafas? Brillan más que tú.', 'Ganar es mi baile favorito.', '¡Que suene la música de la meta!'] },
 ];
 const CH = id => CHARS.find(c => c.id === id) || CHARS[0];
 
@@ -56,7 +56,7 @@ function drawMochi(x, c, y, r, o = {}) {
   x.fillStyle = 'rgba(255,110,150,.45)'; for (const s of [-1, 1]) { x.beginPath(); x.ellipse(s * rx * .58, ey + r * .17, r * .12, r * .065, 0, 0, 7); x.fill(); }
   x.strokeStyle = '#4a2a4a'; x.lineWidth = Math.max(1.2, r * .06); x.beginPath();
   if (mood === 'ouch') x.arc(0, ey + r * .22, r * .08, Math.PI + .3, -.3); else x.arc(0, ey + r * .08, r * .1, .25, Math.PI - .25); x.stroke();
-  if (ch.id === 'disco') { x.fillStyle = '#3a2a5a'; x.fillRect(-rx * .6, ey - r * .1, rx * 1.2, r * .17); }
+  if (ch.id === 'disco' && window.Disco2D) { const D = window.Disco2D; D.discoWig(x, rx, ry, r); D.discoShades(x, rx * .38, ey, r * .075, r); D.discoBow(x, -rx * .66, ey + r * .3, r); }
   if (ch.id === 'copito') { x.fillStyle = '#ff9cc8'; x.beginPath(); x.ellipse(0, -ry * .85, rx * .7, r * .2, 0, Math.PI, 0); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(0, -ry * 1.08, r * .1, 0, 7); x.fill(); }
   if (ch.id === 'cosmo') { x.strokeStyle = '#ffe27a'; x.lineWidth = r * .07; x.beginPath(); x.ellipse(0, -ry * .1, rx * 1.25, r * .2, -.2, 0, Math.PI); x.stroke(); }
   if (ch.id === 'lava') { x.fillStyle = '#ff6a3d'; x.beginPath(); x.ellipse(0, -ry * .92, rx * .45, r * .14, 0, 0, 7); x.fill(); }

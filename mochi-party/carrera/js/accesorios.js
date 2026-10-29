@@ -122,14 +122,5 @@ export function crazyAccessories(ch, root, ud, H) {
     const nk = mesh(tor(.02, 40), toon('#ffd84a', { rim: .8 }), root, [0, .55, 0], [Math.PI / 2 + .5, 0, 0], [.7, .7, 1]); mesh(boltG(), gl('#ffe84a', .8), root, [0, .22, .86], [.3, 0, 0], .5);
     for (let i = 0; i < 3; i++) { const s = glow('#cfe0ff', .45); root.add(s); fx(t => { const a = t * 1.7 + i * 2.1; s.position.set(Math.sin(a) * 1.3, .9 + Math.sin(t * 9 + i) * .45, Math.cos(a) * .9); s.material.opacity = Math.sin(t * 13 + i * 5) > .3 ? 1 : .1; }); }
   }
-  if (id === 'disco') {
-    // peinado afro de bolas de espejos, medallón, notas musicales y destellos
-    const mm = toon('#d8d0ff', { emissive: '#8060ff', ei: .5, rim: .9, nocache: true }), balls = []; mm.flatShading = true;
-    [[0, 1.78, 0, .3], [.3, 1.68, 0, .24], [-.3, 1.68, 0, .24], [0, 1.65, .28, .22], [0, 1.65, -.28, .22], [.2, 1.92, .05, .2], [-.2, 1.92, -.05, .2]].forEach(([x, y, z, r], i) => { const b = mesh(geo('ico1', () => new THREE.IcosahedronGeometry(1, 1)), mm, root, [x, y, z], null, r); balls.push(b); });
-    fx(t => { mm.emissive.setHSL((t * .2) % 1, .9, .3); balls.forEach((b, i) => { b.rotation.y = t * 1.5 + i; }); });
-    const md = new THREE.Group(); md.position.set(0, .26, .88); root.add(md); mesh(tor(.02, 40), toon('#ffd23a', { rim: .9 }), root, [0, .62, 0], [Math.PI / 2 + .55, 0, 0], [.72, .72, 1]);
-    const mb = mesh(geo('ico2', () => new THREE.IcosahedronGeometry(1, 1)), mm, md, null, null, .13); fx(t => { mb.rotation.y = -t * 2; });
-    ['♪', '♫', '♪', '♬'].forEach((n, i) => { const s = symSprite(n, ['#ffe27a', '#ff7fd0', '#7fe0ff', '#c8a0ff'][i], .42); root.add(s); fx(t => { const k = (t * .4 + i * .25) % 1; s.position.set(Math.sin(t * 1.5 + i * 1.6) * (1.0 + k * .3), .8 + k * 1.6, Math.cos(t * 1.5 + i * 1.6) * .8); s.material.opacity = Math.min(1, (1 - k) * 2); }); });
-    for (let i = 0; i < 4; i++) { const s = symSprite('✦', '#ffffff', .3); root.add(s); fx(t => { s.position.set(Math.sin(i * 1.7) * 1.15, .6 + (i * .37) % 1 * 1.2, Math.cos(i * 2.3) * .7 + .4); s.material.opacity = Math.max(0, Math.sin(t * 4 + i * 2)); s.scale.setScalar(.25 + Math.abs(Math.sin(t * 4 + i * 2)) * .2); }); }
-  }
+  // disco: peluca, gafas y lacito viven en disco.js (rehecho en o40 a partir de la imagen de referencia)
 }

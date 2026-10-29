@@ -3,7 +3,7 @@
 // profundidad real (parallax por distancia, niebla), PMREM para reflejos, calidad automática.
 // Solo usa las bandas de arriba/abajo de la pantalla para no tapar botones ni personajes.
 import * as THREE from 'three';
-import { buildWorld } from './mundo3d.js?v=o39';
+import { buildWorld } from './mundo3d.js?v=o40';
 const CFG = window.__DESFILE3D || {};
 const isOn = window.__desfileOn || (() => { const m = document.getElementById('sMenu'), c = document.getElementById('sChars'); return !m || m.classList.contains('on') || (c && c.classList.contains('on')); });
 const cv = document.createElement('canvas'); cv.id = 'desfile'; cv.setAttribute('aria-hidden', 'true');

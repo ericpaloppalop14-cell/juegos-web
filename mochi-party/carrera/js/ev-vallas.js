@@ -1,5 +1,5 @@
 // 🐍 VALLAS SERPIENTE (3D): pista de atletismo con serpientes que ondulan, público de gelatina y meta
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=o39';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=o40';
 const L = 300, LW = 1.7, SEG = 14, V0 = 9.5, BSTEP = .35, BMAX = 2.1;
 const laneX = l => (l - 2.5) * LW;
 function checker() { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d'); for (let i = 0; i < 16; i++) for (let j = 0; j < 4; j++) { x.fillStyle = (i + j) % 2 ? '#ffffff' : '#5a3a6e'; x.fillRect(i * 16, j * 16, 16, 16); } const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; }

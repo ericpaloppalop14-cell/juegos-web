@@ -32,7 +32,7 @@ export const CHARS = [
     stats: { vel: 3, acel: 3, man: 3, peso: 5 }, desc: 'Pesado y puntual: aparta a todo el mundo.', unlock: null },
   { id: 'trueno', name: 'Trueno', color: '#a9b4d6', ears: 'horns', inner: 'storm', vehicle: 'cloud', vname: 'Nube de Tormenta',
     stats: { vel: 4, acel: 3, man: 3, peso: 3 }, desc: 'Rápido y eléctrico. Truena al meter turbo.', unlock: null },
-  { id: 'disco', name: 'Disco', color: '#ff8fd8', ears: 'cat', acc: 'shades', inner: 'disco', vehicle: 'discoball', vname: 'Bola de Discoteca',
+  { id: 'disco', name: 'Disco', color: '#f3a0b2', ears: 'cat', inner: 'disco', vehicle: 'discoball', vname: 'Bola de Discoteca',
     stats: { vel: 4, acel: 4, man: 3, peso: 2 }, desc: 'La fiesta sobre ruedas. ¡Que no pare!', unlock: null },
 ];
 

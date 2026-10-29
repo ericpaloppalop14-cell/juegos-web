@@ -2,7 +2,7 @@
 //  1 Corteza: raíces, topos, tuberías y tesoros · 2 Fósiles: dinos que se mueven, conchas y ámbar
 //  3 Cristales: geodas, murciélagos y setas luminosas · 4 Magma: ríos de lava, salamandras y rocas flotantes
 //  5 Núcleo: esfera dorada y meta épica. Reglas justas: misma velocidad base; turbo por habilidad.
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=o39';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=o40';
 const D = 460, R = 7.5, XM = 5.4, H = D / 5, V0 = 11.5, BSTEP = .8, BMAX = 4.5; // tanda 4: caída más lenta y agujeros enormes
 // medidas ÚNICAS para dibujar y para chocar: lo que ves es lo que choca
 const RR = .45, ZS = 2.6; // radio del mochi (para chocar solo cuenta el 40%: hitbox generosa)

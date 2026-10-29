@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { crazyAccessories } from './accesorios.js?v=o39';
+import { crazyAccessories } from './accesorios.js?v=o40';
+import { buildDisco, fuzzTexture } from './disco.js?v=o40';
 
 // ---------- toon materials ----------
 let gradTex;
@@ -120,9 +121,10 @@ export function makeCharacter(ch, opts = {}) {
   const root = new THREE.Group(); root.name = 'char';
   const ud = root.userData; ud.fx = []; ud.arms = []; ud.casters = []; ud.lite = lite;
   const inner = new THREE.Group(); root.add(inner);
-  buildInner(ch.inner, inner, ch);
+  buildInner(ch.inner, inner, ch); if (ch.id === 'disco') inner.scale.setScalar(0.7);
   const OLC = hex(col(ch.color, -0.55));
-  const body = mesh(bodyGeo(), toon(hex(col(ch.color, 0.05)), { opacity: 0.74, rim: 0.55, vc: true, depthWrite: false }), root);
+  const bodyMat = toon(hex(col(ch.color, 0.05)), { opacity: ch.id === 'disco' ? 0.8 : 0.74, rim: 0.55, vc: true, depthWrite: false, nocache: ch.id === 'disco' }); if (ch.id === 'disco') bodyMat.map = fuzzTexture();
+  const body = mesh(bodyGeo(), bodyMat, root);
   body.renderOrder = 2; ud.casters.push(body);
   const ol = outline(body, OLC, 1.04); ol.renderOrder = 1;
   const eyeM = toon('#2a1838', { rim: 0 }), whiteM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
@@ -168,7 +170,7 @@ export function makeCharacter(ch, opts = {}) {
     if (E === 'bunny') { const g = new THREE.Group(); g.position.set(s * 0.42, 1.38, 0); g.rotation.z = -s * 0.35; ears.add(g);
       const e = mesh(sph(16), earM, g, [0, 0.55, 0], null, [0.2, 0.62, 0.17]); outline(e, OLC, 1.08); mesh(sph(14), innerM, g, [0, 0.52, 0.07], null, [0.12, 0.46, 0.1]); ud.casters.push(e); }
     if (E === 'bear') { const e = mesh(sph(16), earM, ears, [s * 0.62, 1.42, 0], null, [0.26, 0.24, 0.16]); outline(e, OLC, 1.08); mesh(sph(12), innerM, ears, [s * 0.62, 1.42, 0.07], null, [0.16, 0.15, 0.1]); }
-    if (E === 'cat') { const e = mesh(cone(4), earM, ears, [s * 0.5, 1.6, 0], [0, 0, -s * 0.3], [0.26, 0.42, 0.2]); outline(e, OLC, 1.1); mesh(cone(4), innerM, ears, [s * 0.5, 1.56, 0.08], [0, 0, -s * 0.3], [0.15, 0.3, 0.1]); }
+    if (E === 'cat') { const dc = ch.id === 'disco', ex = dc ? 0.64 : 0.5, ey = dc ? 1.52 : 1.6, er = dc ? 0.55 : 0.3, es = dc ? 1.3 : 1; const e = mesh(cone(4), earM, ears, [s * ex, ey, 0], [0, 0, -s * er], [0.26 * es, 0.42 * es, 0.2 * es]); outline(e, OLC, 1.1); mesh(cone(4), innerM, ears, [s * ex, ey - 0.04, 0.08], [0, 0, -s * er], [0.15 * es, 0.3 * es, 0.1 * es]); }
     if (E === 'horns') { const h = mesh(cone(10), toon('#fff3b0', { rim: 0.4 }), ears, [s * 0.45, 1.55, 0], [0, 0, -s * 0.45], [0.13, 0.38, 0.13]); outline(h, '#b89a40', 1.08);
       mesh(tor(0.08, 12), toon('#e8d27a', { rim: 0.3 }), h, [0, -0.1, 0], [Math.PI / 2, 0, 0], [1.05, 1.05, 1.5]); mesh(tor(0.08, 12), toon('#e8d27a', { rim: 0.3 }), h, [0, 0.12, 0], [Math.PI / 2, 0, 0], [0.8, 0.8, 1.5]); }
     if (E === 'fins') { const f = mesh(cone(4), earM, ears, [s * 0.98, 0.85, -0.1], [0, 0, -s * 1.9], [0.3, 0.5, 0.06]); outline(f, OLC, 1.1); for (let k = -1; k <= 1; k++) mesh(box(), innerM, f, [k * 0.18, 0.02, 0.6], [0, 0, k * 0.2], [0.04, 0.8, 0.5]); }
@@ -192,6 +194,7 @@ export function makeCharacter(ch, opts = {}) {
     for (const s of [-1, 1]) { mesh(cyl(20), sm, root, [s * 0.36, 0.9, 1.0], [Math.PI / 2, 0, 0], [0.26, 0.06, 0.22]); mesh(tor(0.1, 20), toon('#ffd36b', { rim: 0.6 }), root, [s * 0.36, 0.9, 1.03], null, [0.26, 0.22, 0.2]); mesh(sph(8), whiteM, root, [s * 0.36 + 0.07, 0.97, 1.07], null, [0.05, 0.03, 0.01]); }
     mesh(box(), toon('#ffd36b'), root, [0, 0.93, 1.02], null, [0.3, 0.05, 0.05]); }
   ud.body = body; ud.inner = inner;
+  if (ch.id === 'disco') { try { buildDisco(root, ud, { toon, mesh, outline, sph, cyl, cone, box, tor, geo, bodyR, gradient }, ch, lite); } catch (e) { console.warn('disco', e); } }
   if (!lite) {
     const det = new THREE.Group(); det.name = 'detalle'; root.add(det); ud.det = det; // todo lo decorativo vive aquí: se puede apagar si el móvil va justo
     // brazos y pies de gelatina
@@ -238,7 +241,7 @@ function buildInner(kind, g, ch) {
 }
 export function animCharacter(c, t, k = 1, expr = '') {
   const u = c.userData;
-  if (u.happy) { const sad = expr === 'sad'; u.happy.visible = expr === 'happy'; u.xx.visible = expr === 'squash'; for (const e of u.eyes) e.visible = !expr || sad; u.mouth.scale.set(expr === 'happy' ? 0.13 : 0.09, expr === 'happy' ? 0.11 : 0.07, 0.07); u.mouth.visible = expr !== 'squash';
+  if (u.happy) { const sad = expr === 'sad'; u.happy.visible = expr === 'happy'; u.xx.visible = expr === 'squash'; for (const e of u.eyes) e.visible = !expr || sad; const mk = u.mouthK || 1; u.mouth.scale.set((expr === 'happy' ? 0.13 : 0.09) * mk, (expr === 'happy' ? 0.11 : 0.07) * mk, 0.07); u.mouth.visible = expr !== 'squash';
     if (u.tongue) u.tongue.visible = expr === 'happy';
     // cara triste: boca del revés y un poco más abajo
     if (u.mouthRZ == null) { u.mouthRZ = u.mouth.rotation.z; u.mouthY = u.mouth.position.y; }
