@@ -2,8 +2,9 @@
 //  MOCHI PARTY · OLIMPIADAS — los 8 tipos de prueba, configurables por cada olimpiada
 //  salto · esquiva · machaca · vuelo · punteria · recoge · ritmo · superv · empuje
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=o43';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o43';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=o44';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o44';
+import { hieloFx } from './hielo-fx.js?v=o44';
 
 const LW = 2.3;
 const lx = (l, n = 6) => (l - (n - 1) / 2) * LW;
@@ -386,6 +387,7 @@ export function superv(cfg) {
         this.arm = new THREE.Group(); E.scene.add(this.arm); const c = prop(cfg.obj || 'reloj'); c.scale.setScalar(1.6); c.rotation.x = -Math.PI / 2; c.position.set(0, .25, 1.6); this.arm.add(c); const bar = mesh(BOX(), T(cfg.armc || '#ff6fae'), this.arm, [R / 2, .45, 0], null, [R, .5, .5]); outline(bar); for (let i = 1; i < 5; i++) mesh(SPHL(), GL('#ffe27a', .5), this.arm, [i * R / 5, .8, 0], null, .2); this.ang = 0; this.av = cfg.av || 1.4;
         this.arm2 = null; }
       this.drops = []; this.next = 1.5; this.cnt = 0;
+      if (MODE === 'baldosas' && cfg.id === 'hielo') this.fx = hieloFx(E, this, cfg, R, MUNDOS[cfg.mundo]);
     },
     kill(E, r, why) { if (r.out) return; r.out = true; r.score = E.t; r.label = `Aguantó ${E.t.toFixed(1)} s`; r.vy = 7; r.expr = 'squash'; E.burst(v3(r.x, 1, r.z), '#ff9cc8', 20, 6, .6, .7); if (r.me) { Audio.sfxPlay('squash'); E.ui.banner('¡Eliminado! 😵'); this.meOut = E.t; } else say(E, r, pick(['¡Nooo!', '¡Adiós, mundo cruel!', '¡Volveré!'])); },
     hurt(E, r, fromx, fromz) { if (r.inv > 0 || r.out) return; r.hp--; r.inv = 1.4; r.stun = .5; const dx = r.x - fromx, dz = r.z - fromz, d = Math.hypot(dx, dz) || 1; r.vx = dx / d * 7; r.vz = dz / d * 7; hitFx(E, r); if (r.me) E.ui.toast(r.hp > 0 ? `¡Ay! ❤️ x${r.hp}` : '', '#ff9cc8'); if (r.hp <= 0) this.kill(E, r); },
@@ -438,7 +440,8 @@ export function superv(cfg) {
       if (this.arm) { this.arm.rotation.y = -this.ang; } if (this.arm2) this.arm2.rotation.y = -this.ang2;
       for (const r of E.racers) { poseArena(E, r, t, dt); r.obj.visible = !(r.out && r.y < -30) && !(r.inv > 0 && Math.sin(t * 30) > .5); if (MODE === 'barrido') r.obj.rotation.y = Math.atan2(-r.x, -r.z) + Math.PI / 2; if (r.out) r.obj.rotation.z += dt * 8; }
       info(`${MODE === 'baldosas' ? '' : '❤️'.repeat(Math.max(0, me.hp)) + '<br>'}⏱️ Aguanta ${Math.max(0, TT - E.t).toFixed(0)} s<br>👥 Quedan ${E.racers.filter(r => !r.out).length}`);
-      arenaCam(E, me.out ? { x: 0, z: 0 } : me, dt, R); (this.A ? this.A.W : this.W).tick(dt, camera); }
+      arenaCam(E, me.out ? { x: 0, z: 0 } : me, dt, R); (this.A ? this.A.W : this.W).tick(dt, camera); this.fx && this.fx.tick(E, dt); },
+    dispose() { const d = $('perf'); if (d) d.remove(); this.fx && this.fx.dispose(); },
   });
 }
 

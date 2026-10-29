@@ -3,7 +3,7 @@
 //  planetas con textura y atmósfera (gigante gaseoso, Tierra, Luna), asfalto metálico, sombras.
 //  Todo se genera una vez en canvas (sin descargas) y los planetas no llevan niebla.
 // ======================================================================
-import { THREE, renderer } from '../core3d.js?v=o43';
+import { THREE, renderer } from '../core3d.js?v=o44';
 
 let SEED = 7; const rr = () => (SEED = (SEED * 16807) % 2147483647) / 2147483647;
 function noiseGrid(n) { const g = new Float32Array(n * n); for (let i = 0; i < g.length; i++) g[i] = rr(); return g; }

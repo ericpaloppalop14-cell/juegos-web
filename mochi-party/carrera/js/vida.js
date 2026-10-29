@@ -2,7 +2,7 @@
 // muñecos que se asoman por las ventanas y más cosas surrealistas en el cielo.
 // Todo con InstancedMesh o con un pool pequeño reutilizable: no se crean objetos por fotograma.
 import * as THREE from 'three';
-import { toon, mesh } from './gfx.js?v=o43';
+import { toon, mesh } from './gfx.js?v=o44';
 import { addEdificios } from './edificios.js';
 const V3 = THREE.Vector3;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new V3(), _p = new V3(), _v = new V3();
