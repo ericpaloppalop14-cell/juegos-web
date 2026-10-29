@@ -197,7 +197,7 @@ function drawHero(t, dt) {
   hx.strokeStyle = ink; hx.lineWidth = r * .04; hx.lineCap = 'round'; hx.lineJoin = 'round'; hx.beginPath();
   hx.arc(-mw, my, mw, Math.PI * .05, Math.PI * .95); hx.moveTo(mw * 2, my); hx.arc(mw, my, mw, Math.PI * .05, Math.PI * .95); hx.stroke();
   if (isH) { hx.fillStyle = '#ff7f9f'; hx.beginPath(); hx.ellipse(0, my + mw * 1.1, mw * .7, mw * .55, 0, 0, 7); hx.fill(); }
-  if (ch.id === 'disco') { const D = window.Disco2D; if (D) { D.discoIce(hx, w, hh, r, t); D.discoShades(hx, ex, ey, er, r); D.discoBow(hx, -w * .66, ey + r * .3, r); } }
+  if (ch.id === 'disco') { const D = window.Disco2D; if (D) { D.discoBola(hx, w, hh, r, t); D.discoShades(hx, ex, ey, er, r); D.discoBow(hx, -w * .66, ey + r * .3, r); } }
   if (ch.id === 'copito') { hx.fillStyle = '#ff9cc8'; hx.beginPath(); hx.ellipse(0, -hh * .9, w * .6, r * .2, 0, Math.PI, 0); hx.fill(); hx.fillStyle = '#fff'; hx.beginPath(); hx.arc(0, -hh * 1.12, r * .1, 0, 7); hx.fill(); }
   hx.restore();
   // partículas

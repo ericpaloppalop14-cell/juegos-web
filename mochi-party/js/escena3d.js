@@ -8,9 +8,9 @@
 //   podio → podio 1-2-3 con caída de los mochis, el ganador salta de alegría y los demás aplauden
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS } from '../carrera/js/data.js?v=o41';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o41';
-import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o41';
+import { CHARS } from '../carrera/js/data.js?v=o42';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o42';
+import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o42';
 
 const CH = id => CHARS.find(c => c.id === id) || CHARS[0];
 const rnd = (a, b) => a + Math.random() * (b - a), lerp = (a, b, t) => a + (b - a) * t;
@@ -204,7 +204,7 @@ function build(m, d) {
   extra.cam = camT.p.clone().multiplyScalar(1.5); // la cámara entra desde lejos
 }
 // ---------- miniaturas 3D de la selección (cada mochi en su recuadro, con su propia animación) ----------
-const mScene = new THREE.Scene(), mCam = new THREE.PerspectiveCamera(30, 1, .1, 50); mCam.position.set(0, 1.35, 6.6); mCam.lookAt(0, 1.0, 0);
+const mScene = new THREE.Scene(), mCam = new THREE.PerspectiveCamera(30, 1, .1, 50); mCam.position.set(0, 1.5, 7.4); mCam.lookAt(0, 1.2, 0);
 mScene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.25)); { const l = new THREE.DirectionalLight('#fff4e8', 1.9); l.position.set(3, 6, 6); mScene.add(l); const b2 = new THREE.DirectionalLight('#ffd0f0', 1); b2.position.set(-4, 4, -6); mScene.add(b2); }
 const mAct = {}, MROLES = ['boing', 'wiggle', 'hop', 'wave', 'spin', 'taunt', 'dance', 'clap'];
 // fluido: todos los recuadros se pintan en el mismo fotograma, en una sola pasada (viewports en fila) y se copian de golpe
@@ -222,6 +222,7 @@ function thumbs(t) {
   cs.forEach((c, i) => { if (c.width !== S) { c.width = c.height = S; } const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, Math.round(i * Sc * pr), H - S, S, S, 0, 0, S, S); });
   renderer.setScissorTest(false);
 }
+const HALO = document.getElementById('stageHalo') || document.createElement('div');
 // ---------- bucle ----------
 let last = now(), shown = true, fpsN = 0, fpsT = now();
 function frame() {
@@ -229,7 +230,7 @@ function frame() {
   const t1 = now(), dt = Math.min(.05, t1 - last); last = t1;
   fpsN++; if (t1 - fpsT > 2) { const f = fpsN / (t1 - fpsT); fpsN = 0; fpsT = t1; if (f < 45 && DPR > 1) { DPR = Math.max(1, DPR - .25); renderer.setPixelRatio(DPR); size(); } else if (f < 26 && DPR <= 1 && !lowMode && DET !== 'max') { lowMode = true; applyLow(); } }
   const el = document.querySelector('.scr.on .stage3d'); let r = el && el.getBoundingClientRect();
-  if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
+  if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
   const want = el.dataset.mode; if (want !== mode || el.dataset.key !== extra.key) { build(want, JSON.parse(el.dataset.d || '{}')); extra.key = el.dataset.key; }
   shown = true; const t = t1 - t0;
   for (const a of actors) pose(a, t, dt);
@@ -252,6 +253,8 @@ function frame() {
   extra.cam.lerp(want3, Math.min(1, dt * 2.6)); camera.position.copy(extra.cam); camera.lookAt(camT.l); camera.updateProjectionMatrix();
   thumbs(t);
   const free = mode === 'menu' || mode === 'chars', cv = renderer.domElement;
+  // halo de contraste (o42): un foco violeta suave y algo desenfocado detrás del pedestal para que los personajes se despeguen del fondo rosa
+  if (free) { const k = Math.round(r.left) + ',' + Math.round(r.top) + ',' + Math.round(r.width) + ',' + Math.round(r.height); if (HALO._k !== k) { HALO._k = k; const S = Math.max(r.width, r.height) * 1.05, cx = r.left + r.width / 2, cy = r.top + r.height * .5; HALO.style.width = HALO.style.height = S + 'px'; HALO.style.left = (cx - S / 2) + 'px'; HALO.style.top = (cy - S / 2) + 'px'; } if (HALO.style.display !== 'block') HALO.style.display = 'block'; } else if (HALO.style.display !== 'none') HALO.style.display = 'none';
   renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
   if (free) { // sin marco: la escena se sale del hueco y se funde con el fondo
     camera.setViewOffset(r.width, r.height, -r.left, -r.top, innerWidth, innerHeight); camera.updateProjectionMatrix();

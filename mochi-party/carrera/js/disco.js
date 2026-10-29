@@ -27,79 +27,39 @@ function lensMat() {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; _lens = new THREE.MeshBasicMaterial({ map: t }); return _lens;
 }
 
-// ---- helado de tres bolas que gotea brillantina (o41) ----
-let _waf;
-function waferTex() {
-  if (_waf) return _waf; const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S; const x = cv.getContext('2d');
-  x.fillStyle = '#e8c27a'; x.fillRect(0, 0, S, S); x.strokeStyle = '#b98a45'; x.lineWidth = 5;
-  for (let k = -S; k < S * 2; k += 22) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + S, S); x.stroke(); x.beginPath(); x.moveTo(k + S, 0); x.lineTo(k, S); x.stroke(); }
-  x.fillStyle = 'rgba(255,240,200,.35)'; for (let k = 0; k < 120; k++) x.fillRect(Math.random() * S, Math.random() * S, 2, 2);
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; _waf = t; return t;
+// ---- bola de discoteca de espejitos (o42): clara, legible y con pocos destellos suaves ----
+let _ballG;
+function ballGeo() {
+  if (_ballG) return _ballG;
+  const g = new THREE.SphereGeometry(1, 20, 14).toNonIndexed(), pos = g.attributes.position, col = new Float32Array(pos.count * 3);
+  const pal = ['#ffffff', '#e4ecff', '#ffdcf0', '#d3ecff', '#ece2ff', '#bcc8ea', '#9fb0d8'].map(h => new THREE.Color(h));
+  const cell = (x, y, z) => { const th = Math.acos(Math.max(-1, Math.min(1, y))), ph = Math.atan2(x, z); return Math.floor(th / (Math.PI / 14)) * 40 + Math.floor((ph + Math.PI) / (2 * Math.PI / 20)); };
+  for (let f = 0; f < pos.count; f += 3) { const cx = (pos.getX(f) + pos.getX(f + 1) + pos.getX(f + 2)) / 3, cy = (pos.getY(f) + pos.getY(f + 1) + pos.getY(f + 2)) / 3, cz = (pos.getZ(f) + pos.getZ(f + 1) + pos.getZ(f + 2)) / 3, l = Math.hypot(cx, cy, cz) || 1, id = cell(cx / l, cy / l, cz / l);
+    const h = Math.abs(Math.sin(id * 12.9898) * 43758.5453) % 1, c = pal[Math.floor(h * pal.length)], k = 0.58 + ((h * 7.3) % 1) * 0.42;
+    for (let q = 0; q < 3; q++) { col[(f + q) * 3] = c.r * k; col[(f + q) * 3 + 1] = c.g * k; col[(f + q) * 3 + 2] = c.b * k; } }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); _ballG = g; return g;
 }
-const surf = (cy, rx, ry, y) => rx * Math.sqrt(Math.max(0, 1 - ((y - cy) / ry) ** 2));
-function buildIce(root, ud, H, lite) {
-  const { toon, mesh, sph, cyl, box, bodyR, glowTex } = H;
-  let sd = 5; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-  const ice = new THREE.Group(); ice.name = 'helado'; root.add(ice);
-  const SC = [ // [color, oscuro, cy, rx, ry, nombre]
-    { c: '#ff8fb6', d: '#e5628f', cy: 1.74, rx: 0.72, ry: 0.46, chip: '#d93a6a' },   // fresa
-    { c: '#8fe9cc', d: '#5ccaa4', cy: 2.12, rx: 0.58, ry: 0.42, chip: '#6a4a3a' },   // menta con pepitas de chocolate
-    { c: '#fff1c8', d: '#f1d495', cy: 2.45, rx: 0.46, ry: 0.38, chip: '#e0b060' } ]; // vainilla
-  const mats = SC.map(o => toon(o.c, { rim: 0.7, emissive: o.c, ei: 0.08 })), matD = SC.map(o => toon(o.d, { rim: 0.6 }));
-  SC.forEach((o, k) => {
-    const m = mesh(sph(lite ? 16 : 28), mats[k], ice, [0, o.cy, 0], null, [o.rx, o.ry, o.rx]); ud.casters.push(m);
-    // falda ondulada de la bola (borde de helado servido con cuchara)
-    const n = lite ? 10 : 16; for (let a = 0; a < n; a++) { const ph = a / n * Math.PI * 2 + k, r = o.rx * (0.9 + R() * 0.06);
-      mesh(sph(8), matD[k], ice, [Math.sin(ph) * r, o.cy - o.ry * 0.5 + R() * 0.03, Math.cos(ph) * r], null, [o.rx * 0.2, o.ry * 0.2, o.rx * 0.2]); }
-    mesh(sph(14), mats[k], ice, [0, o.cy - o.ry * 0.5, 0], null, [o.rx * 1.0, o.ry * 0.22, o.rx * 1.0]);
-    // brillo húmedo
-    const hl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending })); hl.scale.setScalar(o.rx * 0.9); hl.position.set(-o.rx * 0.5, o.cy + o.ry * 0.5, o.rx * 0.6); ice.add(hl);
-  });
-  // virutas de colores (instanciadas) y pepitas
-  const nSp = lite ? 40 : 110, spG = new THREE.CylinderGeometry(0.014, 0.014, 0.085, 5), spM = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: H.gradient() });
-  const sp = new THREE.InstancedMesh(spG, spM, nSp), dm = new THREE.Object3D(), pal = ['#ff5f9e', '#ffd84a', '#5fd0ff', '#ffffff', '#a98bff', '#6af0b0', '#ff8a3a'];
-  for (let q = 0; q < nSp; q++) { const k = q % 3, o = SC[k], th = Math.acos(1 - R() * 1.45), ph = R() * Math.PI * 2, nx = Math.sin(th) * Math.sin(ph), ny = Math.cos(th), nz = Math.sin(th) * Math.cos(ph);
-    dm.position.set(nx * o.rx * 1.0, o.cy + ny * o.ry * 1.0, nz * o.rx * 1.0); dm.rotation.set(R() * 3, R() * 3, R() * 3); dm.updateMatrix(); sp.setMatrixAt(q, dm.matrix); sp.setColorAt(q, new THREE.Color(pal[(q * 3 + k) % pal.length])); }
-  sp.instanceColor.needsUpdate = true; ice.add(sp);
-  for (let q = 0; q < (lite ? 6 : 18); q++) { const k = q % 3, o = SC[k], th = 0.3 + R() * 1.0, ph = R() * 6.28; mesh(sph(6), toon(o.chip, { rim: 0.2 }), ice, [Math.sin(th) * Math.sin(ph) * o.rx * 0.98, o.cy + Math.cos(th) * o.ry * 0.98, Math.sin(th) * Math.cos(ph) * o.rx * 0.98], null, [0.05, 0.035, 0.05]); }
-  // guinda con rabito y brillo
-  const ch = mesh(sph(18), toon('#e0123a', { rim: 0.9, emissive: '#7a0018', ei: 0.35 }), ice, [0.03, 2.86, 0], null, 0.16); ud.casters.push(ch);
-  const stem = mesh(H.tor(0.07, 14), toon('#3a8a3a', { rim: 0.2 }), ice, [0.1, 3.06, 0], [0, 0, 2.3], [0.13, 0.13, 0.2]);
-  const cl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending })); cl.scale.setScalar(0.12); cl.position.set(-0.05, 2.93, 0.12); ice.add(cl);
-  // barquillo clavado en la bola de arriba
-  const wf = mesh(box(), toon('#ffffff', { rim: 0.3, nocache: true }), ice, [0.3, 2.82, 0.0], [0, 0.3, -0.45], [0.14, 0.7, 0.025]); wf.material.map = waferTex(); wf.material.map.repeat.set(1, 4); ud.casters.push(wf);
-  // chorretones: cada bola gotea sobre la de abajo; la de abajo, sobre la cabeza y el cuerpo
-  const drips = [];
-  const drip = (mat, ph, yTop, len, w, R0) => {
-    const g = new THREE.Group(); g.position.set(Math.sin(ph) * R0, yTop, Math.cos(ph) * R0); g.rotation.y = ph; ice.add(g);
-    mesh(sph(10), mat, g, [0, -len / 2, 0], null, [w, len / 2, w * 0.5]); const bulb = mesh(sph(12), mat, g, [0, -len, 0.0], null, [w * 1.3, w * 1.45, w * 0.8]);
-    const sh = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); sh.scale.setScalar(w * 1.5); sh.position.set(-w * 0.35, -len * 0.55, w * 0.5); g.add(sh);
-    drips.push({ bulb, len, ph: R() * 6.28 }); return g; };
-  const nD = lite ? 5 : 8;
-  for (let a = 0; a < nD; a++) { const ph = a / nD * Math.PI * 2 + 0.3, len = 0.18 + R() * 0.2;
-    drip(matD[2], ph, SC[2].cy - SC[2].ry * 0.35, len, 0.05 + R() * 0.02, surf(SC[1].cy, SC[1].rx, SC[1].ry, SC[2].cy - SC[2].ry * 0.35 - len * 0.5) + 0.03);        // vainilla sobre la menta
-    drip(matD[1], ph + 0.4, SC[1].cy - SC[1].ry * 0.4, len + 0.1, 0.055 + R() * 0.02, surf(SC[0].cy, SC[0].rx, SC[0].ry, SC[1].cy - SC[1].ry * 0.4 - len * 0.3) + 0.03); }
-  for (let a = 0; a < (lite ? 7 : 11); a++) { const ph = a / (lite ? 7 : 11) * Math.PI * 2 + 0.1, len = 0.25 + R() * 0.3, y0 = SC[0].cy - SC[0].ry * 0.42, yb = y0 - len;
-    const r0 = Math.max(surf(SC[0].cy, SC[0].rx, SC[0].ry, y0), bodyR(yb + 0.05)) + 0.04; drip(matD[0], ph, y0, len, 0.065 + R() * 0.02, r0); }
-  // brillantina: chorretones iridiscentes por el cuerpo + purpurina flotando
-  const glM = new THREE.MeshToonMaterial({ color: 0xffffff, emissive: 0xff7fd0, emissiveIntensity: 0.55, gradientMap: H.gradient() });
-  const gl = new THREE.Group(); root.add(gl);
-  for (const [ph, y0, len] of [[-1.35, 1.12, 0.5], [1.45, 1.1, 0.42], [-2.2, 1.0, 0.55], [2.3, 1.05, 0.4], [0.2, 0.0, 0]]) { if (!len) continue; const w = 0.045, r0 = bodyR(y0 - len * 0.5) + 0.03;
-    const g = new THREE.Group(); g.position.set(Math.sin(ph) * r0, y0, Math.cos(ph) * r0); g.rotation.y = ph; gl.add(g);
-    mesh(sph(10), glM, g, [0, -len / 2, 0], null, [w, len / 2, w * 0.45]); mesh(sph(12), glM, g, [0, -len, 0], null, [w * 1.4, w * 1.6, w * 0.8]); }
-  const det = new THREE.Group(); det.name = 'detalle'; root.add(det);
-  const sparks = []; for (let q = 0; q < (lite ? 6 : 16); q++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(['#ffffff', '#ffd1f0', '#d6f6ff', '#fff6b0'][q % 4]), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.scale.setScalar(0.18 + R() * 0.16); det.add(s); sparks.push({ s, ph: R() * 6.28, a: R() * 6.28, r: 0.7 + R() * 0.5, sp: 0.4 + R() * 0.5 }); }
+function buildBall(root, ud, H, lite) {
+  const { toon, mesh, tor, cyl, glowTex } = H;
+  const grp = new THREE.Group(); grp.name = 'bolaDisco'; grp.position.set(0, 1.95, 0); root.add(grp);
+  const bm = toon('#ffffff', { rim: 0.8, vc: true, emissive: '#6a76aa', ei: 0.22, nocache: true }); bm.flatShading = true;
+  const ball = new THREE.Mesh(ballGeo(), bm); ball.scale.setScalar(0.56); grp.add(ball); ud.casters.push(ball);
+  // casquillo + anilla de colgar
+  mesh(cyl(14), toon('#aab4d8', { rim: 0.8 }), grp, [0, 0.56, 0], null, [0.1, 0.07, 0.1]);
+  mesh(tor(0.1, 16), toon('#cfd6ee', { rim: 0.8 }), grp, [0, 0.69, 0], null, [0.1, 0.1, 0.1]);
+  // pocos destellos suaves y pequeños (en el grupo "detalle": se apagan si el móvil va justo)
+  const det = new THREE.Group(); det.name = 'detalle'; grp.add(det); const sp = [];
+  for (let q = 0; q < (lite ? 2 : 4); q++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); s.scale.setScalar(0.17); det.add(s); sp.push({ s, a: q * 1.6 + 0.4, ph: q * 0.37 }); }
   ud.fx.push(t => {
-    ice.rotation.z = Math.sin(t * 1.7) * 0.025; ice.rotation.x = Math.cos(t * 1.3) * 0.02; glM.emissive.setHSL((t * 0.15) % 1, 0.9, 0.55);
-    for (const d of drips) { const k = 1 + Math.sin(t * 2.2 + d.ph) * 0.12; d.bulb.scale.y = d.bulb.userData.sy || (d.bulb.userData.sy = d.bulb.scale.y); d.bulb.scale.y *= k; d.bulb.position.y = -d.len * (1 + (k - 1) * 0.4); }
-    for (const p of sparks) { const k = (t * p.sp + p.ph) % 1; p.s.position.set(Math.sin(p.a + t * 0.4) * p.r, 3.0 - k * 2.9, Math.cos(p.a + t * 0.4) * p.r * 0.8); p.s.material.opacity = Math.sin(k * Math.PI) * (0.65 + 0.35 * Math.sin(t * 11 + p.ph * 7)); } });
-  return ice;
+    ball.rotation.y = t * 0.45; grp.rotation.z = Math.sin(t * 1.4) * 0.03;
+    for (const p of sp) { const k = (t * 0.28 + p.ph) % 1, a = p.a + t * 0.2; p.s.position.set(Math.sin(a) * 0.62, 0.15 + Math.sin(a * 1.7) * 0.28, Math.cos(a) * 0.62); p.s.material.opacity = Math.max(0, Math.sin(k * Math.PI)) ** 2 * 0.55; } });
+  return grp;
 }
 
 export function buildDisco(root, ud, H, ch, lite) {
   const { toon, mesh, sph, cyl, cone, box, tor, bodyR } = H;
   const gold = toon('#c9b196', { rim: 0.6, emissive: '#3a2810', ei: 0.1 });
-  buildIce(root, ud, H, lite);
+  buildBall(root, ud, H, lite);
   // gafas redondas de montura dorada fina
   const rb = bodyR(0.92), lensM = lensMat(), ly = 0.93, lx = 0.38, lr = 0.275;
   const zAt = x => Math.sqrt(Math.max(0.05, rb * rb - x * x)) + 0.16;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { crazyAccessories } from './accesorios.js?v=o41';
-import { buildDisco, fuzzTexture } from './disco.js?v=o41';
+import { crazyAccessories } from './accesorios.js?v=o42';
+import { buildDisco, fuzzTexture } from './disco.js?v=o42';
 
 // ---------- toon materials ----------
 let gradTex;
@@ -126,7 +126,7 @@ export function makeCharacter(ch, opts = {}) {
   const bodyMat = toon(hex(col(ch.color, 0.05)), { opacity: ch.id === 'disco' ? 0.8 : 0.74, rim: 0.55, vc: true, depthWrite: false, nocache: ch.id === 'disco' }); if (ch.id === 'disco') bodyMat.map = fuzzTexture();
   const body = mesh(bodyGeo(), bodyMat, root);
   body.renderOrder = 2; ud.casters.push(body);
-  const ol = outline(body, OLC, 1.04); ol.renderOrder = 1;
+  const ol = outline(body, hex(col(ch.color, -0.66)), 1.058); ol.renderOrder = 1; // contorno algo más firme: el personaje se lee mejor sobre fondos rosas (o42)
   const eyeM = toon('#2a1838', { rim: 0 }), whiteM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
   const eyes = [];
   // ----- ojos -----

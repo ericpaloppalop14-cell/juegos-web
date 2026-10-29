@@ -56,7 +56,7 @@ function drawMochi(x, c, y, r, o = {}) {
   x.fillStyle = 'rgba(255,110,150,.45)'; for (const s of [-1, 1]) { x.beginPath(); x.ellipse(s * rx * .58, ey + r * .17, r * .12, r * .065, 0, 0, 7); x.fill(); }
   x.strokeStyle = '#4a2a4a'; x.lineWidth = Math.max(1.2, r * .06); x.beginPath();
   if (mood === 'ouch') x.arc(0, ey + r * .22, r * .08, Math.PI + .3, -.3); else x.arc(0, ey + r * .08, r * .1, .25, Math.PI - .25); x.stroke();
-  if (ch.id === 'disco' && window.Disco2D) { const D = window.Disco2D; D.discoIce(x, rx, ry, r, t); D.discoShades(x, rx * .38, ey, r * .075, r); D.discoBow(x, -rx * .66, ey + r * .3, r); }
+  if (ch.id === 'disco' && window.Disco2D) { const D = window.Disco2D; D.discoBola(x, rx, ry, r, t); D.discoShades(x, rx * .38, ey, r * .075, r); D.discoBow(x, -rx * .66, ey + r * .3, r); }
   if (ch.id === 'copito') { x.fillStyle = '#ff9cc8'; x.beginPath(); x.ellipse(0, -ry * .85, rx * .7, r * .2, 0, Math.PI, 0); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(0, -ry * 1.08, r * .1, 0, 7); x.fill(); }
   if (ch.id === 'cosmo') { x.strokeStyle = '#ffe27a'; x.lineWidth = r * .07; x.beginPath(); x.ellipse(0, -ry * .1, rx * 1.25, r * .2, -.2, 0, Math.PI); x.stroke(); }
   if (ch.id === 'lava') { x.fillStyle = '#ff6a3d'; x.beginPath(); x.ellipse(0, -ry * .92, rx * .45, r * .14, 0, 0, 7); x.fill(); }
