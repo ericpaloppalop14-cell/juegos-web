@@ -126,11 +126,15 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 @media (orientation:landscape) and (max-height:520px){#mold .msh{grid-template-columns:repeat(6,1fr)}body.molding #rows,body.molding #acts{display:none!important}}
 #run{position:fixed;left:max(18px,env(safe-area-inset-left));bottom:max(24px,env(safe-area-inset-bottom));min-width:150px;height:68px;padding:0 22px;border-radius:34px;border:4px solid #fff;background:linear-gradient(#ff8a3d,#ff5a2a);color:#fff;font:700 28px Fredoka;box-shadow:0 5px 0 #b3340f,0 8px 18px rgba(0,0,0,.25);z-index:6;display:none;touch-action:none;cursor:pointer}#run.on{display:flex;align-items:center;justify-content:center;animation:runp 1.2s ease-in-out infinite}@keyframes runp{50%{transform:scale(1.06)}}body.hid #joy{display:none!important}
 #zoom{position:fixed;left:max(14px,env(safe-area-inset-left));top:46%;transform:translateY(-50%);display:none;flex-direction:column;gap:10px;z-index:5}#zoom.on{display:flex}#zoom button{width:52px;height:52px;border-radius:50%;border:3px solid #fff;background:rgba(122,92,255,.88);color:#fff;font:700 30px/1 Fredoka;box-shadow:0 3px 0 #4a2cb0;padding:0;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:pointer}#zoom button:active{transform:scale(.92)}#run.sm{bottom:calc(max(22px,env(safe-area-inset-bottom)) + 142px);min-width:130px;height:60px;font-size:24px;animation:none}@media (orientation:landscape){#run.sm{bottom:max(22px,env(safe-area-inset-bottom));left:calc(max(18px,env(safe-area-inset-left)) + 146px)}}
+#zFol{display:none!important;width:auto!important;min-width:68px;height:48px!important;border-radius:24px!important;padding:0 12px!important;font:700 15px/1 Fredoka!important;background:rgba(170,40,160,.92)!important;box-shadow:0 3px 0 #70146a!important}#zFol.on{display:flex!important}#zFol.act{background:rgba(32,170,110,.95)!important;box-shadow:0 3px 0 #0f6a43!important}#zFol.act::after{content:' ✓'}
+#eyeInd{position:fixed;left:0;top:0;z-index:7;display:none;align-items:center;gap:4px;padding:6px 12px 6px 10px;border-radius:26px;border:3px solid #fff;background:rgba(170,40,160,.94);color:#fff;font:700 15px/1 Fredoka;box-shadow:0 3px 0 #70146a,0 6px 14px rgba(0,0,0,.28);touch-action:none;cursor:pointer;will-change:transform}#eyeInd .ei{font-size:24px;line-height:1}#eyeInd.near{background:rgba(255,120,30,.96);box-shadow:0 3px 0 #a8460a,0 6px 14px rgba(0,0,0,.28)}#eyeInd.alert{background:rgba(230,30,60,.97);box-shadow:0 3px 0 #8a0f26,0 0 0 4px rgba(255,60,80,.35);animation:eiP .5s infinite alternate}@keyframes eiP{to{filter:brightness(1.25)}}#eyeInd #eiA{position:absolute;left:50%;top:50%;width:0;height:0;margin:0;pointer-events:none}#eyeInd #eiA::before{content:'';position:absolute;left:50px;top:-10px;border-left:14px solid #fff;border-top:10px solid transparent;border-bottom:10px solid transparent;transform:translateX(0)}
 #zCen{display:none!important;width:auto!important;min-width:68px;height:48px!important;border-radius:24px!important;padding:0 12px!important;font:700 15px/1 Fredoka!important;background:rgba(255,138,61,.92)!important;box-shadow:0 3px 0 #b3340f!important}#zCen.on{display:flex!important}
+@media (orientation:landscape) and (max-height:480px){#zoom.on{display:grid;grid-auto-flow:column;grid-template-rows:44px 44px;gap:8px;top:96px;transform:none}#zoom button{width:44px;height:44px;font-size:26px}#zFol,#zCen{height:44px!important;min-width:60px}}
+
 </style></head><body>
 <canvas id="c"></canvas>
-<div id="ver">v21 · Cámara libre y gráficos</div><div id="touch"></div><div id="fade"></div>
-<div id="toast"></div><div id="bub"></div><div id="cross"></div>
+<div id="ver">v22 · Sigue al buscador</div><div id="touch"></div><div id="fade"></div>
+<div id="toast"></div><div id="eyeInd"><span class="ei">👁</span><b id="eiD"></b><i id="eiA"></i></div><div id="bub"></div><div id="cross"></div>
 <div id="frameFx" class="fadeFrame"></div>
 <div id="menu" class="scr on">
  <div class="mcard">
@@ -164,12 +168,12 @@ h2{margin:2px 0;font-size:28px;color:#fff;text-shadow:0 3px 0 #ff6fb5,0 6px 12px
 <div id="res" class="scr" style="background:rgba(60,30,130,.35)"><div class="glass"><h2 id="rT"></h2><div class="big" id="rP"></div><img id="shareImg" alt=""><div class="row"><button class="btn yel sm" id="rShare">📸 Compartir mi escondite</button></div><div class="row"><button class="btn teal sm" id="rNext">Siguiente ▶</button><button class="btn lil sm" id="rMenu">🏠 Menú</button></div></div></div>
 <div id="hud"><div class="top"><button class="pill" id="hBack">⏸</button><span class="pill" id="hPhase"></span><span class="pill" id="hTime"></span><span class="pill" id="hInfo"></span></div>
 <div id="meter"><div id="mTxt"><span id="mFace">🙈</span><span id="mPct">0%</span></div><div id="mBar"><div id="mFill"></div></div></div></div>
-<div id="joy"><div id="joyK"></div></div><button id="run" type="button">¡Corre!</button><div id="zoom"><button id="zIn" type="button" aria-label="Acercar">+</button><button id="zOut" type="button" aria-label="Alejar">−</button><button id="zCen" type="button">Centrar</button></div>
+<div id="joy"><div id="joyK"></div></div><button id="run" type="button">¡Corre!</button><div id="zoom"><button id="zIn" type="button" aria-label="Acercar">+</button><button id="zOut" type="button" aria-label="Alejar">−</button><button id="zFol" type="button">👁 Buscador</button><button id="zCen" type="button">Centrar</button></div>
 <div id="rows"></div>
 <div id="mold"><div id="mPrev"><span id="mTag">🎬 Sala de creación</span></div><div class="mrow msh"><button data-sh="gota" title="Gota">💧</button><button data-sh="chafada" title="Chafada">🥞</button><button data-sh="lamina" title="Lámina">📄</button><button data-sh="libro" title="Libro">📕</button><button data-sh="bola" title="Bola">🟠</button><button data-sh="alta" title="Alta">🗿</button></div>
 <label>↔<input type="range" id="mW" min="0.15" max="2.2" step="0.01"></label><label>↕<input type="range" id="mH" min="0.08" max="2.2" step="0.01"></label><label>⬌<input type="range" id="mD" min="0.05" max="2.2" step="0.01"></label><div class="mrow"><button id="mClose">✔</button></div></div>
 <div id="acts"></div>
 <script src="online-config.js"></script><script src="online-cf.js"></script>
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
-<script type="module" src="game.js?v=21"></script>
+<script type="module" src="game.js?v=22"></script>
 </body></html>
