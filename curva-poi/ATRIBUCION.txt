@@ -1,0 +1,4 @@
+CURVA - indice de negocios (celdas de 0,25 grados).
+Datos: Overture Maps Foundation, tema "places" (https://overturemaps.org), licencia CDLA-Permissive-2.0
+(https://cdla.dev/permissive-2-0/). Filtrado: abiertos, confianza >= 0,5, Espana. Atribucion: (c) Overture Maps Foundation.
+Cada fichero <latIdx>_<lonIdx>.tsv.gz = floor(grados/0.25). Sin claves ni cookies; la app las descarga bajo demanda.
