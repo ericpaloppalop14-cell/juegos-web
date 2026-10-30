@@ -226,6 +226,7 @@ function markStencil() { const f = m => { if (!m || !m.userData || m.userData._s
   scene.traverse(o => { if (o.material) Array.isArray(o.material) ? o.material.forEach(f) : f(o.material); }); }
 function populate() { if (MEGA) { MEGA.dispose(); MEGA = null; } GLB.reset(); CLB.reset(); WORLD.setLite(lite); WORLD.rebuild(); for (const e of ents) scene.remove(e.o); ents = [];
   if (SH) { prerenderWorld(); } else bakeWorld();
+  if (opts.noEnts) return; // o48: las figuras del desfile son sprites pre-renderizados (ver sprites())
   for (const k in KINDS) for (let i = 0; i < KINDS[k].n; i++) { const e = spawn(k, true); e.idx = i; if (lite && i > 0) e.o.visible = false; ents.push(e); } MEGA = megaMerge(scene); BAKES.mega = { merged: MEGA.merged, before: MEGA.before }; if (SH) markStencil(); }
 size(); populate(); addEventListener('orientationchange', () => setTimeout(() => { size(); populate(); }, 300));
 let lastLand = W > H; addEventListener('resize', () => { if (SH) size(); if ((W > H) !== lastLand) { lastLand = W > H; populate(); } });

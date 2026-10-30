@@ -6,7 +6,7 @@ if (/[?&]fps=1/.test(location.search)) {
   const win = []; let last = performance.now(), upd = last, worst = 0, slow = 0, tot = 0;
   const tick = t => { requestAnimationFrame(tick); const dt = t - last; last = t; if (dt > 1000) return; win.push(dt); tot++; if (dt > 33.4) slow++; if (dt > worst) worst = dt;
     if (t - upd > 500) { const n = win.length, avg = win.reduce((a, b) => a + b, 0) / n, srt = win.slice().sort((a, b) => a - b), p95 = srt[Math.floor(n * .95)] || 0, mx = srt[n - 1] || 0; upd = t; win.length = 0;
-      const M = window.MP3D, i = M && M.info, r = i && i.render, cv = document.getElementById('st3d'), mode = (document.querySelector('.scr.on') || {}).id || '';
+      const r = window.__fi, cv = document.getElementById('st3d'), mode = (document.querySelector('.scr.on') || {}).id || '';
       d.textContent = Math.round(1000 / avg) + ' fps  ' + avg.toFixed(1) + ' ms/frame\np95 ' + p95.toFixed(1) + '  max ' + mx.toFixed(1) + ' ms\n>33ms: ' + slow + ' de ' + tot + '  (peor ' + worst.toFixed(0) + ')\n' + (r ? 'calls ' + r.calls + '  tris ' + (r.triangles / 1000).toFixed(0) + 'k\n' : '') + 'dpr ' + (window.devicePixelRatio || 1) + (cv ? '  3D ' + cv.width + 'x' + cv.height : '') + '\n' + mode; } };
   requestAnimationFrame(tick);
 }

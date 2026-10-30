@@ -206,18 +206,19 @@ canvas#c{z-index:9}
 #mpLoad.out{opacity:0;pointer-events:none}
 #mpLoad .lg{font-weight:700;font-size:clamp(44px,12vmin,84px);line-height:.9;text-align:center;letter-spacing:.5px;text-shadow:0 4px 0 rgba(255,255,255,.7),0 10px 24px rgba(120,60,180,.25)}
 #mpLoad .lg b{display:block;color:#ff5fa2}#mpLoad .lg i{display:block;font-style:normal;color:#7a55e0}
-#mpLoad .mo{width:84px;height:70px;border-radius:50% 50% 46% 46%/62% 62% 38% 38%;background:linear-gradient(#ffb3d6,#ff7fb6);position:relative;box-shadow:inset 0 -8px 0 rgba(200,60,130,.25),0 12px 22px rgba(150,60,170,.3);animation:mpHop .9s cubic-bezier(.3,0,.4,1) infinite}
+#mpLoad .mo{margin-top:34px;width:84px;height:70px;border-radius:50% 50% 46% 46%/62% 62% 38% 38%;background:linear-gradient(#ffb3d6,#ff7fb6);position:relative;box-shadow:inset 0 -8px 0 rgba(200,60,130,.25),0 12px 22px rgba(150,60,170,.3);animation:mpHop .9s cubic-bezier(.3,0,.4,1) infinite}
 #mpLoad .mo::before,#mpLoad .mo::after{content:'';position:absolute;top:26px;width:11px;height:15px;border-radius:50%;background:#2a1838}
 #mpLoad .mo::before{left:22px}#mpLoad .mo::after{right:22px}
 @keyframes mpHop{0%,100%{transform:translateY(0) scale(1.1,.88)}45%{transform:translateY(-34px) scale(.92,1.08)}}
 #mpLoad .bar{width:min(300px,70vw);height:16px;border-radius:99px;background:rgba(255,255,255,.65);box-shadow:inset 0 2px 4px rgba(120,60,180,.25);overflow:hidden}
 #mpLoad .bar>i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#ff8fc4,#ffd84a,#7ee3c4);transition:width .25s ease-out}
 #mpLoad .tx{font-weight:600;font-size:15px;opacity:.85;min-height:20px}
+.decoLoop{animation:decoIn .5s both}@keyframes decoIn{from{opacity:0}to{opacity:1}}body.mpMeasure .scr,body.mpMeasure .scr *{animation:none!important;transition:none!important}
 </style>
 </head>
 <body>
 <div id="mpLoad" role="status" aria-live="polite"><div class="lg"><b>Mochi</b><i>Party</i></div><div class="mo"></div><div class="bar"><i id="mpLoadBar"></i></div><div class="tx" id="mpLoadTx">Preparando la fiesta…</div></div>
-<script>(function(){var b=document.getElementById('mpLoadBar'),t=document.getElementById('mpLoadTx'),cur=0;window.__LOAD={set:function(p,x){if(p>cur)cur=p;b.style.width=Math.min(100,cur)+'%';if(x)t.textContent=x},done:function(){b.style.width='100%';var e=document.getElementById('mpLoad');if(!e)return;e.classList.add('out');document.documentElement.classList.add('mpReady');setTimeout(function(){e.remove()},900)}}})();</script>
+<script>(function(){var b=document.getElementById('mpLoadBar'),t=document.getElementById('mpLoadTx'),cur=0;window.__LOAD={set:function(p,x){if(p>cur)cur=p;b.style.width=Math.min(100,cur)+'%';if(x)t.textContent=x},show:function(x){cur=0;b.style.transition='none';b.style.width='0';void b.offsetWidth;b.style.transition='';t.textContent=x||'';var e=document.getElementById('mpLoad');e.style.display='';e.style.visibility='';void e.offsetWidth;e.classList.remove('out')},done:function(){b.style.width='100%';var e=document.getElementById('mpLoad');if(!e)return;e.classList.add('out');document.documentElement.classList.add('mpReady');setTimeout(function(){if(e.classList.contains('out'))e.style.visibility='hidden'},800)}}})();</script>
 
 <div id="stageHalo" aria-hidden="true"></div>
 <div id="bgGrad"></div>

@@ -119,10 +119,11 @@ const balP = Array.from({ length: NB }, (_, i) => ({ x: 0, y: 0, z: 0, v: 0, ph:
 let balOn = false;
 function updBal(dt, t) { bal.visible = str.visible = balOn; if (!balOn) return; balP.forEach((p, i) => { p.y += p.v * dt; if (p.y > 10) resetBal(p); const sw = Math.sin(t * 1.2 + p.ph) * .25; tmp.position.set(p.x + sw, p.y, p.z); tmp.rotation.set(0, 0, sw * .3); tmp.scale.setScalar(1); tmp.updateMatrix(); bal.setMatrixAt(i, tmp.matrix); tmp.position.set(p.x + sw * .8, p.y - 1.05, p.z); tmp.updateMatrix(); str.setMatrixAt(i, tmp.matrix); }); bal.instanceMatrix.needsUpdate = str.instanceMatrix.needsUpdate = true; }
 // chispas (estallidos): o45 — pool de sprites reutilizados (antes se creaba un Sprite+Material por chispa y se tiraba → tirones por GC)
+let BAKING = false;
 const sparks = [], sparkG = new THREE.Group(), POOL = []; scene.add(sparkG);
 for (let i = 0; i < 170; i++) { const sp = GB.make('#ffffff', 1, 1, true); sp.visible = false; sp.userData = { v: new THREE.Vector3(), t: 0, l: 1 }; sparkG.add(sp); POOL.push(sp); }
 const freeSpark = s => { s.visible = false; POOL.push(s); };
-function burst(p, c, n = 16, sp = 3) { for (let i = 0; i < n; i++) { const s = POOL.pop(); if (!s) return; s.material.setCol(c); s.scale.setScalar(rnd(.25, .5)); s.position.copy(p); s.material.opacity = 1; s.visible = true; const a = rnd(0, 6.28), b = rnd(-.3, 1.3), u = s.userData; u.v.set(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.5, 1)); u.t = 0; u.l = rnd(.6, 1.1); sparks.push(s); } }
+function burst(p, c, n = 16, sp = 3) { if (BAKING) return; for (let i = 0; i < n; i++) { const s = POOL.pop(); if (!s) return; s.material.setCol(c); s.scale.setScalar(rnd(.25, .5)); s.position.copy(p); s.material.opacity = 1; s.visible = true; const a = rnd(0, 6.28), b = rnd(-.3, 1.3), u = s.userData; u.v.set(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiplyScalar(sp * rnd(.5, 1)); u.t = 0; u.l = rnd(.6, 1.1); sparks.push(s); } }
 function updSparks(dt) { for (let i = sparks.length - 1; i >= 0; i--) { const s = sparks[i], u = s.userData; u.t += dt; if (u.t > u.l) { freeSpark(s); sparks[i] = sparks[sparks.length - 1]; sparks.pop(); continue; } u.v.y -= 4 * dt; s.position.addScaledVector(u.v, dt); s.material.opacity = 1 - u.t / u.l; } }
 
 // ---------- personajes ----------
@@ -213,7 +214,7 @@ function build0(m, d) {
     // plató de presentación: pedestal con bombillas, focos, telón, estrellas, banderines, confeti y globos
     deco = stage(1.9); root.add(deco); root.add(spots()); confAmt = .55; balOn = true; scenery('chars');
     const col = CH(d.pj).color;
-    const pedG = new THREE.Group(); root.add(pedG); const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18, nocache: true }), pedG, [0, .17, 0]); outline(ped, '#d58ab8', 1.03); extra.ped = ped;
+    const pedG = new THREE.Group(); root.add(pedG); extra.pedG = pedG; const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18, nocache: true }), pedG, [0, .17, 0]); outline(ped, '#d58ab8', 1.03); extra.ped = ped;
     extra.pedT = mesh(new THREE.TorusGeometry(1.3, .06, 8, 48), toon(col, { emissive: col, ei: .5, rim: 0, nocache: true }), pedG, [0, .35, 0], [Math.PI / 2, 0, 0]);
     const ring = glow(col, 4.2, .55); ring.position.set(0, .5, -.2); root.add(ring); extra.ring = ring;
         const flagsG = new THREE.Group(); root.add(flagsG); const flags = []; for (let i = 0; i < 13; i++) { const x = (i - 6) * .75, y = 5.2 - Math.cos((i - 6) / 6 * 1.4) * .9; const f = mesh(new THREE.ConeGeometry(.2, .42, 3), toon(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7'][i % 5], { rim: .3 }), flagsG, [x, y, -3.6], [Math.PI, 0, 0]); flags.push(f); } bakeStatic(flagsG, k => flags.forEach((f, i) => { f.rotation.z = Math.sin(BT[k] * 3 + i) * .15; }), { samples: BT.length }); extra.flags = flags;
@@ -279,21 +280,91 @@ function thumbs(t) {
 const FADE = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { uC: { value: new THREE.Vector2() }, uE: { value: new THREE.Vector2(1, 1) } }, transparent: true, depthTest: false, depthWrite: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcAlphaFactor,
   vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: 'uniform vec2 uC; uniform vec2 uE; void main(){ float d = length((gl_FragCoord.xy - uC) / uE); gl_FragColor = vec4(0., 0., 0., clamp((1. - d) / .38, 0., 1.)); }' }));
 FADE.frustumCulled = false; FADE.renderOrder = 9999; FADE.visible = false; scene.add(FADE);
-let D = null; try { D = createDesfile(renderer, { shared: true }); window.__desfile3d = D; } catch (e) { console.warn('desfile', e); }
+let D = null; try { D = createDesfile(renderer, { shared: true, noEnts: true }); window.__desfile3d = D; } catch (e) { console.warn('desfile', e); }
 stMark(scene);
 const HALO = document.getElementById('stageHalo') || document.createElement('div');
 // ---------- bucle ----------
 let last = now(), shown = true, fpsN = 0, fpsT = now(), elC = null, elT = 0, rEl = null, rAt = 0, rT = -9, rC = null; addEventListener('resize', () => { rT = -9; }); addEventListener('orientationchange', () => { rT = -9; }); const _dir = new THREE.Vector3(), _w3 = new THREE.Vector3();
+
+// ---------- o48: decorado PRE-RENDERIZADO (escenario, público, mochis de fondo, luces) ----------
+// Se dibuja una sola vez durante la carga en N fotogramas (ida y vuelta, sin saltos) y se reproduce con un blit 2D a 16 Hz; el 3D en tiempo real solo pinta al protagonista, su pedestal y las chispas.
+const DECO_N = 20, DECO_FPS = 16, DECO_PR = Math.min(DPR, 1.75), DK = {}; let activeDeco = null;
+function measureStage(m) {
+  const scr = document.getElementById(m === 'menu' ? 'sMenu' : 'sChars'), prev = document.querySelector('.scr.on');
+  document.body.classList.add('mpMeasure'); if (prev !== scr) { if (prev) prev.classList.remove('on'); scr.classList.add('on'); }
+  const el = scr.querySelector('.stage3d'), b = el.getBoundingClientRect(), r = { left: b.left, top: b.top, width: b.width, height: b.height };
+  if (prev !== scr) { scr.classList.remove('on'); if (prev) prev.classList.add('on'); } document.body.classList.remove('mpMeasure'); return r;
+}
+function regionOf(r) { const cx = r.left + r.width / 2, cy = r.top + r.height * .46, ex = r.width * .78, ey = r.height * .82, x0 = Math.max(0, cx - ex), x1 = Math.min(innerWidth, cx + ex), y0 = Math.max(0, cy - ey), y1 = Math.min(innerHeight, cy + ey); return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 }; }
+function setCam(r) { // cámara fija (sin balanceo): encuadra el ancho de la escena en el hueco
+  const asp = r.width / r.height; camera.aspect = asp; const fit = camT.w / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1.25, asp), dir = _dir.copy(camT.p).sub(camT.l).normalize();
+  const w3 = _w3.copy(camT.l).add(dir.multiplyScalar(Math.max(fit, 6))); extra.cam.copy(w3); camera.position.copy(w3); camera.lookAt(camT.l); camera.updateProjectionMatrix();
+  camera.setViewOffset(r.width, r.height, -r.left, -r.top, innerWidth, innerHeight); camera.updateProjectionMatrix();
+}
+function updateDeco(t, dt) {
+  for (const a of actors) if (a !== extra.hero) pose(a, t, dt);
+  if (deco && deco.userData.bulbs) deco.userData.bulbs.forEach((b, i) => { b.material = ((i + Math.floor(t * 6)) % 3) ? BULB_ON : BULB_PK; });
+  for (const c of crowds) c.userData.update(t); garlands.forEach(bs => bs.forEach((b, i) => { b.material = BULB_M[(((i + Math.floor(Math.max(0, t) * 3)) % 6) + 6) % 6]; }));
+  clouds.forEach(c => { const u = c.userData; if (u.x0 === undefined) u.x0 = c.position.x; c.position.x = ((u.x0 + u.v * t + 12) % 24 + 24) % 24 - 12; });
+  root.children.forEach(o => { if (o.userData.L) o.userData.L.forEach((c, i) => { c.rotation.z = Math.sin(t * .9 + i * 2) * .35; c.rotation.x = Math.cos(t * .7 + i) * .15; }); });
+  if (extra.stars) extra.stars.forEach(s0 => { s0.material.opacity = .45 + .45 * Math.sin(t * 3 + s0.userData.ph); });
+  if (extra.flags) extra.flags.forEach((f, i) => { f.rotation.z = Math.sin(t * 3 + i) * .15; });
+}
+const tickMs = () => new Promise(r => setTimeout(r, 0));
+async function bakeDeco(m, prog) {
+  const el0 = document.getElementById(m === 'menu' ? 'menuStage' : 'charStage'); let d = {}; try { d = JSON.parse(el0.dataset.d || '{}'); } catch (e) {} if (!d.pj) d.pj = CHARS[0].id;
+  const r = measureStage(m), reg = regionOf(r), PRr = renderer.getPixelRatio(), K = DK[m] || (DK[m] = {});
+  build(m, d); const c = CM[m]; BAKING = true;
+  c.root.children.forEach(o => { if (o.userData._dh) { o.visible = true; o.userData._dh = 0; } });
+  const live = [extra.hero, extra.hero && extra.hero.userData.tag, extra.pedG, extra.ring]; live.forEach(o => { if (o) o.visible = false; }); // lo «vivo» no entra en el decorado
+  for (const a of actors) { if (a !== extra.hero && a.userData.roles) { a.userData.role = a.userData.roles[Math.random() * a.userData.roles.length | 0]; a.userData.roles = null; } }
+  setCam(r); const cw = Math.round(reg.w * DECO_PR), ch = Math.round(reg.h * DECO_PR);
+  const U = FADE.material.uniforms, kk = PRr; U.uC.value.set((r.left + r.width / 2) * kk, (innerHeight - (r.top + r.height * .46)) * kk); U.uE.value.set(r.width * .78 * kk, r.height * .82 * kk); FADE.visible = true;
+  const frames = [], TB = 9, dtk = 1 / DECO_FPS;
+  for (let k = 0; k < DECO_N; k++) {
+    updateDeco(TB + k * dtk, dtk);
+    renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear(); renderer.setScissorTest(true); renderer.setScissor(reg.x0, innerHeight - reg.y1, reg.w, reg.h); renderer.render(scene, camera);
+    const cvf = document.createElement('canvas'); cvf.width = cw; cvf.height = ch; cvf.getContext('2d').drawImage(renderer.domElement, Math.round(reg.x0 * PRr), Math.round(reg.y0 * PRr), Math.round(reg.w * PRr), Math.round(reg.h * PRr), 0, 0, cw, ch); frames.push(cvf);
+    if (k % 2 === 1) { if (prog) prog(k / DECO_N); await tickMs(); }
+  }
+  FADE.visible = false; renderer.setScissorTest(false); renderer.clear(); BAKING = false;
+  c.root.children.forEach(o => { if (!live.includes(o) && o.visible) { o.visible = false; o.userData._dh = 1; } }); live.forEach(o => { if (o) o.visible = true; });
+  if (K.cv) K.cv.remove(); const cv = document.createElement('canvas'); cv.className = 'decoLoop'; cv.setAttribute('aria-hidden', 'true'); cv.width = cw; cv.height = ch;
+  cv.style.cssText = 'position:fixed;pointer-events:none;z-index:8;display:none;left:' + reg.x0 + 'px;top:' + reg.y0 + 'px;width:' + reg.w + 'px;height:' + reg.h + 'px'; document.body.appendChild(cv);
+  Object.assign(K, { r, reg, frames, cv, ctx: cv.getContext('2d'), step: -1 });
+  K.ctx.drawImage(frames[0], 0, 0);
+  if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; activeDeco = null;
+}
+function hideDeco() { if (activeDeco) { if (DK[activeDeco] && DK[activeDeco].cv) DK[activeDeco].cv.style.display = 'none'; activeDeco = null; } }
+function activateDeco(m) {
+  hideDeco(); const K = DK[m]; activeDeco = m; K.cv.style.display = ''; K.step = -1; setCam(K.r);
+  renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
+  const r = K.r, S = Math.max(r.width, r.height) * 1.05, cx = r.left + r.width / 2, cy = r.top + r.height * .5; HALO.style.width = HALO.style.height = S + 'px'; HALO.style.left = (cx - S / 2) + 'px'; HALO.style.top = (cy - S / 2) + 'px'; HALO.style.display = 'block'; HALO._k = '';
+}
+function tickDeco(tms) { const K = DK[activeDeco]; if (!K) return; const st = Math.floor(tms / (1000 / DECO_FPS)); if (st === K.step) return; K.step = st; const L = 2 * DECO_N - 2, i = st % L, k = i < DECO_N ? i : L - i; K.ctx.drawImage(K.frames[k], 0, 0); }
+function liveFrame(el, t1, dt) {
+  const m = el.dataset.mode, K = DK[m];
+  if (m !== mode || el.dataset.key !== extra.key) { build(m, JSON.parse(el.dataset.d || '{}')); extra.key = el.dataset.key; }
+  if (activeDeco !== m) activateDeco(m);
+  shown = true; const t = t1 - t0, hero = extra.hero; pose(hero, t, dt); if (hero.userData.tag) hero.userData.tag.visible = t - hero.userData.enter > .6;
+  if (m === 'chars') { if (extra.ring) extra.ring.material.opacity = .4 + Math.sin(t * 3) * .15;
+    if (t > 1 && Math.random() < dt * .8) burst(new THREE.Vector3(rnd(-3, 3), rnd(3, 4.5), rnd(-2.5, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][Math.random() * 4 | 0], 12, 2.4);
+    if (extra.sel != null) { const k = t - extra.sel; if (k < 1.1) { hero.userData.flip = extra.sel; confAmt = 1; } } }
+  else if (t > 1 && Math.random() < dt * 1.2) burst(new THREE.Vector3(rnd(-4, 4), rnd(3.2, 4.6), rnd(-3, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff', '#b9a2f7'][Math.random() * 5 | 0], 16, 2.6);
+  updConf(dt, t); updSparks(dt); updBal(dt, t); thumbs(t); tickDeco(performance.now());
+  const reg = K.reg; renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.setScissorTest(true); renderer.setScissor(reg.x0, innerHeight - reg.y1, reg.w, reg.h); renderer.clear(); renderer.render(scene, camera);
+}
 let READY = false;
 function frame() {
   requestAnimationFrame(frame);
   if (!READY) return;
-  renderer.info.reset(); // o47: contadores acumulados de todo el fotograma (miniaturas + escena + figuras del desfile)
-  const t1 = now(); if (t1 - last < .0135) return; // o48: tope de 60 fps estables (en pantallas de 120 Hz se alternaba 120/60 y se notaba a tirones)
+  const t1 = now(); if (t1 - last < .0135) return; { const ir = renderer.info.render; window.__fi = { calls: ir.calls, triangles: ir.triangles }; renderer.info.reset(); } // contadores de todo el fotograma anterior (miniaturas + escena) // o48: tope de 60 fps estables (en pantallas de 120 Hz se alternaba 120/60 y se notaba a tirones)
   const dt = Math.min(.05, t1 - last); last = t1;
   // o46: sin regulador automático (ni baja la resolución ni oculta detalle)
-  if (!elC || t1 - elT > .25 || !elC.isConnected || !elC.closest('.scr.on')) { elC = document.querySelector('.scr.on .stage3d'); elT = t1; } const el = elC; if (elC !== rEl) { rEl = elC; rAt = t1; rT = -9; } if (t1 - rT > (t1 - rAt < 1.3 ? 0 : .12)) { rC = el && el.getBoundingClientRect(); rT = t1; } const r = rC; // o46: sin lectura de layout por fotograma (solo durante la animación de entrada y luego 8 veces/s)
-  if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; if (D) D.setOn(false); if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
+  if (!elC || t1 - elT > .25 || !elC.isConnected || !elC.closest('.scr.on')) { elC = document.querySelector('.scr.on .stage3d'); elT = t1; }
+  { const e0 = elC, m0 = e0 && e0.dataset.mode; if (e0 && (m0 === 'menu' || m0 === 'chars') && DK[m0] && DK[m0].cv) { liveFrame(e0, t1, dt); return; } }
+  const el = elC; if (elC !== rEl) { rEl = elC; rAt = t1; rT = -9; } if (t1 - rT > (t1 - rAt < 1.3 ? 0 : .12)) { rC = el && el.getBoundingClientRect(); rT = t1; } const r = rC; // o46: sin lectura de layout por fotograma (solo durante la animación de entrada y luego 8 veces/s)
+  if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; hideDeco(); if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
   const want = el.dataset.mode; if (want !== mode || el.dataset.key !== extra.key) { build(want, JSON.parse(el.dataset.d || '{}')); extra.key = el.dataset.key; }
   shown = true; const t = t1 - t0;
   for (const a of actors) pose(a, t, dt);
@@ -329,7 +400,6 @@ function frame() {
   } else { FADE.visible = false; camera.clearViewOffset(); camera.updateProjectionMatrix(); if (cv._m) { cv._m = ''; cv.style.webkitMaskImage = cv.style.maskImage = ''; }
     const y = innerHeight - r.bottom; renderer.setScissorTest(true); renderer.setScissor(r.left, y, r.width, r.height); renderer.setViewport(r.left, y, r.width, r.height); }
   renderer.render(scene, camera);
-  if (D) { D.setOn(free); if (free) { D.step(t1, dt); D.draw(); } }
 }
 // o45: precompila los shaders de TODAS las escenas antes de enseñar nada (así abrir «Elige tu mochi» no provoca un tirón de compilación)
 const warmRender = (sc, cam) => { renderer.setScissorTest(true); renderer.setScissor(0, 0, 2, 2); renderer.setViewport(0, 0, 2, 2); renderer.render(sc, cam); renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); }; // o47: dibuja 2×2 px para subir ya geometrías y texturas a la GPU
@@ -343,11 +413,14 @@ try { const T0 = performance.now(); let pj = CHARS[0].id; try { pj = JSON.parse(
   for (const c of CHARS) { tg.add(heroFor('chars', c.id)); tagFor(c.id); LD(36 + (++hi) / CHARS.length * 24); await yieldPaint(); }
   renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep); LD(62, 'Ensayando los bailes…'); await yieldPaint();
   hi = 0; for (const [i, c] of CHARS.entries()) { mkThumb(c.id, i); LD(62 + (++hi) / CHARS.length * 14); await yieldPaint(); }
-  for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false; LD(78, 'Encendiendo las luces…'); await yieldPaint();
+  for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false; LD(78, 'Pintando el escenario…'); await yieldPaint();
+  await bakeDeco('chars', p => LD(78 + p * 8)); await bakeDeco('menu', p => LD(86 + p * 8)); LD(94, 'Encendiendo las luces…'); await yieldPaint();
   try { D && D.draw(); } catch (e) {} renderer.clear(); if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; ROOTX.visible = false; window.__warmMs = Math.round(performance.now() - T0); } catch (e) { console.warn('warmup', e); }
 // o48: espera a fuentes, imágenes y a la carga de la página; luego muestra TODO de golpe con un fundido
 LD(88, 'Últimos retoques…');
 try { await Promise.race([Promise.all([document.fonts ? document.fonts.ready : 0, ...[...document.images].map(i => i.decode ? i.decode().catch(() => {}) : 0), document.readyState === 'complete' ? 0 : new Promise(r => addEventListener('load', r, { once: true }))]), new Promise(r => setTimeout(r, 12000))]); } catch (e) {}
+let layKey = innerWidth + 'x' + innerHeight, rbT = 0;
+addEventListener('resize', () => { clearTimeout(rbT); rbT = setTimeout(async () => { const k = innerWidth + 'x' + innerHeight; if (k === layKey || !READY) return; layKey = k; READY = false; window.__LOAD && __LOAD.show('Ajustando la pantalla…'); try { hideDeco(); size(); await yieldPaint(); await bakeDeco('chars', p => LD(p * 50)); await bakeDeco('menu', p => LD(50 + p * 50)); } catch (e) { console.warn('rebake', e); } READY = true; window.__LOAD && __LOAD.done(); }, 450); });
 document.body.classList.remove('no3d'); READY = true; LD(97, '¡Listo!'); requestAnimationFrame(frame); await yieldPaint(); await yieldPaint(); window.__LOAD && __LOAD.done();
 // tocar el escenario: voltereta del protagonista
 addEventListener('pointerdown', e => { const el = document.querySelector('.scr.on .stage3d'); if (!el || !extra.hero) return; const r = el.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return; const u = extra.hero.userData; if (now() - t0 - u.flip > .9) { u.flip = now() - t0; burst(extra.hero.position.clone().add(new THREE.Vector3(0, 1.5, 0)), '#ff9cc8', 14, 3); } });
