@@ -2,7 +2,7 @@
 // globos aerostáticos con mochis, planetas con anillo, aros dorados, arco iris gigante, sol con rayos, nubes en capas y purpurina.
 // Todo en 3D con profundidad real (niebla atmosférica + paralaje de cámara). Se coloca por fracción de pantalla y profundidad.
 import * as THREE from 'three';
-import { HOOK } from './glowbatch.js?v=o46';
+import { HOOK } from './glowbatch.js?v=o47';
 const R = (a, b) => a + Math.random() * (b - a);
 const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: o.r ?? .75, metalness: o.m ?? 0, flatShading: o.flat ?? false, emissive: o.e || 0x000000, emissiveIntensity: o.ei ?? 1, transparent: o.op != null && o.op < 1, opacity: o.op ?? 1, side: o.side || THREE.FrontSide, depthWrite: o.dw ?? true });
 const phys = (c, o = {}) => new THREE.MeshPhysicalMaterial({ color: c, roughness: o.r ?? .4, sheen: 1, sheenColor: new THREE.Color(0xffffff), clearcoat: o.cc ?? .4, emissive: o.e || 0, emissiveIntensity: o.ei ?? 1, transparent: o.op != null && o.op < 1, opacity: o.op ?? 1, depthWrite: o.dw ?? true });

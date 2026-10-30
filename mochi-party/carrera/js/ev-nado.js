@@ -1,5 +1,5 @@
 // 🫧 NADO EN GELATINA (3D): piscina translúcida de gelatina con medusas, montañas de flan y arcoíris
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=o46';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, skyDome, lights, rnd, clamp, lerp, pick, Audio, OUCH } from './core3d.js?v=o47';
 const L = 240, LW = 2, VM = 13, V0 = 9.5, BSTEP = .35, BMAX = 2.2, ACT = .8, Z0 = 26; // tanda 4: más rápido y trepidante
 // posiciones FIJAS: medusa ARRIBA flota en el aire (bucea), medusa ABAJO está en el fondo (salta). Nunca a medias.
 const YUP = 1.25, YDN = -1.35, WARN = 2.2;

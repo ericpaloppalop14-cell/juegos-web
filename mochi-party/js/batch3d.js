@@ -58,7 +58,7 @@ export function bakeStatic(root, advance, { samples = 6, keep = null } = {}) {
 
 // ---- fusión ENTRE objetos (o46): todas las SkinnedMesh horneadas de la escena (varios personajes, camellos, medusas…) con el mismo material → UNA sola malla + UN esqueleto.
 // Los vértices se pasan a coordenadas del mundo en la pose de horneado (bindMatrix de cada malla) y el esqueleto combinado usa bindMode «detached» con identidad.
-export function megaMerge(scene, filter = null) {
+export function megaMerge(scene, filter = null, parent = scene) {
   const metas = new Map(); // esqueleto → {root, meshes}
   scene.traverse(o => { if (o.isSkinnedMesh && o.userData.baked && o.visible && o.skeleton && o.skeleton.userData && o.skeleton.userData.root && (!filter || filter(o))) { let m = metas.get(o.skeleton); if (!m) metas.set(o.skeleton, m = { sk: o.skeleton, root: o.skeleton.userData.root, meshes: [] }); m.meshes.push(o); } });
   const list = [...metas.values()]; if (!list.length) return { dispose() {}, merged: 0, before: 0 };
@@ -86,7 +86,7 @@ export function megaMerge(scene, filter = null) {
       for (let i = e.off; i < e.off + n; i++) { off.multiplyMatrices(bs[i].matrixWorld, iv[i]); off.toArray(mat, i * 16); } }
     for (let g = 0; g < gates.length; g++) { const ch = gates[g][1]; for (let j = 0; j < ch.length; j++) if (!ch[j].visible) { mat.fill(0, gates[g][0] * 16, gates[g][0] * 16 + 16); break; } }
     if (tx !== null) tx.needsUpdate = true; };
-  for (const mm of made) { mm.bindMode = THREE.DetachedBindMode; scene.add(mm); mm.bind(sk, I); } scene.updateMatrixWorld(true);
+  for (const mm of made) { mm.bindMode = THREE.DetachedBindMode; parent.add(mm); mm.bind(sk, I); } scene.updateMatrixWorld(true);
   for (const me of hidden) me.visible = false;
-  return { merged: made.length, before, meshes: made, dispose() { for (const mm of made) { scene.remove(mm); mm.geometry.dispose(); } for (const me of hidden) me.visible = true; } };
+  return { merged: made.length, before, meshes: made, dispose() { for (const mm of made) { parent.remove(mm); mm.geometry.dispose(); } for (const me of hidden) me.visible = true; } };
 }

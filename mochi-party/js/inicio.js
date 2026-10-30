@@ -5,12 +5,12 @@ const $ = id => document.getElementById(id), M = $('sMenu'), bg = $('menuBg'), h
 if (!M || !bg || !hero) return;
 const bx = bg.getContext('2d'), hx = hero.getContext('2d');
 const L = { x: -0.55, y: -0.8 };               // única fuente de luz: arriba a la izquierda
-let dpr = 1, W = 0, H = 0, HW = 0, HH = 0;
+let dpr = 1, bdpr = 1, W = 0, H = 0, HW = 0, HH = 0;
 function shade(hex, k) { const n = parseInt(hex.slice(1), 16); const f = v => Math.max(0, Math.min(255, Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k))); return `rgb(${f(n >> 16)},${f(n >> 8 & 255)},${f(n & 255)})`; }
 function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
 function size() {
   dpr = Math.min(3, window.devicePixelRatio || 1);
-  W = innerWidth; H = innerHeight; bg.width = W * dpr; bg.height = H * dpr; bg.style.width = W + 'px'; bg.style.height = H + 'px';
+  bdpr = Math.min(1.5, dpr); W = innerWidth; H = innerHeight; bg.width = Math.round(W * bdpr); bg.height = Math.round(H * bdpr); bg.style.width = W + 'px'; bg.style.height = H + 'px';
   const r = hero.getBoundingClientRect(); HW = r.width || 200; HH = r.height || 170; hero.width = HW * dpr; hero.height = HH * dpr;
 }
 addEventListener('resize', size);
@@ -84,7 +84,7 @@ function hill(y0, amp, freq, ph, c1, c2, t, pk = 0) {
   bx.stroke(); bx.restore();
 }
 function drawBg(t) {
-  bx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  bx.setTransform(bdpr, 0, 0, bdpr, 0, 0);
   const sky = bx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#ffc6e2'); sky.addColorStop(.45, '#ffe3d6'); sky.addColorStop(1, '#cfefff'); bx.fillStyle = sky; bx.fillRect(0, 0, W, H);
   // sol / luz principal arriba a la izquierda
   const sx = W * .12, sy = H * .06, sg = bx.createRadialGradient(sx, sy, 0, sx, sy, W * .95); sg.addColorStop(0, 'rgba(255,252,235,.95)'); sg.addColorStop(.25, 'rgba(255,240,215,.45)'); sg.addColorStop(1, 'rgba(255,240,215,0)'); bx.fillStyle = sg; bx.fillRect(0, 0, W, H);
@@ -208,10 +208,10 @@ function drawHero(t, dt) {
     else { hx.fillStyle = '#fff6c0'; hx.beginPath(); hx.moveTo(x, y - s); hx.quadraticCurveTo(x, y, x + s, y); hx.quadraticCurveTo(x, y, x, y + s); hx.quadraticCurveTo(x, y, x - s, y); hx.quadraticCurveTo(x, y, x, y - s); hx.fill(); }
     hx.globalAlpha = 1; }
 }
-let last = performance.now(), wasOn = false;
+let last = performance.now(), wasOn = false, lastBg = 0;
 function frame(now) {
   const on = M.classList.contains('on');
-  if (on) { if (!wasOn) size(); const t = now / 1000, dt = Math.min(.05, (now - last) / 1000); drawBg(t); if (hero.offsetParent) drawHero(t, dt); }
+  if (on) { if (!wasOn) size(); const t = now / 1000, dt = Math.min(.05, (now - last) / 1000); if (now - lastBg > 31) { lastBg = now; drawBg(t); } if (hero.offsetParent) drawHero(t, dt); }
   wasOn = on; last = now; requestAnimationFrame(frame);
 }
 size(); requestAnimationFrame(frame);

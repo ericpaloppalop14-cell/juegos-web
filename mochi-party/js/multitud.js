@@ -2,14 +2,14 @@
 // Cada espectador tiene cuerpo, contorno, ojos con brillo, mejillas, boca, orejas (conejo/oso/gato), brazos que saludan
 // y a veces gorro de fiesta, pompón o banderín. Se usa en el escenario del menú, la selección, la presentación y el podio.
 import * as THREE from 'three';
-import { toon, bodyGeometry } from '../carrera/js/gfx.js?v=o46';
+import { toon, bodyGeometry } from '../carrera/js/gfx.js?v=o47';
 
 const PAL = ['#ff9cc8', '#7ee3c4', '#9fc3ff', '#b9a2f7', '#ffe27a', '#8fe3f0', '#ffb36b', '#ff8fd8', '#a8f0c6', '#ffc2e0', '#c9b2ff', '#fff0b0'];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _b = new THREE.Matrix4(), _l = new THREE.Matrix4(), _a = new THREE.Matrix4(), _t = new THREE.Matrix4();
 const L = (x, y, z, sx = 1, sy = sx, sz = sx, rx = 0, ry = 0, rz = 0) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
 let G;
-const geos = () => G || (G = { body: bodyGeometry(true), sph: new THREE.SphereGeometry(1, 14, 10), sphL: new THREE.SphereGeometry(1, 8, 6), cone: new THREE.ConeGeometry(1, 1, 10), cone3: new THREE.ConeGeometry(1, 1, 3), cyl: new THREE.CylinderGeometry(1, 1, 1, 6) });
+const geos = () => G || (G = { body: bodyGeometry(2), sph: new THREE.SphereGeometry(1, 8, 6), sphL: new THREE.SphereGeometry(1, 7, 5), tiny: new THREE.SphereGeometry(1, 5, 4), cone: new THREE.ConeGeometry(1, 1, 7), cone3: new THREE.ConeGeometry(1, 1, 3), cyl: new THREE.CylinderGeometry(1, 1, 1, 6) });
 
 // members: [{ x, y, z, s, ry, kind: 'bounce'|'sway'|'wave', ear: 'bunny'|'bear'|'cat'|'none', hat: 0|1|2|3, color }]
 export function makeCrowd(members) {
@@ -21,20 +21,20 @@ export function makeCrowd(members) {
   const add = (geo, mat, local, idx, colors, key) => { const im = new THREE.InstancedMesh(geo, mat, idx.length); im.frustumCulled = false; if (colors) idx.forEach((mi, k) => im.setColorAt(k, colors[mi])); grp.add(im); parts.push({ im, local, idx, key }); return im; };
   const all = members.map((_, i) => i), pick = f => all.filter(i => f(members[i]));
   add(g.body, bodyM, L(0, 0, 0, 1), all, col); add(g.body, outM, L(0, -0.03, 0, 1.045, 1.04, 1.045), all, dark);
-  for (const s of [-1, 1]) { add(g.sph, eyeM, L(s * 0.36, 0.86, 0.9, 0.17, 0.22, 0.1), all); add(g.sphL, whiteM, L(s * 0.36 + 0.06, 0.95, 0.99, 0.065), all); add(g.sphL, whiteM, L(s * 0.36 - 0.05, 0.8, 1.0, 0.03), all); add(g.sphL, cheekM, L(s * 0.62, 0.64, 0.74, 0.16, 0.09, 0.05, 0, s * 0.7, 0), all); }
-  add(g.sphL, eyeM, L(0, 0.64, 0.98, 0.07, 0.04, 0.03), all);
+  for (const s of [-1, 1]) { add(g.tiny, eyeM, L(s * 0.36, 0.86, 0.9, 0.17, 0.22, 0.1), all); add(g.tiny, whiteM, L(s * 0.36 + 0.06, 0.95, 0.99, 0.065), all); add(g.tiny, whiteM, L(s * 0.36 - 0.05, 0.8, 1.0, 0.03), all); add(g.tiny, cheekM, L(s * 0.62, 0.64, 0.74, 0.16, 0.09, 0.05, 0, s * 0.7, 0), all); }
+  add(g.tiny, eyeM, L(0, 0.64, 0.98, 0.07, 0.04, 0.03), all);
   const eb = pick(m => m.ear === 'bunny'), eo = pick(m => m.ear === 'bear'), ec = pick(m => m.ear === 'cat');
-  if (eb.length) for (const s of [-1, 1]) { add(g.sph, bodyM, L(s * 0.42 + s * 0.16, 1.9, 0, 0.2, 0.62, 0.17, 0, 0, -s * 0.35), eb, col); add(g.sph, outM, L(s * 0.42 + s * 0.16, 1.9, 0, 0.215, 0.665, 0.185, 0, 0, -s * 0.35), eb, dark); }
-  if (eo.length) for (const s of [-1, 1]) { add(g.sph, bodyM, L(s * 0.62, 1.42, 0, 0.26, 0.24, 0.16), eo, col); add(g.sph, outM, L(s * 0.62, 1.42, 0, 0.28, 0.26, 0.18), eo, dark); }
+  if (eb.length) for (const s of [-1, 1]) { add(g.tiny, bodyM, L(s * 0.42 + s * 0.16, 1.9, 0, 0.2, 0.62, 0.17, 0, 0, -s * 0.35), eb, col); add(g.tiny, outM, L(s * 0.42 + s * 0.16, 1.9, 0, 0.215, 0.665, 0.185, 0, 0, -s * 0.35), eb, dark); }
+  if (eo.length) for (const s of [-1, 1]) { add(g.tiny, bodyM, L(s * 0.62, 1.42, 0, 0.26, 0.24, 0.16), eo, col); add(g.tiny, outM, L(s * 0.62, 1.42, 0, 0.28, 0.26, 0.18), eo, dark); }
   if (ec.length) for (const s of [-1, 1]) add(g.cone, bodyM, L(s * 0.5, 1.6, 0, 0.26, 0.42, 0.2, 0, 0, -s * 0.3), ec, col);
   const h1 = pick(m => m.hat === 1), h2 = pick(m => m.hat === 2), h3 = pick(m => m.hat === 3);
   const hc = (arr, cols) => arr.map(i => new THREE.Color(cols[i % cols.length]));
   const full = (arr, c) => { const o = new Array(n); arr.forEach((i, k) => o[i] = c[k]); return o; };
   if (h1.length) { add(g.cone, toon('#ffffff', { rim: 0.5 }), L(0, 1.95, 0, 0.34, 0.7, 0.34, 0, 0, 0.18), h1, full(h1, hc(h1, ['#ff4f8f', '#ffd84a', '#4fc3ff', '#7ee3c4']))); add(g.sphL, whiteM, L(0.12, 2.32, 0, 0.1), h1); }
-  if (h2.length) { add(g.sph, toon('#ffffff', { rim: 0.5 }), L(0, 1.5, 0, 0.78, 0.42, 0.78), h2, full(h2, hc(h2, ['#ff8fb8', '#8fd0ff', '#ffe27a']))); add(g.sphL, whiteM, L(0, 1.92, 0, 0.17), h2); }
+  if (h2.length) { add(g.sphL, toon('#ffffff', { rim: 0.5 }), L(0, 1.5, 0, 0.78, 0.42, 0.78), h2, full(h2, hc(h2, ['#ff8fb8', '#8fd0ff', '#ffe27a']))); add(g.sphL, whiteM, L(0, 1.92, 0, 0.17), h2); }
   if (h3.length) { add(g.cyl, toon('#8a6a4a', { rim: 0 }), L(0.95, 1.6, 0.1, 0.03, 1.6, 0.03), h3); add(g.cone3, toon('#ffffff', { rim: 0, side: THREE.DoubleSide }), L(1.2, 2.3, 0.1, 0.34, 0.5, 0.05, 0, 0, -Math.PI / 2), h3, full(h3, hc(h3, ['#ff4f8f', '#ffd84a', '#4fc3ff']))); }
   // brazos que saludan (matriz dinámica)
-  const armIm = [-1, 1].map(s => { const im = new THREE.InstancedMesh(g.sph, bodyM, n); im.frustumCulled = false; col.forEach((c, i) => im.setColorAt(i, c)); grp.add(im); return im; });
+  const armIm = [-1, 1].map(s => { const im = new THREE.InstancedMesh(g.tiny, bodyM, n); im.frustumCulled = false; col.forEach((c, i) => im.setColorAt(i, c)); grp.add(im); return im; });
   const base = new THREE.Matrix4(), pos = new THREE.Vector3(), sc = new THREE.Vector3(), qq = new THREE.Quaternion(), ee = new THREE.Euler();
   const state = members.map(m => ({ ph: rnd(0, 6.28), sp: rnd(0.8, 1.3), ...m }));
   function update(t) {

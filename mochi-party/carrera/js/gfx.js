@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { crazyAccessories } from './accesorios.js?v=o46';
-import { buildDisco, fuzzTexture } from './disco.js?v=o46';
+import { crazyAccessories } from './accesorios.js?v=o47';
+import { buildDisco, fuzzTexture } from './disco.js?v=o47';
 
 // ---------- toon materials ----------
 let gradTex;
@@ -72,7 +72,8 @@ export function mesh(geo, mat, parent, pos, rot, scl) {
 }
 const G = {}; // shared geometries
 function geo(name, f) { return G[name] || (G[name] = f()); }
-const sph = (s = 16) => geo('sph' + s, () => new THREE.SphereGeometry(1, s, Math.max(8, s * 0.75 | 0)));
+export const gfxLod = { k: 1 }; // o47: factor de segmentos de las esferas (el menú usa <1; la carrera, 1)
+const sph = (s = 16) => { const k = gfxLod.k; return geo('sph' + s + (k === 1 ? '' : 'k' + k), () => k === 1 ? new THREE.SphereGeometry(1, s, Math.max(8, s * 0.75 | 0)) : new THREE.SphereGeometry(1, Math.max(8, Math.round(s * k)), Math.max(6, Math.round(Math.max(8, s * 0.75 | 0) * k)))); };
 const cyl = (s = 16) => geo('cyl' + s, () => new THREE.CylinderGeometry(1, 1, 1, s));
 const cone = (s = 12) => geo('cone' + s, () => new THREE.ConeGeometry(1, 1, s));
 const box = () => geo('box', () => new THREE.BoxGeometry(1, 1, 1));
@@ -91,11 +92,12 @@ function bodyR(y) {
   return Math.max(0.001, r);
 }
 function bodyGeo(low = false) {
-  return geo(low ? 'body2low' : 'body2', () => {
-    const p = [], N = low ? 10 : 44;
+  const xl = low === 2, md = low === 1.5; // o47: xl = cuerpo mínimo para el público (se ve a ~20 px); md = intermedio para los mochis del menú
+  return geo(xl ? 'body2xl' : md ? 'body2mid' : low ? 'body2low' : 'body2', () => {
+    const p = [], N = xl ? 6 : md ? 20 : low ? 10 : 44;
     for (let i = 0; i <= N; i++) { const a = i / N, y = a * 1.62; p.push(new THREE.Vector2(bodyR(y), y)); }
     p.unshift(new THREE.Vector2(0.001, 0.02));
-    const g = new THREE.LatheGeometry(p, low ? 18 : 56); g.computeVertexNormals();
+    const g = new THREE.LatheGeometry(p, xl ? 10 : md ? 32 : low ? 18 : 56); g.computeVertexNormals();
     // sombreado pintado en los vértices: arriba clarito, abajo algo más denso (la gelatina se espesa)
     const pos = g.attributes.position, c = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) { const y = pos.getY(i) / 1.62, k = 0.84 + 0.16 * Math.min(1, y * 1.25); c[i * 3] = k; c[i * 3 + 1] = k * 0.985; c[i * 3 + 2] = Math.min(1, k * 1.03); }
@@ -124,7 +126,7 @@ export function makeCharacter(ch, opts = {}) {
   buildInner(ch.inner, inner, ch); if (ch.id === 'disco') inner.scale.setScalar(0.7);
   const OLC = hex(col(ch.color, -0.55));
   const bodyMat = toon(hex(col(ch.color, 0.05)), { opacity: ch.id === 'disco' ? 0.8 : 0.74, rim: 0.55, vc: true, depthWrite: false, nocache: ch.id === 'disco' }); if (ch.id === 'disco') bodyMat.map = fuzzTexture();
-  const body = mesh(bodyGeo(), bodyMat, root);
+  const body = mesh(bodyGeo(opts.bodyLod ? 1.5 : false), bodyMat, root);
   body.renderOrder = 2; ud.casters.push(body);
   const ol = outline(body, hex(col(ch.color, -0.66)), 1.058); ol.renderOrder = 1; // contorno algo más firme: el personaje se lee mejor sobre fondos rosas (o42)
   const eyeM = toon('#2a1838', { rim: 0 }), whiteM = new THREE.MeshBasicMaterial({ color: '#ffffff' });

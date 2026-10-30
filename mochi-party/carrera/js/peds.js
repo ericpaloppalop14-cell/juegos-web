@@ -6,7 +6,7 @@
 //  los jugadores online sin enviar nada por la red.
 // ======================================================================
 import * as THREE from 'three';
-import { toon, mesh, outline, makeCharacter, animCharacter } from './gfx.js?v=o46';
+import { toon, mesh, outline, makeCharacter, animCharacter } from './gfx.js?v=o47';
 import { PED_KINDS } from './data.js';
 const V3 = THREE.Vector3;
 const PS = 1.25; // escala de los peatones (más visibles en vertical)

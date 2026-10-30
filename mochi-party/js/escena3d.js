@@ -8,34 +8,34 @@
 //   podio → podio 1-2-3 con caída de los mochis, el ganador salta de alegría y los demás aplauden
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS } from '../carrera/js/data.js?v=o46';
-import { makeGlowBatch } from './glowbatch.js?v=o46';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o46';
-import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o46';
-import { bakeStatic, megaMerge } from './batch3d.js?v=o46';
+import { CHARS } from '../carrera/js/data.js?v=o47';
+import { makeGlowBatch } from './glowbatch.js?v=o47';
+import { makeCharacter, gfxLod, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o47';
+import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o47';
+import { bakeStatic, megaMerge } from './batch3d.js?v=o47';
+import { createDesfile } from './desfile3d.js?v=o47';
 const NOOP2 = { samples: 2 }, noop = () => {};
 const BT = [0, .3, .7, 1.3, 1.9, 2.6, 3.3, 4.2, 5.1, 6.7, 8.4, 12.2], BE = ['', 'happy', 'squash', 'sad', '', 'happy', 'sad', '', 'squash', 'happy', '', 'sad'];
 const bakeChar = c => bakeStatic(c, k => animCharacter(c, BT[k], 1, BE[k]), { samples: BT.length });
 
 const CH = id => CHARS.find(c => c.id === id) || CHARS[0];
 const rnd = (a, b) => a + Math.random() * (b - a), lerp = (a, b, t) => a + (b - a) * t;
-let renderer;
+let renderer, root;
 try {
   const cv = document.createElement('canvas'); cv.id = 'st3d'; document.body.appendChild(cv);
-  renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: (devicePixelRatio || 1) < 2, alpha: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: (devicePixelRatio || 1) < 1.5, alpha: true, stencil: true, powerPreference: 'high-performance' });
 } catch (e) { document.body.classList.add('no3d'); throw e; }
-renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; // sombras de verdad de los mochis sobre el escenario (o39)
-let DPR = Math.min(devicePixelRatio || 1, 3); /* o46: resolución completa del dispositivo (sin topes) */ renderer.setPixelRatio(DPR);
+renderer.info.autoReset = false; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = false; /* o47: sin mapa de sombras dinámico (una pasada entera menos de geometría): sombras = discos suaves bajo cada mochi */ // sombras de verdad de los mochis sobre el escenario (o39)
+let DPR = Math.min(devicePixelRatio || 1, 2); /* o47: DPR 2 = nítido, a 3 cuesta 2,25× más píxeles en móvil y provocaba los tirones */ renderer.setPixelRatio(DPR);
 const size = () => renderer.setSize(innerWidth, innerHeight); addEventListener('resize', size); size();
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(36, 1, .1, 200);
 if (window.__fxNoche) window.__fxNoche.mejora3D(THREE, renderer, scene, { hemi: 0, env: .35 }); // noche 25-10: reflejos suaves
 scene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.15)); const sun = new THREE.DirectionalLight('#fff4e8', 1.9); sun.position.set(4, 9, 7); scene.add(sun);
-sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); { const c = sun.shadow.camera; c.left = -6; c.right = 6; c.top = 6; c.bottom = -6; c.near = 1; c.far = 28; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03; sun.shadow.radius = 5; }
+sun.castShadow = false; sun.shadow.mapSize.set(1024, 1024); { const c = sun.shadow.camera; c.left = -6; c.right = 6; c.top = 6; c.bottom = -6; c.near = 1; c.far = 28; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03; sun.shadow.radius = 5; }
 const back = new THREE.DirectionalLight('#ffd0f0', .9); back.position.set(-5, 6, -8); scene.add(back); const fillL = new THREE.PointLight('#fff0c8', 6, 14, 1.6); fillL.position.set(0, 3, 5); scene.add(fillL);
 
 // ---------- piezas comunes ----------
-const root = new THREE.Group(); scene.add(root);
 const GB = makeGlowBatch(scene), glow = (c, s, op = 1) => GB.make(c, s, op, false); // o46: todos los destellos = 1 sola llamada de dibujo
 function textSprite(text, color, me) {
   const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const x = cv.getContext('2d'); x.scale(2, 2); x.font = '700 64px Fredoka, sans-serif';
@@ -56,12 +56,12 @@ function bulbSet(parent, items, init) { const im = new THREE.InstancedMesh(BULB_
   parent.add(im); return proxies; }
 function stage(r = 3.2) {
   const g = new THREE.Group();
-  const top = mesh(new THREE.CylinderGeometry(r, r, .35, 72), toon('#fff4fa', { rim: .3 }), g, [0, -.18, 0]); outline(top, '#d58ab8', 1.02); top.receiveShadow = true;
+  const top = mesh(new THREE.CylinderGeometry(r, r, .35, 44), toon('#fff4fa', { rim: .3 }), g, [0, -.18, 0]); outline(top, '#d58ab8', 1.02); top.receiveShadow = true;
   const st = mesh(STAR5, toon('#ffd84a', { emissive: '#ffb830', ei: .22, rim: 0 }), g, [0, .012, 0], [-Math.PI / 2, 0, 0], r * .62); st.receiveShadow = true;
-  for (const [a, b2, c] of [[.7, .74, '#ffc0de'], [.84, .86, '#c9b6ff'], [.93, .95, '#9fe0ff']]) { const rg = mesh(new THREE.RingGeometry(r * a, r * b2, 72), toon(c, { rim: 0 }), g, [0, .01, 0], [-Math.PI / 2, 0, 0]); rg.receiveShadow = true; }
-  mesh(new THREE.CylinderGeometry(r + .25, r + .45, .55, 72), toon('#ff8fc4', { rim: .4 }), g, [0, -.6, 0]);
-  mesh(new THREE.CylinderGeometry(r + .8, r + 1.0, .4, 72), toon('#b9a2f7', { rim: .4 }), g, [0, -1.05, 0]);
-  mesh(new THREE.TorusGeometry(r + .02, .06, 8, 72), toon('#ffffff', { rim: 0, emissive: '#ffffff', ei: .3 }), g, [0, 0, 0], [Math.PI / 2, 0, 0]);
+  for (const [a, b2, c] of [[.7, .74, '#ffc0de'], [.84, .86, '#c9b6ff'], [.93, .95, '#9fe0ff']]) { const rg = mesh(new THREE.RingGeometry(r * a, r * b2, 44), toon(c, { rim: 0 }), g, [0, .01, 0], [-Math.PI / 2, 0, 0]); rg.receiveShadow = true; }
+  mesh(new THREE.CylinderGeometry(r + .25, r + .45, .55, 44), toon('#ff8fc4', { rim: .4 }), g, [0, -.6, 0]);
+  mesh(new THREE.CylinderGeometry(r + .8, r + 1.0, .4, 44), toon('#b9a2f7', { rim: .4 }), g, [0, -1.05, 0]);
+  mesh(new THREE.TorusGeometry(r + .02, .06, 8, 44), toon('#ffffff', { rim: 0, emissive: '#ffffff', ei: .3 }), g, [0, 0, 0], [Math.PI / 2, 0, 0]);
   const bi = []; for (let i = 0; i < 34; i++) { const a = i / 34 * Math.PI * 2; bi.push([Math.cos(a) * (r + .36), -.48, Math.sin(a) * (r + .36), .085]); }
   for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; bi.push([Math.cos(a) * (r + .9), -.98, Math.sin(a) * (r + .9), .075]); }
   bakeStatic(g, noop, NOOP2); g.userData.bulbs = bulbSet(g, bi, () => BULB_ON); return g;
@@ -128,11 +128,11 @@ function updSparks(dt) { for (let i = sparks.length - 1; i >= 0; i--) { const s 
 // ---------- personajes ----------
 // cada mochi: grupo (posición) → pivot (animación) → personaje de la carrera (mismo modelo 3D que en las pruebas)
 function actor(id, scale = 1, role = 'dance', seed = 0, opaque = false) {
-  const g = new THREE.Group(), pivot = new THREE.Group(); g.add(pivot); const c = makeCharacter(CH(id)); c.userData.seed = seed; pivot.add(c);
+  const g = new THREE.Group(), pivot = new THREE.Group(); g.add(pivot); const c = (gfxLod.k = .7, makeCharacter(CH(id), { bodyLod: 1 })); gfxLod.k = 1; c.userData.seed = seed; pivot.add(c);
   if (opaque) c.traverse(o => { if (o.material && !Array.isArray(o.material) && o.material.transparent && o.material.opacity >= .7 && o.material.opacity < 1) { o.material = o.material.clone(); o.material.opacity = 1; o.material.transparent = false; o.material.depthWrite = true; } }); // vitrina: copia opaca (en las pruebas sigue igual)
   if (!opaque) (c.userData.casters || []).forEach(m => m.castShadow = true); bakeChar(c); // o46: personaje fundido en pocas mallas
-  const sh = mesh(new THREE.CircleGeometry(.85, 24), new THREE.MeshBasicMaterial({ color: '#7a3a8a', transparent: true, opacity: .18, depthWrite: false }), g, [0, .01, 0], [-Math.PI / 2, 0, 0]);
-  g.userData = { pivot, c, sh, scale, role, seed, enter: 0, flip: -9, expr: '' }; pivot.scale.setScalar(scale); if (!opaque) { sh.material.opacity = .1; (c.userData.casters || []).forEach(m => m.castShadow = true); } return g;
+  const sh = mesh(new THREE.CircleGeometry(.85, 24), new THREE.MeshBasicMaterial({ color: '#7a3a8a', transparent: true, opacity: .26, depthWrite: false }), g, [0, .01, 0], [-Math.PI / 2, 0, 0]);
+  g.userData = { pivot, c, sh, scale, role, seed, enter: 0, flip: -9, expr: '' }; pivot.scale.setScalar(scale); if (!opaque) { sh.material.opacity = .2; (c.userData.casters || []).forEach(m => m.castShadow = true); } return g;
 }
 function pose(a, t, dt) {
   const u = a.userData, p = u.pivot, s = u.scale, T = t + u.seed * .37; let y = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, expr = '';
@@ -162,33 +162,63 @@ function pose(a, t, dt) {
 
 // ---------- escenas ----------
 const DET = new URLSearchParams(location.search).get('detalle'); let lowMode = DET === 'bajo';
-function applyLow() { const f = o => { if (o.name === 'detalle') o.visible = !lowMode; }; root.traverse(f); mScene.traverse(f); sun.castShadow = !lowMode; }
+function applyLow() { const f = o => { if (o.name === 'detalle') o.visible = !lowMode; }; root.traverse(f); mScene.traverse(f);  }
 let mode = null, actors = [], deco = null, t0 = 0, camT = { p: new THREE.Vector3(0, 2.4, 9), l: new THREE.Vector3(0, 1, 0) }, extra = {};
-function clear() { if (MEGA) { MEGA.dispose(); MEGA = null; } crowds.forEach(c => c.userData.dispose && c.userData.dispose()); crowds = []; garlands = []; clouds = []; suns = []; thumbCs = null; root.clear(); actors = []; deco = null; extra = {}; sparks.forEach(freeSpark); sparks.length = 0; GB.reset(); }
+function clearVars() { crowds = []; garlands = []; clouds = []; suns = []; actors = []; deco = null; extra = {}; }
+function clear() { if (MEGA) { MEGA.dispose(); MEGA = null; } crowds.forEach(c => c.userData.dispose && c.userData.dispose()); thumbCs = null; root.clear(); clearVars(); sparks.forEach(freeSpark); sparks.length = 0; GB.reset('x'); }
 const now = () => performance.now() / 1000;
 let MEGA = null;
-function build(m, d) { build0(m, d); MEGA = megaMerge(scene); } // o46: fusiona entre sí todas las piezas horneadas (personajes, escenario, gradas…)
+// o47: las escenas «menu» y «chars» se construyen UNA vez y se conservan (cada una en su grupo); entrar/salir/cambiar de mochi ya no recrea ni vuelve a hornear nada
+const ROOTX = new THREE.Group(); scene.add(ROOTX); root = ROOTX;
+const CM = {}; let cur = null; const HER = {}, TAGS = {};
+const snapshot = () => ({ actors, deco, crowds, garlands, clouds, suns, extra, camT, confAmt, balOn });
+const inRoot = (o, r) => { for (let q = o; q; q = q.parent) if (q === r) return true; return false; };
+const noMega = o => { for (let q = o; q; q = q.parent) if (q.userData && q.userData.noMega) return true; return false; };
+const stMark = obj => { const f = m => { if (!m || !m.userData || m.userData._st) return; m.userData._st = 1; if (m.transparent && !m.depthWrite) return; m.stencilWrite = true; m.stencilFunc = THREE.AlwaysStencilFunc; m.stencilRef = 1; m.stencilFail = m.stencilZFail = THREE.KeepStencilOp; m.stencilZPass = THREE.ReplaceStencilOp; }; obj.traverse(o => { if (o.material) Array.isArray(o.material) ? o.material.forEach(f) : f(o.material); }); }; // o47: marca lo que pinta el 3D principal para que las figuras del desfile (dibujadas después) queden detrás
+function heroFor(kind, pj) { const k = kind + pj; if (HER[k]) return HER[k]; const a = HER[k] = kind === 'menu' ? actor(pj, 1.1, 'dance', 0) : actor(pj, 1.15, 'dance', 0, true); a.userData.noMega = true; stMark(a); return a; }
+function tagFor(pj) { return TAGS[pj] || (TAGS[pj] = (() => { const col = CH(pj).color, tg = textSprite(CH(pj).name, col, true); tg.position.set(0, 3.55, 0); tg.scale.multiplyScalar(.85); return tg; })()); }
+function setHero(m, d) {
+  const E = extra, a = heroFor(m, d.pj); if (E.hero === a) return; const old = E.hero;
+  if (old) { root.remove(old); actors = actors.filter(x => x !== old); if (old.userData.tag) root.remove(old.userData.tag); }
+  const u = a.userData; u.landed = false; u.rk = undefined; u.flip = -9;
+  if (m === 'menu') { a.position.set(0, 0, 1.25); u.roles = ['dance', 'twirl', 'wiggle', 'cheer']; u.enter = 0; }
+  else { a.position.set(0, .35, 0); u.roles = ['dance', 'hop', 'spin', 'wave', 'cheer', 'wiggle']; u.per = 2.6; u.enter = .05; u.sh.visible = false;
+    const col = CH(d.pj).color; E.ped.material.emissive.set(col); E.pedT.material.color.set(col); E.pedT.material.emissive.set(col); E.ring.material.setCol(col);
+    const tg = tagFor(d.pj); root.add(tg); u.tag = tg; E.tagC = tg; if (d.prev) { burst(new THREE.Vector3(0, 1.4, 0), col, 26, 4); burst(new THREE.Vector3(0, 1.4, 0), '#ffffff', 14, 3); } }
+  root.add(a); actors.push(a); E.hero = a; E.pj = d.pj; E.cur = true;
+}
+function build(m, d) {
+  if (cur && m === cur) { const tn = now() - t0; setHero(m, d); extra.hero.userData.enter = tn + .05; return; } // mismo escenario, otro mochi: solo se cambia el protagonista
+  if (cur) { const c = CM[cur]; c.snap = snapshot(); c.root.visible = false; cur = null; } else if (mode) { clear(); ROOTX.visible = false; }
+  if (m === 'menu' || m === 'chars') {
+    let c = CM[m];
+    if (!c) { c = CM[m] = { root: new THREE.Group() }; scene.add(c.root); root = c.root; GB.use(m); clearVars(); build0(m, d); c.mega = megaMerge(scene, o => inRoot(o, c.root) && !noMega(o), c.root); stMark(c.root); }
+    else { root = c.root; GB.use(m); ({ actors, deco, crowds, garlands, clouds, suns, extra, camT, confAmt, balOn } = c.snap); }
+    c.root.visible = true; cur = m; mode = m; t0 = now(); balOn = true; extra.cam = camT.p.clone().multiplyScalar(1.5);
+    if (extra.pj !== d.pj) setHero(m, d); for (const a of actors) { a.userData.landed = false; a.userData.rk = undefined; }
+    if (lowMode) applyLow(); return;
+  }
+  root = ROOTX; ROOTX.visible = true; GB.use('x'); GB.reset('x'); build0(m, d); MEGA = megaMerge(scene, o => inRoot(o, ROOTX), ROOTX); stMark(ROOTX); // o46: fusiona entre sí todas las piezas horneadas
+}
 function build0(m, d) {
-  clear(); balOn = false; mode = m; t0 = now(); const T = 0;
+  balOn = false; mode = m; t0 = now();
   if (m === 'menu') {
     deco = stage(3.3); root.add(deco); root.add(spots()); confAmt = .8; balOn = true; scenery('menu');
-    const hero = actor(d.pj, 1.1, 'dance', 0); hero.position.set(0, 0, 1.25); hero.userData.roles = ['dance', 'twirl', 'wiggle', 'cheer']; root.add(hero); extra.hero = hero;
+    
     const pool = (window.MR && MR.CHARS ? MR.CHARS : CHARS).map(c => c.id), others = pool.filter(id => id !== d.pj).sort(() => Math.random() - .5).slice(0, 4);
     const R = [['hop', 'spin', 'boing', 'wave'], ['wiggle', 'cheer', 'dance', 'hop'], ['spin', 'boing', 'twirl', 'taunt'], ['boing', 'dance', 'wave', 'wiggle']];
     [[-1.55, .35], [1.55, .35], [-2.6, -.85], [2.6, -.85]].forEach(([x, z], i) => { const a = actor(others[i], 1, R[i][0], i + 1); a.userData.roles = R[i]; a.position.set(x, 0, z); a.rotation.y = -x * .14; a.userData.enter = .15 + i * .12; root.add(a); actors.push(a); });
-    actors.push(hero); camT = { p: new THREE.Vector3(0, 3.1, 8), l: new THREE.Vector3(0, 1.2, 0), w: 7.4 };
+    setHero('menu', d); camT = { p: new THREE.Vector3(0, 3.1, 8), l: new THREE.Vector3(0, 1.2, 0), w: 7.4 };
   } else if (m === 'chars') {
     // plató de presentación: pedestal con bombillas, focos, telón, estrellas, banderines, confeti y globos
     deco = stage(1.9); root.add(deco); root.add(spots()); confAmt = .55; balOn = true; scenery('chars');
     const col = CH(d.pj).color;
-    const pedG = new THREE.Group(); root.add(pedG); const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18 }), pedG, [0, .17, 0]); outline(ped, '#d58ab8', 1.03);
-    mesh(new THREE.TorusGeometry(1.3, .06, 8, 48), toon(col, { emissive: col, ei: .5, rim: 0 }), pedG, [0, .35, 0], [Math.PI / 2, 0, 0]); bakeStatic(pedG, noop, NOOP2);
+    const pedG = new THREE.Group(); root.add(pedG); const ped = mesh(new THREE.CylinderGeometry(1.25, 1.4, .35, 40), toon('#ffffff', { rim: .5, emissive: col, ei: .18, nocache: true }), pedG, [0, .17, 0]); outline(ped, '#d58ab8', 1.03); extra.ped = ped;
+    extra.pedT = mesh(new THREE.TorusGeometry(1.3, .06, 8, 48), toon(col, { emissive: col, ei: .5, rim: 0, nocache: true }), pedG, [0, .35, 0], [Math.PI / 2, 0, 0]);
     const ring = glow(col, 4.2, .55); ring.position.set(0, .5, -.2); root.add(ring); extra.ring = ring;
         const flagsG = new THREE.Group(); root.add(flagsG); const flags = []; for (let i = 0; i < 13; i++) { const x = (i - 6) * .75, y = 5.2 - Math.cos((i - 6) / 6 * 1.4) * .9; const f = mesh(new THREE.ConeGeometry(.2, .42, 3), toon(['#ff6fae', '#ffd84a', '#7ee3c4', '#8fd0ff', '#b9a2f7'][i % 5], { rim: .3 }), flagsG, [x, y, -3.6], [Math.PI, 0, 0]); flags.push(f); } bakeStatic(flagsG, k => flags.forEach((f, i) => { f.rotation.z = Math.sin(BT[k] * 3 + i) * .15; }), { samples: BT.length }); extra.flags = flags;
     const stars = []; for (let i = 0; i < 18; i++) { const s0 = glow(['#ffe27a', '#ffffff', '#ff9cc8', '#8fd0ff'][i % 4], rnd(.3, .7), .9); s0.position.set(rnd(-5, 5), rnd(1, 6.5), rnd(-4.5, -3.2)); s0.userData.ph = rnd(0, 6); root.add(s0); stars.push(s0); } extra.stars = stars;
-    const a = actor(d.pj, 1.15, 'dance', 0, true); a.position.y = .35; a.userData.roles = ['dance', 'hop', 'spin', 'wave', 'cheer', 'wiggle']; a.userData.per = 2.6; a.userData.enter = .05; a.userData.sh.visible = false; root.add(a); actors.push(a); extra.hero = a;
-    if (d.prev) { burst(new THREE.Vector3(0, 1.4, 0), col, 26, 4); burst(new THREE.Vector3(0, 1.4, 0), '#ffffff', 14, 3); }
-    const tg = textSprite(CH(d.pj).name, col, true); tg.position.set(0, 3.55, 0); tg.scale.multiplyScalar(.85); root.add(tg); a.userData.tag = tg; extra.tagC = tg;
+    setHero('chars', d);
     camT = { p: new THREE.Vector3(0, 2.6, 8.4), l: new THREE.Vector3(0, 1.5, 0), w: 7.4 };
   } else if (m === 'intro') {
     deco = stage(3.4); root.add(deco); root.add(spots()); confAmt = .2; scenery('intro');
@@ -225,35 +255,42 @@ mScene.add(new THREE.HemisphereLight('#ffffff', '#ffc6e2', 1.25)); { const l = n
 const mAct = {}, MROLES = ['boing', 'wiggle', 'hop', 'wave', 'spin', 'taunt', 'dance', 'clap'];
 // fluido: todos los recuadros se pintan en el mismo fotograma, en una sola pasada (viewports en fila) y se copian de golpe
 let thumbLast = 0, thumbVisT = 0, thumbCs = null, thumbVis = [];
+let thumbN = 0;
+function mkThumb(id, i) { let a = mAct[id]; if (!a) { a = mAct[id] = actor(id, 1, MROLES[i % MROLES.length], i * 3 + 1, true); a.userData.landed = true; a.userData.enter = -5; a.visible = false; mScene.add(a); if (lowMode) applyLow(); } return a; }
 function thumbs(t) {
   if (mode !== 'chars') return;
-  const tt = now(); if (tt - thumbLast < .045) return; thumbLast = tt; // o45: miniaturas a ~22 Hz (eran un render por cada mochi y fotograma)
+  const tt = now();
   if (tt - thumbVisT > .3 || !thumbCs) { thumbCs = Array.from(document.querySelectorAll('.scr.on #charGrid canvas, canvas[data-mini]')); thumbVis = thumbCs.map(c => { const r = c.getBoundingClientRect(); return r.width > 0 && r.bottom > -30 && r.top < innerHeight + 30; }); thumbVisT = tt; } // lecturas de layout agrupadas, 3 veces/s
   const cs = thumbCs; if (!cs.length) return;
-  const gl = renderer.domElement, pr = renderer.getPixelRatio(), Sc = Math.floor(Math.min(64, gl.width / pr / cs.length)), S = Math.round(Sc * pr), H = gl.height;
+  // o47: miniaturas repartidas: 2 por fotograma (≈12 Hz cada una) + la seleccionada cada 2 fotogramas; antes eran 10 renders + 10 copias GL→2D juntos cada 45 ms (picos de CPU y sincronización de GPU)
+  thumbN++; const todo = [], n = cs.length; for (let k = 0; k < 2; k++) { const i = (thumbN * 2 + k) % n; if (thumbVis[i]) todo.push(i); }
+  if (thumbN % 2 === 0) { const i = cs.findIndex(c => c.parentElement.classList.contains('on')); if (i >= 0 && thumbVis[i] && !todo.includes(i)) todo.push(i); }
+  if (!todo.length) return;
+  const gl = renderer.domElement, pr = renderer.getPixelRatio(), Sc = Math.floor(Math.min(64, gl.width / pr / 4)), S = Math.round(Sc * pr), H = gl.height;
   renderer.setScissorTest(true); renderer.setClearColor(0, 0);
-  for (const k in mAct) mAct[k].visible = false;
-  cs.forEach((c, i) => { if (!thumbVis[i]) return; const id = c.dataset.id;
-    let a = mAct[id]; if (!a) { a = mAct[id] = actor(id, 1, MROLES[i % MROLES.length], i * 3 + 1, true); a.userData.landed = true; a.userData.enter = -5; mScene.add(a); if (lowMode) applyLow(); }
+  todo.forEach((i, slot) => { const c = cs[i], id = c.dataset.id, a = mkThumb(id, i);
     const on = c.parentElement.classList.contains('on'); a.userData.role = on ? 'dance' : MROLES[i % MROLES.length];
     pose(a, tt, 0); a.visible = true; a.userData.sh.visible = true;
-    renderer.setViewport(i * Sc, 0, Sc, Sc); renderer.setScissor(i * Sc, 0, Sc, Sc); renderer.clear(); renderer.render(mScene, mCam); a.visible = false; });
-  cs.forEach((c, i) => { if (!thumbVis[i]) return; if (c.width !== S) { c.width = c.height = S; } const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, Math.round(i * Sc * pr), H - S, S, S, 0, 0, S, S); });
+    renderer.setViewport(slot * Sc, 0, Sc, Sc); renderer.setScissor(slot * Sc, 0, Sc, Sc); renderer.clear(); renderer.render(mScene, mCam); a.visible = false; });
+  todo.forEach((i, slot) => { const c = cs[i]; if (c.width !== S) { c.width = c.height = S; } const x = c.getContext('2d'); x.clearRect(0, 0, S, S); x.drawImage(gl, Math.round(slot * Sc * pr), H - S, S, S, 0, 0, S, S); });
   renderer.setScissorTest(false);
 }
 // fundido elíptico de bordes dentro de WebGL: multiplica el resultado por un alfa radial (equivale al antiguo mask-image: #000 62% → transparent 100%)
 const FADE = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { uC: { value: new THREE.Vector2() }, uE: { value: new THREE.Vector2(1, 1) } }, transparent: true, depthTest: false, depthWrite: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcAlphaFactor,
   vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: 'uniform vec2 uC; uniform vec2 uE; void main(){ float d = length((gl_FragCoord.xy - uC) / uE); gl_FragColor = vec4(0., 0., 0., clamp((1. - d) / .38, 0., 1.)); }' }));
 FADE.frustumCulled = false; FADE.renderOrder = 9999; FADE.visible = false; scene.add(FADE);
+let D = null; try { D = createDesfile(renderer, { shared: true }); window.__desfile3d = D; } catch (e) { console.warn('desfile', e); }
+stMark(scene);
 const HALO = document.getElementById('stageHalo') || document.createElement('div');
 // ---------- bucle ----------
 let last = now(), shown = true, fpsN = 0, fpsT = now(), elC = null, elT = 0, rEl = null, rAt = 0, rT = -9, rC = null; addEventListener('resize', () => { rT = -9; }); addEventListener('orientationchange', () => { rT = -9; }); const _dir = new THREE.Vector3(), _w3 = new THREE.Vector3();
 function frame() {
   requestAnimationFrame(frame);
+  renderer.info.reset(); // o47: contadores acumulados de todo el fotograma (miniaturas + escena + figuras del desfile)
   const t1 = now(), dt = Math.min(.05, t1 - last); last = t1;
   // o46: sin regulador automático (ni baja la resolución ni oculta detalle)
   if (!elC || t1 - elT > .25 || !elC.isConnected || !elC.closest('.scr.on')) { elC = document.querySelector('.scr.on .stage3d'); elT = t1; } const el = elC; if (elC !== rEl) { rEl = elC; rAt = t1; rT = -9; } if (t1 - rT > (t1 - rAt < 1.3 ? 0 : .12)) { rC = el && el.getBoundingClientRect(); rT = t1; } const r = rC; // o46: sin lectura de layout por fotograma (solo durante la animación de entrada y luego 8 veces/s)
-  if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
+  if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; if (D) D.setOn(false); if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
   const want = el.dataset.mode; if (want !== mode || el.dataset.key !== extra.key) { build(want, JSON.parse(el.dataset.d || '{}')); extra.key = el.dataset.key; }
   shown = true; const t = t1 - t0;
   for (const a of actors) pose(a, t, dt);
@@ -289,9 +326,16 @@ function frame() {
   } else { FADE.visible = false; camera.clearViewOffset(); camera.updateProjectionMatrix(); if (cv._m) { cv._m = ''; cv.style.webkitMaskImage = cv.style.maskImage = ''; }
     const y = innerHeight - r.bottom; renderer.setScissorTest(true); renderer.setScissor(r.left, y, r.width, r.height); renderer.setViewport(r.left, y, r.width, r.height); }
   renderer.render(scene, camera);
+  if (D) { D.setOn(free); if (free) { D.step(t1, dt); D.draw(); } }
 }
 // o45: precompila los shaders de TODAS las escenas antes de enseñar nada (así abrir «Elige tu mochi» no provoca un tirón de compilación)
-try { const pj = CHARS[0].id; FADE.visible = true; for (const m of ['chars', 'menu']) { build(m, { pj }); renderer.compile(scene, camera); } FADE.visible = false; const a = actor(pj, 1, 'dance', 0, true); mScene.add(a); renderer.compile(mScene, mCam); mScene.remove(a); clear(); mode = null; extra = {}; } catch (e) { console.warn('warmup', e); }
+const warmRender = (sc, cam) => { renderer.setScissorTest(true); renderer.setScissor(0, 0, 2, 2); renderer.setViewport(0, 0, 2, 2); renderer.render(sc, cam); renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); }; // o47: dibuja 2×2 px para subir ya geometrías y texturas a la GPU
+try { const T0 = performance.now(); let pj = CHARS[0].id; try { pj = JSON.parse(document.querySelector('.stage3d').dataset.d).pj || pj; } catch (e) {}
+  FADE.visible = true; for (const m of ['chars', 'menu']) { build(m, { pj }); renderer.compile(scene, camera); warmRender(scene, camera); } FADE.visible = false;
+  // o47: todo se crea y compila ahora (detrás del splash/hero 2D), no al pulsar: héroes de «Elige tu mochi», etiquetas y miniaturas
+  const keep = CM.chars && CM.chars.snap && CM.chars.snap.extra.hero; const tg = new THREE.Group(); scene.add(tg); CHARS.forEach(c => { tg.add(heroFor('chars', c.id)); tagFor(c.id); }); renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep);
+  CHARS.forEach((c, i) => mkThumb(c.id, i)); for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false;
+  try { D && D.draw(); } catch (e) {} renderer.clear(); if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; ROOTX.visible = false; window.__warmMs = Math.round(performance.now() - T0); } catch (e) { console.warn('warmup', e); }
 document.body.classList.remove('no3d'); // si el módulo tardó más de 5 s, el 3D vuelve a mandar sobre el hero 2D de reserva
 requestAnimationFrame(frame);
 // tocar el escenario: voltereta del protagonista

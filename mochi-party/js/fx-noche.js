@@ -19,8 +19,9 @@
   cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:' + (opts.z || 5) + ';mix-blend-mode:screen';
   const vg = document.createElement('div'); vg.id = 'fxVig';
   vg.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:' + (opts.z || 5) + ';background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 55%,rgba(30,0,50,' + (opts.vig ?? .22) + ') 100%)';
-  const add = () => { document.body.appendChild(cv); document.body.appendChild(vg); };
+  const add = () => { if (opts.canvas !== false) document.body.appendChild(cv); document.body.appendChild(vg); };
   document.body ? add() : addEventListener('DOMContentLoaded', add);
+  if (opts.canvas === false) return; // o47: sin capa 2D con mix-blend-mode redibujada cada fotograma (solo la viñeta, que es CSS estático)
   const x = cv.getContext('2d'); let W = 0, H = 0, dpr = 1;
   const rs = () => { dpr = Math.min(devicePixelRatio || 1, 1.5); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; };
   addEventListener('resize', rs); rs();
