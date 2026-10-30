@@ -8,12 +8,12 @@
 //   podio → podio 1-2-3 con caída de los mochis, el ganador salta de alegría y los demás aplauden
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS } from '../carrera/js/data.js?v=o47';
-import { makeGlowBatch } from './glowbatch.js?v=o47';
-import { makeCharacter, gfxLod, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o47';
-import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o47';
-import { bakeStatic, megaMerge } from './batch3d.js?v=o47';
-import { createDesfile } from './desfile3d.js?v=o47';
+import { CHARS } from '../carrera/js/data.js?v=o48';
+import { makeGlowBatch } from './glowbatch.js?v=o48';
+import { makeCharacter, gfxLod, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o48';
+import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o48';
+import { bakeStatic, megaMerge } from './batch3d.js?v=o48';
+import { createDesfile } from './desfile3d.js?v=o48';
 const NOOP2 = { samples: 2 }, noop = () => {};
 const BT = [0, .3, .7, 1.3, 1.9, 2.6, 3.3, 4.2, 5.1, 6.7, 8.4, 12.2], BE = ['', 'happy', 'squash', 'sad', '', 'happy', 'sad', '', 'squash', 'happy', '', 'sad'];
 const bakeChar = c => bakeStatic(c, k => animCharacter(c, BT[k], 1, BE[k]), { samples: BT.length });
@@ -189,14 +189,16 @@ function setHero(m, d) {
   root.add(a); actors.push(a); E.hero = a; E.pj = d.pj; E.cur = true;
 }
 function build(m, d) {
-  if (cur && m === cur) { const tn = now() - t0; setHero(m, d); extra.hero.userData.enter = tn + .05; return; } // mismo escenario, otro mochi: solo se cambia el protagonista
+  if (cur && m === cur && m !== 'intro') { const tn = now() - t0; setHero(m, d); extra.hero.userData.enter = tn + .05; return; } // mismo escenario, otro mochi: solo se cambia el protagonista
   if (cur) { const c = CM[cur]; c.snap = snapshot(); c.root.visible = false; cur = null; } else if (mode) { clear(); ROOTX.visible = false; }
-  if (m === 'menu' || m === 'chars') {
-    let c = CM[m];
-    if (!c) { c = CM[m] = { root: new THREE.Group() }; scene.add(c.root); root = c.root; GB.use(m); clearVars(); build0(m, d); c.mega = megaMerge(scene, o => inRoot(o, c.root) && !noMega(o), c.root); stMark(c.root); }
-    else { root = c.root; GB.use(m); ({ actors, deco, crowds, garlands, clouds, suns, extra, camT, confAmt, balOn } = c.snap); }
-    c.root.visible = true; cur = m; mode = m; t0 = now(); balOn = true; extra.cam = camT.p.clone().multiplyScalar(1.5);
-    if (extra.pj !== d.pj) setHero(m, d); for (const a of actors) { a.userData.landed = false; a.userData.rk = undefined; }
+  if (m === 'menu' || m === 'chars' || m === 'intro') {
+    const hv = m !== 'intro', K = hv ? m : 'intro|' + d.pj + '|' + (d.rv || []).join(','); // o48: «intro» (pantalla intermedia) también se conserva por combinación mochi+rivales
+    let c = CM[K];
+    if (!c) { if (!hv) { const ks = Object.keys(CM).filter(k => k.startsWith('intro|')); if (ks.length >= 4) { const o = CM[ks[0]]; scene.remove(o.root); GB.reset(ks[0]); delete CM[ks[0]]; } }
+      c = CM[K] = { root: new THREE.Group() }; scene.add(c.root); root = c.root; GB.use(K); clearVars(); build0(m, d); c.mega = megaMerge(scene, o => inRoot(o, c.root) && !noMega(o), c.root); stMark(c.root); }
+    else { root = c.root; GB.use(K); ({ actors, deco, crowds, garlands, clouds, suns, extra, camT, confAmt, balOn } = c.snap); }
+    c.root.visible = true; cur = K; mode = m; t0 = now(); if (hv) balOn = true; extra.cam = camT.p.clone().multiplyScalar(1.5);
+    if (hv && extra.pj !== d.pj) setHero(m, d); for (const a of actors) { a.userData.landed = false; a.userData.rk = undefined; }
     if (lowMode) applyLow(); return;
   }
   root = ROOTX; ROOTX.visible = true; GB.use('x'); GB.reset('x'); build0(m, d); MEGA = megaMerge(scene, o => inRoot(o, ROOTX), ROOTX); stMark(ROOTX); // o46: fusiona entre sí todas las piezas horneadas
@@ -434,6 +436,9 @@ try { const T0 = performance.now(); let pj = CHARS[0].id; try { pj = JSON.parse(
   renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep); LD(62, 'Ensayando los bailes…'); await yieldPaint();
   hi = 0; for (const [i, c] of CHARS.entries()) { mkThumb(c.id, i); LD(62 + (++hi) / CHARS.length * 14); await yieldPaint(); }
   for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false; LD(78, 'Pintando el escenario…'); await yieldPaint();
+  { const ids = CHARS.map(c => c.id); // o48: «intro» y «podio» (pantallas intermedias) también se precalientan: shaders, geometrías y texturas ya están en la GPU al entrar
+    ROOTX.visible = true; build('intro', { pj, rv: ids.filter(i => i !== pj).slice(0, 5) }); renderer.compile(scene, camera); warmRender(scene, camera); await yieldPaint();
+    build('podio', { ids: ids.slice(0, 5), meIdx: 0 }); renderer.compile(scene, camera); warmRender(scene, camera); await yieldPaint(); }
   if (D) await D.sprites(p => LD(78 + p * 6)); await bakeThumbs(); await bakeDeco('chars', p => LD(84 + p * 5)); await bakeDeco('menu', p => LD(89 + p * 5)); LD(94, 'Encendiendo las luces…'); await yieldPaint();
   try { D && D.draw(); } catch (e) {} renderer.clear(); if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; ROOTX.visible = false; window.__warmMs = Math.round(performance.now() - T0); } catch (e) { console.warn('warmup', e); }
 // o48: espera a fuentes, imágenes y a la carga de la página; luego muestra TODO de golpe con un fundido

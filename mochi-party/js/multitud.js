@@ -2,7 +2,7 @@
 // Cada espectador tiene cuerpo, contorno, ojos con brillo, mejillas, boca, orejas (conejo/oso/gato), brazos que saludan
 // y a veces gorro de fiesta, pompón o banderín. Se usa en el escenario del menú, la selección, la presentación y el podio.
 import * as THREE from 'three';
-import { toon, bodyGeometry } from '../carrera/js/gfx.js?v=o47';
+import { toon, bodyGeometry } from '../carrera/js/gfx.js?v=o48';
 
 const PAL = ['#ff9cc8', '#7ee3c4', '#9fc3ff', '#b9a2f7', '#ffe27a', '#8fe3f0', '#ffb36b', '#ff8fd8', '#a8f0c6', '#ffc2e0', '#c9b2ff', '#fff0b0'];
 const rnd = (a, b) => a + Math.random() * (b - a);

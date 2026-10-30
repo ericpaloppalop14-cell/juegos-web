@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { CONFIG, CHARS, CUPS, ITEMS } from './data.js';
-import { makeKart, animKart, toon, mesh, outline } from './gfx.js?v=o47';
-import { Race } from './race.js?v=o47';
+import { makeKart, animKart, toon, mesh, outline } from './gfx.js?v=o48';
+import { Race } from './race.js?v=o48';
 import { buildTrack } from './track.js';
 import { Audio } from './audio.js';
-import { makePost } from './post.js?v=o47';
+import { makePost } from './post.js?v=o48';
 import { Net, netAvailable } from './net.js';
 
 const $ = id => document.getElementById(id);

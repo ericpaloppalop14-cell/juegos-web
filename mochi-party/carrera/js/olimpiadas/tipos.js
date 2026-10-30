@@ -2,9 +2,9 @@
 //  MOCHI PARTY · OLIMPIADAS — los 8 tipos de prueba, configurables por cada olimpiada
 //  salto · esquiva · machaca · vuelo · punteria · recoge · ritmo · superv · empuje
 // ======================================================================
-import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=o47';
-import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o47';
-import { hieloFx } from './hielo-fx.js?v=o47';
+import { THREE, camera, toon, outline, mesh, glowSprite, makeRunner, rnd, clamp, lerp, pick, Audio, OUCH } from '../core3d.js?v=o48';
+import { buildWorld, prop, arch, MUNDOS, SPH, SPHL, CYL, BOX, TOR } from './mundos.js?v=o48';
+import { hieloFx } from './hielo-fx.js?v=o48';
 
 const LW = 2.3;
 const lx = (l, n = 6) => (l - (n - 1) / 2) * LW;
