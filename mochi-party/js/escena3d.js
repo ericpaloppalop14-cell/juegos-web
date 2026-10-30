@@ -24,7 +24,7 @@ let renderer, root;
 try {
   const cv = document.createElement('canvas'); cv.id = 'st3d'; document.body.appendChild(cv);
   renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: (devicePixelRatio || 1) < 1.5, alpha: true, stencil: true, powerPreference: 'high-performance' });
-} catch (e) { document.body.classList.add('no3d'); throw e; }
+} catch (e) { document.body.classList.add('no3d'); window.__LOAD && __LOAD.done(); throw e; }
 renderer.info.autoReset = false; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
 renderer.shadowMap.enabled = false; /* o47: sin mapa de sombras dinámico (una pasada entera menos de geometría): sombras = discos suaves bajo cada mochi */ // sombras de verdad de los mochis sobre el escenario (o39)
 let DPR = Math.min(devicePixelRatio || 1, 2); /* o47: DPR 2 = nítido, a 3 cuesta 2,25× más píxeles en móvil y provocaba los tirones */ renderer.setPixelRatio(DPR);
@@ -284,10 +284,13 @@ stMark(scene);
 const HALO = document.getElementById('stageHalo') || document.createElement('div');
 // ---------- bucle ----------
 let last = now(), shown = true, fpsN = 0, fpsT = now(), elC = null, elT = 0, rEl = null, rAt = 0, rT = -9, rC = null; addEventListener('resize', () => { rT = -9; }); addEventListener('orientationchange', () => { rT = -9; }); const _dir = new THREE.Vector3(), _w3 = new THREE.Vector3();
+let READY = false;
 function frame() {
   requestAnimationFrame(frame);
+  if (!READY) return;
   renderer.info.reset(); // o47: contadores acumulados de todo el fotograma (miniaturas + escena + figuras del desfile)
-  const t1 = now(), dt = Math.min(.05, t1 - last); last = t1;
+  const t1 = now(); if (t1 - last < .0135) return; // o48: tope de 60 fps estables (en pantallas de 120 Hz se alternaba 120/60 y se notaba a tirones)
+  const dt = Math.min(.05, t1 - last); last = t1;
   // o46: sin regulador automático (ni baja la resolución ni oculta detalle)
   if (!elC || t1 - elT > .25 || !elC.isConnected || !elC.closest('.scr.on')) { elC = document.querySelector('.scr.on .stage3d'); elT = t1; } const el = elC; if (elC !== rEl) { rEl = elC; rAt = t1; rT = -9; } if (t1 - rT > (t1 - rAt < 1.3 ? 0 : .12)) { rC = el && el.getBoundingClientRect(); rT = t1; } const r = rC; // o46: sin lectura de layout por fotograma (solo durante la animación de entrada y luego 8 veces/s)
   if (!r || r.width < 20 || r.height < 20 || r.bottom < 0 || r.top > innerHeight) { if (HALO.style.display !== 'none') HALO.style.display = 'none'; if (D) D.setOn(false); if (shown) { renderer.setScissorTest(false); renderer.clear(); shown = false; } return; }
@@ -330,14 +333,22 @@ function frame() {
 }
 // o45: precompila los shaders de TODAS las escenas antes de enseñar nada (así abrir «Elige tu mochi» no provoca un tirón de compilación)
 const warmRender = (sc, cam) => { renderer.setScissorTest(true); renderer.setScissor(0, 0, 2, 2); renderer.setViewport(0, 0, 2, 2); renderer.render(sc, cam); renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); }; // o47: dibuja 2×2 px para subir ya geometrías y texturas a la GPU
+const LD = (p, t) => window.__LOAD && __LOAD.set(p, t), yieldPaint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 try { const T0 = performance.now(); let pj = CHARS[0].id; try { pj = JSON.parse(document.querySelector('.stage3d').dataset.d).pj || pj; } catch (e) {}
-  FADE.visible = true; for (const m of ['chars', 'menu']) { build(m, { pj }); renderer.compile(scene, camera); warmRender(scene, camera); } FADE.visible = false;
-  // o47: todo se crea y compila ahora (detrás del splash/hero 2D), no al pulsar: héroes de «Elige tu mochi», etiquetas y miniaturas
-  const keep = CM.chars && CM.chars.snap && CM.chars.snap.extra.hero; const tg = new THREE.Group(); scene.add(tg); CHARS.forEach(c => { tg.add(heroFor('chars', c.id)); tagFor(c.id); }); renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep);
-  CHARS.forEach((c, i) => mkThumb(c.id, i)); for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false;
+  LD(8, 'Montando el escenario…'); await yieldPaint();
+  FADE.visible = true; build('chars', { pj }); renderer.compile(scene, camera); warmRender(scene, camera); LD(22, 'Colocando al público…'); await yieldPaint();
+  build('menu', { pj }); renderer.compile(scene, camera); warmRender(scene, camera); FADE.visible = false; LD(36, 'Vistiendo a los mochis…'); await yieldPaint();
+  // o47/o48: todo se crea y compila ahora (detrás de la pantalla de carga), no al pulsar: héroes de «Elige tu mochi», etiquetas y miniaturas
+  const keep = CM.chars && CM.chars.snap && CM.chars.snap.extra.hero; const tg = new THREE.Group(); scene.add(tg); let hi = 0;
+  for (const c of CHARS) { tg.add(heroFor('chars', c.id)); tagFor(c.id); LD(36 + (++hi) / CHARS.length * 24); await yieldPaint(); }
+  renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep); LD(62, 'Ensayando los bailes…'); await yieldPaint();
+  hi = 0; for (const [i, c] of CHARS.entries()) { mkThumb(c.id, i); LD(62 + (++hi) / CHARS.length * 14); await yieldPaint(); }
+  for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false; LD(78, 'Encendiendo las luces…'); await yieldPaint();
   try { D && D.draw(); } catch (e) {} renderer.clear(); if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; ROOTX.visible = false; window.__warmMs = Math.round(performance.now() - T0); } catch (e) { console.warn('warmup', e); }
-document.body.classList.remove('no3d'); // si el módulo tardó más de 5 s, el 3D vuelve a mandar sobre el hero 2D de reserva
-requestAnimationFrame(frame);
+// o48: espera a fuentes, imágenes y a la carga de la página; luego muestra TODO de golpe con un fundido
+LD(88, 'Últimos retoques…');
+try { await Promise.race([Promise.all([document.fonts ? document.fonts.ready : 0, ...[...document.images].map(i => i.decode ? i.decode().catch(() => {}) : 0), document.readyState === 'complete' ? 0 : new Promise(r => addEventListener('load', r, { once: true }))]), new Promise(r => setTimeout(r, 12000))]); } catch (e) {}
+document.body.classList.remove('no3d'); READY = true; LD(97, '¡Listo!'); requestAnimationFrame(frame); await yieldPaint(); await yieldPaint(); window.__LOAD && __LOAD.done();
 // tocar el escenario: voltereta del protagonista
 addEventListener('pointerdown', e => { const el = document.querySelector('.scr.on .stage3d'); if (!el || !extra.hero) return; const r = el.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return; const u = extra.hero.userData; if (now() - t0 - u.flip > .9) { u.flip = now() - t0; burst(extra.hero.position.clone().add(new THREE.Vector3(0, 1.5, 0)), '#ff9cc8', 14, 3); } });
 window.MP3D = { ok: true, thumbs3d: true, get scene() { return scene; }, get info() { return renderer.info; }, get mode() { return mode; },
