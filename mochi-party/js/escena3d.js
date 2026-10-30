@@ -335,9 +335,9 @@ async function bakeDeco(m, prog) {
   K.ctx.drawImage(frames[0], 0, 0);
   if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; activeDeco = null;
 }
-function hideDeco() { if (activeDeco) { if (DK[activeDeco] && DK[activeDeco].cv) DK[activeDeco].cv.style.display = 'none'; activeDeco = null; } }
+function hideDeco() { if (D) { D.spriteShow(false); D.setOn(false); } if (activeDeco) { if (DK[activeDeco] && DK[activeDeco].cv) DK[activeDeco].cv.style.display = 'none'; activeDeco = null; } }
 function activateDeco(m) {
-  hideDeco(); const K = DK[m]; activeDeco = m; K.cv.style.display = ''; K.step = -1; setCam(K.r);
+  hideDeco(); const K = DK[m]; activeDeco = m; if (D) { D.spriteShow(true); D.setOn(true); } K.cv.style.display = ''; K.step = -1; setCam(K.r);
   renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
   const r = K.r, S = Math.max(r.width, r.height) * 1.05, cx = r.left + r.width / 2, cy = r.top + r.height * .5; HALO.style.width = HALO.style.height = S + 'px'; HALO.style.left = (cx - S / 2) + 'px'; HALO.style.top = (cy - S / 2) + 'px'; HALO.style.display = 'block'; HALO._k = '';
 }
@@ -414,13 +414,13 @@ try { const T0 = performance.now(); let pj = CHARS[0].id; try { pj = JSON.parse(
   renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep); LD(62, 'Ensayando los bailes…'); await yieldPaint();
   hi = 0; for (const [i, c] of CHARS.entries()) { mkThumb(c.id, i); LD(62 + (++hi) / CHARS.length * 14); await yieldPaint(); }
   for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false; LD(78, 'Pintando el escenario…'); await yieldPaint();
-  await bakeDeco('chars', p => LD(78 + p * 8)); await bakeDeco('menu', p => LD(86 + p * 8)); LD(94, 'Encendiendo las luces…'); await yieldPaint();
+  if (D) await D.sprites(p => LD(78 + p * 6)); await bakeDeco('chars', p => LD(84 + p * 5)); await bakeDeco('menu', p => LD(89 + p * 5)); LD(94, 'Encendiendo las luces…'); await yieldPaint();
   try { D && D.draw(); } catch (e) {} renderer.clear(); if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; ROOTX.visible = false; window.__warmMs = Math.round(performance.now() - T0); } catch (e) { console.warn('warmup', e); }
 // o48: espera a fuentes, imágenes y a la carga de la página; luego muestra TODO de golpe con un fundido
 LD(88, 'Últimos retoques…');
 try { await Promise.race([Promise.all([document.fonts ? document.fonts.ready : 0, ...[...document.images].map(i => i.decode ? i.decode().catch(() => {}) : 0), document.readyState === 'complete' ? 0 : new Promise(r => addEventListener('load', r, { once: true }))]), new Promise(r => setTimeout(r, 12000))]); } catch (e) {}
 let layKey = innerWidth + 'x' + innerHeight, rbT = 0;
-addEventListener('resize', () => { clearTimeout(rbT); rbT = setTimeout(async () => { const k = innerWidth + 'x' + innerHeight; if (k === layKey || !READY) return; layKey = k; READY = false; window.__LOAD && __LOAD.show('Ajustando la pantalla…'); try { hideDeco(); size(); await yieldPaint(); await bakeDeco('chars', p => LD(p * 50)); await bakeDeco('menu', p => LD(50 + p * 50)); } catch (e) { console.warn('rebake', e); } READY = true; window.__LOAD && __LOAD.done(); }, 450); });
+addEventListener('resize', () => { clearTimeout(rbT); rbT = setTimeout(async () => { const k = innerWidth + 'x' + innerHeight; if (k === layKey || !READY) return; layKey = k; READY = false; window.__LOAD && __LOAD.show('Ajustando la pantalla…'); try { hideDeco(); size(); await yieldPaint(); if (D) { D.resize(); await D.sprites(p => LD(p * 30)); } await bakeDeco('chars', p => LD(30 + p * 35)); await bakeDeco('menu', p => LD(65 + p * 35)); } catch (e) { console.warn('rebake', e); } READY = true; window.__LOAD && __LOAD.done(); }, 450); });
 document.body.classList.remove('no3d'); READY = true; LD(97, '¡Listo!'); requestAnimationFrame(frame); await yieldPaint(); await yieldPaint(); window.__LOAD && __LOAD.done();
 // tocar el escenario: voltereta del protagonista
 addEventListener('pointerdown', e => { const el = document.querySelector('.scr.on .stage3d'); if (!el || !extra.hero) return; const r = el.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return; const u = extra.hero.userData; if (now() - t0 - u.flip > .9) { u.flip = now() - t0; burst(extra.hero.position.clone().add(new THREE.Vector3(0, 1.5, 0)), '#ff9cc8', 14, 3); } });

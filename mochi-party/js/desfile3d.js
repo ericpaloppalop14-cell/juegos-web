@@ -253,7 +253,51 @@ if (!SH) { rd.setClearColor(0, 0); rd.outputColorSpace = THREE.SRGBColorSpace; r
   const frame = now => { requestAnimationFrame(frame); const on = isOn() && !document.hidden; setOn(on); if (!on) { last = now; return; } const dt = Math.min(.07, (now - last) / 1000); last = now; step(now / 1000, dt); rd.render(scene, cam); };
   requestAnimationFrame(frame); }
 if (SH) { const tm = rd.toneMapping; rd.toneMapping = ACES; try { rd.compile(scene, cam); } catch (e) {} rd.toneMapping = tm; }
-const api = { step, draw, setOn, isOn: () => isOn() && !document.hidden, resize() { size(); }, scene, cam, get ents() { return ents; }, BAKES, world: WORLD, get info() { return rd.info; }, get quality() { return quality; }, GLB, CLB };
+/* o48: figuras del desfile (camellos, medusas, mochis, trofeo, medallas) = SPRITES pre-renderizados a alta resolución (tira de 12 fotogramas por figura) que se desplazan solo con transform en GPU (CSS): 0 trabajo de 3D/JS por fotograma */
+const SPN = 12; let spHost = null;
+async function sprites(prog) {
+  if (!SH) return; if (spHost) spHost.remove();
+  const host = spHost = document.createElement('div'); host.id = 'dsfSprites'; host.setAttribute('aria-hidden', 'true'); host.style.cssText = 'position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:' + (CFG.z ?? 8) + ';display:none;--vw:' + innerWidth + 'px;--vh:' + innerHeight + 'px';
+  if (!document.getElementById('dsfSpCss')) { const st = document.createElement('style'); st.id = 'dsfSpCss'; const pp = [], lp = [], L = 2 * SPN - 2;
+    for (let i = 0; i < L; i++) { const k = i < SPN ? i : L - i; pp.push((i / L * 100).toFixed(3) + '%{transform:translate3d(' + (-k * 100 / SPN).toFixed(4) + '%,0,0)}'); }
+    for (let i = 0; i < SPN; i++) lp.push((i / SPN * 100).toFixed(3) + '%{transform:translate3d(' + (-i * 100 / SPN).toFixed(4) + '%,0,0)}');
+    st.textContent = '#dsfSprites .dsfS{position:absolute;left:0;top:0;width:var(--s);height:var(--s);will-change:transform;animation:dsfX linear infinite}#dsfSprites .dsfS.r{animation-name:dsfXr}#dsfSprites .dsfS.j{animation-name:dsfY}' +
+      '@keyframes dsfX{from{transform:translate3d(calc(var(--s)*-1),0,0)}to{transform:translate3d(var(--vw),0,0)}}@keyframes dsfXr{from{transform:translate3d(var(--vw),0,0)}to{transform:translate3d(calc(var(--s)*-1),0,0)}}@keyframes dsfY{from{transform:translate3d(0,var(--vh),0)}to{transform:translate3d(0,calc(var(--s)*-1),0)}}' +
+      '#dsfSprites .dsfM.f{transform:scaleX(-1)}#dsfSprites .dsfB{width:100%;height:100%;overflow:hidden;animation:dsfBob var(--bd,3s) ease-in-out infinite alternate}@keyframes dsfBob{from{transform:translate3d(0,-6%,0)}to{transform:translate3d(0,6%,0)}}#dsfSprites .j .dsfB{animation-name:dsfSway}@keyframes dsfSway{from{transform:translate3d(-14%,0,0)}to{transform:translate3d(14%,0,0)}}' +
+      '#dsfSprites .dsfF{height:100%;background-size:100% 100%;animation:dsfPP steps(1,end) infinite}#dsfSprites .dsfF.l{animation-name:dsfLP}@keyframes dsfPP{' + pp.join('') + '}@keyframes dsfLP{' + lp.join('') + '}'; document.head.appendChild(st); }
+  const tcam = new THREE.PerspectiveCamera(26, 1, .1, 300), PRr = rd.getPixelRatio(), sheets = {};
+  const world = WORLD.world, wv = world.visible, tm = rd.toneMapping, ex = rd.toneMappingExposure, ac = rd.autoClear; world.visible = false; GLB.mesh.visible = CLB.mesh.visible = true; rd.toneMapping = ACES; rd.toneMappingExposure = EXPO; rd.setClearColor(0x000000, 0); rd.autoClear = true;
+  const m = Math.min(innerWidth, innerHeight) * (innerWidth > innerHeight ? .85 : 1), CELL = { camel: m * .19 * 1.9, jelly: m * .12 * 2.2, mochi: m * .085 * 2.4, trophy: m * .12 * 1.9, medal: m * .12 * 1.9 };
+  const POSE = { camel: (o, i, t) => animCamel(o, t, 0), jelly: (o, i, t) => animJelly(o, t, 0), mochi: (o, i, t) => { o.userData.wave = i % 2 ? 1.8 : 0; animMochi(o, t, 0, .016); },
+    trophy: (o, i, t) => { const g = o.userData.g; g.rotation.y = t * 1.4; g.position.y = Math.sin(t * 2) * .12; o.rotation.z = Math.sin(t * 1.3) * .15; } }; POSE.medal = POSE.trophy;
+  const STEP = { camel: .0875, jelly: .22, mochi: 1 / 1.7 / SPN, trophy: 2 * Math.PI / 1.4 / SPN, medal: 2 * Math.PI / 1.4 / SPN };
+  for (const k in KINDS) {
+    const o = KINDS[k].make(); o.traverse(q => { if (q.isMesh) q.frustumCulled = false; }); if (k === 'camel') o.rotation.y = -.35; if (k === 'mochi') o.rotation.y = .5; scene.add(o);
+    const S = Math.round(CELL[k]), A = Math.round(S * Math.min(PRr, 2)), sheet = document.createElement('canvas'); sheet.width = A * SPN; sheet.height = A; const sx = sheet.getContext('2d');
+    for (let i = 0; i < SPN; i++) {
+      POSE[k](o, i, i * STEP[k]); o.updateMatrixWorld(true);
+      if (i === 0) { const b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()), rad = Math.max(sz.x, sz.y) * .5 * (k === 'jelly' ? 1.5 : 1.3), dist = rad / Math.tan(THREE.MathUtils.degToRad(13)); tcam.position.set(c.x, c.y, c.z + dist + sz.z * .5); tcam.lookAt(c); tcam.updateMatrixWorld(true); }
+      rd.setScissorTest(false); rd.setViewport(0, 0, S, S); rd.clear(); rd.setScissorTest(true); rd.setScissor(0, 0, S, S); rd.render(scene, tcam);
+      sx.drawImage(rd.domElement, 0, rd.domElement.height - S * PRr, S * PRr, S * PRr, i * A, 0, A, A);
+      if (i % 4 === 3) await new Promise(r => setTimeout(r, 0));
+    }
+    scene.remove(o); GLB.reset(); CLB.reset(); rd.setScissorTest(false);
+    sheets[k] = await new Promise(r => sheet.toBlob(b => r(URL.createObjectURL(b)), 'image/webp', .92)); if (prog) prog(Object.keys(sheets).length / 5);
+  }
+  rd.setScissorTest(false); rd.setViewport(0, 0, innerWidth, innerHeight); rd.clear(); world.visible = wv; GLB.mesh.visible = CLB.mesh.visible = false; rd.toneMapping = tm; rd.toneMappingExposure = ex; rd.autoClear = ac;
+  const land = innerWidth > innerHeight, vh = innerHeight;
+  for (const k in KINDS) for (let i = 0; i < KINDS[k].n; i++) {
+    const S = Math.round(CELL[k] * R(.85, 1.1)), w = document.createElement('div'), dir = Math.random() < .5 ? 1 : -1, jelly = k === 'jelly', dur = jelly ? R(26, 38) : k === 'mochi' ? R(15, 22) : R(18, 28);
+    const y = jelly ? 0 : k === 'mochi' ? vh * (land ? .93 : .955) - S * .85 : vh * (Math.random() < .58 ? R(.05, land ? .17 : .12) : R(land ? .84 : .88, land ? .9 : .93)) - S * .5;
+    w.className = 'dsfS' + (jelly ? ' j' : dir < 0 ? ' r' : ''); w.style.cssText = '--s:' + S + 'px;animation-duration:' + dur.toFixed(1) + 's;animation-delay:-' + (Math.random() * dur).toFixed(1) + 's;' + (jelly ? 'left:' + (innerWidth * (Math.random() < .5 ? R(.02, .16) : R(.78, .94))).toFixed(0) + 'px;' : 'top:' + y.toFixed(0) + 'px;');
+    const cyc = k === 'camel' ? 1.05 : k === 'jelly' ? 2.6 * 2 : k === 'mochi' ? .6 : 1.0, loopK = k === 'mochi' || k === 'trophy' || k === 'medal';
+    w.innerHTML = '<div class="dsfM' + (dir < 0 && !jelly ? ' f' : '') + '" style="width:100%;height:100%"><div class="dsfB" style="--bd:' + R(2.2, 4).toFixed(1) + 's' + (k === 'mochi' ? ';animation:none' : '') + '"><div class="dsfF' + (loopK ? ' l' : '') + '" style="width:' + SPN * 100 + '%;background-image:url(' + sheets[k] + ');animation-duration:' + cyc + 's"></div></div></div>';
+    host.appendChild(w);
+  }
+  document.body.appendChild(host);
+}
+function spriteShow(on) { if (spHost) spHost.style.display = on ? '' : 'none'; }
+const api = { sprites, spriteShow, step, draw, setOn, isOn: () => isOn() && !document.hidden, resize() { size(); }, scene, cam, get ents() { return ents; }, BAKES, world: WORLD, get info() { return rd.info; }, get quality() { return quality; }, GLB, CLB };
 if (!SH) window.__desfile3d = api;
 return api;
 }
