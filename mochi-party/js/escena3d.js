@@ -351,8 +351,28 @@ function liveFrame(el, t1, dt) {
     if (t > 1 && Math.random() < dt * .8) burst(new THREE.Vector3(rnd(-3, 3), rnd(3, 4.5), rnd(-2.5, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][Math.random() * 4 | 0], 12, 2.4);
     if (extra.sel != null) { const k = t - extra.sel; if (k < 1.1) { hero.userData.flip = extra.sel; confAmt = 1; } } }
   else if (t > 1 && Math.random() < dt * 1.2) burst(new THREE.Vector3(rnd(-4, 4), rnd(3.2, 4.6), rnd(-3, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff', '#b9a2f7'][Math.random() * 5 | 0], 16, 2.6);
-  updConf(dt, t); updSparks(dt); updBal(dt, t); thumbs(t); tickDeco(performance.now());
+  updConf(dt, t); updSparks(dt); updBal(dt, t); thumbsApply(t1); tickDeco(performance.now());
   const reg = K.reg; renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.setScissorTest(true); renderer.setScissor(reg.x0, innerHeight - reg.y1, reg.w, reg.h); renderer.clear(); renderer.render(scene, camera);
+}
+
+// ---------- o48: miniaturas de «Elige tu mochi» = tiras pre-renderizadas (12 fotogramas, ida y vuelta) animadas por CSS: sin renders ni copias GL→2D en vivo ----------
+const THS = {}; let thApplyT = 0, thFirst = null;
+async function bakeThumbs(prog) {
+  if (!document.getElementById('thCss')) { const L = 2 * 12 - 2, kf = []; for (let i = 0; i < L; i++) { const k = i < 12 ? i : L - i; kf.push((i / L * 100).toFixed(3) + '%{background-position:' + (k * 100 / 11).toFixed(3) + '% 0}'); }
+    const st = document.createElement('style'); st.id = 'thCss'; st.textContent = '#charGrid canvas.thSp{background-repeat:no-repeat;background-size:1200% 100%;animation:thAnim 1.2s steps(1,end) infinite}@keyframes thAnim{' + kf.join('') + '}'; document.head.appendChild(st); }
+  const PRr = renderer.getPixelRatio(), A = Math.round(58 * Math.min(PRr, 2)); let n = 0;
+  renderer.setClearColor(0, 0);
+  for (const [i, c] of CHARS.entries()) {
+    const a = mkThumb(c.id, i); a.userData.role = MROLES[i % MROLES.length]; a.visible = true; a.userData.sh.visible = true; const sheet = document.createElement('canvas'); sheet.width = A * 12; sheet.height = A; const sx = sheet.getContext('2d');
+    for (let f = 0; f < 12; f++) { pose(a, 3 + f * .1, 0); renderer.setScissorTest(false); renderer.setViewport(0, 0, 58, 58); renderer.clear(); renderer.setScissorTest(true); renderer.setScissor(0, 0, 58, 58); renderer.render(mScene, mCam);
+      sx.drawImage(renderer.domElement, 0, renderer.domElement.height - 58 * PRr, 58 * PRr, 58 * PRr, f * A, 0, A, A); }
+    a.visible = false; renderer.setScissorTest(false); THS[c.id] = await new Promise(r => sheet.toBlob(b => r(URL.createObjectURL(b)), 'image/webp', .92)); if (prog) prog(++n / CHARS.length); await tickMs();
+  }
+  renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
+}
+function thumbsApply(t1) {
+  const g = document.getElementById('charGrid'); if (!g) return; if (g.firstChild === thFirst && t1 - thApplyT < 1) return; thFirst = g.firstChild; thApplyT = t1;
+  document.querySelectorAll('#charGrid canvas:not(.thSp)').forEach(c => { const u = THS[c.dataset.id]; if (!u) return; c.style.backgroundImage = 'url(' + u + ')'; c.style.animationDelay = '-' + (Math.random() * 1.2).toFixed(2) + 's'; c.classList.add('thSp'); });
 }
 let READY = false;
 function frame() {
@@ -414,7 +434,7 @@ try { const T0 = performance.now(); let pj = CHARS[0].id; try { pj = JSON.parse(
   renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep); LD(62, 'Ensayando los bailes…'); await yieldPaint();
   hi = 0; for (const [i, c] of CHARS.entries()) { mkThumb(c.id, i); LD(62 + (++hi) / CHARS.length * 14); await yieldPaint(); }
   for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false; LD(78, 'Pintando el escenario…'); await yieldPaint();
-  if (D) await D.sprites(p => LD(78 + p * 6)); await bakeDeco('chars', p => LD(84 + p * 5)); await bakeDeco('menu', p => LD(89 + p * 5)); LD(94, 'Encendiendo las luces…'); await yieldPaint();
+  if (D) await D.sprites(p => LD(78 + p * 6)); await bakeThumbs(); await bakeDeco('chars', p => LD(84 + p * 5)); await bakeDeco('menu', p => LD(89 + p * 5)); LD(94, 'Encendiendo las luces…'); await yieldPaint();
   try { D && D.draw(); } catch (e) {} renderer.clear(); if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; ROOTX.visible = false; window.__warmMs = Math.round(performance.now() - T0); } catch (e) { console.warn('warmup', e); }
 // o48: espera a fuentes, imágenes y a la carga de la página; luego muestra TODO de golpe con un fundido
 LD(88, 'Últimos retoques…');
