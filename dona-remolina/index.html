@@ -9,7 +9,7 @@
 <meta name="description" content="La abuela torbellino de Mueblópolis: ¡a limpiar!">
 <link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <div id="app">
@@ -40,13 +40,12 @@
   <div id="screens">
     <section id="sTitle" class="screen">
       <div class="logo"><div class="l1">Doña</div><div class="l2">Remolina</div><div class="sub">¡La abuela más huracanada de Mueblópolis!</div></div>
+      <div class="statline"><span><i class="coin"></i> <b id="tCoins">0</b></span><span>Récord <b id="tBest">0</b></span></div>
       <div class="menu">
+        <div id="tNote">Tu partida anterior se ha traspasado: las mejoras ahora son de Doña Remolina y las monedas se han ajustado.</div>
         <div class="placepick"><button class="arrow" id="bPPrev" aria-label="Lugar anterior">‹</button><div class="pinfo"><span id="pNum">Lugar 1 de 6</span><b id="pName">Mueblópolis</b><small id="pSub"></small><div class="bar"><i id="pFill"></i></div><em id="pPct"></em></div><button class="arrow" id="bPNext" aria-label="Lugar siguiente">›</button></div>
         <button class="btn big go" id="bPlay">¡A LIMPIAR!</button>
-        <button class="btn chars" id="bChars"><span class="cl">Personajes</span><small id="tChar">Doña Remolina</small></button>
-        <div class="row"><button class="btn mid shop" id="bShop">Mejoras</button><button class="btn mid help" id="bHelp">Cómo se juega</button></div>
-        <div id="tNote">Tu partida anterior se ha traspasado: las mejoras ahora son de Doña Remolina y las monedas se han ajustado.</div>
-        <div class="statline"><span><i class="coin"></i> <b id="tCoins">0</b></span><span>Récord <b id="tBest">0</b></span></div>
+        <div class="row"><button class="btn chars" id="bChars"><span class="cl">Personajes</span><small id="tChar">Doña Remolina</small></button><button class="btn mid shop" id="bShop">Mejoras</button><button class="btn mid help" id="bHelp">Ayuda</button></div>
       </div>
       <div class="snd"><button class="iconbtn sm" id="bSfx" aria-label="Sonidos">♪</button><button class="iconbtn sm" id="bMus" aria-label="Música">♫</button></div>
     </section>
@@ -127,6 +126,6 @@
   <div id="loading"><div class="logo small"><div class="l1">Doña</div><div class="l2">Remolina</div></div><div class="lbar"><i id="lbarFill"></i></div><div class="ltxt" id="loadTxt">Preparando Mueblópolis…</div></div>
 </div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/game.js?v=5"></script>
+<script type="module" src="js/game.js?v=6"></script>
 </body>
 </html>

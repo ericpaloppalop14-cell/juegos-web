@@ -1,17 +1,17 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=5';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=5';
-import './models2.js?v=5';
-import './models3.js?v=5';
-import { PLACES } from './places.js?v=5';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=5';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=5';
-import { NPC } from './npcs.js?v=5';
-import { makeTitle } from './title.js?v=5';
-import { GB, setOutlines } from './geo.js?v=5';
-import { Particles, Rings, makeTornado } from './fx.js?v=5';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=5';
+import * as AU from './audio.js?v=6';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=6';
+import './models2.js?v=6';
+import './models3.js?v=6';
+import { PLACES } from './places.js?v=6';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=6';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=6';
+import { NPC } from './npcs.js?v=6';
+import { makeTitle } from './title.js?v=6';
+import { GB, setOutlines } from './geo.js?v=6';
+import { Particles, Rings, makeTornado } from './fx.js?v=6';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=6';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -102,7 +102,7 @@ function resize() {
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w, h, false); if (composer) { composer.setPixelRatio(pixelRatio); composer.setSize(w, h); bloom.resolution.set(w * pixelRatio * 0.5, h * pixelRatio * 0.5); }
   camera.aspect = w / h; camera.fov = w / h < 1 ? 56 : 46; camera.updateProjectionMatrix();
   parts.mat.uniforms.uScale.value = (h * pixelRatio * 0.5) / Math.tan(camera.fov * Math.PI / 360);
-  if (title) title.resize(w, h, pixelRatio);
+  if (title) { title.resize(w, h, pixelRatio); title.insOk = 0; }
   $('rotate').style.display = 'none';
 }
 window.addEventListener('resize', resize); resize();
@@ -530,6 +530,55 @@ function updateOcclusion(dt) {
   }
 }
 
+// ---------- v6: encuadre del personaje de cuerpo entero en el hueco libre de la pantalla ----------
+let chBox = { h: 2, cy: 1, w: 1.6 }, chFree = null;
+function measureChar() {
+  const sp = dona.position.clone(), ss = dona.scale.clone(), sr = dona.rotation.clone();
+  dona.position.set(0, 0, 0); dona.scale.set(1, 1, 1); dona.rotation.set(0, 0, 0); dona.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(dona); dona.position.copy(sp); dona.scale.copy(ss); dona.rotation.copy(sr); dona.updateMatrixWorld(true);
+  if (isFinite(bb.max.y) && bb.max.y > bb.min.y) chBox = { h: bb.max.y - bb.min.y, cy: (bb.max.y + bb.min.y) / 2, w: Math.max(0.8, Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z)) };
+  chFree = null;
+}
+function freeRectChars() {
+  const W = window.innerWidth, H = window.innerHeight, sh = document.querySelector('#sChars .chsheet').getBoundingClientRect(), tb = document.querySelector('#sChars .chtop').getBoundingClientRect();
+  const t = tb.bottom + 2;
+  if (W > H * 1.1) return { l: 0, r: Math.max(W * 0.3, sh.left - 4), t, b: H - 6 };
+  return { l: 0, r: W, t, b: Math.max(H * 0.35, sh.top - 2) };
+}
+let chCorr = { m: 1, dx: 0, dy: 0 };
+function titleInsets() {
+  const W = window.innerWidth, H = window.innerHeight, q = (s) => document.querySelector(s).getBoundingClientRect(), lg = q('#sTitle .logo'), st = q('#sTitle .statline'), mn = q('#sTitle .menu');
+  if (W > H * 1.1) return { l: 0, r: Math.round(Math.max(0, W - mn.left + 6)), t: 0, b: 0 };
+  return { l: 0, r: 0, t: Math.round(Math.max(lg.bottom, st.bottom) + 2), b: Math.round(Math.max(0, H - mn.top + 2)) };
+}
+function applyChCamera() {
+  const fr = chFree, W = window.innerWidth, H = window.innerHeight, Wf = fr.r - fr.l, Hf = fr.b - fr.t, ds0 = G.Rv * 1.18;
+  if (camera.fov !== 30) { camera.fov = 30; camera.updateProjectionMatrix(); camera.userData.cf = 1; }
+  const ppu = Math.min(0.8 * Hf / (chBox.h * ds0), 0.88 * Wf / (chBox.w * ds0)), tanF = Math.tan(camera.fov * Math.PI / 360), dc = (H / 2) / (tanF * ppu) * chCorr.m;
+  const ty = chBox.cy * ds0 + 0.12 * ds0, pit = 0.12;
+  camera.position.set(G.px, ty + Math.sin(pit) * dc, G.pz + Math.cos(pit) * dc); camera.lookAt(G.px, ty, G.pz);
+  camera.setViewOffset(W, H, W / 2 - (fr.l + fr.r) / 2 + chCorr.dx, H / 2 - (fr.t + fr.b) / 2 + chCorr.dy, W, H);
+  camera.updateMatrixWorld(true);
+}
+function calibrateChar() { // mide la caja en pantalla en reposo y ajusta distancia y desplazamiento para que quede centrado y completo
+  chFree = freeRectChars(); chCorr = { m: 1, dx: 0, dy: 0 }; const ds0 = G.Rv * 1.18;
+  const sp = dona.position.clone(), ss = dona.scale.clone(), sr = dona.rotation.clone();
+  dona.position.set(G.px, 0.12 * ds0, G.pz); dona.scale.setScalar(ds0); dona.rotation.set(0, 0, 0); dona.updateMatrixWorld(true);
+  const fr = chFree, Wf = fr.r - fr.l, Hf = fr.b - fr.t;
+  for (let k = 0; k < 3; k++) {
+    applyChCamera(); const s = charScreenBox().box, bh = s.b - s.t, bw = s.r - s.l, m = Math.min(0.8 * Hf / bh, 0.88 * Wf / bw);
+    chCorr.m /= m; if (k === 2) break;
+    applyChCamera(); const s2 = charScreenBox().box; chCorr.dy += (s2.t + s2.b) / 2 - (fr.t + fr.b) / 2; chCorr.dx += (s2.l + s2.r) / 2 - (fr.l + fr.r) / 2;
+  }
+  applyChCamera(); const s3 = charScreenBox().box; chCorr.dy += (s3.t + s3.b) / 2 - (fr.t + fr.b) / 2; chCorr.dx += (s3.l + s3.r) / 2 - (fr.l + fr.r) / 2;
+  dona.position.copy(sp); dona.scale.copy(ss); dona.rotation.copy(sr); dona.updateMatrixWorld(true);
+}
+function frameChar() { if (!chFree) calibrateChar(); applyChCamera(); }
+function charScreenBox() { // para pruebas: caja en pantalla del personaje y hueco libre
+  dona.updateMatrixWorld(true); camera.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(dona); let l = 1e9, t = 1e9, r = -1e9, b = -1e9;
+  const zc = (bb.min.z + bb.max.z) / 2; for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [zc]) { const p = toScreen(x, y, z); l = Math.min(l, p.x); r = Math.max(r, p.x); t = Math.min(t, p.y); b = Math.max(b, p.y); }
+  return { box: { l, t, r, b }, free: chFree || freeRectChars() };
+}
 // ---------- efectos / cámara ----------
 const camT = new THREE.Vector3(SPAWN.x, 0, SPAWN.z); let camDist = 20;
 function updateFx(dt) {
@@ -537,7 +586,7 @@ function updateFx(dt) {
   // torbellino y Doña
   if (scenery) scenery.userData.update(t);
   const pulse = 1 + G.kick * 0.18 + Math.sin(t * 9) * 0.012;
-  tornado.setAlpha(G.mode === 'chars' ? 0.2 : 1);
+  tornado.setAlpha(G.mode === 'chars' ? 0.05 : 1); tornado.bits.visible = tornado.group.visible = G.mode !== 'chars';
   tornado.update(t, R, G.px, 0, G.pz, { x: G.vz * 0.02, z: -G.vx * 0.02 }, pulse);
   const ds = R * 1.18 * (1 + G.kick * 0.1), ud = dona.userData, sw = Math.sin(t * 9), a0 = ud.arms0 || 2.35;
   // squash & stretch: rebota al andar, respira al quieto y se estira al tragar
@@ -556,7 +605,7 @@ function updateFx(dt) {
     for (let i = 0; i < n; i++) { const a = rnd() * 6.28; parts.emit({ x: G.px + Math.cos(a) * R * 0.9, y: 0.25, z: G.pz + Math.sin(a) * R * 0.9, vx: -G.vx * 0.15 + Math.cos(a + 1.57) * R * 1.2, vy: 0.4 + rnd() * 0.8, vz: -G.vz * 0.15 + Math.sin(a + 1.57) * R * 1.2, life: 0.6 + rnd() * 0.3, size: 0.5 * R + 0.2, size1: 1.7 * R + 0.5, color: 0xfff0e0, alpha: 0.35, shape: 4, g: -0.3, drag: 1.5 }); }
   }
   const fx = viewCh.fx;
-  if (rnd() < dt * fx.rate) { const a = rnd() * 6.28, rr = R * (0.6 + rnd() * 0.5), sz = (0.18 * R + 0.1) * fx.sz, bub = fx.shape === 2; parts.emit({ x: G.px + Math.cos(a) * rr, y: 0.3 + (bub ? rnd() * R * 1.6 : 0), z: G.pz + Math.sin(a) * rr, vx: Math.cos(a + 1.57) * R * (fx.fast ? 3.2 : 2.2), vy: (1.2 * R + rnd() * R) * fx.up * (bub ? 0.5 : 1), vz: Math.sin(a + 1.57) * R * (fx.fast ? 3.2 : 2.2), life: bub ? 1.5 : fx.shape === 4 ? 1.1 : 0.9, size: sz * (fx.shape === 4 ? 2.2 : 1), size1: bub ? sz * 1.5 : fx.shape === 4 ? sz * 4 : 0.02, color: fx.colors[(rnd() * fx.colors.length) | 0], shape: fx.shape, g: fx.g, drag: 0.8, alpha: fx.alpha }); }
+  if (rnd() < dt * fx.rate * (G.mode === 'chars' ? 0.1 : 1)) { const a = rnd() * 6.28, rr = R * (0.6 + rnd() * 0.5), sz = (0.18 * R + 0.1) * fx.sz, bub = fx.shape === 2; parts.emit({ x: G.px + Math.cos(a) * rr, y: 0.3 + (bub ? rnd() * R * 1.6 : 0), z: G.pz + Math.sin(a) * rr, vx: Math.cos(a + 1.57) * R * (fx.fast ? 3.2 : 2.2), vy: (1.2 * R + rnd() * R) * fx.up * (bub ? 0.5 : 1), vz: Math.sin(a + 1.57) * R * (fx.fast ? 3.2 : 2.2), life: bub ? 1.5 : fx.shape === 4 ? 1.1 : 0.9, size: sz * (fx.shape === 4 ? 2.2 : 1), size1: bub ? sz * 1.5 : fx.shape === 4 ? sz * 4 : 0.02, color: fx.colors[(rnd() * fx.colors.length) | 0], shape: fx.shape, g: fx.g, drag: 0.8, alpha: fx.alpha }); }
   parts.update(dt); rings.update(dt);
   AU.setWhoosh(G.mode === 'play' ? clamp(G.speed / 16, 0.1, 1) : 0.0, Math.max(1, R));
   // cámara
@@ -570,6 +619,7 @@ function updateFx(dt) {
   const k = camDist / d;
   camera.position.set(camT.x + sx, h * k + sy, camT.z + d * k + sz);
   camera.lookAt(camT.x + sx * 0.5, G.mode === 'chars' ? (window.CAMY == null ? 0.55 : window.CAMY) : R * 0.9, G.mode === 'menu' ? camT.z + R * 1.6 : G.mode === 'chars' ? camT.z + (window.CAMZZ == null ? -1 : window.CAMZZ) : camT.z - R * 1.0 - 1.2);
+  if (G.mode === 'chars') frameChar(); else if (camera.userData.cf || (camera.view && camera.view.enabled)) { camera.clearViewOffset(); if (camera.userData.cf) { camera.userData.cf = 0; resize(); } }
   if (window.CAMOVR) { camera.position.set(...window.CAMOVR.p); camera.lookAt(...window.CAMOVR.t); }
   updateOcclusion(dt);
   // luz y sombras
@@ -790,12 +840,12 @@ function renderChars() {
   const p = PLAYERS[cIdx]; setChar(p.id, false); const owned = !!save.owned[p.id], sel = save.char === p.id;
   $('cName').textContent = p.name; $('cSub').textContent = p.sub; $('cPerk').textContent = p.perk; $('cCoins').textContent = fmt(save.coins); $('cNum').textContent = (cIdx + 1) + ' / ' + PLAYERS.length;
   const b = $('bCPick'), lockP = PLi >= save.unlocked; b.className = 'btn big ' + (owned ? 'go' : save.coins >= p.price ? 'unlock' : 'locked');
-  b.innerHTML = owned ? `¡A LIMPIAR!<small>con ${p.name}${lockP ? ' · en ' + PLACES[save.unlocked - 1].name : ''}</small>` : `<i class="coin"></i> ${fmt(p.price)} · DESBLOQUEAR`;
+  b.innerHTML = owned ? `¡A LIMPIAR!${lockP ? '<small>en ' + PLACES[save.unlocked - 1].name + '</small>' : ''}` : `<i class="coin"></i> ${fmt(p.price)} · DESBLOQUEAR`;
   $('cDots').innerHTML = PLAYERS.map((q, i) => `<button class="dot ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`).join('');
-  $('cStats').innerHTML = (owned ? '' : '<span class="lk">🔒 Bloqueada</span>') + `<span class="ph">“${p.start}”</span>`;
-  G.kick = 1; G.twirl = 6.28; X.puff(G.px, 0.8 * G.Rv, G.pz); say('dona', pick(p.say, (rnd() * 99) | 0), 2600);
+  $('cStats').innerHTML = '';
+  G.kick = 1; G.twirl = 6.28; measureChar(); calibrateChar();
 }
-function openChars() { cIdx = Math.max(0, PLAYERS.findIndex((p) => p.id === save.char)); G.mode = 'chars'; G.vx = G.vz = 0; show('sChars'); renderChars(); AU.click(); }
+function openChars() { cIdx = Math.max(0, PLAYERS.findIndex((p) => p.id === save.char)); G.mode = 'chars'; G.vx = G.vz = 0; $('dBanner').classList.remove('on'); show('sChars'); renderChars(); AU.click(); }
 function charsMove(d) { cIdx = (cIdx + d + PLAYERS.length) % PLAYERS.length; AU.select(); renderChars(); }
 canvas.addEventListener('pointerdown', (e) => { if (G.mode === 'menu' && title && title.active) title.tap(e.clientX, e.clientY); });
 let swipe = null;
@@ -842,7 +892,7 @@ function frame(now) {
   if (!last) last = now; let dt = Math.min(0.05, (now - last) / 1000); last = now;
   const tOn = !!title && G.mode === 'menu';
   if (title && title.active !== tOn) title.setActive(tOn, ch.id);
-  if (tOn) { if (titleStar !== ch.id) { titleStar = ch.id; title.setStar(ch.id); title.theme(ch.theme); } G.t += dt; title.update(dt); title.render(renderer); }
+  if (tOn) { if (frameNo++ % 20 === 0 || !title.insOk) { title.insOk = 1; title.setInsets(titleInsets()); } if (titleStar !== ch.id) { titleStar = ch.id; title.setStar(ch.id); title.theme(ch.theme); } G.t += dt; title.update(dt); title.render(renderer); }
   else { if (G.mode !== 'pause') step(dt); else { G.t += 0; updateFx(0); } draw(dt); }
   // resolución adaptativa
   fAvg = fAvg * 0.95 + dt * 1000 * 0.05;
@@ -852,7 +902,7 @@ function frame(now) {
 }
 // API para pruebas
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
-window.DR = { get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
+window.DR = { charScreenBox, get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
 function initLogo() {
   const L = document.querySelector('#sTitle .logo'); if (!L) return; L.setAttribute('aria-label', 'Doña Remolina'); let n = 0;
