@@ -212,15 +212,17 @@ function LightsView(C){const{def}=C;const n=def.n;const TG=lightsTarget(def);let
       for(let i=0;i<n*n;i++){const e=h('button','lt'+(def.fig&&inTg(i)?' tg':''),board,'<b></b>');px(e,(i%n)*u+u*.05,Math.floor(i/n)*u+u*.05,u*.9,u*.9);e.dataset.i=i;e.setAttribute('aria-label','Interruptor');e.onclick=()=>{if(C.locked())return;V.clearHint();C.dispatch([i]);};cells.push(e);}
       const ex=C.extra;ex.innerHTML='';const box=h('div','lhint',ex);
       const c1=h('div','lcol',box);miniGrid(c1,n,i=>inTg(i)?'on':'');h('span','',c1,def.fig?'<b>Objetivo</b>: esta figura':'<b>Objetivo</b>: todo amarillo');
-      const c2=h('div','lcol',box);const eff=lightsEffect({n:3,mode:def.mode},4);miniGrid(c2,3,i=>((eff>>>i)&1?'on':'')+(i===4?' me':''));h('span','',c2,'<b>Un toque</b> cambia estas');
+      const c2=h('div','lcol',box);const eff=lightsEffect({n:3,mode:def.mode},4);miniGrid(c2,3,i=>((eff>>>i)&1?'on':'')+(i===4?' me':''));h('span','',c2,'<b>Un toque</b> cambia estas 5: las <b>grises se encienden</b> y las <b>amarillas se apagan</b>');
       if(def.fig){h('div','lleg',ex,'<i class="sw ok"></i>bien <i class="sw ring"></i>falta <i class="sw bad"></i>sobra');}
       V.update(st,{kind:'init'});},
     update(st,info){cells.forEach((e,i)=>{const on=(st>>>i)&1;e.classList.toggle('on',!!on);e.classList.toggle('bad',!!on&&!inTg(i));});
       if(info&&info.mv){const i=info.mv[0];const eff=lightsEffect(def,i);cells.forEach((e,j)=>{if((eff>>>j)&1){e.classList.remove('pop');e.getBoundingClientRect();e.classList.add('pop');}});}},
     progress(st){const N=n*n;let bad=0;for(let i=0;i<N;i++)if(((st>>>i)&1)!==inTg(i))bad++;return{good:N-bad,total:N};},
-    hint(mv){V.clearHint();hintEl=cells[mv[0]];hintEl.classList.add('hint');const eff=lightsEffect(def,mv[0]);cells.forEach((e,j)=>{if((eff>>>j)&1&&j!==mv[0]){e.classList.add('will');willEls.push(e);}});},
+    hint(mv){V.clearHint();hintEl=cells[mv[0]];hintEl.classList.add('hint');},
     clearHint(){if(hintEl){hintEl.classList.remove('hint');hintEl=null;}willEls.forEach(e=>e.classList.remove('will'));willEls=[];},
-    plan(mv){return{from:cells[mv[0]],to:null,text:'Toca la casilla que late. Cambian ella y las de borde azul.'};},
+    plan(mv,sol){const k=Array.isArray(sol)?sol.length:0;const r=Math.floor(mv[0]/n)+1,c=mv[0]%n+1;
+      const rest=k<=1?'<b>¡Es el último toque!</b>':`Te quedan <b>${k} toques</b> en total (este y ${k-1} más).`;
+      return{from:cells[mv[0]],to:null,text:`<b>Toca la casilla que brilla con la manita</b> (fila ${r}, columna ${c}). ${rest}`};},
     celebrate(){board.classList.add('done');},destroy(){}};
   return V;}
 

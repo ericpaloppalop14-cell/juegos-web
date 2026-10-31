@@ -227,9 +227,11 @@ export const Gravity={key:'gravity',
     return null;}};
 
 /* ───────── 6 · INTERRUPTORES (Lights Out) ───────── */
-// [lado, modo, toques de mezcla, figura|null]  (null = encender TODAS las casillas)
-const LI=[[3,'plus',2,null],[3,'plus',3,null],[3,'plus',3,'cruz'],[4,'plus',4,null],[4,'plus',4,'marco'],[5,'plus',6,null],[4,'plus',5,'rombo'],[5,'x',6,null],[5,'plus',8,'corazon'],[5,'box',9,null],[5,'plus',12,null],[5,'plus',9,'letraH'],[5,'x',8,'aspa'],[5,'box',8,'marco'],[5,'plus',10,'rombo'],[5,'plus',12,'corazon']];
-const LI_LO=[2,3,3,4,4,5,5,5,6,6,8,6,5,5,7,8];
+// [lado, modo, toques de mezcla, figura|null]  v3: UNA sola regla y UN solo objetivo en todos los niveles:
+// «toca una casilla: cambian ella y sus 4 vecinas (arriba, abajo, izquierda, derecha)» · objetivo: encender TODAS.
+// Curva suave: empieza con 1 toque en 3×3 y sube poco a poco hasta 5×5.
+const LI=[[3,'plus',1,null],[3,'plus',2,null],[3,'plus',3,null],[4,'plus',2,null],[4,'plus',3,null],[4,'plus',4,null],[4,'plus',5,null],[5,'plus',3,null],[5,'plus',4,null],[5,'plus',5,null],[5,'plus',6,null],[5,'plus',7,null],[5,'plus',8,null],[5,'plus',9,null],[5,'plus',10,null],[5,'plus',12,null]];
+const LI_LO=[1,2,3,2,3,4,5,3,4,5,6,7,8,9,10,12];
 export const FIGURES={
   3:{cruz:{n:'la cruz',g:['010','111','010']},equis:{n:'la equis',g:['101','010','101']},aro:{n:'el aro',g:['111','101','111']},letraT:{n:'la letra T',g:['111','010','010']}},
   4:{marco:{n:'el marco',g:['1111','1001','1001','1111']},rombo:{n:'el rombo',g:['0110','1001','1001','0110']},escalera:{n:'la escalera',g:['1000','1100','1110','1111']}},

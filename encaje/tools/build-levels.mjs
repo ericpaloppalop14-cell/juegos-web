@@ -16,6 +16,7 @@ for(let tier=0;tier<TIERS;tier++)for(let slot=0;slot<8;slot++){const type=ORDER[
     for(const p of sol){const o=orients(def.pieces[p.id].shape)[p.o];for(const[dr,dc]of o){const k=(p.r+dr)+','+(p.c+dc);if(cov.has(k))dup=true;cov.add(k);}}
     const want=new Set(def.cells.map(c=>c.join(',')));ok=!dup&&cov.size===want.size&&[...cov].every(k=>want.has(k))&&sol.length===def.pieces.length;}
   else{let st=T.init(def);sol=T.solve(def,st);for(const mv of sol)st=T.apply(def,st,mv);ok=T.isWin(def,st)&&sol.length===min;}
+  if(type==='lights'&&(def.fig||def.mode!=='plus'||min<[1,2,3,2,3,4,5,3,4,5,6,7,8,9,10,12][tier])){console.error('LUCES fuera de curva',tier,def,min);fails++;}
   if(!ok){console.error('NO VERIFICA',type,tier);fails++;}
   const id=tier*8+slot+1;levels.push({id,round:tier+1,slot:slot+1,type,tier,seed,min,def});report.push({id,type,tier,seed,min,sol,verificada:ok});}
 // control cruzado del solucionador de Interruptores contra BFS

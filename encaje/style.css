@@ -197,7 +197,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .lt b{position:absolute;inset:26%;border-radius:50%;background:rgba(255,255,255,.35);transition:all .3s}
 .lt.on{background:radial-gradient(circle at 50% 40%,#ffe9a8,var(--on));box-shadow:0 0 16px rgba(244,205,114,.65),inset 0 2px 0 rgba(255,255,255,.6)}.lt.on b{background:#fff;box-shadow:0 0 10px #fff}
 .lt.pop{animation:popL .35s}@keyframes popL{40%{transform:scale(.88)}}
-.lt.hint{outline:4px solid var(--accent2);outline-offset:2px;animation:hintL .7s infinite;box-shadow:0 0 0 8px rgba(229,143,143,.3)}@keyframes hintL{50%{outline-color:transparent}}
+.lt.hint{z-index:3;outline:5px solid #e0593f;outline-offset:3px;animation:hintL .8s infinite;box-shadow:0 0 0 10px rgba(224,89,63,.28),0 0 26px 8px rgba(255,200,90,.9)}@keyframes hintL{50%{outline-color:#ffd25a;transform:scale(1.08)}}
+.hleft{display:block;margin-top:2px;font-style:normal;font-weight:700;opacity:.85}
 .lights.done .lt{animation:wave 1s ease}
 /* tuberías */
 .pt{position:absolute;border-radius:calc(var(--u,40px)*.24);background:var(--cell);box-shadow:inset 0 2px 5px rgba(0,0,0,.08);overflow:hidden}
@@ -337,3 +338,5 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
  #extra{gap:4px}.lhint{gap:14px}.lcol{max-width:150px;font-size:12px}
 }
 .dextra .rnote{display:none}
+/* v3: dentro de la pista solo «Pista:» va en su línea; el resto del texto fluye */
+#ghelp .hintBox span>b:not(:first-child){display:inline;font-size:1em;font-weight:700;line-height:inherit}

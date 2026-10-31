@@ -138,7 +138,7 @@ function updateStats(){if(!G)return;if(G.timed&&TM){$('#gStats').innerHTML=`Tiem
   const slack=(G.type==='fit'||G.type==='trace')?0:Math.floor(G.min/6);let extra='';
   if(G.type==='trace'){extra=` · casillas <b>${G.st.length}</b>/${G.def.w*G.def.h-G.def.blocked.length}`;}
   if(G.type==='fit'){extra=` · piezas <b>${Object.keys(G.st.placed).length}</b>/${G.def.pieces.length}`;}
-  if(G.type==='lights'&&G.view&&G.view.progress){const p=G.view.progress(G.st);extra=` · casillas bien <b>${p.good}</b>/${p.total}`;}
+  if(G.type==='lights'&&G.view&&G.view.progress){const p=G.view.progress(G.st);extra=p.total-p.good?` · por encender <b>${p.total-p.good}</b>`:' · ¡todas encendidas!';}
   else if(G.type==='lights'){extra='';}
   $('#gStats').innerHTML=`Movimientos <b>${G.moves}</b> · ★★★ hasta <b>${G.min+slack}</b>${extra}`;}
 function sfxFor(info){const t=G.type;if(info.kind==='place')return audio.ok(info.n);if(info.kind==='lift')return audio.tick();
@@ -156,13 +156,16 @@ function endHintUI(){fingerStop();const g=$('#ghelp');if(g&&g.classList.contains
 function showHintUI(pl){endHintUI();if(!pl)return;const g=$('#ghelp');g.innerHTML=`<div class="hintBox"><i class="hbulb"></i><span><b>Pista:</b> ${pl.text}</span></div>`;g.classList.add('hinting');
   setTimeout(()=>{if(!G||!g.classList.contains('hinting'))return;const a=pt(pl.from),b=pl.to?pt(pl.to):null;if(a)fingerLoop(a,b);},160);}
 $('#bHint').onclick=()=>{if(!G||G.locked)return;
-  const sol=solveFrom(G.st);if(!sol||(Array.isArray(sol)&&!sol.length)){toast('Por aquí no hay salida: prueba con «Deshacer»');const b=$('#bUndo');b.classList.add('pulse');setTimeout(()=>b.classList.remove('pulse'),1900);audio.error();return;}
+  const sol=solveFrom(G.st);if(!sol||(Array.isArray(sol)&&!sol.length)){let back=0;for(let i=G.hist.length-1,tries=0;i>=0&&tries<40;i--,tries++){const s2=G.T.solve(G.def,G.hist[i].st);if(s2){back=G.hist.length-i;break;}}
+    toast(back?`Por aquí no hay salida: pulsa «Deshacer» ${back} ${back===1?'vez':'veces'} y vuelvo a ayudarte`:'Por aquí no hay salida: prueba con «Deshacer» o «Reiniciar»');const b=$('#bUndo');b.classList.add('pulse');setTimeout(()=>b.classList.remove('pulse'),1900);audio.error();return;}
   const mv=Array.isArray(sol)?sol[0]:sol;G.hinted=true;G.hintsUsed++;audio.ok(4);G.view.hint(mv);
-  showHintUI(G.view.plan?G.view.plan(mv,sol):{text:'Mira lo que brilla.',from:null});};
+  const pl=G.view.plan?G.view.plan(mv,sol):{text:'Mira lo que brilla.',from:null};
+  if(G.type!=='lights'&&Array.isArray(sol)&&sol.length&&pl&&pl.text){const NOUN={slide:'movimientos',trace:'casillas',mirrors:'giros',gravity:'inclinaciones',pipes:'giros',rings:'giros',fit:'piezas'}[G.type]||'pasos';pl.text+=` <i class="hleft">Quedan ${sol.length} ${NOUN}.</i>`;}
+  showHintUI(pl);};
 $('#gBack').onclick=()=>{audio.back();if(cur==='game'){const b=backOf();leaveGame();G=null;show(b);}};
 $('#gHelp').onclick=()=>{if(G)openTut(tutKey(G.lvl));};
 /* ───── victoria ───── */
-function win(){G.locked=true;if(G.view.clearHint)G.view.clearHint();const stars=starsFor(G.type,G.min,G.moves,G.hinted);G.stars=stars;
+function win(){const g0=G;G.locked=true;if(G.view.clearHint)G.view.clearHint();const stars=starsFor(G.type,G.min,G.moves,G.hinted);G.stars=stars;
   if(G.timed){winTimed(stars);return;}
   audio.win(stars);if(G.view.celebrate)G.view.celebrate();
   const id=G.lvl.id;combo=stars===3?combo+1:0;
@@ -170,8 +173,8 @@ function win(){G.locked=true;if(G.view.clearHint)G.view.clearHint();const stars=
     if(S.streak.last!==k){const y=new Date();y.setDate(y.getDate()-1);const yk=`${y.getFullYear()}-${pad2(y.getMonth()+1)}-${pad2(y.getDate())}`;S.streak.n=S.streak.last===yk?S.streak.n+1:1;S.streak.last=k;}}
   else{const p=S.levels[id];const nh=!G.hinted;if(!p||stars>p.stars)S.levels[id]={stars,best:Math.min(G.moves,p?p.best:99999),nh:nh||(p&&p.nh)?1:0};else{if(G.moves<p.best)p.best=G.moves;if(nh)p.nh=1;}}
   save();
-  setTimeout(()=>confetti(stars===3?1.2:stars===2?.8:.5),250);
-  setTimeout(()=>{if(!G)return;const t=stars===3?'¡Perfecto!':stars===2?'¡Muy bien!':'¡Resuelto!';$('#winT').textContent=t;
+  setTimeout(()=>{if(G===g0)confetti(stars===3?1.2:stars===2?.8:.5);},250);
+  setTimeout(()=>{if(!G||G!==g0)return;const t=stars===3?'¡Perfecto!':stars===2?'¡Muy bien!':'¡Resuelto!';$('#winT').textContent=t;
     let info=`Movimientos: <b>${G.moves}</b> · Mejor posible: <b>${G.min}</b>`;if(G.hinted&&stars===2&&G.moves<=G.min)info+='<br>Con pista, el máximo son 2 estrellas';else if(stars<3)info+='<br>Prueba a repetirla para conseguir 3 estrellas';
     $('#winInfo').innerHTML=info;const cb=$('#winCombo');if(combo>=2){cb.hidden=false;cb.innerHTML=`Racha de <b>${combo}</b> pruebas perfectas seguidas`;}else cb.hidden=true;
     const st=$$('#winStars i');st.forEach(i=>i.classList.remove('on'));$('#win').classList.add('on');
@@ -225,7 +228,7 @@ const MEDALS=[
  {id:'p10',n:'Perfeccionista',d:'10 pruebas con 3 estrellas',t:()=>LEVELS.filter(l=>starsOf(l.id)===3).length>=10},
  {id:'p50',n:'Precisión de reloj',d:'50 pruebas con 3 estrellas',t:()=>LEVELS.filter(l=>starsOf(l.id)===3).length>=50},
  {id:'nh',n:'Sin ayuda',d:'Supera 10 pruebas sin usar pistas',t:()=>LEVELS.filter(l=>S.levels[l.id]&&S.levels[l.id].nh).length>=10},
- {id:'fig',n:'Dibujando con luz',d:'Supera una prueba de Interruptores con figura',t:()=>LEVELS.some(l=>l.type==='lights'&&l.def.fig&&starsOf(l.id)>0)},
+ {id:'fig',n:'Maestro de la luz',d:'Supera 8 pruebas de Interruptores',t:()=>LEVELS.filter(l=>l.type==='lights'&&starsOf(l.id)>0).length>=8},
  {id:'daily',n:'Cita diaria',d:'Supera el reto del día',t:()=>(S.dailyWon||0)>=1||Object.keys(S.daily).length>=1},
  {id:'st3',n:'Constancia',d:'Juega el reto del día 3 días seguidos',t:()=>S.streak.n>=3},
  {id:'st7',n:'Hábito de hierro',d:'Juega el reto del día 7 días seguidos',t:()=>S.streak.n>=7},

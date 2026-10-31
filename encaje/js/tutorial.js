@@ -35,7 +35,7 @@ export function playTutorial(key,{stage,cap,dots,audio}){
     async lights(){const def={n:3,mode:'plus',start:0};let s=fullMask(3);s=Lights.apply(def,s,[0]);s=Lights.apply(def,s,[8]);def.start=s;const m=mount('lights',def,'lights');const cell=i=>m.board.children[i];
       say('Mira: hay casillas <b>grises</b> (apagadas). Hay que ponerlas <b>todas en amarillo</b>.',0);await wait(2600);
       say('<b>1.</b> Toca una casilla gris…',1);const e0=lightsEffect(def,0);for(let j=0;j<9;j++)if((e0>>>j)&1)cell(j).classList.add('will');await wait(700);await tap(cell(0),300);
-      for(let j=0;j<9;j++)cell(j).classList.remove('will');m.C.dispatch([0]);say('…y <b>ella y sus vecinas</b> cambian: las grises se encienden.',2);await wait(2200);
+      for(let j=0;j<9;j++)cell(j).classList.remove('will');m.C.dispatch([0]);say('…y <b>ella y sus 4 vecinas</b> cambian: las grises se encienden (las amarillas se <b>apagarían</b>).',2);await wait(2200);
       say('<b>2.</b> Toca la otra casilla gris',3);const e8=lightsEffect(def,8);for(let j=0;j<9;j++)if((e8>>>j)&1)cell(j).classList.add('will');await wait(500);await tap(cell(8),300);
       for(let j=0;j<9;j++)cell(j).classList.remove('will');m.C.dispatch([8]);m.view.celebrate();audio.ok(6);say('¡Todo amarillo! <b>Prueba superada</b>.',4);await wait(2400);},
     async lightsfig(){const def={n:3,mode:'plus',fig:'cruz',start:0};const tg=figureMask(3,'cruz');let s=tg;s=Lights.apply(def,s,[1]);s=Lights.apply(def,s,[7]);def.start=s;const m=mount('lights',def,'lightsfig');const cell=i=>m.board.children[i];
