@@ -1,20 +1,21 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=7';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=7';
-import './models2.js?v=7';
-import './models3.js?v=7';
-import { PLACES } from './places.js?v=7';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=7';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=7';
-import { NPC } from './npcs.js?v=7';
-import { makeTitle } from './title.js?v=7';
-import { GB, setOutlines } from './geo.js?v=7';
-import { loadPacks } from './charpack.js?v=7';
+import * as AU from './audio.js?v=8';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=8';
+import './models2.js?v=8';
+import './models3.js?v=8';
+import { PLACES } from './places.js?v=8';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=8';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=8';
+import { NPC } from './npcs.js?v=8';
+import { makeTitle } from './title.js?v=8';
+import { makeStage } from './stage.js?v=8';
+import { GB, setOutlines } from './geo.js?v=8';
+import { loadPacks } from './charpack.js?v=8';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=7';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=7';
+import { Particles, Rings, makeTornado } from './fx.js?v=8';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=8';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -60,6 +61,7 @@ const startR = () => 0.9 * (1 + (ut().size || 0)) * (1 + (ch.perkK.grow || 0));
 const gate = () => GATE + pk('gate');
 const speedMul = () => 1 + pk('speed');
 const lootMul = () => (1 + (ut().loot || 0)) * (1 + pk('coins'));
+const HOSTILE_K = 0.55; // v8: los bichos que persiguen o golpean van a ~55% de su velocidad
 const hitMul = () => (ch.perkK.hit != null ? ch.perkK.hit : 1) * Math.max(0.25, 1 - (ut().hit || 0));
 const comboWin = () => COMBO_WIN + pk('combo');
 const clockBonus = () => 6 + (ut().clock || 0);
@@ -88,6 +90,7 @@ initComposer();
 const SUN_OFF = new THREE.Vector3(55, 100, 42);
 const parts = new Particles(scene, 1200);
 const rings = new Rings(scene, 10);
+const stage = makeStage(scene); let stageOn = false, stageHidden = [], bgKeep = null;
 const tornado = makeTornado(scene);
 let blinkT = 2, blinkP = 0, qLevel = 0; let scenery = null, dona = null, viewCh = ch; const modelCache = {};
 function setChar(id, remember = true) {
@@ -412,14 +415,14 @@ function animLegs(o, dt, speed) {
 const X = {
   G, parts, rings, AU, dt: 0, live: false, BOUND,
   edible: (c) => c.r <= G.R * gate(),
-  step(c, tx, tz, sp, dt) { if (!sp) return 0; const l = Math.hypot(tx, tz) || 1, mg = Math.min(4, c.r * 0.4 + 1); const nx = clamp(c.x + tx / l * sp * dt, -BOUND + mg, BOUND - mg), nz = clamp(c.z + tz / l * sp * dt, -BOUND + mg, BOUND - mg); const mv = Math.hypot(nx - c.x, nz - c.z) / dt; c.x = nx; c.z = nz; return mv; },
+  step(c, tx, tz, sp, dt) { if (!sp) return 0; const l = Math.hypot(tx, tz) || 1; if (G.mode === 'play' && c.r > G.R * gate() && (c.st === 2 || ((G.px - c.x) * tx + (G.pz - c.z) * tz) / (l * (Math.hypot(G.px - c.x, G.pz - c.z) || 1)) > 0.25)) sp *= HOSTILE_K; const mg = Math.min(4, c.r * 0.4 + 1); const nx = clamp(c.x + tx / l * sp * dt, -BOUND + mg, BOUND - mg), nz = clamp(c.z + tz / l * sp * dt, -BOUND + mg, BOUND - mg); const mv = Math.hypot(nx - c.x, nz - c.z) / dt; c.x = nx; c.z = nz; return mv; },
   say, toast, shake(v) { G.shake = Math.max(G.shake, v); },
   addTime(s) { if (G.mode === 'play') { G.time = Math.min(G.time + s, G.dur + 25); hud.dirty = true; } },
   bonus(msg, coins) { if (G.mode !== 'play') return; coins = Math.max(1, Math.round(coins * 0.25)); G.coins += coins; save.coins += coins; AU.coin(); toast(msg, ''); hud.dirty = true; },
   puff(x, y, z) { parts.burst(x, y, z, 14, { color: [0xffffff, 0xe8d8ff, 0xffd9ec], speed: 3, size: 1.0, size1: 2.2, life: 0.7, shape: 4, g: -0.3, alpha: 0.7 }); parts.burst(x, y, z, 6, { color: [0xffd23f, 0xff74c4], speed: 4, size: 0.4, life: 0.7, shape: 3, g: 2 }); },
   shoot(c, ux, uz) {
     AU.toastShot(); const m = toastMesh.clone(); m.castShadow = true; worldGroup.add(m);
-    toasts.push({ mesh: m, x: c.x + ux * 1.6, z: c.z + uz * 1.6, vx: ux * 14, vz: uz * 14, t: 0, y: c.hy * 1.7 });
+    toasts.push({ mesh: m, x: c.x + ux * 1.6, z: c.z + uz * 1.6, vx: ux * 14 * HOSTILE_K, vz: uz * 14 * HOSTILE_K, t: 0, y: c.hy * 1.7 });
   },
   hit(c, nx, nz, o) {
     if (G.mode !== 'play' || G.inv > 0) return false; const hm = hitMul(), f = 0.5 + 0.5 * hm;
@@ -432,11 +435,11 @@ const toastMesh = (() => { const g = new GB(); g.rbox(0.9, 0.9, 0.22, 0.12, 0xf0
 function updateToasts(dt, live) {
   for (let i = toasts.length - 1; i >= 0; i--) {
     const t = toasts[i]; t.t += dt; t.x += t.vx * dt; t.z += t.vz * dt; const m = t.mesh; m.position.set(t.x, t.y + Math.sin(t.t * 3) * 0.5, t.z); m.rotation.x += dt * 9; m.rotation.z += dt * 5;
-    const d = Math.hypot(t.x - G.px, t.z - G.pz); let kill = t.t > 2.6 || Math.abs(t.x) > BOUND || Math.abs(t.z) > BOUND;
+    const d = Math.hypot(t.x - G.px, t.z - G.pz); let kill = t.t > 2.6 / HOSTILE_K || Math.abs(t.x) > BOUND || Math.abs(t.z) > BOUND;
     if (live && d < G.R * 0.95 + 0.5) {
       kill = true;
       if (G.R >= 3.2) { parts.burst(t.x, t.y, t.z, 6, { color: [0xf0c27a, 0xffe0a6], speed: 3, size: 0.3, life: 0.5, shape: 1, g: 6 }); if (G.mode === 'play') { G.score += 5; popText('¡Tostada!', t.x, t.y + 1, t.z, 'coinp'); } AU.pop(0, 0); }
-      else { parts.burst(t.x, t.y, t.z, 10, { color: [0xf0c27a, 0xffe0a6, 0xb06b2a], speed: 4, size: 0.4, life: 0.6, shape: 4, g: 6 }); X.hit(t, t.vx / 14, t.vz / 14, { knock: 8, slow: 0.45, loss: 0.03, msg: '¡Tostada en la cara!' }); }
+      else { parts.burst(t.x, t.y, t.z, 10, { color: [0xf0c27a, 0xffe0a6, 0xb06b2a], speed: 4, size: 0.4, life: 0.6, shape: 4, g: 6 }); X.hit(t, t.vx / (14 * HOSTILE_K), t.vz / (14 * HOSTILE_K), { knock: 8, slow: 0.45, loss: 0.03, msg: '¡Tostada en la cara!' }); }
     }
     if (kill) { worldGroup.remove(m); toasts[i] = toasts[toasts.length - 1]; toasts.pop(); }
   }
@@ -460,7 +463,7 @@ function updateAlcalde(a, dt, live) {
   let tx, tz, sp;
   if (edible) { tx = -dx / d; tz = -dz / d; sp = a.spd * 1.15; if (a.talk <= 0) { a.talk = 3; say('alc', '¡Socorro! ¡Me voy de vacaciones!', 1400); } }
   else if (a.rec > 0) { tx = -dx / d; tz = -dz / d; sp = a.spd * 0.7; }
-  else { tx = dx / d; tz = dz / d; sp = a.spd; if (a.talk <= 0 && d < 28) { a.talk = 6 + rnd() * 4; say('alc', ALC_LINES[(1 + rnd() * (ALC_LINES.length - 1)) | 0], 1600); } }
+  else { tx = dx / d; tz = dz / d; sp = a.spd * HOSTILE_K; if (a.talk <= 0 && d < 28) { a.talk = 6 + rnd() * 4; say('alc', ALC_LINES[(1 + rnd() * (ALC_LINES.length - 1)) | 0], 1600); } }
   const nx = clamp(a.x + tx * sp * dt, -BOUND + 1.5, BOUND - 1.5), nz = clamp(a.z + tz * sp * dt, -BOUND + 1.5, BOUND - 1.5); const mv = Math.hypot(nx - a.x, nz - a.z) / dt; a.x = nx; a.z = nz;
   const m = a.mesh; const hop = Math.abs(Math.sin(a.ph)) * 0.45 * Math.min(1, mv / 3);
   const face = Math.atan2(tx, tz); const da = Math.atan2(Math.sin(face - (a.rot || 0)), Math.cos(face - (a.rot || 0))); a.rot = (a.rot || 0) + da * Math.min(1, dt * 6);
@@ -472,7 +475,7 @@ function updateAlcalde(a, dt, live) {
   if (!edible && d < G.R * 0.9 + 1.7 && a.cool <= 0 && G.inv <= 0) alcalde_hit(a, dx / d, dz / d);
 }
 function alcalde_hit(a, nx, nz) {
-  a.cool = 2.8; a.rec = 1.4; G.inv = 2.0 + pk('inv'); G.slow = 1.3 * (0.5 + 0.5 * hitMul()); G.hits++;
+  a.cool = 4.2; a.rec = 1.8; G.inv = 2.0 + pk('inv'); G.slow = 1.3 * (0.5 + 0.5 * hitMul()); G.hits++;
   G.kx = nx * 20 * (0.5 + 0.5 * hitMul()); G.kz = nz * 20 * (0.5 + 0.5 * hitMul()); G.shake = 1; G.combo = 0; G.comboT = 0;
   const loss = 0.09 * (G.A - G.A0) * hitMul(); G.A = Math.max(G.A0, G.A - loss); G.R = Math.sqrt(G.A);
   AU.hit(); flash(); say('alc', '¡MULTA! ¡Por soplona!', 1600); toast('¡Multa!', 'warn'); say('dona', pick(['¡Qué agravio!', '¡Ay, mi espalda!', '¡Eso es abuso municipal!'], (rnd() * 3) | 0), 1200);
@@ -548,7 +551,7 @@ function freeRectChars() {
   if (W > H * 1.1) return { l: 0, r: Math.max(W * 0.3, sh.left - 4), t, b: H - 6 };
   return { l: 0, r: W, t, b: Math.max(H * 0.35, sh.top - 2) };
 }
-let chCorr = { m: 1, dx: 0, dy: 0 };
+let chCorr = { m: 1, dx: 0, dy: 0 }; const CH_YAW = 0.42;
 function titleInsets() {
   const W = window.innerWidth, H = window.innerHeight, q = (s) => document.querySelector(s).getBoundingClientRect(), lg = q('#sTitle .logo'), st = q('#sTitle .statline'), mn = q('#sTitle .menu');
   if (W > H * 1.1) return { l: 0, r: Math.round(Math.max(0, W - mn.left + 6)), t: 0, b: 0 };
@@ -563,17 +566,25 @@ function applyChCamera() {
   camera.setViewOffset(W, H, W / 2 - (fr.l + fr.r) / 2 + chCorr.dx, H / 2 - (fr.t + fr.b) / 2 + chCorr.dy, W, H);
   camera.updateMatrixWorld(true);
 }
+function swingBox() { // v8: caja en pantalla sumando el giro de lado a lado y el vaivén de los brazos (así el plumero, el clip o la escoba no se salen)
+  let u = null; const ud = dona.userData, a0 = ud.arms0 || 2.35, sv = ud.arms ? [ud.arms[0].rotation.z, ud.arms[1].rotation.z] : null;
+  for (const y of [-CH_YAW, 0, CH_YAW]) for (const sw of ud.arms ? [-1, 0, 1] : [0]) {
+    dona.rotation.y = y; if (ud.arms) { ud.arms[1].rotation.z = -(a0 + sw * 0.55); ud.arms[0].rotation.z = a0 - sw * 0.5 + 0.2; } dona.updateMatrixWorld(true);
+    const b = charScreenBox().box; u = u ? { l: Math.min(u.l, b.l), t: Math.min(u.t, b.t), r: Math.max(u.r, b.r), b: Math.max(u.b, b.b) } : b;
+  }
+  dona.rotation.y = 0; if (sv) { ud.arms[0].rotation.z = sv[0]; ud.arms[1].rotation.z = sv[1]; } dona.updateMatrixWorld(true); return u;
+}
 function calibrateChar() { // mide la caja en pantalla en reposo y ajusta distancia y desplazamiento para que quede centrado y completo
   chFree = freeRectChars(); chCorr = { m: 1, dx: 0, dy: 0 }; const ds0 = G.Rv * 1.18;
   const sp = dona.position.clone(), ss = dona.scale.clone(), sr = dona.rotation.clone();
   dona.position.set(G.px, 0.12 * ds0, G.pz); dona.scale.setScalar(ds0); dona.rotation.set(0, 0, 0); dona.updateMatrixWorld(true);
   const fr = chFree, Wf = fr.r - fr.l, Hf = fr.b - fr.t;
   for (let k = 0; k < 3; k++) {
-    applyChCamera(); const s = charScreenBox().box, bh = s.b - s.t, bw = s.r - s.l, m = Math.min(0.8 * Hf / bh, 0.88 * Wf / bw);
+    applyChCamera(); const s = swingBox(), bh = s.b - s.t, bw = s.r - s.l, m = Math.min(0.8 * Hf / bh, 0.9 * Wf / bw);
     chCorr.m /= m; if (k === 2) break;
-    applyChCamera(); const s2 = charScreenBox().box; chCorr.dy += (s2.t + s2.b) / 2 - (fr.t + fr.b) / 2; chCorr.dx += (s2.l + s2.r) / 2 - (fr.l + fr.r) / 2;
+    applyChCamera(); const s2 = swingBox(); chCorr.dy += (s2.t + s2.b) / 2 - (fr.t + fr.b) / 2; chCorr.dx += (s2.l + s2.r) / 2 - (fr.l + fr.r) / 2;
   }
-  applyChCamera(); const s3 = charScreenBox().box; chCorr.dy += (s3.t + s3.b) / 2 - (fr.t + fr.b) / 2; chCorr.dx += (s3.l + s3.r) / 2 - (fr.l + fr.r) / 2;
+  applyChCamera(); const s3 = swingBox(); chCorr.dy += (s3.t + s3.b) / 2 - (fr.t + fr.b) / 2; chCorr.dx += (s3.l + s3.r) / 2 - (fr.l + fr.r) / 2;
   dona.position.copy(sp); dona.scale.copy(ss); dona.rotation.copy(sr); dona.updateMatrixWorld(true);
 }
 function frameChar() { if (!chFree) calibrateChar(); applyChCamera(); }
@@ -584,6 +595,7 @@ function charScreenBox() { // para pruebas: caja en pantalla del personaje y hue
 }
 // ---------- efectos / cámara ----------
 const camT = new THREE.Vector3(SPAWN.x, 0, SPAWN.z); let camDist = 20;
+const CAM_UP = 1.2, CAM_BACK = 0.8; // v8: cámara más elevada (ángulo más cenital)
 function updateFx(dt) {
   const R = G.Rv, t = G.t;
   // torbellino y Doña
@@ -597,7 +609,7 @@ function updateFx(dt) {
   dona.scale.set(ds * (1 - sqz * 0.55), ds * (1 + sqz), ds * (1 - sqz * 0.55));
   if (ud.lids) { blinkT -= dt; if (blinkT < 0) { blinkP = 0.17; blinkT = 1.8 + rnd() * 3.2; } blinkP = Math.max(0, blinkP - dt); const bl = blinkP > 0 ? Math.sin((1 - blinkP / 0.17) * Math.PI) : 0; for (const l of ud.lids) { l.visible = bl > 0.05; l.scale.set(1, Math.max(0.01, bl), 1); } }
   dona.position.set(G.px, 0.12 * ds + Math.abs(Math.sin(t * 6)) * 0.06 * ds + (ud.hover ? (ud.hover + Math.sin(t * 3) * 0.05) * ds : 0), G.pz);
-  dona.rotation.set(G.vz * 0.012, clamp(G.vx * 0.045, -0.5, 0.5) + G.twirl + (G.mode === 'chars' ? Math.sin(t * 1.3) * 0.55 : 0), -G.vx * 0.014);
+  dona.rotation.set(G.vz * 0.012, clamp(G.vx * 0.045, -0.5, 0.5) + G.twirl + (G.mode === 'chars' ? Math.sin(t * 1.3) * CH_YAW : 0), -G.vx * 0.014);
   ud.arms[1].rotation.z = -(a0 + sw * 0.55 + (G.shout > 0 ? 0.35 : 0)); ud.arms[0].rotation.z = a0 - sw * 0.5 + 0.2; ud.arms[1].rotation.x = Math.cos(t * 9) * 0.3; ud.arms[0].rotation.x = -Math.cos(t * 9) * 0.25;
   if (G.shout > 0) { const cw = Math.sin(t * 16); ud.arms[1].rotation.z = -(0.5 + cw * 0.28); ud.arms[0].rotation.z = 0.5 - cw * 0.28; ud.arms[1].rotation.x = ud.arms[0].rotation.x = 0; } // celebrar: brazos arriba
   if (ud.legs) { const ls = Math.sin(t * 9) * 0.8 * mv + (G.shout > 0 ? Math.sin(t * 16) * 0.35 : 0); ud.legs[0].rotation.x = ls; ud.legs[1].rotation.x = -ls }
@@ -613,12 +625,20 @@ function updateFx(dt) {
   if (rnd() < dt * fx.rate * (G.mode === 'chars' ? 0.1 : 1)) { const a = rnd() * 6.28, rr = R * (0.6 + rnd() * 0.5), sz = (0.18 * R + 0.1) * fx.sz, bub = fx.shape === 2; parts.emit({ x: G.px + Math.cos(a) * rr, y: 0.3 + (bub ? rnd() * R * 1.6 : 0), z: G.pz + Math.sin(a) * rr, vx: Math.cos(a + 1.57) * R * (fx.fast ? 3.2 : 2.2), vy: (1.2 * R + rnd() * R) * fx.up * (bub ? 0.5 : 1), vz: Math.sin(a + 1.57) * R * (fx.fast ? 3.2 : 2.2), life: bub ? 1.5 : fx.shape === 4 ? 1.1 : 0.9, size: sz * (fx.shape === 4 ? 2.2 : 1), size1: bub ? sz * 1.5 : fx.shape === 4 ? sz * 4 : 0.02, color: fx.colors[(rnd() * fx.colors.length) | 0], shape: fx.shape, g: fx.g, drag: 0.8, alpha: fx.alpha }); }
   parts.update(dt); rings.update(dt);
   AU.setWhoosh(G.mode === 'play' ? clamp(G.speed / 16, 0.1, 1) : 0.0, Math.max(1, R));
+  // v8: en la elección de personaje se esconde el mundo y se enseña el escenario propio
+  { const inCh = G.mode === 'chars';
+    if (inCh !== stageOn) {
+      stageOn = inCh; stage.active(inCh);
+      if (inCh) { bgKeep = scene.background; stageHidden = scene.children.filter((o) => o.visible && o !== dona && o !== stage.group && o !== parts.pts && o !== tornado.group && o !== tornado.bits && !o.isLight && !(o.type === 'Object3D') && o.renderOrder < 5); stageHidden.forEach((o) => { o.visible = false; }); }
+      else { stageHidden.forEach((o) => { o.visible = true; }); stageHidden = []; if (bgKeep) scene.background = bgKeep; for (let k = 0; k < parts.max; k++) { parts.life[k] = 0; parts.size[k] = 0; parts.pos[k * 3 + 1] = -999; } }
+    }
+    if (inCh) { if (stage.bg) scene.background = stage.bg; stage.update(dt, G.px, G.pz, G.Rv * 1.18, parts, camera); } }
   // cámara
   const pf = camera.aspect < 1 ? 1 + (1 - camera.aspect) * 0.55 : 1;
   const menuZ = G.mode === 'chars' ? (window.CAMZ || 0.43) : (G.mode === 'menu' || G.mode === 'results' || G.mode === 'shop') ? 0.66 : 1; G.mz = G.mz == null ? menuZ : G.mz + (menuZ - G.mz) * Math.min(1, dt * 2.5);
   const intro = G.intro, zoom = (G.mz + intro * 0.9 + G.kick * 0.1) * pf;
   camT.x += (G.px + G.vx * 0.22 - camT.x) * Math.min(1, dt * 6); camT.z += (G.pz + G.vz * 0.22 - camT.z) * Math.min(1, dt * 6);
-  const d = (8.2 + R * 3.1) * zoom, h = (8.2 + R * 4.1) * zoom * (G.mode === 'chars' ? (window.CAMH || 0.42) : 1);
+  const d = (8.2 + R * 3.1) * zoom * (G.mode === 'chars' ? 1 : CAM_BACK), h = (8.2 + R * 4.1) * zoom * (G.mode === 'chars' ? (window.CAMH || 0.42) : CAM_UP);
   camDist += (d - camDist) * Math.min(1, dt * 4);
   const sk = G.shake * G.shake * (0.35 + 0.18 * R); const sx = (rnd() - 0.5) * sk, sy = (rnd() - 0.5) * sk, sz = (rnd() - 0.5) * sk;
   const k = camDist / d;
@@ -848,7 +868,7 @@ function renderChars() {
   b.innerHTML = owned ? `¡A LIMPIAR!${lockP ? '<small>en ' + PLACES[save.unlocked - 1].name + '</small>' : ''}` : `<i class="coin"></i> ${fmt(p.price)} · DESBLOQUEAR`;
   $('cDots').innerHTML = PLAYERS.map((q, i) => `<button class="dot ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`).join('');
   $('cStats').innerHTML = '';
-  G.kick = 1; G.twirl = 6.28; measureChar(); calibrateChar();
+  G.kick = 1; G.twirl = 6.28; measureChar(); calibrateChar(); stage.setTheme(p.theme); stage.pulse(parts, G.px, G.pz, G.Rv * 1.18);
 }
 function openChars() { cIdx = Math.max(0, PLAYERS.findIndex((p) => p.id === save.char)); G.mode = 'chars'; G.vx = G.vz = 0; $('dBanner').classList.remove('on'); show('sChars'); renderChars(); AU.click(); }
 function charsMove(d) { cIdx = (cIdx + d + PLAYERS.length) % PLAYERS.length; AU.select(); renderChars(); }
@@ -907,7 +927,7 @@ function frame(now) {
 }
 // API para pruebas
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
-window.DR = { charScreenBox, get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
+window.DR = { stage, charScreenBox, get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
 function initLogo() {
   const L = document.querySelector('#sTitle .logo'); if (!L) return; L.setAttribute('aria-label', 'Doña Remolina'); let n = 0;

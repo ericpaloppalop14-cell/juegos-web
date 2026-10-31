@@ -1,7 +1,7 @@
 // Los personajes locos de Mueblópolis (NPC): modelos procedurales + comportamiento.
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=7';
-import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=7';
+import { GB, lighten, darken } from './geo.js?v=8';
+import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=8';
 const PI = Math.PI, INK = 0x2a1840;
 const pick = (a, v) => a[v % a.length];
 
@@ -174,7 +174,7 @@ export const NPC = {
         if (edible) { sp = 5; X.step(c, -v.ux, -v.uz, sp, dt); if (rnd() < dt * 0.5) X.say(c, pick(this.flee, (rnd() * 9) | 0)); }
         else {
           sp = v.d > 14 ? 2.8 : 0.8; X.step(c, v.ux, v.uz, sp, dt);
-          if (v.d < 28) { c.shootT -= dt; const k = Math.max(0, 0.9 - Math.abs(c.shootT - 0.3) * 3); ud.toasts.forEach((t) => { t.position.y = 1.0 + k * 0.4; }); if (c.shootT <= 0) { c.shootT = 2.2 + rnd() * 1.4; X.shoot(c, v.ux, v.uz); X.say(c, pick(this.lines, (rnd() * 9) | 0), 1500); } }
+          if (v.d < 28) { c.shootT -= dt; const k = Math.max(0, 0.9 - Math.abs(c.shootT - 0.3) * 3); ud.toasts.forEach((t) => { t.position.y = 1.0 + k * 0.4; }); if (c.shootT <= 0) { c.shootT = 3.4 + rnd() * 1.8; X.shoot(c, v.ux, v.uz); X.say(c, pick(this.lines, (rnd() * 9) | 0), 1500); } }
         }
       } else sp = wanderDir(c, dt, X, 1.4, 0.5);
       c.ph += dt * (sp > 0.5 ? 7 : 3); c.yo = Math.abs(Math.sin(c.ph)) * (sp > 0.5 ? 1.0 : 0.15); c.sy = 1 + Math.sin(c.ph * 2 + 1.6) * 0.06 * (sp > 0.5 ? 1 : 0.3);
@@ -193,7 +193,7 @@ export const NPC = {
       else if (X.live && !edible && v.d < 22) {
         c.cd -= dt;
         if (c.spinT > 0) { c.spinT -= dt; c.rot += dt * 12; X.parts.emit({ x: c.x + (rnd() - 0.5) * 3, y: 3.8, z: c.z + (rnd() - 0.5) * 3, vx: Math.cos(c.rot) * 6, vy: 3, vz: Math.sin(c.rot) * 6, life: 0.6, size: 0.7, size1: 1.4, color: 0xffffff, shape: 4, g: 1, alpha: 0.7 }); if (c.spinT <= 0) { X.rings.spawn(c.x, c.z, 1, 15, 0x9fe8ff, 0.5, 0.8); if (v.d < 15 + X.G.R * 0.4) X.hit(c, v.ux, v.uz, { knock: 20, slow: 0.7, loss: 0.05, msg: '¡Centrifugado!' }); X.AU.swish(); } }
-        else { m = X.step(c, v.ux, v.uz, v.d > 9 ? 3.0 : 0.6, dt); if (c.cd <= 0 && v.d < 13) { c.cd = 4.2; c.spinT = 0.9; X.say(c, '¡CENTRIFUGADO!', 1300); X.rings.spawn(c.x, c.z, 2, 8, 0xffffff, 0.9, 0.5); } else if (c.cd < 0.01) c.cd = 0.5; }
+        else { m = X.step(c, v.ux, v.uz, v.d > 9 ? 3.0 : 0.6, dt); if (c.cd <= 0 && v.d < 13) { c.cd = 5.8; c.spinT = 0.9; X.say(c, '¡CENTRIFUGADO!', 1300); X.rings.spawn(c.x, c.z, 2, 8, 0xffffff, 0.9, 0.5); } else if (c.cd < 0.01) c.cd = 0.5; }
         faceTo(c, Math.atan2(v.ux, v.uz) , dt, 3);
         if (c.spinT <= 0) speak(c, X, this.lines, 0.4, 5);
       } else { m = wanderDir(c, dt, X, 1.4, 0.35); speak(c, X, this.lines, 0.5, 6); c.rot = Math.sin(c.ph * 0.5) * 0.6; }
@@ -222,7 +222,7 @@ export const NPC = {
         faceTo(c, Math.atan2(v.ux, v.uz), dt, 4);
         if (c.st === 0) { X.step(c, v.ux, v.uz, v.d > 12 ? 3.0 : 0.3, dt); c.yo = Math.abs(Math.sin(c.ph * 2)) * 0.3; if (c.cd <= 0 && v.d < 16) { c.st = 1; c.stT = 0; X.say(c, '¡AHORA VERÁS!', 1100); X.rings.spawn(c.x, c.z, 2, 15, 0xff3d6e, 1.0, 0.45, 0.4); } else speak(c, X, this.lines, 0.45, 5); }
         else if (c.st === 1) { c.stT += dt; c.yo = Math.min(1.8, c.stT * 3.2) * (c.stT < 0.55 ? 1 : 0); ud.arms[0].rotation.z = 3.0; ud.arms[1].rotation.z = -3.0; if (c.stT > 0.55) { c.st = 2; c.stT = 0; X.shake(0.9); X.AU.hit(); X.rings.spawn(c.x, c.z, 2, 17, 0xffffff, 0.6, 0.9); X.parts.burst(c.x, 0.4, c.z, 24, { color: [0xe6f6ff, 0xffffff, 0x9fe8ff], speed: 9, size: 0.9, size1: 2.2, life: 0.9, shape: 4, g: -0.5, alpha: 0.7, flat: true, up: 0.6 }); if (v.d < 15 + X.G.R * 0.3) X.hit(c, v.ux, v.uz, { knock: 24, slow: 1.0, loss: 0.08, msg: '¡PISOTÓN HELADO!' }); } }
-        else { c.stT += dt; c.yo = 0; if (c.stT > 0.5) { c.st = 0; c.cd = 4.2 + rnd() * 1.5; } }
+        else { c.stT += dt; c.yo = 0; if (c.stT > 0.5) { c.st = 0; c.cd = 5.8 + rnd() * 2; } }
       } else { wanderDir(c, dt, X, 1.2, 0.5); c.yo = 0; }
       if (c.st !== 1) { ud.arms[0].rotation.z = 0.4 + Math.sin(c.ph) * 0.15; ud.arms[1].rotation.z = -0.4 - Math.sin(c.ph) * 0.15; }
       c.rz = Math.sin(c.ph) * 0.02;
@@ -291,7 +291,7 @@ export const NPC = {
       else if (X.live && !edible && v.d < 34) {
         if (c.st === 0) { faceTo(c, Math.atan2(v.ux, v.uz), dt, 4); X.step(c, v.ux, v.uz, v.d > 18 ? 3.2 : 0.8, dt); if (c.cd <= 0 && v.d > 8 && v.d < 28) { c.st = 1; c.stT = 0; c.dx = v.ux; c.dz = v.uz; X.say(c, pick(this.lines, (rnd() * 9) | 0), 1100); } else speak(c, X, this.lines, 0.3, 6); }
         else if (c.st === 1) { c.stT += dt; c.rot = Math.atan2(c.dx, c.dz) + Math.sin(c.stT * 50) * 0.05; X.parts.emit({ x: c.x - c.dx * 1.5, y: 0.5, z: c.z - c.dz * 1.5, vx: (rnd() - 0.5), vy: 1.5, vz: (rnd() - 0.5), life: 0.5, size: 0.5, size1: 1.2, color: 0x7a7a8c, shape: 4, g: -0.5, alpha: 0.6 }); X.rings.spawn(c.x + c.dx * 5, c.z + c.dz * 5, 0.3, 1.2, 0xff3d6e, 0.2, 0.7, 0.3); if (c.stT > 0.8) { c.st = 2; c.stT = 0; } }
-        else { c.stT += dt; X.step(c, c.dx, c.dz, 22, dt); c.rot = Math.atan2(c.dx, c.dz); X.parts.emit({ x: c.x + (rnd() - 0.5), y: 0.4, z: c.z + (rnd() - 0.5), vx: -c.dx * 4, vy: 2.5, vz: -c.dz * 4, life: 0.6, size: 0.35, size1: 0.1, color: pick([0x7bd65a, 0xa8f07a, 0x4ebf3d], (rnd() * 3) | 0), shape: 0, g: 8 }); const dd = Math.hypot(X.G.px - c.x, X.G.pz - c.z); if (dd < X.G.R * 0.9 + 2.2) { X.hit(c, c.dx, c.dz, { knock: 22, slow: 0.9, loss: 0.05, msg: '¡Corte de pelo!' }); c.st = 0; c.cd = 3; } if (c.stT > 1.1) { c.st = 0; c.cd = 2.6; } }
+        else { c.stT += dt; X.step(c, c.dx, c.dz, 22, dt); c.rot = Math.atan2(c.dx, c.dz); X.parts.emit({ x: c.x + (rnd() - 0.5), y: 0.4, z: c.z + (rnd() - 0.5), vx: -c.dx * 4, vy: 2.5, vz: -c.dz * 4, life: 0.6, size: 0.35, size1: 0.1, color: pick([0x7bd65a, 0xa8f07a, 0x4ebf3d], (rnd() * 3) | 0), shape: 0, g: 8 }); const dd = Math.hypot(X.G.px - c.x, X.G.pz - c.z); if (dd < X.G.R * 0.9 + 2.2) { X.hit(c, c.dx, c.dz, { knock: 22, slow: 0.9, loss: 0.05, msg: '¡Corte de pelo!' }); c.st = 0; c.cd = 4.4; } if (c.stT > 1.1) { c.st = 0; c.cd = 3.8; } }
       } else { const m = wanderDir(c, dt, X, 1.5, 0.4); if (m > 0.3) faceTo(c, Math.atan2(c.wdx, c.wdz), dt, 5); }
       c.ph += dt * 12; c.yo = c.st === 2 ? 0.1 : Math.abs(Math.sin(c.ph)) * 0.05; c.rz = c.st === 2 ? 0 : Math.sin(c.ph * 0.7) * 0.02;
     } },
@@ -358,8 +358,8 @@ function ram(def) {
         if (c.st === 0) { faceTo(c, Math.atan2(v.ux, v.uz), dt, 4); X.step(c, v.ux, v.uz, v.d > 16 ? def.sp : def.sp * 0.4, dt); c.yo = Math.abs(Math.sin(c.ph * 0.7)) * (def.bob || 0.25); if (c.cd <= 0 && v.d > 7 && v.d < 26) { c.st = 1; c.stT = 0; c.dx = v.ux; c.dz = v.uz; X.say(c, lineOf(def.lines), 1000); } else speak(c, X, def.lines, 0.3, 6); }
         else if (c.st === 1) { c.stT += dt; c.yo = 0; c.rot = Math.atan2(c.dx, c.dz) + Math.sin(c.stT * 45) * 0.06; c.rz = Math.sin(c.stT * 40) * 0.1; if (c.stT > 0.6) { c.st = 2; c.stT = 0; } }
         else { c.stT += dt; c.rz = 0; X.step(c, c.dx, c.dz, def.charge || 18, dt); c.rot = Math.atan2(c.dx, c.dz); c.yo = 0.1; X.parts.emit({ x: c.x - c.dx * c.r, y: 0.4, z: c.z - c.dz * c.r, vx: (rnd() - 0.5), vy: 1.6, vz: (rnd() - 0.5), life: 0.5, size: 0.5, size1: 1.2, color: def.dust || 0xffffff, shape: 4, g: -0.5, alpha: 0.6 });
-          const hv = vec(c, X); if (hv.d < X.G.R * 0.9 + c.r * 0.8) { X.hit(c, hv.ux, hv.uz, { knock: def.knock || 14, slow: 0.6, loss: 0.05, msg: def.msg }); c.st = 0; c.cd = 3 + rnd() * 1.5; c.stT = 0; }
-          else if (c.stT > 0.95) { c.st = 0; c.cd = 2.6 + rnd() * 1.5; } }
+          const hv = vec(c, X); if (hv.d < X.G.R * 0.9 + c.r * 0.8) { X.hit(c, hv.ux, hv.uz, { knock: def.knock || 14, slow: 0.6, loss: 0.05, msg: def.msg }); c.st = 0; c.cd = 4.4 + rnd() * 2; c.stT = 0; }
+          else if (c.stT > 0.95) { c.st = 0; c.cd = 3.8 + rnd() * 2; } }
       } else { const m = wanderDir(c, dt, X, 1.6, 0.4); if (m > 0.3) faceTo(c, Math.atan2(c.wdx, c.wdz), dt, 5); c.yo = Math.abs(Math.sin(c.ph * 0.6)) * 0.08; c.rz = 0; if (v.d < 50) speak(c, X, def.lines, 0.3, 8); }
     } };
 }

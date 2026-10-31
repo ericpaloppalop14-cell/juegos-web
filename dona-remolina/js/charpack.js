@@ -1,7 +1,7 @@
 // v7: personajes esculpidos (SDF + surface-nets) horneados a .bin y montados como grupos animables
 import * as THREE from 'three';
-import { GB, addOutline } from './geo.js?v=7';
-import { MeshoptDecoder } from './meshopt.js?v=7';
+import { GB, addOutline } from './geo.js?v=8';
+import { MeshoptDecoder } from './meshopt.js?v=8';
 
 const LUT = new Float32Array(256); for (let i = 0; i < 256; i++) { const c = i / 255; LUT[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
 

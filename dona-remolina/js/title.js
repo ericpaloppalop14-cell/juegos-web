@@ -1,17 +1,17 @@
 // v5: pantalla de inicio viva — un tornado gigante chupando muebles, personajes bailando y persiguiéndose,
 // el Alcalde Paraguas volando con su sombrero, globos de texto, confeti y todo tocable.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=7';
-import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=7';
-import { Particles, makeTornado } from './fx.js?v=7';
-import { PLAYERS } from './players.js?v=7';
+import * as AU from './audio.js?v=8';
+import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=8';
+import { Particles, makeTornado } from './fx.js?v=8';
+import { PLAYERS } from './players.js?v=8';
 
 const rnd = Math.random, PI = Math.PI;
 const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const pick = (a) => a[(rnd() * a.length) | 0];
 const CONF = [0xff6b5e, 0xffd23f, 0x3fe0b0, 0x4aa8ff, 0xff74c4, 0xffffff, 0xb8a0ff];
-const TC = { x: 0, z: -16 };           // centro del tornado
+const TC = { x: 0, z: -12 };           // centro del tornado
 const TR = 5.4;                        // radio del tornado gigante
 
 const GENERIC = ['¡Mi calcetín!', '¡Quack!', '¡Cuidado con el sofá!', '¡Esto vuela!', '¡Bailemos!', '¡Soy un pato!', '¡Hay un armario volando!', '¡Te pillo!', '¡Corre, corre!', '¡Qué desorden!', '¡Aspira, aspira!', '¡Yo limpié primero!', '¡Wiiiii!', '¡Ay, mi moño!', '¡Un sofá me persigue!'];
@@ -86,7 +86,9 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
   };
   // personajes
   const actors = []; let starId = 'dona';
-  const SLOTS = [{ role: 'star', home: [0, 8.2], sc: 2.6 }, { role: 'dance', home: [-1, 3.2], sc: 2.0 }, { role: 'dance', home: [1, 3.6], sc: 2.0 }, { role: 'run', sc: 1.85 }, { role: 'run', sc: 1.85 }, { role: 'run', sc: 1.85 }, { role: 'run', sc: 1.85 }];
+  // v8: personajes repartidos por la escena en tres filas (fondo: estrella; medio: bailarinas a los lados; frente: dos parejas que se persiguen, cada una en su mitad)
+  const ZL = { x0: -0.9, x1: 0.9, z0: 2.4, z1: 4.4 }, ZR = { x0: -0.9, x1: 0.9, z0: 8.2, z1: 10.2 };
+  const SLOTS = [{ role: 'star', home: [0, -1.4], sc: 2.7 }, { role: 'dance', home: [-1, -2.4], sc: 2.05 }, { role: 'dance', home: [1, -2.4], sc: 2.05 }, { role: 'run', zone: ZL, sc: 1.85 }, { role: 'run', zone: ZL, sc: 1.85 }, { role: 'run', zone: ZR, sc: 1.85 }, { role: 'run', zone: ZR, sc: 1.85 }];
   const pairs = [[3, 4], [5, 6]];
   const assign = (a, id) => {
     if (a.model) scene.remove(a.model); a.id = id; a.model = cloneModel(getModel(id)); a.model.userData.lids && 0; scene.add(a.model); a.def = PLAYERS.find((p) => p.id === id);
@@ -96,7 +98,7 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
     for (const a of actors) a.model && scene.remove(a.model); actors.length = 0;
     const others = PLAYERS.map((p) => p.id).filter((id) => id !== starId).sort(() => rnd() - 0.5);
     SLOTS.forEach((s, i) => {
-      const a = { cool: 0, slot: s, role: s.role, x: s.home ? s.home[0] : (i < 5 ? -1.5 : 1.5), z: s.home ? s.home[1] : 6 + (i - 3) * 1.2, vx: 0, vz: 0, ph: rnd() * 6.28, react: 0, stun: 0, sc: s.sc, face: 0, spin: 0, hop: 0, blinkT: 1 + rnd() * 3, blinkP: 0 };
+      const a = { cool: 0, slot: s, role: s.role, x: s.home ? s.home[0] : bounds(3.6) * (i % 2 ? 0.5 : -0.5), z: s.home ? s.home[1] : (s.zone.z0 + s.zone.z1) / 2 + (i % 2 ? 0.8 : -0.8), vx: 0, vz: 0, ph: rnd() * 6.28, react: 0, stun: 0, sc: s.sc, face: 0, spin: 0, hop: 0, blinkT: 1 + rnd() * 3, blinkP: 0 };
       assign(a, i === 0 ? starId : others[i - 1]); actors.push(a);
     });
     pairs.forEach(([c, f]) => { actors[c].chase = actors[f]; actors[f].chase = null; actors[c].chaser = true; actors[f].chaser = false; });
@@ -115,8 +117,8 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
   let ins = { l: 0, r: 0, t: 0, b: 0 }; const VF = { fov: 50, asp: 0.8 };
   function placeCamera() {
     const Wf = Math.max(160, W - ins.l - ins.r), Hf = Math.max(200, H - ins.t - ins.b), aspF = Wf / Hf; VF.asp = aspF;
-    if (aspF < 1.0) { VF.fov = 52; camera.position.set(0, 9, 27); camera.lookAt(0, 6.6, 0); }
-    else { VF.fov = 46; camera.position.set(0, 8, 26); camera.lookAt(0, 6.0, 0); }
+    if (aspF < 1.0) { VF.fov = 54; camera.position.set(0, 15.5, 24); camera.lookAt(0, 4.6, -1); }
+    else { VF.fov = 46; camera.position.set(0, 12.5, 25); camera.lookAt(0, 4.2, -1); }
     if (window.TCAM) { camera.position.set(...window.TCAM.p); camera.lookAt(...window.TCAM.t); }
     camera.fov = 2 * Math.atan(Math.tan(VF.fov * PI / 360) * H / Hf) * 180 / PI; camera.aspect = W / H;
     camera.setViewOffset(W, H, W / 2 - (ins.l + Wf / 2), H / 2 - (ins.t + Hf / 2), W, H); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
@@ -124,7 +126,7 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
   let PR = 1;
   function resize(w, h, pr) { W = w; H = h; PR = pr; placeCamera(); parts.mat.uniforms.uScale.value = (h * pr * 0.5) / Math.tan(camera.fov * PI / 360); }
   function setInsets(n) { if (n.l === ins.l && n.r === ins.r && n.t === ins.t && n.b === ins.b) return; ins = n; resize(W, H, PR); }
-  function bounds(z) { const d = camera.position.z - z, hw = Math.tan(VF.fov * PI / 360) * d * VF.asp; return Math.max(1.6, hw * 0.78); }
+  function bounds(z) { const d = camera.position.z - z, hw = Math.tan(VF.fov * PI / 360) * d * VF.asp; return Math.max(1.6, hw * 0.92); }
   // ---------- reacciones ----------
   function confetti(x, y, z, n = 26, speed = 5) { parts.burst(x, y, z, n, { color: CONF, speed, size: 0.32, life: 1.3, shape: 1, g: 6, up: 4, drag: 0.8 }); parts.burst(x, y, z, Math.ceil(n / 3), { color: [0xffffff, 0xfff0a0], speed: speed * 0.6, size: 0.45, life: 0.9, shape: 3, g: 0, up: 1, drag: 2.5 }); }
   const sfxFor = { duck: () => AU.quack(), sofa: () => AU.sofaScream(), armchair: () => AU.sofaScream(), chair: () => AU.sofaScream(), fridge: () => AU.stomp(), bed: () => AU.stomp(), tv: () => AU.toastShot(), toaster: () => AU.toastShot(), lamp: () => AU.coin(), cup: () => AU.puff(), plant: () => AU.puff() };
@@ -182,10 +184,11 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
       } else {
         const o = a.chase ? a.chase : actors.find((q) => q.chase === a); let dx = o.x - a.x, dz = o.z - a.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
         if (a.stun > 0) { a.stun -= dt; sp = 0; } else if (a.chase) { sp = 3.6; a.vx = dx * sp; a.vz = dz * sp; } else { // el que huye: zigzag y hacia el centro
-          sp = 3.45; const zz = Math.sin(t * 3.1 + a.ph * 3) * 0.7, fx = -dx + zz * -dz - a.x * 0.12, fz = -dz + zz * dx - (a.z - 6.5) * 0.18, fl = Math.hypot(fx, fz) || 1; a.vx = fx / fl * sp; a.vz = fz / fl * sp;
+          sp = 3.45; const zz = Math.sin(t * 3.1 + a.ph * 3) * 0.7, zc = a.slot.zone, zx = Math.sin(T * 0.32 + (a.slot.zone === ZL ? 0 : PI)) * 0.85 * bounds(a.z), zzc = (zc.z0 + zc.z1) / 2, fx = -dx + zz * -dz - (a.x - zx) * 0.22, fz = -dz + zz * dx - (a.z - zzc) * 0.4, fl = Math.hypot(fx, fz) || 1; a.vx = fx / fl * sp; a.vz = fz / fl * sp;
         }
         if (a.stun > 0) { a.vx = a.vz = 0; }
-        if (d < 0.9 && !(a.chase && a.stun <= 0 && a.cool <= 0)) { a.x -= dx * (0.9 - d) * 0.5; a.z -= dz * (0.9 - d) * 0.5; } a.x += a.vx * dt; a.z += a.vz * dt; const bx = bounds(a.z); a.x = clamp(a.x, -bx, bx); a.z = clamp(a.z, 2.2, 10.5);
+        if (d < 0.9 && !(a.chase && a.stun <= 0 && a.cool <= 0)) { a.x -= dx * (0.9 - d) * 0.5; a.z -= dz * (0.9 - d) * 0.5; } a.x += a.vx * dt; a.z += a.vz * dt; const bx = bounds(a.z), zn = a.slot.zone; a.x = clamp(a.x, bx * zn.x0, bx * zn.x1); a.z = clamp(a.z, zn.z0, zn.z1);
+        for (const q of actors) { if (q === a || q === o) continue; const ex = q.x - a.x, ez = q.z - a.z, ed = Math.hypot(ex, ez) || 1, RS = q.role === 'run' ? 2.5 : 3.8; if (ed < RS) { a.x -= ex / ed * (RS - ed) * Math.min(1, dt * 3); a.z -= ez / ed * (RS - ed) * Math.min(1, dt * 3); } }
         if (a.chase && a.stun <= 0 && a.cool <= 0 && d < 1.25) { // ¡pillado!
           const q = a.chase; a.chase = null; q.chase = a; a.stun = 0; q.stun = 0.9; a.cool = q.cool = 2.6; a.react = 0.7; q.react = 0.5; confetti((a.x + q.x) / 2, 1.4, (a.z + q.z) / 2, 24, 5); AU.pop(3, 1);
           say(() => V.set(q.x, 0, q.z), pick(['¡Pillada!', '¡Te pillé!', '¡Ahora tú!', '¡Tú la llevas!']), 1300, 1.8 * q.sc + 0.2); a.chaser = false; q.chaser = true;
@@ -234,7 +237,14 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
       if (b.t <= 0) continue; b.t -= dt; if (b.t <= 0) { b.e.classList.remove('on'); b.get = null; continue; }
       if (!b.e.textContent) { b.t = 0; b.e.classList.remove('on'); continue; }
       const p = b.get ? b.get() : null; if (!p) continue; V.copy(p); V.y += b.off; V.project(camera); if (V.z > 1) continue;
-      b.e.style.left = clamp((V.x * 0.5 + 0.5) * W, 70, W - 70) + 'px'; b.e.style.top = clamp((-V.y * 0.5 + 0.5) * H, ins.t + 30, H - ins.b - 10) + 'px';
+      const hwb = (b.e.offsetWidth || 140) / 2 + 8; b.x = clamp((V.x * 0.5 + 0.5) * W, hwb, W - hwb); b.y = clamp((-V.y * 0.5 + 0.5) * H, ins.t + 30, H - ins.b - 10);
+      b.e.style.left = b.x + 'px'; b.e.style.top = b.y + 'px';
+    }
+    // v8: los globos no se pisan — se apilan hacia arriba; si no caben, el más nuevo se esconde
+    const on = bubs.filter((q) => q.t > 0 && q.x != null && q.e.textContent).sort((p, q) => q.y - p.y);
+    for (let i = 0; i < on.length; i++) for (let j = 0; j < i; j++) {
+      const A = on[j], B = on[i], wA = (A.e.offsetWidth || 120) / 2 + (B.e.offsetWidth || 120) / 2 + 6, hh = Math.max(A.e.offsetHeight || 34, B.e.offsetHeight || 34) + 6;
+      if (Math.abs(A.x - B.x) < wA && Math.abs(A.y - B.y) < hh) { B.y = A.y - hh; B.e.style.top = B.y + 'px'; if (B.y < ins.t + 10 || B.y > H) { B.t = 0; B.e.classList.remove('on'); B.get = null; } }
     }
   }
   const sparkle = () => {
