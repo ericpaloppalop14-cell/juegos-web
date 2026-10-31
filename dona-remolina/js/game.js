@@ -1,21 +1,21 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=8';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=8';
-import './models2.js?v=8';
-import './models3.js?v=8';
-import { PLACES } from './places.js?v=8';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=8';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=8';
-import { NPC } from './npcs.js?v=8';
-import { makeTitle } from './title.js?v=8';
-import { makeStage } from './stage.js?v=8';
-import { GB, setOutlines } from './geo.js?v=8';
-import { loadPacks } from './charpack.js?v=8';
+import * as AU from './audio.js?v=9';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=9';
+import './models2.js?v=9';
+import './models3.js?v=9';
+import { PLACES } from './places.js?v=9';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=9';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=9';
+import { NPC } from './npcs.js?v=9';
+import { makeTitle } from './title.js?v=9';
+import { makeStage } from './stage.js?v=9';
+import { GB, setOutlines } from './geo.js?v=9';
+import { loadPacks } from './charpack.js?v=9';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=8';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=8';
+import { Particles, Rings, makeTornado } from './fx.js?v=9';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=9';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -61,6 +61,7 @@ const startR = () => 0.9 * (1 + (ut().size || 0)) * (1 + (ch.perkK.grow || 0));
 const gate = () => GATE + pk('gate');
 const speedMul = () => 1 + pk('speed');
 const lootMul = () => (1 + (ut().loot || 0)) * (1 + pk('coins'));
+const SPEED_K = 1.15; // v9: la ciudad es mucho más grande que en la v1, así que Doña corre un poco más
 const HOSTILE_K = 0.55; // v8: los bichos que persiguen o golpean van a ~55% de su velocidad
 const hitMul = () => (ch.perkK.hit != null ? ch.perkK.hit : 1) * Math.max(0.25, 1 - (ut().hit || 0));
 const comboWin = () => COMBO_WIN + pk('combo');
@@ -339,7 +340,7 @@ function step(dt) {
     let iv = { x: 0, z: 0, m: 0 }; if (play || demo || G.bot) iv = inputVec();
     if (G.mode === 'count') iv = { x: 0, z: 0, m: 0 };
     const live = play || demo; if (!(frameNo % 5)) cull(); if (play && !(frameNo % 8)) { const dn = districtAt(G.px, G.pz); if (dn !== G.dist) { G.dist = dn; banner(dn); } drawMini(); }
-    const spd = (6.4 + 0.9 * G.R) * speedMul() * (G.slow > 0 ? 0.55 : 1) * (demo && G.mode !== 'play' ? 0.9 : 1);
+    const spd = (6.4 + 0.9 * G.R) * SPEED_K * speedMul() * (G.slow > 0 ? 0.55 : 1) * (demo && G.mode !== 'play' ? 0.9 : 1);
     const tvx = iv.x * iv.m * spd, tvz = iv.z * iv.m * spd, a = Math.min(1, dt * (iv.m > 0 ? 9 : 6));
     G.vx += (tvx - G.vx) * a; G.vz += (tvz - G.vz) * a;
     G.kx *= Math.exp(-dt * 4); G.kz *= Math.exp(-dt * 4);
@@ -595,7 +596,7 @@ function charScreenBox() { // para pruebas: caja en pantalla del personaje y hue
 }
 // ---------- efectos / cámara ----------
 const camT = new THREE.Vector3(SPAWN.x, 0, SPAWN.z); let camDist = 20;
-const CAM_UP = 1.2, CAM_BACK = 0.8; // v8: cámara más elevada (ángulo más cenital)
+const CAM_UP = 1, CAM_BACK = 1; // v9: cámara como en la v1 (la v8 la subía y se veía menos mapa)
 function updateFx(dt) {
   const R = G.Rv, t = G.t;
   // torbellino y Doña
@@ -682,10 +683,10 @@ function placeBubble(b, x, y, z) { if (!b.classList.contains('on')) return; cons
 function cull() {
   const vr = clamp(scene.fog.far * 0.9, 120, 250), olR = scene.fog.near + 30, olR2 = olR * olR, E = sun.shadow.camera.right + 10, cx = camT.x, cz = camT.z;
   for (const o of props) {
-    if (o.state !== 0) continue; const dx = o.x - cx, dz = o.z - cz, d2 = dx * dx + dz * dz, ext = o.hy > 8 ? vr + 70 : o.tier === 0 ? vr * 0.72 : o.tier === 1 ? vr * 0.88 : vr;
+    if (o.state !== 0) continue; const dx = o.x - cx, dz = o.z - cz, d2 = dx * dx + dz * dz, ext = o.hy > 8 ? vr + 70 : o.tier === 0 ? vr * (qLevel >= 1 ? 0.45 : 0.72) : o.tier === 1 ? vr * 0.88 : vr;
     const vis = d2 < ext * ext; if (o.vis !== vis) { o.vis = vis; o.mesh.visible = vis; }
-    if (vis) { if (!o.ol) { o.ol = []; o.mesh.traverse((c) => { if (c.isMesh && c.material && c.material.isShaderMaterial) o.ol.push(c); }); o.olv = true; } const ov = d2 < olR2 || o.hy > 8; if (ov !== o.olv) { o.olv = ov; if (!o.fm) for (const c of o.ol) c.visible = ov; } }
-    const cs = vis && d2 < (E * 1.25) * (E * 1.25) && !(o.tier === 0 && d2 > 2500); if (o.cs !== cs) { o.cs = cs; o.mesh.castShadow = cs; }
+    if (vis) { if (!o.ol) { o.ol = []; o.mesh.traverse((c) => { if (c.isMesh && c.material && c.material.isShaderMaterial) o.ol.push(c); }); o.olv = true; } const ov = o.tier === 0 ? false : (d2 < olR2 || o.hy > 8); if (ov !== o.olv) { o.olv = ov; if (!o.fm) for (const c of o.ol) c.visible = ov; } }
+    const cs = vis && d2 < (E * 1.25) * (E * 1.25) && !(o.tier === 0 && d2 > 400) && !(o.tier <= 1 && qLevel >= 1); if (o.cs !== cs) { o.cs = cs; o.mesh.castShadow = cs; }
   }
 }
 function banner(dn) {

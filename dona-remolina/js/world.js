@@ -1,8 +1,8 @@
 // Mueblópolis: suelo de parquet, alfombras-manzana, paredes de papel pintado y generación de objetos
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=8';
-import { KINDS, getGeo, PAL } from './models.js?v=8';
-import { PLACES } from './places.js?v=8';
+import { GB, lighten, darken } from './geo.js?v=9';
+import { KINDS, getGeo, PAL } from './models.js?v=9';
+import { PLACES } from './places.js?v=9';
 
 export const HALF = 130;          // el torbellino se mueve en [-128, 128]
 export const SPAWN = { x: 0, z: 98 };
@@ -280,7 +280,9 @@ export function generate(seed, place) {
     }
   }
   // [tier, cantidad, d_centro, d_ancho]
-  const plan = P.plan;
+  // v9: la ciudad es ~3x más grande que en la v1, así que se multiplica la cantidad de cosas (sobre todo las pequeñas) para mantener la misma densidad
+  const DENS = [2.6, 2.0, 1.5, 1.25, 1, 1];
+  const plan = P.plan.map(([t, n, dc, dw]) => [t, Math.round(n * DENS[t]), t === 0 ? 18 : dc, t === 0 ? 70 : dw]);
   for (const [tier, count, dc, dw] of plan) {
     let tries = count * 50, made = 0;
     while (made < count && tries-- > 0) {
@@ -308,8 +310,8 @@ export function generate(seed, place) {
   }
   // anillo de cositas junto al punto de salida
   const starters = ['sock', 'button', 'cookie', 'cup', 'duck', 'yarn', 'book', 'slipper', 'dice', 'pillow'];
-  for (let i = 0; i < 30; i++) {
-    const a = rnd() * Math.PI * 2, d = R(2.2, 12);
+  for (let i = 0; i < 110; i++) {
+    const a = rnd() * Math.PI * 2, d = R(2.2, i < 50 ? 12 : 22);
     const x = SPAWN.x + Math.cos(a) * d, z = SPAWN.z + Math.sin(a) * d * 0.9; if (z > HALF - 3) continue;
     const kind = starters[(rnd() * starters.length) | 0], v = (rnd() * KINDS[kind].nv) | 0, sc = R(0.9, 1.15);
     getGeo(kind, v); if (!free(x, z, 0.5)) continue;
