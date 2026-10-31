@@ -1,7 +1,8 @@
 // Mueblópolis: suelo de parquet, alfombras-manzana, paredes de papel pintado y generación de objetos
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=3';
-import { KINDS, getGeo, PAL } from './models.js?v=3';
+import { GB, lighten, darken } from './geo.js?v=4';
+import { KINDS, getGeo, PAL } from './models.js?v=4';
+import { PLACES } from './places.js?v=4';
 
 export const HALF = 130;          // el torbellino se mueve en [-128, 128]
 export const SPAWN = { x: 0, z: 98 };
@@ -19,6 +20,8 @@ export const DISTRICTS = {
   salon: { name: 'Salón Acogedor', cx: 0, cz: 86, c: 0xff8fb8 },
   jardin: { name: 'Jardín de la Terraza', cx: 86, cz: 86, c: 0x57c84d },
 };
+const BASE_D = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(DISTRICTS).map(([k, v]) => [k, { name: v.name, c: v.c }]))));
+export function setDistrictStyle(place) { for (const k in DISTRICTS) { const src = place && place.districts ? place.districts[k] : BASE_D[k]; DISTRICTS[k].name = src.name; DISTRICTS[k].c = src.c; } }
 export function districtAt(x, z) {
   const ix = x < -43 ? 0 : x < 43 ? 1 : 2, iz = z < -43 ? 0 : z < 43 ? 1 : 2;
   return [['biblioteca', 'armaropolis', 'dormitorio'], ['cocina', 'plaza', 'bano'], ['lavanderia', 'salon', 'jardin']][iz][ix];
@@ -91,17 +94,48 @@ function wallTex() {
     for (let y = 0; y < 4; y++) for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#ff74c4' : '#1fc4d6'; g.beginPath(); g.arc(i * 64 + 32, y * 64 + 32 + (i % 2) * 32, 7, 0, 7); g.fill(); }
   }, [14, 3]);
 }
-export function skyTex() {
+export function skyTex(place) {
+  const sk = (place && place.sky) || ['#6bc2ff', '#b4e6ff', '#ffeedd', '#ffd6ea'], night = place && place.night;
   return canvasTex(512, 256, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#6bc2ff'); gr.addColorStop(0.45, '#b4e6ff'); gr.addColorStop(0.78, '#ffeedd'); gr.addColorStop(1, '#ffd6ea'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, sk[0]); gr.addColorStop(0.45, sk[1]); gr.addColorStop(0.78, sk[2]); gr.addColorStop(1, sk[3]); g.fillStyle = gr; g.fillRect(0, 0, w, h);
     const sun = g.createRadialGradient(w * 0.72, h * 0.34, 4, w * 0.72, h * 0.34, h * 0.5); sun.addColorStop(0, 'rgba(255,250,220,.95)'); sun.addColorStop(0.18, 'rgba(255,244,200,.45)'); sun.addColorStop(1, 'rgba(255,244,200,0)'); g.fillStyle = sun; g.fillRect(0, 0, w, h);
-    g.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 9; i++) { const x = (i * 131) % w, y = h * (0.42 + ((i * 37) % 30) / 100); g.beginPath(); g.ellipse(x, y, 60 + (i % 3) * 26, 9 + (i % 2) * 5, 0, 0, 7); g.fill(); }
+    if (night) { g.fillStyle = 'rgba(255,255,230,.9)'; for (let i = 0; i < 60; i++) { const x = (i * 211) % w, y = ((i * 97) % 140); g.beginPath(); g.arc(x, y, 0.8 + (i % 3) * 0.5, 0, 7); g.fill(); } }
+    g.fillStyle = night ? 'rgba(140,100,200,.3)' : 'rgba(255,255,255,.35)'; for (let i = 0; i < 9; i++) { const x = (i * 131) % w, y = h * (0.42 + ((i * 37) % 30) / 100); g.beginPath(); g.ellipse(x, y, 60 + (i % 3) * 26, 9 + (i % 2) * 5, 0, 0, 7); g.fill(); }
   }, null, 1);
 }
 
+// ---------- v4: suelos por patrón (lugares nuevos) ----------
+function patTex(sp) {
+  const A = sp.a, B = sp.b, Cc = sp.c || sp.b;
+  return canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = A; g.fillRect(0, 0, w, h);
+    switch (sp.t) {
+      case 'checker': for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { g.fillStyle = (x + y) % 2 ? B : A; g.fillRect(x * 64, y * 64, 64, 64); g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(x * 64 + 3, y * 64 + 3, 58, 6); } break;
+      case 'tiles': for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { g.fillStyle = [A, B, Cc, B][(x * 3 + y * 5) % 4]; g.fillRect(x * 64 + 2, y * 64 + 2, 60, 60); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x * 64 + 4, y * 64 + 4, 56, 5); } break;
+      case 'dots': for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) { g.fillStyle = (x + y) % 2 ? B : 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(x * 56 + 28 + (y % 2) * 28, y * 56 + 28, 15, 0, 7); g.fill(); } break;
+      case 'stripes': for (let i = -4; i < 10; i++) { g.fillStyle = i % 2 ? B : A; g.save(); g.translate(i * 48, 0); g.rotate(0.6); g.fillRect(0, -200, 24, 700); g.restore(); } break;
+      case 'bricks': for (let r = 0; r < 8; r++) for (let c = 0; c < 5; c++) { g.fillStyle = [A, 'rgba(255,255,255,.12)', A][(r + c) % 3]; g.fillRect(c * 64 + (r % 2) * 32 - 32, r * 32 + 1, 62, 30); g.fillStyle = B; g.globalAlpha = 0.25; g.fillRect(c * 64 + (r % 2) * 32 - 32, r * 32 + 28, 62, 3); g.globalAlpha = 1; } break;
+      case 'waves': g.lineWidth = 7; g.strokeStyle = B; for (let y = 0; y < 8; y++) { g.beginPath(); for (let x = 0; x <= 256; x += 8) g.lineTo(x, y * 32 + 16 + Math.sin((x / 256) * Math.PI * 4 + y) * 8); g.stroke(); } break;
+      case 'clouds': for (let i = 0; i < 14; i++) { g.fillStyle = B; g.globalAlpha = 0.7; const x = (i * 83) % 256, y = (i * 61) % 256; for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(x + k * 14 - 20, y + (k % 2) * 6, 14 + (k % 2) * 6, 0, 7); g.fill(); g.beginPath(); g.arc(x + k * 14 - 20 - 256, y + (k % 2) * 6, 14 + (k % 2) * 6, 0, 7); g.fill(); } g.globalAlpha = 1; } if (sp.stars) { g.fillStyle = '#ffe27a'; for (let i = 0; i < 12; i++) { g.beginPath(); g.arc((i * 71) % 256, (i * 113) % 256, 4, 0, 7); g.fill(); } } break;
+      case 'grass': for (let i = 0; i < 90; i++) { g.fillStyle = [A, B, Cc][i % 3]; const x = (i * 97) % 256, y = (i * 53) % 256; g.fillRect(x, y, 3, 10); g.fillRect(x - 256, y, 3, 10); } g.fillStyle = B; for (let i = 0; i < 40; i++) g.fillRect((i * 131) % 256, (i * 71) % 256, 4, 9); break;
+      case 'stars': for (let i = 0; i < 22; i++) { g.fillStyle = B; g.globalAlpha = 0.8; const x = (i * 61) % 256, y = (i * 97) % 256; g.beginPath(); for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5, rr = k % 2 ? 5 : 11; g.lineTo(x + Math.sin(a) * rr, y - Math.cos(a) * rr); } g.fill(); g.globalAlpha = 1; } break;
+    }
+  }, [86 / 14, 86 / 14]);
+}
+const _hx = (n) => '#' + n.toString(16).padStart(6, '0');
+function wallTexP(wl) {
+  return canvasTex(256, 256, (g, w, h) => {
+    if (wl.sky) { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#8ab8ff'); gr.addColorStop(1, wl.bg); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 6; i++) { const x = i * 46, y = 40 + (i * 53) % 170; for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + k * 16, y + (k % 2) * 6, 14, 0, 7); g.fill(); } } g.fillStyle = wl.d1; for (let i = 0; i < 8; i++) { g.beginPath(); g.arc((i * 37) % 256, (i * 91) % 256, 3, 0, 7); g.fill(); } return; }
+    g.fillStyle = wl.bg; g.fillRect(0, 0, w, h);
+    if (wl.stone) { for (let r = 0; r < 8; r++) for (let c = 0; c < 4; c++) { g.fillStyle = (r + c) % 2 ? wl.s1 : wl.s2; g.fillRect(c * 64 + (r % 2) * 32 - 32, r * 32 + 1, 62, 30); } g.fillStyle = wl.d1; g.fillRect(0, 124, w, 8); return; }
+    for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? wl.s1 : wl.s2; g.fillRect(i * 64 + 8, 0, 48, h); }
+    for (let y = 0; y < 4; y++) for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? wl.d1 : wl.d2; g.beginPath(); if (wl.night) { g.arc(i * 64 + 32, y * 64 + 32 + (i % 2) * 32, 5 + (i % 2) * 3, 0, 7); } else g.arc(i * 64 + 32, y * 64 + 32 + (i % 2) * 32, 7, 0, 7); g.fill(); }
+  }, [14, 3]);
+}
 
 // ---------- suelos de cada distrito ----------
-function floorTex(id) {
+function floorTex(id, spec) {
+  if (spec) return patTex(spec);
   const rep = [86 / 14, 86 / 14];
   switch (id) {
     case 'cocina': return canvasTex(256, 256, (g, w, h) => { for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) { g.fillStyle = (x + y) % 2 ? '#fff6e6' : '#ff8d7a'; g.fillRect(x * 64, y * 64, 64, 64); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x * 64 + 4, y * 64 + 4, 56, 6); g.strokeStyle = 'rgba(120,40,30,.2)'; g.strokeRect(x * 64 + .5, y * 64 + .5, 63, 63); } }, [86 / 16, 86 / 16]);
@@ -130,24 +164,30 @@ function cloudGeo(seed) {
   return g.build(false, 0.1);
 }
 
-export function buildScenery(scene) {
-  const grp = new THREE.Group(); scene.add(grp);
+export function disposeScenery(scene, grp) {
+  if (!grp) return; scene.remove(grp);
+  const d = (o) => o.traverse((c) => { if (c.isMesh) { c.geometry && c.geometry.dispose(); const ms = Array.isArray(c.material) ? c.material : [c.material]; for (const m of ms) { if (m && m.map) m.map.dispose(); m && m.dispose && m.dispose(); } } });
+  d(grp); for (const e of grp.userData.extras || []) { if (e.isMesh) { scene.remove(e); e.geometry.dispose(); } }
+}
+export function buildScenery(scene, place) {
+  const P = place && !place.home ? place : null; const extras = [];
+  const grp = new THREE.Group(); scene.add(grp); grp.userData.extras = extras;
   const floors = [];
   // suelos por distrito
   for (const id in DISTRICTS) {
     const D = DISTRICTS[id];
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(86.3, 86.3), new THREE.MeshStandardMaterial({ map: floorTex(id), roughness: id === 'armaropolis' ? 0.35 : 0.6, metalness: id === 'armaropolis' ? 0.12 : 0 }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(86.3, 86.3), new THREE.MeshStandardMaterial({ map: floorTex(id, P && P.districts[id].floor), roughness: !P && id === 'armaropolis' ? 0.35 : 0.6, metalness: !P && id === 'armaropolis' ? 0.12 : 0 }));
     m.rotation.x = -Math.PI / 2; m.position.set(D.cx, 0, D.cz); m.receiveShadow = true; grp.add(m);
   }
   // franjas de frontera entre distritos
   const bd = new GB();
-  for (const t of [-43, 43]) { bd.box(260, 0.04, 1.4, 0xffffff, 0, 0.02, t); bd.box(1.4, 0.04, 260, 0xffffff, t, 0.02, 0); for (let k = -6; k <= 6; k++) { bd.box(6, 0.05, 0.7, 0xffc933, k * 20, 0.03, t); bd.box(0.7, 0.05, 6, 0xffc933, t, 0.03, k * 20); } }
+  for (const t of [-43, 43]) { bd.box(260, 0.04, 1.4, 0xffffff, 0, 0.02, t); bd.box(1.4, 0.04, 260, 0xffffff, t, 0.02, 0); for (let k = -6; k <= 6; k++) { bd.box(6, 0.05, 0.7, P ? P.trim[2] : 0xffc933, k * 20, 0.03, t); bd.box(0.7, 0.05, 6, P ? P.trim[2] : 0xffc933, t, 0.03, k * 20); } }
   grp.add(new THREE.Mesh(bd.build(false, 0.1), new THREE.MeshBasicMaterial({ vertexColors: true })));
   // alfombras (manzanas)
-  const rugTexs = RUGS.map(rugTex);
+  const RG = P ? P.rugs.map(([bg, fg, ac, pat]) => ({ bg, fg, ac, pat })) : RUGS; const rugTexs = RG.map(rugTex);
   let n = 0;
   for (const bz of BLOCKS) for (const bx of BLOCKS) {
-    const ri = (n * 5 + (n >> 2) * 3) % RUGS.length, R = RUGS[ri];
+    const ri = (n * 5 + (n >> 2) * 3) % RG.length, R = RG[ri];
     const top = new THREE.MeshStandardMaterial({ map: rugTexs[ri], roughness: 0.95 }); const sm = new THREE.MeshStandardMaterial({ color: R.fg, roughness: 0.95 });
     const rug = new THREE.Mesh(new THREE.BoxGeometry(34, 0.22, 34), [sm, sm, top, sm, sm, sm]);
     rug.position.set(bx, 0.11, bz); rug.receiveShadow = true; grp.add(rug); n++;
@@ -167,40 +207,42 @@ export function buildScenery(scene) {
   for (let i = -3; i <= 3; i++) { const cx = i * 36 + 6; lg.add(new THREE.PlaneGeometry(10, 22).rotateX(-Math.PI / 2), lc, cx + 4, 0.06, -118, 0, 0, 0.1); }
   const lm = new THREE.Mesh(lg.build(false, 0.1), new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending })); grp.add(lm);
   // paredes
-  const wt = wallTex(); wt.repeat.set(28, 3); const wm = new THREE.MeshStandardMaterial({ map: wt, roughness: 1 });
+  const wt = P ? wallTexP(P.wall) : wallTex(); wt.repeat.set(28, 3); const wm = new THREE.MeshStandardMaterial({ map: wt, roughness: 1 });
   const W = HALF + 5, WH = 70;
   for (const [x, z, ry] of [[0, -W, 0], [0, W, Math.PI], [-W, 0, Math.PI / 2], [W, 0, -Math.PI / 2]]) {
     const w = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, WH), wm); w.position.set(x, WH / 2, z); w.rotation.y = ry; w.receiveShadow = true; grp.add(w);
   }
   for (const [x, z, ry] of [[0, -W, 0], [0, W, Math.PI], [-W, 0, Math.PI / 2], [W, 0, -Math.PI / 2]]) {
     const sub = new GB();
-    sub.box(W * 2, 3.2, 1.2, 0xffffff, 0, 0, 0.6); sub.box(W * 2, 0.5, 1.6, 0xffd9ec, 0, 3.2, 0.7);
+    const TR = P ? P.trim : [PAL.coral, PAL.turq, PAL.violet, PAL.sun, PAL.pink], WIN = P ? (P.wall.night ? 0xffc93a : 0xbfe8ff) : 0x9fdcff, FRM = P && P.wall.night ? 0x2a1840 : 0xffffff;
+    sub.box(W * 2, 3.2, 1.2, FRM, 0, 0, 0.6); sub.box(W * 2, 0.5, 1.6, P ? TR[1] : 0xffd9ec, 0, 3.2, 0.7);
     for (let i = -4; i <= 4; i++) {
       const cx = i * 30 + 6;
-      sub.box(14, 16, 0.5, 0xffffff, cx, 22, 0.1); sub.box(11.6, 13.6, 0.6, 0x9fdcff, cx, 23.2, 0.2); sub.box(0.6, 13.6, 0.7, 0xffffff, cx, 23.2, 0.25); sub.box(11.6, 0.6, 0.7, 0xffffff, cx, 29.5, 0.25);
-      sub.box(3, 17, 0.9, [PAL.coral, PAL.turq, PAL.violet, PAL.sun, PAL.pink][(i + 4) % 5], cx - 8, 21, 0.4); sub.box(3, 17, 0.9, [PAL.coral, PAL.turq, PAL.violet, PAL.sun, PAL.pink][(i + 4) % 5], cx + 8, 21, 0.4);
+      sub.box(14, 16, 0.5, FRM, cx, 22, 0.1); sub.box(11.6, 13.6, 0.6, WIN, cx, 23.2, 0.2); sub.box(0.6, 13.6, 0.7, FRM, cx, 23.2, 0.25); sub.box(11.6, 0.6, 0.7, FRM, cx, 29.5, 0.25);
+      sub.box(3, 17, 0.9, TR[(i + 4) % 5], cx - 8, 21, 0.4); sub.box(3, 17, 0.9, TR[(i + 4) % 5], cx + 8, 21, 0.4);
       sub.box(16, 0.7, 1.2, PAL.gold, cx, 38.5, 0.5);
     }
-    for (let i = -5; i <= 5; i++) { const cx = i * 24 + 12 + (i % 2) * 3; sub.box(7, 9, 0.5, i % 2 ? PAL.sun : PAL.violet, cx, 48 + (i % 2) * 4, 0.1); sub.box(5.6, 7.6, 0.6, i % 2 ? PAL.sky : PAL.mint, cx, 48.7 + (i % 2) * 4, 0.2); sub.cyl(1.6, 1.6, 0.6, PAL.pink, cx, 49.5 + (i % 2) * 4, 0.3, 12, Math.PI / 2, 0, 0); }
+    for (let i = -5; i <= 5; i++) { const cx = i * 24 + 12 + (i % 2) * 3; sub.box(7, 9, 0.5, P ? TR[i & 1 ? 0 : 3] : (i % 2 ? PAL.sun : PAL.violet), cx, 48 + (i % 2) * 4, 0.1); sub.box(5.6, 7.6, 0.6, P ? WIN : (i % 2 ? PAL.sky : PAL.mint), cx, 48.7 + (i % 2) * 4, 0.2); sub.cyl(1.6, 1.6, 0.6, P ? TR[2] : PAL.pink, cx, 49.5 + (i % 2) * 4, 0.3, 12, Math.PI / 2, 0, 0); }
     const geo = sub.build(false, 0.1); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }));
     m.position.set(x, 0, z); m.rotation.y = ry; grp.add(m);
   }
   // nubes y sol allá fuera
   const clouds = [];
-  const cmat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false, transparent: true, opacity: 0.92 });
+  const cmat = new THREE.MeshBasicMaterial({ color: P ? P.cloud : 0xffffff, fog: false, transparent: true, opacity: 0.92 }); extras.push(cmat);
   for (let i = 0; i < 18; i++) {
     const m = new THREE.Mesh(cloudGeo(i + 7), cmat); const a = i / 18 * Math.PI * 2 + 0.3, rr = 260 + (i % 3) * 50;
-    m.position.set(Math.cos(a) * rr, 120 + (i % 4) * 22, Math.sin(a) * rr); m.scale.setScalar(2 + (i % 3) * 0.6); m.rotation.y = -a; m.renderOrder = -1; scene.add(m); clouds.push({ m, a, rr, sp: 0.004 + (i % 5) * 0.0015 });
+    m.position.set(Math.cos(a) * rr, 120 + (i % 4) * 22, Math.sin(a) * rr); m.scale.setScalar(2 + (i % 3) * 0.6); m.rotation.y = -a; m.renderOrder = -1; scene.add(m); extras.push(m); clouds.push({ m, a, rr, sp: 0.004 + (i % 5) * 0.0015 });
   }
-  const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(40, 32), new THREE.MeshBasicMaterial({ color: 0xfff2a8, fog: false, transparent: true, opacity: 0.95 })); sunDisc.position.set(-220, 210, -300); sunDisc.lookAt(0, 20, 0); scene.add(sunDisc);
-  const halo = new THREE.Mesh(new THREE.CircleGeometry(95, 32), new THREE.MeshBasicMaterial({ color: 0xfff7cf, fog: false, transparent: true, opacity: 0.28, depthWrite: false })); halo.position.copy(sunDisc.position).multiplyScalar(1.001); halo.lookAt(0, 20, 0); scene.add(halo);
+  const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(40, 32), new THREE.MeshBasicMaterial({ color: P ? P.sunDisc : 0xfff2a8, fog: false, transparent: true, opacity: 0.95 })); sunDisc.position.set(-220, 210, -300); sunDisc.lookAt(0, 20, 0); scene.add(sunDisc); extras.push(sunDisc);
+  const halo = new THREE.Mesh(new THREE.CircleGeometry(95, 32), new THREE.MeshBasicMaterial({ color: P ? P.sunDisc : 0xfff7cf, fog: false, transparent: true, opacity: 0.28, depthWrite: false })); halo.position.copy(sunDisc.position).multiplyScalar(1.001); halo.lookAt(0, 20, 0); scene.add(halo); extras.push(halo);
   grp.userData.update = (t) => { for (const c of clouds) { const a = c.a + t * c.sp; c.m.position.x = Math.cos(a) * c.rr; c.m.position.z = Math.sin(a) * c.rr; c.m.rotation.y = -a; } };
   return grp;
 }
 const propMaterialLite = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 });
 
 // ---------- generación de objetos ----------
-export function generate(seed) {
+export function generate(seed, place) {
+  const P = place || PLACES[0], HOME = !!P.home, inP = (K) => !K.places || K.places.includes(P.id);
   const rnd = mulberry(seed >>> 0);
   const R = (a, b) => a + (b - a) * rnd();
   const placed = []; const cell = 6, grid = new Map();
@@ -216,17 +258,19 @@ export function generate(seed) {
   const kinds = Object.keys(KINDS);
   const pickKind = (tier, dist) => {
     const c = []; let tot = 0;
-    for (const k of kinds) { const K = KINDS[k]; if (K.tier !== tier || K.lm || K.cb) continue; const th = K.th || []; const w = th.includes(dist) ? 4 : th.length === 0 ? 1 : (tier >= 4 ? 0.05 : 0.14); c.push([k, w]); tot += w; }
+    for (const k of kinds) { const K = KINDS[k]; if (K.tier !== tier || K.lm || K.cb || !inP(K)) continue; const th = K.th || []; let w = th.includes(dist) ? 4 : th.length === 0 ? 1 : (tier >= 4 ? 0.05 : 0.14); if (K.places) w *= 2.6; c.push([k, w]); tot += w; }
     let r = rnd() * tot; for (const [k, w] of c) { r -= w; if (r <= 0) return k; } return c[c.length - 1][0];
   };
   // monumentos
   const landmarks = [];
-  for (const k of kinds) if (KINDS[k].lm) {
+  for (const k of P.lms) if (KINDS[k]) {
     const dn = KINDS[k].th[0], D = DISTRICTS[dn]; let x = D.cx, z = D.cz; if (dn === 'salon') { x = -26; z = 66; } if (dn === 'plaza') { x = 0; z = 0; }
     const geo = getGeo(k, 0); const o = { kind: k, v: 0, x, z, rot: 0, sc: 1, ov: geo.r * 0.95, lm: true }; add(o); out.push(o); landmarks.push(o);
   }
   // edificios locos gigantes: 2 de cada, repartidos por sus distritos
-  for (const k of kinds) if (KINDS[k].cb) for (let n = 0; n < 2; n++) {
+  const generic = kinds.filter((k) => KINDS[k].cb && !KINDS[k].places), pi = PLACES.indexOf(P);
+  const cbList = HOME ? generic : [...P.cbs, ...[0, 1, 2].map((i) => generic[(pi * 2 + i * 3) % generic.length])];
+  for (const k of cbList) for (let n = 0; n < 2; n++) {
     const dn = KINDS[k].th[n % KINDS[k].th.length], D = DISTRICTS[dn], geo = getGeo(k, 0);
     for (let t = 0; t < 80; t++) {
       const x = D.cx + R(-36, 36), z = D.cz + R(-36, 36), ov = geo.r * 0.95;
@@ -235,7 +279,7 @@ export function generate(seed) {
     }
   }
   // [tier, cantidad, d_centro, d_ancho]
-  const plan = [[5, 24, 190, 55], [4, 56, 140, 52], [3, 105, 100, 48], [2, 235, 64, 44], [1, 330, 40, 52], [0, 700, 22, 80]];
+  const plan = P.plan;
   for (const [tier, count, dc, dw] of plan) {
     let tries = count * 50, made = 0;
     while (made < count && tries-- > 0) {
@@ -281,16 +325,13 @@ export function generate(seed) {
     }
     return null;
   };
-  const NPC_PLAN = [
-    ['rebel', null, 14, 2.6, 18], ['tostadora', 'cocina', 6, 1.6], ['tostadora', null, 2, 1.6, 30], ['lavadora', 'lavanderia', 4, 3.4], ['alfombra', 'salon', 2, 1.2, 12], ['alfombra', 'dormitorio', 2, 1.2],
-    ['nevera', 'cocina', 1, 5.5, 30], ['nevera', 'plaza', 1, 5.5, 30], ['cuco', 'salon', 3, 2.2, 10], ['osito', 'dormitorio', 6, 2.0], ['gnomo', 'jardin', 7, 1.2], ['gnomo', 'plaza', 2, 1.2],
-    ['cortacesped', 'jardin', 3, 2.4], ['globo', 'biblioteca', 3, 3.0], ['globo', 'plaza', 1, 3.0], ['calcetin', 'lavanderia', 7, 0.8], ['calcetin', null, 5, 0.8, 12], ['vater', 'bano', 4, 2.4],
-  ];
+  const NPC_PLAN = P.npcs;
   for (const [type, dist, n, r, dmin] of NPC_PLAN) for (let i = 0; i < n; i++) { const p = spot(dist, r, dmin || 14); if (p) npcs.push({ type, x: p.x, z: p.z, v: i }); }
   // grupos de patitos
-  for (const dist of ['bano', 'bano', 'jardin', 'salon', 'cocina']) { const p = spot(dist, 3, 12); if (p) npcs.push({ type: 'patitos', x: p.x, z: p.z, v: 0 }); }
+  for (const dist of [...P.ducks, ...(HOME ? ['cocina'] : [])]) { const p = spot(dist, 3, 12); if (p) npcs.push({ type: 'patitos', x: p.x, z: p.z, v: 0 }); }
   const pickups = [];
-  for (let i = 0; i < 150; i++) { const x = R(-HALF + 5, HALF - 5), z = R(-HALF + 5, HALF - 5); if (!free(x, z, 0.8)) continue; pickups.push({ type: 'coin', x, z }); add({ x, z, ov: 0.8 }); }
-  for (let i = 0; i < 9; i++) { const x = R(-110, 110), z = R(-110, 110); if (!free(x, z, 1.2) || spawnD(x, z) < 8) { i--; continue; } pickups.push({ type: 'clock', x, z }); add({ x, z, ov: 1.2 }); }
+  for (let i = 0; i < 46; i++) { const x = R(-HALF + 5, HALF - 5), z = R(-HALF + 5, HALF - 5); if (!free(x, z, 0.8)) continue; pickups.push({ type: 'coin', x, z }); add({ x, z, ov: 0.8 }); }
+  for (let i = 0; i < 12; i++) { const x = R(-110, 110), z = R(-110, 110); if (!free(x, z, 1.2) || spawnD(x, z) < 8) { i--; continue; } pickups.push({ type: 'clock', x, z }); add({ x, z, ov: 1.2 }); }
+  out.forEach((o, i) => { o.gid = i; }); npcs.forEach((o, i) => { o.gid = i; });
   return { objs: out, npcs, pickups, landmarks };
 }

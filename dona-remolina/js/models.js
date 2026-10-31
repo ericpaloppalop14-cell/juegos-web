@@ -1,6 +1,6 @@
 // Catálogo de objetos de Mueblópolis (todo procedural, original)
 import * as THREE from 'three';
-import { GB, C, mix, lighten, darken, sectorColors, addOutline, Q } from './geo.js?v=3';
+import { GB, C, mix, lighten, darken, sectorColors, addOutline, Q } from './geo.js?v=4';
 
 export const PAL = {
   coral: 0xff6b5e, tang: 0xff9a1f, sun: 0xffd23f, lime: 0x8fdc4a, mint: 0x3fe0b0, turq: 0x1fc4d6, sky: 0x4aa8ff,
@@ -310,10 +310,22 @@ export const KINDS = {
 };
 
 const cache = new Map();
+let TINT = null, TKEY = '';
+const _tc = new THREE.Color(), _hsl = { h: 0, s: 0, l: 0 };
+function tintGB(gb, t) {
+  const c = gb.c, memo = new Map();
+  for (let i = 0; i < c.length; i += 3) {
+    const key = ((c[i] * 255) | 0) * 65536 + ((c[i + 1] * 255) | 0) * 256 + ((c[i + 2] * 255) | 0); let r = memo.get(key);
+    if (!r) { _tc.setRGB(c[i], c[i + 1], c[i + 2]).getHSL(_hsl); const sat = _hsl.s; _tc.setHSL((_hsl.h + t.h * Math.min(1, sat * 3) + 1) % 1, Math.min(1, _hsl.s * t.s), Math.max(0, Math.min(1, _hsl.l + t.l * (1 - _hsl.l)))); r = [_tc.r, _tc.g, _tc.b]; memo.set(key, r); }
+    c[i] = r[0]; c[i + 1] = r[1]; c[i + 2] = r[2];
+  }
+}
+export function setPlaceTint(key, tint) { TKEY = key || ''; TINT = tint || null; }
+export function clearGeoCache() { for (const r of cache.values()) r.geo.dispose(); cache.clear(); }
 export function getGeo(kind, v) {
-  const key = kind + ':' + v; let r = cache.get(key);
+  const K = KINDS[kind], key = (K.notint ? '' : TKEY) + kind + ':' + v; let r = cache.get(key);
   if (!r) {
-    const K = KINDS[kind]; const [gb, rad] = K.f(v);
+    const [gb, rad] = K.f(v); if (TINT && !K.notint) tintGB(gb, TINT);
     const geo = gb.build(true);
     r = { geo, r: rad, h: geo.userData.h, halfH: geo.userData.halfH };
     cache.set(key, r);

@@ -1,8 +1,8 @@
 // Las 6 limpiadoras jugables de Mueblópolis. Todo el arte es original y procedural.
 import * as THREE from 'three';
-import { GB, lighten, darken, mix, hiQ } from './geo.js?v=3';
-import { addLids, EXTRA_PLAYERS } from './players2.js?v=3';
-import { PAL, part, makeDona } from './models.js?v=3';
+import { GB, lighten, darken, mix, hiQ } from './geo.js?v=4';
+import { addLids, EXTRA_PLAYERS } from './players2.js?v=4';
+import { PAL, part, makeDona } from './models.js?v=4';
 const PI = Math.PI;
 const INK = 0x2a1840;
 
@@ -246,27 +246,27 @@ const BASE_PLAYERS = [
     theme: { f: T([0xffd1f0, 0xb8f0ff], [0xfff0a0, 0xffcbf2], [0xffffff, 0xcdf2ff]), ring: 0xff74c4, glow: 0xff74c4, bits: [0xff6b5e, 0xffd23f, 0x3fe0b0, 0x4aa8ff, 0xff74c4, 0xffffff] },
     fx: { colors: [0xff6b5e, 0xffd23f, 0x3fe0b0, 0x4aa8ff, 0xff74c4, 0xffffff], shape: 1, rate: 20, g: 0, up: 1 }, say: ['¡A limpiar!', '¡Qué desorden!', '¡Todo para dentro!', '¡Hasta el último calcetín!', '¡En mis tiempos esto estaba ordenado!', '¡Ay, cuánto polvo!', '¡Me lo llevo todo!', '¡Con esta escoba no hay quien pueda!'],
     voice: { pitch: 1.0, rate: 1.0 }, start: '¡A limpiar!' },
-  { id: 'gato', name: 'Gato Aspiradora', sub: 'Míster Succión, siete vidas sin bolsa', price: 250, make: () => hiQ(() => addLids(makeGato(), [[-0.16, 0.36, 0.31, 0.11, 0xff9a3c], [0.16, 0.36, 0.31, 0.11, 0xff9a3c]])),
+  { id: 'gato', name: 'Gato Aspiradora', sub: 'Míster Succión, siete vidas sin bolsa', price: 1200, make: () => hiQ(() => addLids(makeGato(), [[-0.16, 0.36, 0.31, 0.11, 0xff9a3c], [0.16, 0.36, 0.31, 0.11, 0xff9a3c]])),
     perk: 'Hocico potente: traga cosas un 6 % más grandes', perkK: { gate: 0.045 },
     theme: { f: T([0xffc58a, 0xc9d3e6], [0xffe3c2, 0xff9a4a], [0xfff4e4, 0xb9c4d6]), ring: 0xff9a3c, glow: 0xffa24a, bits: [0xff9a3c, 0xc9d3e6, 0xfff0d8, 0x6b7a99], freq: 1.2 },
     fx: { colors: [0xffb066, 0xe8eef8, 0xff9a3c, 0xfff0d8], shape: 4, rate: 16, g: -0.4, up: 1.2, alpha: 0.7, sz: 1.9 }, say: ['¡Miau-spirando!', '¡Prrr… succión máxima!', '¡Esto es mío, mío y de la nevera!', '¿Un ratón? ¡Para dentro!', 'Siete vidas, cero bolsas.', '¡Miauuu, qué hambre de polvo!', 'No me hables antes del café… ni del enchufe.', '¡Ojo, que ronroneo a 3000 vatios!'],
     voice: { pitch: 1.55, rate: 1.1 }, start: '¡Miau-spirando!' },
-  { id: 'fregona', name: 'Capitán Fregona', sub: 'Pirata de los siete charcos', price: 600, make: () => hiQ(() => addLids(makeFregona(), [[0.15, 0.34, 0.31, 0.1, 0xffd2ae]])),
+  { id: 'fregona', name: 'Capitán Fregona', sub: 'Pirata de los siete charcos', price: 2500, make: () => hiQ(() => addLids(makeFregona(), [[0.15, 0.34, 0.31, 0.1, 0xffd2ae]])),
     perk: 'Pies de espuma: se mueve un 12 % más rápido', perkK: { speed: 0.12 },
     theme: { f: T([0xc8f0ff, 0x6fc6ff], [0xffffff, 0xa8e4ff], [0xe9fbff, 0x9ad8ff]), ring: 0x4aa8ff, glow: 0x6fd0ff, bits: [0xffffff, 0x9fe8ff, 0x4aa8ff, 0xd8f6ff], spd: 1.15 },
     fx: { colors: [0xffffff, 0xbff3ff, 0x8fdcff], shape: 2, rate: 22, g: -1.2, up: 1.6, alpha: 0.9, sz: 1.0 }, say: ['¡Al abordaje de la mugre!', '¡Mil rayos y mil escobas!', '¡Fregad, grumetes, fregad!', '¡Tierra a la vista… y está sucia!', '¡Por Neptuno y su detergente!', '¡Que no quede ni una miga en alta mar!', '¡Suelo mojado, grumete avisado!', '¡Yo-ho-ho y una botella de lejía!'],
     voice: { pitch: 0.62, rate: 0.92 }, start: '¡Al abordaje de la mugre!' },
-  { id: 'bruja', name: 'Brujita Escobilla', sub: 'Aprendiz de hechicera doméstica', price: 1000, make: () => hiQ(() => addLids(makeBruja(), [[-0.14, 0.33, 0.31, 0.105, 0xffe0c8], [0.14, 0.33, 0.31, 0.105, 0xffe0c8]])),
+  { id: 'bruja', name: 'Brujita Escobilla', sub: 'Aprendiz de hechicera doméstica', price: 4000, make: () => hiQ(() => addLids(makeBruja(), [[-0.14, 0.33, 0.31, 0.105, 0xffe0c8], [0.14, 0.33, 0.31, 0.105, 0xffe0c8]])),
     perk: 'Polvo de oro: +40 % de monedas por objeto', perkK: { coins: 0.4 },
     theme: { f: T([0xe0b0ff, 0x7b3fe4], [0xff9ae6, 0x5a2fc9], [0xffe0ff, 0xb08aff]), ring: 0xb06bff, glow: 0xc084ff, bits: [0xffd23f, 0xff74c4, 0xb06bff, 0xffffff], spd: 1.3, freq: 1.3 },
     fx: { colors: [0xffd23f, 0xff74c4, 0xc084ff, 0xffffff], shape: 3, rate: 26, g: -2.2, up: 1.4, alpha: 1, sz: 1.2 }, say: ['¡Abracadabra, a barrer!', '¡Escoba, escoba, no te me pongas boba!', '¡Ni una pelusa sin hechizar!', '¡Polvo de estrellas, polvo de salón!', '¡Chas! ¡Y a la basura!', '¡Que se enteren en el aquelarre!', 'Mi murciélago dice que está limpio… ¡mentiroso!', '¡Hechizo de limpieza nivel cuñado!'],
     voice: { pitch: 1.75, rate: 1.12 }, start: '¡Abracadabra, a barrer!' },
-  { id: 'robo', name: 'Robo-Chus 3000', sub: 'Robot limpiador con complejo de superhéroe', price: 1600, make: () => hiQ(makeRobo),
+  { id: 'robo', name: 'Robo-Chus 3000', sub: 'Robot limpiador con complejo de superhéroe', price: 6000, make: () => hiQ(makeRobo),
     perk: 'Batería extra: +10 s de ronda', perkK: { time: 10 },
     theme: { f: T([0x9ffff0, 0x2ad4ff], [0xd8ff7a, 0x37e08a], [0xffffff, 0x9ffff0]), ring: 0x2ad4ff, glow: 0x37ffc8, bits: [0x37ffc8, 0xc8ff4a, 0x2ad4ff, 0xffffff], spd: 1.6, freq: 1.7 },
     fx: { colors: [0x37ffc8, 0xc8ff4a, 0x2ad4ff, 0xffffff], shape: 3, rate: 30, g: 0, up: 0.6, alpha: 1, sz: 0.8, fast: true }, say: ['¡BIP BOP! ¡Limpieza al 100 %!', 'Detectando mugre… ¡encontrada!', 'Batería al 99 %… y tu cariño al 100 %.', 'Ejecutando TRAGAR_TODO.exe…', 'Error 404: suciedad no encontrada.', 'Actualizando… ya no queda polvo.', 'Mi algoritmo favorito es el de succión.', '¡BZZT! Eso no estaba en mi manual.'],
     voice: { pitch: 0.4, rate: 1.25 }, start: '¡BIP BOP! ¡Limpieza al cien por cien!' },
-  { id: 'calcetin', name: 'Sir Calcetín', sub: 'Caballero del Par Perdido', price: 2400, make: () => hiQ(() => addLids(makeCalcetin(), [[-0.15, 0.3, 0.31, 0.115, 0xfff3e0], [0.15, 0.3, 0.31, 0.115, 0xfff3e0]])),
+  { id: 'calcetin', name: 'Sir Calcetín', sub: 'Caballero del Par Perdido', price: 8500, make: () => hiQ(() => addLids(makeCalcetin(), [[-0.15, 0.3, 0.31, 0.115, 0xfff3e0], [0.15, 0.3, 0.31, 0.115, 0xfff3e0]])),
     perk: 'Armadura de felpa: los golpes te quitan la mitad', perkK: { hit: 0.5 },
     theme: { f: T([0xff8a7a, 0xffe27a], [0x7ad0ff, 0xff9ae6], [0xffffff, 0xffe27a]), ring: 0xff5a4d, glow: 0xffb347, bits: [0xff5a4d, 0xfff3e0, 0x4aa8ff, 0xffd23f], spd: 0.9 },
     fx: { colors: [0xff5a4d, 0xfff3e0, 0x4aa8ff, 0xffd23f], shape: 1, rate: 22, g: 2, up: 1.5, alpha: 1, sz: 1.1 }, say: ['¡Por el honor del par perdido!', '¡Ningún pie quedará sin pareja!', '¡El calcetín nunca olvida!', '¡Con gran agujero viene gran responsabilidad!', '¡Mi capa huele a suavizante!', '¡Ni lavadora ni secadora me detendrán!', '¡Soy el héroe que tu cajón merece!', '¡Calcetines del mundo, uníos!'],

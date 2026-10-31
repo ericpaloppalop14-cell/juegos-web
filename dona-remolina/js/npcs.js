@@ -1,7 +1,7 @@
 // Los personajes locos de Mueblópolis (NPC): modelos procedurales + comportamiento.
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=3';
-import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=3';
+import { GB, lighten, darken } from './geo.js?v=4';
+import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=4';
 const PI = Math.PI, INK = 0x2a1840;
 const pick = (a, v) => a[v % a.length];
 
@@ -53,8 +53,8 @@ function mkAlfombra(v = 0) {
   const body = part(g); body.children[0].visible = true; root.add(body);
   root.userData = { h: 0.8, body }; return root;
 }
-function mkNevera() {
-  const root = new THREE.Group(), g = new GB(); const c1 = 0x5a3fa0, c2 = 0x7a60c8;
+function mkNevera(cols) {
+  const root = new THREE.Group(), g = new GB(); const [c1, c2] = Array.isArray(cols) ? cols : [0x5a3fa0, 0x7a60c8];
   for (const s of [-1, 1]) { g.cyl(0.3, 0.34, 0.6, 0x2a1840, s * 1.3, 0, 0.3, 8); g.rbox(0.9, 0.3, 1.2, 0.12, 0x2a1840, s * 1.3, 0, 0.5, 0, 0, 0, 2); }
   g.rbox(4.4, 5.6, 3.5, 0.5, c1, 0, 0.5, 0, 0, 0, 0, 4); g.rbox(4.0, 2.0, 0.2, 0.1, c2, 0, 3.7, 1.7, 0, 0, 0, 2); g.rbox(4.0, 2.7, 0.2, 0.1, c2, 0, 0.75, 1.7, 0, 0, 0, 2); g.box(4.1, 0.1, 0.25, INK, 0, 3.55, 1.72);
   g.cyl(0.1, 0.1, 1.5, 0xe6eef8, 1.6, 4.2, 1.95, 8); g.cyl(0.1, 0.1, 1.5, 0xe6eef8, 1.6, 1.0, 1.95, 8);
@@ -332,3 +332,61 @@ export const NPC = {
       else { c.yo = 0; speak(c, X, this.lines, 0.4, 7); faceTo(c, Math.atan2(v.ux, v.uz), dt, 1.5); }
     } },
 };
+
+// ============ v4: personajes de los lugares nuevos (modelos + dos comportamientos genéricos) ============
+const legs2 = (g, col, y = 0, x = 0.3, z = 0) => { for (const s of [-1, 1]) { g.cyl(0.07, 0.07, 0.3, col, s * x, y, z, 6); g.rbox(0.24, 0.1, 0.34, 0.04, 0xffffff, s * x, y, z + 0.06, 0, 0, 0, 2); } };
+const wrap = (g, h, extra = {}) => { const root = new THREE.Group(), body = part(g); root.add(body); root.userData = { h, body, ...extra }; return root; };
+function mkDonut() { const g = new GB(); legs2(g, 0xe8b072, 0, 0.5); g.torus(1.2, 0.58, 0xe8b072, 0, 1.7, 0, 0, 0, 0, PI * 2, 28); g.torus(1.2, 0.5, 0xff7ac0, 0, 1.78, 0.08, 0, 0, 0, PI * 2, 28); for (let i = 0; i < 16; i++) { const a = i * 0.8; g.rbox(0.07, 0.07, 0.22, 0.03, [0xffffff, 0xffd23f, 0x4aa8ff, 0x3fe0b0][i % 4], Math.cos(a) * 1.2, 1.78 + Math.sin(a) * 1.2, 0.62, 0, 0, a, 1); } eyes(g, 2.55, 0.6, 0.38, 0.22, { brow: 0.3 }); smile(g, 2.15, 0.62, 0.4); return wrap(g, 3.0); }
+function mkHelado() { const g = new GB(); legs2(g, 0xe8b072, 0, 0.18, 0.05); g.cone(0.45, 1.0, 0xe8b072, 0, 0.3, 0, 12, PI, 0, 0); g.sph(0.52, 0xffb3d1, 0, 1.4, 0, 1, 0.95, 1, 14); g.sph(0.42, 0xfff0d2, 0, 1.95, 0, 1, 0.9, 1, 14); g.sph(0.1, 0xff2d4d, 0, 2.4, 0, 1, 1, 1, 8); eyes(g, 1.45, 0.42, 0.2, 0.12); smile(g, 1.2, 0.46, 0.2); return wrap(g, 2.5); }
+function mkMonito() { const g = new GB(), f = 0x9a6a3a, fl = 0xd9b080; legs2(g, f, 0, 0.35); g.sph(0.8, f, 0, 1.2, 0, 1, 1.1, 0.85, 16); g.sph(0.5, fl, 0, 1.15, 0.45, 1, 1, 0.5, 12); g.sph(0.55, f, 0, 2.25, 0, 1, 0.95, 0.95, 16); g.sph(0.36, fl, 0, 2.15, 0.34, 1.1, 0.8, 0.6, 12); for (const s of [-1, 1]) { g.sph(0.22, fl, s * 0.6, 2.35, 0, 1, 1, 0.5, 8); g.cyl(0.1, 0.1, 0.8, f, s * 0.95, 1.1, 0, 6, 0, 0, s * -0.3); } eyes(g, 2.4, 0.45, 0.2, 0.13); smile(g, 2.08, 0.66, 0.26); g.cyl(0.4, 0.4, 0.06, 0xffd23f, -1.15, 0.9, 0.0, 14, 0, 0, PI / 2); g.cyl(0.4, 0.4, 0.06, 0xffd23f, 1.15, 0.9, 0.0, 14, 0, 0, PI / 2); const key = new GB(); key.cyl(0.07, 0.07, 0.6, 0xc8c8d8, 0, 0, 0, 6); key.torus(0.28, 0.07, 0xffd23f, 0.0, 0.7, 0, 0, 0, 0, PI * 2, 12); const root = wrap(g, 3.0), kp = part(key, false); kp.position.set(0, 1.4, -0.75); kp.rotation.x = PI / 2; root.add(kp); root.userData.key = kp; return root; }
+function mkSaltarin() { const g = new GB(); g.rbox(1.0, 0.9, 1.0, 0.12, 0xe8453c, 0, 0, 0, 0, 0, 0, 2); g.rbox(1.04, 0.2, 1.04, 0.08, 0xffd23f, 0, 0.7, 0, 0, 0, 0, 1); for (let i = 0; i < 4; i++) g.torus(0.24, 0.045, 0xc8c8d8, 0, 1.0 + i * 0.22, 0, PI / 2, 0, 0, PI * 2, 10); g.sph(0.5, 0xffe0c8, 0, 2.2, 0, 1, 1, 1, 14); g.cone(0.4, 0.8, 0x8a4be0, 0, 2.5, 0, 10); g.sph(0.1, 0xff4a6e, 0, 3.3, 0, 1, 1, 1, 8); g.sph(0.12, 0xff2d4d, 0, 2.2, 0.5, 1, 1, 1, 8); eyes(g, 2.35, 0.42, 0.2, 0.12); smile(g, 2.0, 0.46, 0.3); return wrap(g, 3.4); }
+function mkCaballero() { const g = new GB(), m = 0xcfd8e8; legs2(g, m, 0, 0.38); g.sph(0.85, m, 0, 1.2, 0, 1, 1.1, 0.85, 16); g.sph(0.6, 0xe8f4ff, 0, 2.3, 0, 1, 1, 1, 16); g.sph(0.62, 0xbff3ff, 0, 2.3, 0, 1.05, 1.05, 1.05, 14); eyes(g, 2.35, 0.5, 0.22, 0.14); smile(g, 2.05, 0.54, 0.26); g.cone(0.14, 0.7, 0xff4a8c, 0, 2.9, -0.1, 8, -0.3, 0, 0); for (const s of [-1, 1]) { g.cyl(0.14, 0.14, 0.9, m, s * 1.05, 1.0, 0, 8, 0, 0, s * -0.3); g.sph(0.2, 0xe8e8f6, s * 1.2, 0.95, 0, 1, 1, 1, 8); } g.cyl(0.04, 0.04, 2.2, 0x8a8aa0, 1.35, 0.7, 0.2, 6); g.rbox(0.8, 1.1, 0.1, 0.12, 0x7b8cf0, -1.25, 0.8, 0.5, 0, 0, 0, 1); for (let i = 0; i < 4; i++) g.sph(0.14, 0xffffff, -1.0 + i * 0.4, 2.8 + (i % 2) * 0.2, 0.6, 1, 1, 1, 8); return wrap(g, 3.4); }
+function mkBurbujita() { const g = new GB(); g.sph(0.8, 0xcff0ff, 0, 0.9, 0, 1, 1, 1, 18); g.sph(0.2, 0xffffff, -0.35, 1.3, 0.55, 1, 0.7, 0.4, 8); eyes(g, 0.95, 0.66, 0.26, 0.16); smile(g, 0.6, 0.72, 0.3); g.sph(0.1, 0xff9ab0, -0.5, 0.7, 0.66, 1.3, 0.8, 0.5, 6); g.sph(0.1, 0xff9ab0, 0.5, 0.7, 0.66, 1.3, 0.8, 0.5, 6); return wrap(g, 1.8); }
+function mkNubarron() { const g = new GB(), c = 0x7a809c; for (const [x, y, z, r] of [[0, 1.4, 0, 1.0], [0.9, 1.1, 0, 0.75], [-0.9, 1.1, 0, 0.75], [0.4, 1.9, 0, 0.7], [-0.4, 1.9, 0, 0.7]]) g.sph(r, c, x, y, z, 1.1, 0.85, 1, 14); g.sph(0.95, 0x9aa0bc, 0, 1.25, 0.2, 1.1, 0.8, 0.9, 14); eyes(g, 1.6, 0.8, 0.36, 0.26, { brow: 0.5 }); g.rbox(0.8, 0.22, 0.1, 0.1, 0x240d3c, 0, 1.15, 0.9, 0, 0, 0, 2); const bolt = new GB(); bolt.rbox(0.25, 0.7, 0.1, 0.04, 0xffe66a, 0.2, 0, 0, 0, 0, 0.4, 1); bolt.rbox(0.25, 0.7, 0.1, 0.04, 0xffe66a, -0.05, -0.55, 0, 0, 0, 0.4, 1); bolt.cone(0.22, 0.6, 0xffe66a, -0.3, -1.2, 0, 4, PI, 0, 0.3); const root = wrap(g, 2.8), bp = part(bolt, false); bp.position.set(0, 0.9, 0.5); root.add(bp); root.userData.bolt = bp; return root; }
+function mkOvejita() { const g = new GB(); legs2(g, 0x3a2a3a, 0, 0.3); for (const [x, y, z, r] of [[0, 0.95, 0, 0.6], [0.5, 0.9, 0.05, 0.45], [-0.5, 0.9, 0.05, 0.45], [0.2, 1.4, -0.1, 0.4], [-0.25, 1.4, -0.1, 0.4], [0, 0.9, -0.5, 0.45]]) g.sph(r, 0xffffff, x, y, z, 1, 1, 1, 12); g.sph(0.36, 0x3a2a3a, 0, 1.1, 0.7, 1, 1.05, 0.9, 12); for (const s of [-1, 1]) g.sph(0.14, 0x3a2a3a, s * 0.42, 1.28, 0.62, 1.3, 0.7, 0.6, 8); eyes(g, 1.18, 0.9, 0.14, 0.09); g.sph(0.28, 0xffffff, 0, 1.55, 0.55, 1, 0.7, 0.9, 10); return wrap(g, 2.1); }
+function mkCalabaza() { const g = new GB(); legs2(g, 0x4a7a2a, 0, 0.5); g.sph(1.0, 0xff8a1f, 0, 1.4, 0, 1.15, 0.95, 1.05, 18); for (const s of [-0.55, 0, 0.55]) g.sph(0.7, 0xff9a3a, s * 0.8, 1.4, 0, 0.5, 0.95, 1.0, 12); g.cyl(0.14, 0.18, 0.4, 0x4a7a2a, 0.05, 2.25, 0, 6); for (const s of [-1, 1]) g.cone(0.26, 0.4, 0xffe66a, s * 0.4, 1.7, 0.9, 3, 0, 0, 0); g.rbox(1.2, 0.34, 0.2, 0.1, 0xffe66a, 0, 1.0, 0.95, 0, 0, 0, 1); for (let i = 0; i < 4; i++) g.cone(0.1, 0.2, 0xff8a1f, -0.45 + i * 0.3, 1.1, 1.0, 3, 0, 0, 0); for (const s of [-1, 1]) g.cyl(0.1, 0.1, 0.7, 0x4a7a2a, s * 1.25, 1.2, 0, 6, 0, 0, s * -0.4); return wrap(g, 2.6); }
+function mkFantasmita() { const g = new GB(); g.sph(0.7, 0xffffff, 0, 1.4, 0, 1, 1.1, 0.95, 16); g.cyl(0.7, 0.8, 1.0, 0xffffff, 0, 0.5, 0, 16); for (let i = 0; i < 6; i++) { const a = i / 6 * PI * 2; g.sph(0.28, 0xffffff, Math.cos(a) * 0.62, 0.45, Math.sin(a) * 0.62, 1, 1.3, 1, 8); } for (const s of [-1, 1]) g.sph(0.22, 0xffffff, s * 0.78, 1.1, 0.1, 1, 1.4, 0.7, 8, 0, 0, s * 0.4); eyes(g, 1.5, 0.6, 0.25, 0.17); g.sph(0.1, 0x6a3fa0, 0, 1.15, 0.64, 1, 1.4, 0.5, 8); return wrap(g, 2.2); }
+const lineOf = (arr) => arr[(rnd() * arr.length) | 0];
+function ram(def) {
+  return { ...def, init(c) { c.cd = 2 + rnd() * 2; c.st = 0; c.stT = 0; c.dx = 0; c.dz = 1; },
+    update(c, dt, X) {
+      const v = vec(c, X), edible = X.edible(c), ud = c.inner.userData; c.ph += dt * 8; c.cd -= dt;
+      if (ud.key) ud.key.rotation.z += dt * (c.st === 2 ? 14 : 4);
+      if (ud.bolt) ud.bolt.visible = c.st !== 0 || ((c.ph * 0.5) % 2) < 1;
+      if (X.live && edible && v.d < 30) { X.step(c, -v.ux, -v.uz, def.flee || 5, dt); faceTo(c, Math.atan2(-v.ux, -v.uz), dt, 8); c.st = 0; c.yo = Math.abs(Math.sin(c.ph)) * (def.bob || 0.25); if (rnd() < dt * 0.35) X.say(c, def.fl[(rnd() * def.fl.length) | 0]); }
+      else if (X.live && !edible && v.d < 36) {
+        if (c.st === 0) { faceTo(c, Math.atan2(v.ux, v.uz), dt, 4); X.step(c, v.ux, v.uz, v.d > 16 ? def.sp : def.sp * 0.4, dt); c.yo = Math.abs(Math.sin(c.ph * 0.7)) * (def.bob || 0.25); if (c.cd <= 0 && v.d > 7 && v.d < 26) { c.st = 1; c.stT = 0; c.dx = v.ux; c.dz = v.uz; X.say(c, lineOf(def.lines), 1000); } else speak(c, X, def.lines, 0.3, 6); }
+        else if (c.st === 1) { c.stT += dt; c.yo = 0; c.rot = Math.atan2(c.dx, c.dz) + Math.sin(c.stT * 45) * 0.06; c.rz = Math.sin(c.stT * 40) * 0.1; if (c.stT > 0.6) { c.st = 2; c.stT = 0; } }
+        else { c.stT += dt; c.rz = 0; X.step(c, c.dx, c.dz, def.charge || 18, dt); c.rot = Math.atan2(c.dx, c.dz); c.yo = 0.1; X.parts.emit({ x: c.x - c.dx * c.r, y: 0.4, z: c.z - c.dz * c.r, vx: (rnd() - 0.5), vy: 1.6, vz: (rnd() - 0.5), life: 0.5, size: 0.5, size1: 1.2, color: def.dust || 0xffffff, shape: 4, g: -0.5, alpha: 0.6 });
+          const hv = vec(c, X); if (hv.d < X.G.R * 0.9 + c.r * 0.8) { X.hit(c, hv.ux, hv.uz, { knock: def.knock || 14, slow: 0.6, loss: 0.05, msg: def.msg }); c.st = 0; c.cd = 3 + rnd() * 1.5; c.stT = 0; }
+          else if (c.stT > 0.95) { c.st = 0; c.cd = 2.6 + rnd() * 1.5; } }
+      } else { const m = wanderDir(c, dt, X, 1.6, 0.4); if (m > 0.3) faceTo(c, Math.atan2(c.wdx, c.wdz), dt, 5); c.yo = Math.abs(Math.sin(c.ph * 0.6)) * 0.08; c.rz = 0; if (v.d < 50) speak(c, X, def.lines, 0.3, 8); }
+    } };
+}
+function fleer(def) {
+  return { ...def, init(c) { c.zz = 0; c.zt = 0; },
+    update(c, dt, X) {
+      const v = vec(c, X); c.ph += dt * 14; c.zt -= dt; const ud = c.inner.userData;
+      if (X.live && v.d < 16 + X.G.R * 1.2) { if (c.zt <= 0) { c.zt = 0.4 + rnd() * 0.5; c.zz = (rnd() < 0.5 ? -1 : 1) * (0.5 + rnd()); } const px = -v.uz * c.zz, pz = v.ux * c.zz; const l = Math.hypot(-v.ux + px, -v.uz + pz) || 1; const tx = (-v.ux + px) / l, tz = (-v.uz + pz) / l; X.step(c, tx, tz, def.sp, dt); faceTo(c, Math.atan2(tx, tz), dt, 10); c.yo = Math.abs(Math.sin(c.ph)) * (def.bob || 0.35); if (rnd() < dt * 0.5) X.say(c, def.fl[(rnd() * def.fl.length) | 0], 1000); }
+      else { const m = wanderDir(c, dt, X, 2, 0.5); if (m > 0.3) faceTo(c, Math.atan2(c.wdx, c.wdz), dt, 8); c.yo = Math.abs(Math.sin(c.ph * 0.5)) * 0.15; speak(c, X, def.lines, 0.3, 8); }
+      if (def.ghost) c.yo += 0.7 + Math.sin(c.ph * 0.3) * 0.15;
+      if (rnd() < dt * 8) X.parts.emit({ x: c.x, y: c.hy + 0.3 + c.yo, z: c.z, vx: (rnd() - 0.5), vy: 0.7, vz: (rnd() - 0.5), life: 0.5, size: 0.35, size1: 0, color: def.spark || 0xffe27a, shape: 3, g: 0, drag: 1 });
+    },
+    onSwallow(c, X) { X.addTime(def.time || 3); X.toast(def.win || '¡Bonus! +3 s'); } };
+}
+NPC.donut = ram({ name: 'Dona Donut', r: 1.5, tier: 2, coins: 36, make: mkDonut, h: 3.0, sp: 3.2, charge: 19, knock: 14, msg: '¡Donutazo!', dust: 0xffd9ec, lines: ['¡Soy un donut con agujero y con genio!', '¡Rodando que es gerundio!', '¡Tengo el azúcar subido!', '¡Con virutas me sale mejor!'], fl: ['¡Mi glaseado!', '¡No me mordisquees!'] });
+NPC.helado = fleer({ name: 'Helado Fugitivo', r: 0.85, tier: 1, coins: 22, make: mkHelado, h: 2.5, sp: 9.5, time: 3, win: '¡Helado fresquito! +3 s', spark: 0xff9ec8, lines: ['¡Me derrito de miedo!', '¡Soy de nata y fresa!', '¡Atrápame si puedes!'], fl: ['¡Que me derrito!', '¡Corre, corre!'] });
+NPC.monito = ram({ name: 'Mono de Cuerda', r: 1.6, tier: 2, coins: 34, make: mkMonito, h: 3.0, sp: 3.4, charge: 20, knock: 15, msg: '¡Platillazo!', dust: 0xd9b080, lines: ['¡Chin, chin, chin!', '¡Dame cuerda, dame cuerda!', '¡Soy un mono con muchas pilas!'], fl: ['¡Uh uh ah ah!', '¡Mi llave!'] });
+NPC.saltarin = fleer({ name: 'Payaso de Resorte', r: 1.0, tier: 1, coins: 24, make: mkSaltarin, h: 3.4, sp: 8.5, bob: 0.9, time: 3, win: '¡Sorpresa! +3 s', spark: 0xff4a6e, lines: ['¡Sorpresaaa!', '¡Boing, boing!', '¡Hoy me toca saltar!'], fl: ['¡Boing! ¡Me escapo!', '¡Que viene el remolino!'] });
+NPC.caballero = ram({ name: 'Caballero Burbuja', r: 1.8, tier: 2, coins: 40, make: mkCaballero, h: 3.4, sp: 3.0, charge: 17, knock: 15, msg: '¡Escudazo!', dust: 0xbff3ff, lines: ['¡En guardia, torbellino!', '¡Por el honor de la lavandería!', '¡Soy el caballero de la espuma!'], fl: ['¡Retirada táctica!', '¡Mi armadura!'] });
+NPC.burbujita = fleer({ name: 'Burbujita Saltarina', r: 0.8, tier: 1, coins: 22, make: mkBurbujita, h: 1.8, sp: 9, bob: 0.5, time: 3, win: '¡Plop! +3 s', spark: 0xbff3ff, lines: ['¡Plop, plop!', '¡Soy muy frágil!', '¡Cuidado que exploto!'], fl: ['¡Plop! ¡No me pinches!', '¡Flotando me voy!'] });
+NPC.nubarron = ram({ name: 'Nubarrón Gruñón', r: 1.9, tier: 2, coins: 42, make: mkNubarron, h: 2.8, sp: 3.0, charge: 18, knock: 14, msg: '¡Rayo!', dust: 0xffe66a, bob: 0.5, lines: ['¡Voy a llover sobre tu fiesta!', '¡Truenos y relámpagos!', '¡Hoy tengo mal día!'], fl: ['¡Me quedo sin lluvia!', '¡Ay, mis rayos!'] });
+NPC.ovejita = fleer({ name: 'Oveja de Algodón', r: 0.95, tier: 1, coins: 24, make: mkOvejita, h: 2.1, sp: 8.5, time: 3, win: '¡Oveja dormilona! +3 s', spark: 0xffffff, lines: ['¡Beee! ¡Soy de algodón!', '¡Cuéntame hasta cien!', '¡Beee-lleza de oveja!'], fl: ['¡Beee! ¡Socorro!', '¡Corre, borreguito!'] });
+NPC.calabaza = ram({ name: 'Calabaza Carcajada', r: 1.8, tier: 2, coins: 40, make: mkCalabaza, h: 2.6, sp: 3.2, charge: 19, knock: 15, msg: '¡Truco!', dust: 0xffa63a, lines: ['¡Ji ji ji! ¿Truco o trato?', '¡Soy la calabaza más risueña!', '¡Te voy a dar un susto de calabaza!'], fl: ['¡Mi vela!', '¡Nooo, que me vacían!'] });
+NPC.fantasmita = fleer({ name: 'Fantasmita Tímido', r: 0.95, tier: 1, coins: 26, make: mkFantasmita, h: 2.2, sp: 9.5, ghost: true, time: 4, win: '¡Fantasmita atrapado! +4 s', spark: 0xd8b0ff, lines: ['¡Buuu! (bajito)', '¡Me da vergüenza asustar!', '¡Uuuuh!'], fl: ['¡Buuu-ena huida!', '¡Me desvanezco!'] });
+const neveraV = (name, cols, win) => ({ ...NPC.nevera, name, make: () => mkNevera(cols), onSwallow(c, X) { X.addTime(8); X.toast(win); X.say('dona', '¡A descongelar!', 1500); } });
+NPC.neveraP = neveraV('Congelador Golosón (Jefe)', [0xff7ac0, 0xffb3d9], '¡Congelador derretido! +8 s');
+NPC.neveraJ = neveraV('Nevera de Juguete (Jefa)', [0x2a7bd9, 0x6aa8ff], '¡Nevera de juguete! +8 s');
+NPC.neveraC = neveraV('Nevera Caballera (Jefa)', [0x7b8cf0, 0xb8c8ff], '¡Nevera real derretida! +8 s');
+NPC.neveraN = neveraV('Nevera Nimbo (Jefa)', [0xaac8ff, 0xe8f2ff], '¡Nimbo derretida! +8 s');
+NPC.neveraH = neveraV('Nevera Maldita (Jefa)', [0x3a1f5a, 0x6a3fa0], '¡Nevera maldita! +8 s');

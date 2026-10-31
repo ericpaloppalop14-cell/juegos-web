@@ -1,13 +1,16 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=3';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL } from './models.js?v=3';
-import './models2.js?v=3';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=3';
-import { NPC } from './npcs.js?v=3';
-import { GB, setOutlines } from './geo.js?v=3';
-import { Particles, Rings, makeTornado } from './fx.js?v=3';
-import { buildScenery, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=3';
+import * as AU from './audio.js?v=4';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=4';
+import './models2.js?v=4';
+import './models3.js?v=4';
+import { PLACES } from './places.js?v=4';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=4';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=4';
+import { NPC } from './npcs.js?v=4';
+import { GB, setOutlines } from './geo.js?v=4';
+import { Particles, Rings, makeTornado } from './fx.js?v=4';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=4';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -22,28 +25,40 @@ const GROW_K = 0.22;          // crecimiento del área por área del objeto
 const R_MAX = 22, BOUND = HALF - 2;
 const COMBO_WIN = 2.0;
 
-// ---------- partida guardada ----------
-const SAVE_KEY = 'dr_save_v1';
-let save = { coins: 0, best: 0, rounds: 0, tut: false, ups: { size: 0, time: 0, speed: 0, loot: 0 }, char: 'dona', owned: { dona: true } };
-try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { save = Object.assign(save, s); save.ups = Object.assign({ size: 0, time: 0, speed: 0, loot: 0 }, s.ups); save.owned = Object.assign({ dona: true }, s.owned || {}); if (!PLAYER_BY_ID[save.char]) save.char = 'dona'; } } catch (e) {}
+// ---------- partida guardada (v4: mejoras por personaje + progreso por lugar) ----------
+const SAVE_KEY = 'dr_save_v4', OLD_KEY = 'dr_save_v1';
+const COIN_K = 0.13;          // v4: las monedas por objeto valen mucho menos
+let save = { v: 4, coins: 0, best: 0, rounds: 0, tut: false, char: 'dona', owned: { dona: true }, cu: {}, pl: {}, place: 0, unlocked: 1, mig: 0 };
+try {
+  const s4 = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+  if (s4) { save = Object.assign(save, s4); save.owned = Object.assign({ dona: true }, s4.owned || {}); }
+  else {
+    const s1 = JSON.parse(localStorage.getItem(OLD_KEY) || 'null');
+    if (s1) { // migración: las mejoras globales pasan a Doña (máx. nivel 4), las monedas se reducen a un tercio
+      const u = Object.assign({ size: 0, time: 0, speed: 0, loot: 0 }, s1.ups || {});
+      save.coins = Math.floor((s1.coins || 0) / 3); save.best = s1.best || 0; save.rounds = s1.rounds || 0; save.tut = !!s1.tut; save.owned = Object.assign({ dona: true }, s1.owned || {}); save.char = s1.char || 'dona';
+      save.cu = { dona: [Math.min(4, u.size), Math.min(4, u.time), Math.min(4, u.speed), Math.min(4, u.loot)] }; save.mig = 1;
+    }
+  }
+} catch (e) {}
+if (!PLAYER_BY_ID[save.char]) save.char = 'dona';
+if (!(save.place >= 0 && save.place < PLACES.length)) save.place = 0;
+save.unlocked = Math.max(1, Math.min(PLACES.length, save.unlocked | 0));
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
-const UPMAX = 8;
-const upCost = (l) => Math.round(60 * Math.pow(1.7, l) / 5) * 5;
-const dur = (l) => 70 + 7 * l + pk('time');
-const UPS = [
-  { id: 'size', n: 'Tamaño', d: (l) => `Empiezas con un torbellino de ${100 + 12 * l}% → ${100 + 12 * (l + 1)}%`, col: '#ff4fa3', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>' },
-  { id: 'time', n: 'Duración', d: (l) => `La ronda dura ${dur(l)} s → ${dur(l + 1)} s`, col: '#2a8cf0', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>' },
-  { id: 'speed', n: 'Velocidad', d: (l) => `Te mueves un +${6 * l}% → +${6 * (l + 1)}%`, col: '#ff9a1f', icon: '<svg viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>' },
-  { id: 'loot', n: 'Botín', d: (l) => `Monedas por objeto x${(1 + 0.15 * l).toFixed(2)} → x${(1 + 0.15 * (l + 1)).toFixed(2)}`, col: '#3fbf5a', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.2 1.3-1.8 3-1.8s3 .8 3 2-1.3 1.6-3 2-3 .8-3 2 1.3 2 3 2 3-.7 3-1.8"/></svg>' },
-];
-const startR = () => 0.9 * (1 + 0.12 * save.ups.size) * (1 + pk('grow'));
+let PLi = save.place, PL = PLACES[PLi];
+const progOf = (id) => save.pl[id] || (save.pl[id] = { rm: [], rn: [], done: false, att: 0, tot: 0 });
+const prog = () => progOf(PL.id);
 let ch = PLAYER_BY_ID[save.char] || PLAYERS[0];
-function pk(k) { return (ch.perkK[k] || 0); }
+let UT = null; const ut = () => UT || (UT = statTotals(ch.id, save.cu[ch.id]));
+function pk(k) { return (ch.perkK[k] || 0) + (k === 'time' || k === 'gate' || k === 'combo' || k === 'inv' || k === 'magnet' || k === 'score' || k === 'speed' ? (ut()[k] || 0) : 0); }
+const dur = () => PL.dur + pk('time');
+const startR = () => 0.9 * (1 + (ut().size || 0)) * (1 + (ch.perkK.grow || 0));
 const gate = () => GATE + pk('gate');
-const speedMul = () => (1 + 0.06 * save.ups.speed) * (1 + pk('speed'));
-const lootMul = () => (1 + 0.15 * save.ups.loot) * (1 + pk('coins'));
-const hitMul = () => (ch.perkK.hit != null ? ch.perkK.hit : 1);
+const speedMul = () => 1 + pk('speed');
+const lootMul = () => (1 + (ut().loot || 0)) * (1 + pk('coins'));
+const hitMul = () => (ch.perkK.hit != null ? ch.perkK.hit : 1) * Math.max(0.25, 1 - (ut().hit || 0));
 const comboWin = () => COMBO_WIN + pk('combo');
+const clockBonus = () => 6 + (ut().clock || 0);
 
 // ---------- renderer / escena ----------
 const canvas = $('c');
@@ -74,7 +89,7 @@ let blinkT = 2, blinkP = 0, qLevel = 0; let scenery = null, dona = null, viewCh 
 function setChar(id, remember = true) {
   const c = PLAYER_BY_ID[id] || PLAYERS[0]; if (dona) scene.remove(dona);
   dona = modelCache[c.id] || (modelCache[c.id] = c.make()); scene.add(dona); tornado.theme(c.theme);
-  viewCh = c; if (remember) { ch = c; save.char = c.id; }
+  viewCh = c; if (remember) { ch = c; save.char = c.id; UT = null; }
   return c;
 }
 setChar(save.char);
@@ -93,7 +108,7 @@ window.addEventListener('resize', resize); resize();
 const G = {
   mode: 'menu', t: 0, time: 70, dur: 70, px: SPAWN.x, pz: SPAWN.z, vx: 0, vz: 0, kx: 0, kz: 0,
   A0: 0.81, A: 0.81, R: 0.9, Rv: 0.9, lvl: 1, score: 0, coins: 0, swallowed: 0, combo: 0, comboT: 0, bestCombo: 0, rebels: 0, alcaldes: 0, hits: 0, maxTier: 0, crazies: 0, monuments: 0, dist: null, crazies: 0, monuments: 0, dist: null,
-  slow: 0, inv: 0, shake: 0, kick: 0, twirl: 0, shout: 0, ended: 0, countT: 0, intro: 1, seed: 1, demoT: 0, hintStage: 0, moved: 0, bubbleT: 3, bot: false, speed: 0, paused: false,
+  slow: 0, inv: 0, shake: 0, kick: 0, twirl: 0, shout: 0, ended: 0, countT: 0, intro: 1, seed: 1, demoT: 0, hintStage: 0, moved: 0, bubbleT: 3, bot: false, speed: 0, paused: false, cf: 0, left: 0, total: 0, cleaned: 0, pulseT: 0, placeDone: false,
 };
 let props = [], grid = new Map(), movers = [], sucked = [], wobbling = [], pickups = [], frameNo = 0, alc = null, alcTimer = 0, alcLevel = 0, taken = [], toasts = [], landmarks = [];
 const cellOf = (v) => Math.floor(v / 8);
@@ -146,7 +161,7 @@ function makeClockMesh() {
 function addProp(d, shadow = true) {
   const geo = getGeo(d.kind, d.v), K = KINDS[d.kind];
   const m = new THREE.Mesh(geo.geo, propMaterial); m.castShadow = shadow; m.rotation.order = 'XZY';
-  const o = { id: props.length, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, mesh: m, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
+  const o = { id: props.length, gid: d.gid, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, mesh: m, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
   o.area = o.r * o.r; o.hw = Math.max(geo.geo.userData.w, geo.geo.userData.d) * d.sc * 0.5; m.position.set(d.x, o.hy, d.z); m.rotation.set(0, d.rot, 0); m.scale.setScalar(d.sc); m.updateMatrix(); m.matrixAutoUpdate = false;
   worldGroup.add(m); props.push(o);
   const k = gkey(cellOf(d.x), cellOf(d.z)); (grid.get(k) || grid.set(k, []).get(k)).push(o); o.cell = k;
@@ -158,9 +173,13 @@ function addNpc(d) {
   const o = { npc: true, def, kind: d.type, rebel: d.type === 'rebel', name: def.name, tier: def.tier, r: def.r, sc: 1, x: d.x, z: d.z, hy: h / 2, rot: rnd() * 6.28, mesh: holder, inner, state: 0, area: def.r * def.r, coins: def.coins, ph: rnd() * 6, yo: def.fly || 0, sy: 1, rx: 0, rz: 0, vx: 0, vz: 0, face: 0, wander: rnd() * 5, wdx: 0, wdz: 0, scream: 0, group: null };
   if (def.init) def.init(o); movers.push(o); return o;
 }
-function addPatitos(d) {
-  const grp = { members: [], left: 5 }; let prev = null;
-  for (let i = 0; i < 5; i++) { const o = addNpc({ type: 'patitos', x: d.x - i * 1.05, z: d.z, v: i === 0 ? 0 : 1 + (i % 2) }); o.group = grp; o.leader = i === 0; o.prev = prev; prev = o; grp.members.push(o); }
+function addPatitos(d, rn) {
+  const grp = { members: [], left: 0 }; let prev = null, skipped = 0;
+  for (let i = 0; i < 5; i++) {
+    const key = d.gid * 8 + i; if (rn && rn.has(key)) { skipped++; continue; }
+    const o = addNpc({ type: 'patitos', x: d.x - i * 1.05, z: d.z, v: i === 0 ? 0 : 1 + (i % 2) }); o.key = key; o.group = grp; o.leader = !prev; o.prev = prev; prev = o; grp.members.push(o); grp.left++;
+  }
+  return skipped;
 }
 function addPickup(d) {
   const mesh = d.type === 'coin' ? makeCoinMesh() : makeClockMesh(); mesh.position.set(d.x, d.type === 'coin' ? 1.1 : 1.5, d.z); worldGroup.add(mesh);
@@ -171,18 +190,23 @@ function spawnAlcalde(level) {
   let x = 0, z = 0, best = -1; for (let i = 0; i < 12; i++) { const a = rnd() * 6.283, d = 30 + rnd() * 10, cx = clamp(G.px + Math.cos(a) * d, -BOUND + 2, BOUND - 2), cz = clamp(G.pz + Math.sin(a) * d, -BOUND + 2, BOUND - 2), dd = Math.hypot(cx - G.px, cz - G.pz); if (dd > best) { best = dd; x = cx; z = cz; } }
   holder.position.set(x, h / 2, z); worldGroup.add(holder);
   const r = Math.min(3.6, 2.1 + level * 0.4);
-  alc = { rebel: false, alc: true, kind: 'alcalde', name: 'Alcalde Paraguas', tier: 3, r, sc: 1 + level * 0.12, x, z, hy: h / 2, mesh: holder, inner, state: 0, area: r * r * 1.2, coins: 70 + level * 30, spd: 4.4 + level * 0.5, cool: 1.0, mode: 'chase', rec: 0, ph: 0, vx: 0, vz: 0, talk: 3, level };
+  alc = { rebel: false, alc: true, kind: 'alcalde', name: 'Alcalde Paraguas', tier: 3, r, sc: 1 + level * 0.12, x, z, hy: h / 2, mesh: holder, inner, state: 0, area: r * r * 1.2, coins: 70 + level * 30, spd: (4.4 + level * 0.5) * (1 + (PL.hazard - 1) * 0.4), cool: 1.0, mode: 'chase', rec: 0, ph: 0, vx: 0, vz: 0, talk: 3, level };
   holder.scale.setScalar(alc.sc); alc.hy = h / 2 * alc.sc; holder.position.y = alc.hy;
   toast('¡Llega el Alcalde Paraguas!', 'alc'); say('alc', ALC_LINES[0], 2300); AU.swish();
 }
-function buildWorld(seed) {
+function buildWorld(seed, play) {
   clearWorld(); G.seed = seed;
-  const w = generate(seed);
-  for (const d of w.objs) addProp(d);
+  const w = generate(seed, PL);
+  const P = play ? prog() : null, rm = P ? new Set(P.rm) : null, rn = P ? new Set(P.rn) : null;
+  let total = w.objs.length; for (const d of w.npcs) total += d.type === 'patitos' ? 5 : 1;
+  let left = total;
+  for (const d of w.objs) { if (rm && rm.has(d.gid)) { left--; continue; } addProp(d); }
   landmarks = props.filter((o) => o.K.lm);
-  for (const d of w.npcs) { if (d.type === 'patitos') addPatitos(d); else addNpc(d); }
+  for (const d of w.npcs) { if (d.type === 'patitos') left -= addPatitos(d, rn); else { if (rn && rn.has(d.gid * 8)) { left--; continue; } addNpc(d).key = d.gid * 8; } }
   for (const d of w.pickups) addPickup(d);
+  G.total = play ? total : 0; G.left = play ? left : 0; if (P) P.tot = total;
 }
+const addCoins = (x) => { G.cf += x; const n = Math.floor(G.cf); if (n > 0) { G.cf -= n; G.coins += n; save.coins += n; } return n; };
 
 // ---------- tragar ----------
 function removeFromGrid(o) { if (o.cell == null) return; const l = grid.get(o.cell); if (l) { const i = l.indexOf(o); if (i >= 0) { l[i] = l[l.length - 1]; l.pop(); } } o.cell = null; }
@@ -196,10 +220,10 @@ function swallow(o) {
   if (G.mode === 'play') { G.combo++; G.comboT = comboWin(); G.bestCombo = Math.max(G.bestCombo, G.combo); }
   const cm = 1 + Math.min(G.combo, 40) * 0.025;
   const pts = Math.round((10 + o.area * 14) * (1 + Math.min(10, Math.floor(G.combo / 5)) * 0.2) * (1 + pk('score')));
-  const coins = Math.max(1, Math.round(o.coins * lootMul() * cm));
+  const coinsF = o.coins * lootMul() * cm * COIN_K;
   const real = G.mode === 'play';
-  if (real) { G.score += pts; G.coins += coins; save.coins += coins; G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper' || (o.K && o.K.cb)) G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
-  const before = G.A; G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * o.area / (1 + G.A / 70)); G.R = Math.sqrt(G.A);
+  if (real) { G.score += pts; addCoins(coinsF); G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper' || (o.K && o.K.cb)) G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
+  const before = G.A; G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * (1 + (ut().gain || 0)) * o.area / (1 + G.A / 70)); G.R = Math.sqrt(G.A);
   hud.dirty = true;
   // feedback
   const big = o.tier >= 2 || o.npc || o.alc;
@@ -214,6 +238,7 @@ function swallow(o) {
   if (o.tier >= 6 && real) { G.monuments++; toast('¡' + o.name + ' tragado!', 'alc'); popText('+' + fmt(pts), o.x, o.hy * 2 + 2, o.z, 'big'); G.shake = 1.4; flash('good'); AU.roundEnd(true); AU.levelUp(6); }
   if (o.npc && real) { G.crazies++; if (o.def.onSwallow) o.def.onSwallow(o, X); }
   checkLevel();
+  if (real && !o.alc && G.total) { G.left--; G.cleaned++; const P = prog(); if (o.npc) P.rn.push(o.key); else P.rm.push(o.gid); hud.dirty = true; if (G.left <= 0) completePlace(); }
 }
 function checkLevel() {
   const L = 1 + Math.floor(Math.log(G.R / G.A0 ** 0.5) / Math.log(1.32) + 1e-6);
@@ -247,7 +272,7 @@ const joyEnd = (e) => { if (e.pointerId !== joy.id) return; joy.on = false; joy.
 canvas.addEventListener('pointerup', joyEnd); canvas.addEventListener('pointercancel', joyEnd); canvas.addEventListener('lostpointercapture', joyEnd);
 window.addEventListener('keydown', (e) => { keys[e.code] = true; if (e.code === 'Escape' || e.code === 'KeyP') { if (G.mode === 'play') pauseGame(); else if (G.mode === 'pause') resumeGame(); } AU.init(); });
 window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play') pauseGame(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); if (document.hidden && G.mode === 'play') pauseGame(); });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 function inputVec() {
   if (G.bot || G.mode === 'menu') { const b = botDir(); return b; }
@@ -277,10 +302,10 @@ function botDir() {
   for (const m of movers) { if (m.state !== 0 || !HAZ[m.kind] || m.r <= R * gate()) continue; const ax = G.px - m.x, az = G.pz - m.z, ad = Math.hypot(ax, az), rr = 7 + R * 0.6 + m.r; if (ad < rr) { const w = (rr - ad) / rr * 1.4; tx += ax / ad * w; tz += az / ad * w; l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l; } }
   return { x: tx, z: tz, m: 0.85 };
 }
-const HAZ = { cortacesped: 1, globo: 1, nevera: 1, lavadora: 1, vater: 1, tostadora: 0 };
+const HAZ = { cortacesped: 1, globo: 1, nevera: 1, lavadora: 1, vater: 1, tostadora: 0, donut: 1, monito: 1, caballero: 1, nubarron: 1, calabaza: 1, neveraP: 1, neveraJ: 1, neveraC: 1, neveraN: 1, neveraH: 1 };
 
 // ---------- actualización ----------
-const hud = { dirty: true, coins: -1, time: -1, lvl: -1, score: -1, prog: -1, combo: -1 };
+const hud = { left: -1, dirty: true, coins: -1, time: -1, lvl: -1, score: -1, prog: -1, combo: -1 };
 function step(dt) {
   G.t += dt; frameNo++;
   const play = G.mode === 'play', demo = G.mode === 'menu';
@@ -293,6 +318,7 @@ function step(dt) {
     G.time -= dt; G.inv = Math.max(0, G.inv - dt); G.slow = Math.max(0, G.slow - dt);
     if (G.time <= 0) endRound();
     else if (G.time < 10.5 && Math.ceil(G.time) !== G.lastTick) { G.lastTick = Math.ceil(G.time); AU.tick(G.time < 5); }
+    { const pl = ut().pulse_l || 0; if (pl > 0) { G.pulseT += dt; if (G.pulseT >= pulsePeriod(pl)) { G.pulseT = 0; doPulse(pl); } } }
     if (G.comboT > 0) { G.comboT -= dt; if (G.comboT <= 0) { G.combo = 0; hud.dirty = true; } }
     if (!alc && alcTimer <= 0 && G.alcSpawned !== true && G.t - G.startT > 10) { G.alcSpawned = true; spawnAlcalde(0); }
     if (G.alcSpawned && !alc) { alcTimer -= dt; if (alcTimer <= 0 && G.time > 12) spawnAlcalde(alcLevel); }
@@ -344,10 +370,18 @@ function step(dt) {
   updateFx(dt);
   updateHud();
 }
+function doPulse(pl) {
+  const rad = G.R * pulseRadius(pl), rc = cellOf(G.px), rz = cellOf(G.pz), span = Math.ceil(rad / 8) + 1; let n = 0, lim = 12 + pl * 6;
+  const got = []; for (let a = rc - span; a <= rc + span; a++) for (let b = rz - span; b <= rz + span; b++) { const l = grid.get(gkey(a, b)); if (l) for (const o of l) if (o.state === 0 && o.r <= G.R * gate() && Math.hypot(o.x - G.px, o.z - G.pz) < rad) got.push(o); }
+  for (const m of movers) if (m.state === 0 && m.r <= G.R * gate() && Math.hypot(m.x - G.px, m.z - G.pz) < rad) got.push(m);
+  got.sort((a, b) => Math.hypot(a.x - G.px, a.z - G.pz) - Math.hypot(b.x - G.px, b.z - G.pz));
+  for (const o of got) { if (n++ >= lim) break; if (o.state === 0) swallow(o); }
+  rings.spawn(G.px, G.pz, G.Rv, rad, 0xff5a8a, 0.9, 0.7); rings.spawn(G.px, G.pz, G.Rv * 0.6, rad * 0.7, 0xffffff, 0.7, 0.6); AU.levelUp(4); G.shake = Math.max(G.shake, 0.4); toast('¡SUPERASPIRACIÓN!', ''); G.kick = 1;
+}
 function collectPickup(p) {
   const y = 1.5; if (G.mode !== 'play') { parts.burst(p.x, y, p.z, 8, { color: [0xffd23f, 0xfff0a0], speed: 3, size: 0.4, life: 0.6, shape: 2, g: 8, up: 3 }); return; }
-  if (p.type === 'coin') { const c = Math.round(2 * lootMul()); G.coins += c; save.coins += c; AU.coin(); parts.burst(p.x, y, p.z, 10, { color: [0xffd23f, 0xfff0a0], speed: 4, size: 0.5, life: 0.7, shape: 2, g: 8, up: 4 }); popText('+' + c, p.x, y + 1, p.z, 'coinp'); }
-  else { G.time = Math.min(G.time + 6, G.dur + 20); AU.clockBonus(); parts.burst(p.x, y, p.z, 18, { color: [0x9fe8ff, 0xffffff, 0x4aa8ff], speed: 5, size: 0.5, life: 0.9, shape: 3, g: 3, up: 4 }); popText('+6 s', p.x, y + 1, p.z, 'timep'); toast('¡+6 segundos!', ''); rings.spawn(p.x, p.z, 0.5, 4, 0x9fe8ff, 0.6, 0.9); }
+  if (p.type === 'coin') { const c = Math.max(1, Math.round(2 * lootMul())); G.coins += c; save.coins += c; AU.coin(); parts.burst(p.x, y, p.z, 10, { color: [0xffd23f, 0xfff0a0], speed: 4, size: 0.5, life: 0.7, shape: 2, g: 8, up: 4 }); popText('+' + c, p.x, y + 1, p.z, 'coinp'); }
+  else { const cb = clockBonus(); G.time = Math.min(G.time + cb, G.dur + 30); AU.clockBonus(); parts.burst(p.x, y, p.z, 18, { color: [0x9fe8ff, 0xffffff, 0x4aa8ff], speed: 5, size: 0.5, life: 0.9, shape: 3, g: 3, up: 4 }); popText('+' + cb.toFixed(cb % 1 ? 1 : 0).replace('.', ',') + ' s', p.x, y + 1, p.z, 'timep'); toast('¡Más tiempo!', ''); rings.spawn(p.x, p.z, 0.5, 4, 0x9fe8ff, 0.6, 0.9); }
   hud.dirty = true;
 }
 function updateSucked(o, dt, R) {
@@ -375,7 +409,7 @@ const X = {
   step(c, tx, tz, sp, dt) { if (!sp) return 0; const l = Math.hypot(tx, tz) || 1, mg = Math.min(4, c.r * 0.4 + 1); const nx = clamp(c.x + tx / l * sp * dt, -BOUND + mg, BOUND - mg), nz = clamp(c.z + tz / l * sp * dt, -BOUND + mg, BOUND - mg); const mv = Math.hypot(nx - c.x, nz - c.z) / dt; c.x = nx; c.z = nz; return mv; },
   say, toast, shake(v) { G.shake = Math.max(G.shake, v); },
   addTime(s) { if (G.mode === 'play') { G.time = Math.min(G.time + s, G.dur + 25); hud.dirty = true; } },
-  bonus(msg, coins) { if (G.mode !== 'play') return; G.coins += coins; save.coins += coins; AU.coin(); toast(msg, ''); hud.dirty = true; },
+  bonus(msg, coins) { if (G.mode !== 'play') return; coins = Math.max(1, Math.round(coins * 0.25)); G.coins += coins; save.coins += coins; AU.coin(); toast(msg, ''); hud.dirty = true; },
   puff(x, y, z) { parts.burst(x, y, z, 14, { color: [0xffffff, 0xe8d8ff, 0xffd9ec], speed: 3, size: 1.0, size1: 2.2, life: 0.7, shape: 4, g: -0.3, alpha: 0.7 }); parts.burst(x, y, z, 6, { color: [0xffd23f, 0xff74c4], speed: 4, size: 0.4, life: 0.7, shape: 3, g: 2 }); },
   shoot(c, ux, uz) {
     AU.toastShot(); const m = toastMesh.clone(); m.castShadow = true; worldGroup.add(m);
@@ -526,6 +560,16 @@ function updateFx(dt) {
       ind.style.display = 'flex'; ind.style.left = (cx + vx * s2) + 'px'; ind.style.top = (cy + vy * s2 + 20) + 'px'; ind.style.setProperty('--rot', (Math.atan2(vy, vx) * 180 / Math.PI + 90) + 'deg');
     } else ind.style.display = 'none';
   } else ind.style.display = 'none';
+  // flecha hacia lo que queda por limpiar
+  const li = $('leftInd');
+  if (G.mode === 'play' && G.total && G.left > 0 && G.left <= 40 && !(frameNo % 6 && li._t)) {
+    let best = null, bd = 1e9; for (const o of props) if (o.state === 0) { const d = Math.hypot(o.x - G.px, o.z - G.pz); if (d < bd) { bd = d; best = o; } } for (const m of movers) if (m.state === 0) { const d = Math.hypot(m.x - G.px, m.z - G.pz); if (d < bd) { bd = d; best = m; } }
+    li._t = best ? { o: best, d: bd } : null;
+  }
+  if (G.mode === 'play' && li._t && li._t.o.state === 0 && G.left <= 40 && G.left > 0) {
+    const o = li._t.o, p = toScreen(o.x, (o.hy || 0), o.z), W = window.innerWidth, Hh = window.innerHeight; const off = p.behind || p.x < 24 || p.x > W - 24 || p.y < 110 || p.y > Hh - 24;
+    if (off) { let cx = W / 2, cy = Hh / 2, vx = p.x - cx, vy = p.y - cy; if (p.behind) { vx = -vx; vy = -vy; } const sx2 = (W / 2 - 46) / Math.abs(vx || 1e-3), sy2 = (Hh / 2 - 100) / Math.abs(vy || 1e-3), s2 = Math.min(sx2, sy2); li.style.display = 'flex'; li.style.left = (cx + vx * s2) + 'px'; li.style.top = (cy + vy * s2 + 20) + 'px'; li.style.setProperty('--rot', (Math.atan2(vy, vx) * 180 / Math.PI + 90) + 'deg'); } else li.style.display = 'none';
+  } else { li.style.display = 'none'; if (G.mode !== 'play') li._t = null; }
 }
 function placeBubble(b, x, y, z) { if (!b.classList.contains('on')) return; const p = toScreen(x, y, z); b.style.left = clamp(p.x, 100, window.innerWidth - 100) + 'px'; b.style.top = clamp(p.y, 130, window.innerHeight - 60) + 'px'; }
 
@@ -543,10 +587,21 @@ function banner(dn) {
   const b = $('dBanner'), D = DISTRICTS[dn]; b.textContent = D.name; b.style.setProperty('--c', '#' + D.c.toString(16).padStart(6, '0')); b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
 }
 const miniC = $('mini'), mctx = miniC.getContext('2d');
+let heat = null;
 function drawMini() {
   const W = miniC.width, k = W / (HALF * 2), g = mctx; g.clearRect(0, 0, W, W);
-  for (const id in DISTRICTS) { const D = DISTRICTS[id]; g.fillStyle = '#' + D.c.toString(16).padStart(6, '0'); g.globalAlpha = id === G.dist ? 0.85 : 0.5; g.fillRect((D.cx - 43 + HALF) * k + 1, (D.cz - 43 + HALF) * k + 1, 86 * k - 2, 86 * k - 2); }
-  g.globalAlpha = 1; g.fillStyle = '#fff';
+  for (const id in DISTRICTS) { const D = DISTRICTS[id]; g.fillStyle = '#' + D.c.toString(16).padStart(6, '0'); g.globalAlpha = id === G.dist ? 0.9 : 0.65; g.fillRect((D.cx - 43 + HALF) * k + 1, (D.cz - 43 + HALF) * k + 1, 86 * k - 2, 86 * k - 2); }
+  g.globalAlpha = 1;
+  if (G.total) { // lo que aún está sucio se oscurece; lo limpio brilla
+    const CN = 22, cs = (HALF * 2) / CN; if (!heat) heat = new Float32Array(CN * CN); heat.fill(0);
+    const add = (o) => { const ix = clamp(((o.x + HALF) / cs) | 0, 0, CN - 1), iz = clamp(((o.z + HALF) / cs) | 0, 0, CN - 1); heat[iz * CN + ix] += o.tier >= 3 ? 3 : 1; };
+    for (const o of props) if (o.state === 0) add(o); for (const m of movers) if (m.state === 0) add(m);
+    for (let iz = 0; iz < CN; iz++) for (let ix = 0; ix < CN; ix++) { const h = heat[iz * CN + ix]; if (h > 0) { g.fillStyle = `rgba(42,24,64,${Math.min(0.62, 0.16 + h * 0.025).toFixed(2)})`; g.fillRect(ix * cs * k, iz * cs * k, cs * k + 0.6, cs * k + 0.6); } }
+    const few = G.left <= 60; g.lineWidth = 1.2; g.strokeStyle = '#fff'; g.fillStyle = '#ff2d6e';
+    const dot = (o, r) => { g.beginPath(); g.arc((o.x + HALF) * k, (o.z + HALF) * k, r, 0, 7); g.fill(); g.stroke(); };
+    for (const o of props) if (o.state === 0 && (few || o.tier >= 4)) dot(o, few ? 2.4 : 2.0); for (const m of movers) if (m.state === 0 && (few || m.def.boss)) dot(m, 2.6);
+  }
+  g.fillStyle = '#fff';
   for (const o of landmarks) { if (o.state !== 0 && o.state !== undefined) continue; const x = (o.x + HALF) * k, y = (o.z + HALF) * k; g.beginPath(); g.moveTo(x, y - 4); g.lineTo(x + 3, y); g.lineTo(x, y + 4); g.lineTo(x - 3, y); g.fill(); }
   for (const m of movers) if (m.state === 0 && m.def.boss) { g.fillStyle = '#7a1fd0'; g.beginPath(); g.arc((m.x + HALF) * k, (m.z + HALF) * k, 3.2, 0, 7); g.fill(); }
   if (alc) { g.fillStyle = '#ff2d4d'; g.beginPath(); g.arc((alc.x + HALF) * k, (alc.z + HALF) * k, 3.4, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.2; g.stroke(); }
@@ -561,6 +616,8 @@ function updateHud() {
   if (G.lvl !== hud.lvl) { hud.lvl = G.lvl; $('hLvl').textContent = 'Nivel ' + G.lvl; }
   const sc = Math.round(G.score); if (sc !== hud.score) { hud.score = sc; $('hScore').textContent = fmt(sc); }
   const prog = clamp(Math.log(G.R / Math.sqrt(G.A0)) / Math.log(1.32) % 1, 0, 1); const pq = Math.round(prog * 100); if (pq !== hud.prog) { hud.prog = pq; $('hLvlBar').style.width = pq + '%'; }
+  if (G.total) { const lf = G.left; if (lf !== hud.left) { hud.left = lf; const pc = Math.floor((1 - lf / G.total) * 100); $('hCleanPct').textContent = (lf === 0 ? 100 : Math.min(99, pc)) + '%'; $('hCleanLeft').textContent = lf === 0 ? '¡Todo!' : 'quedan ' + lf; $('hCleanBar').style.width = (100 - lf / G.total * 100) + '%'; } }
+  const plv = ut().pulse_l || 0; $('pulseRow').style.display = plv ? 'block' : 'none'; if (plv) $('hPulse').style.width = clamp(G.pulseT / pulsePeriod(plv) * 100, 0, 100) + '%';
   const c = $('combo'); if (G.combo >= 3) { c.classList.add('on'); if (G.combo !== hud.combo) { hud.combo = G.combo; $('hComboN').textContent = 'x' + G.combo; } $('hComboBar').style.width = (G.comboT / comboWin() * 100) + '%'; } else { c.classList.remove('on'); hud.combo = -1; }
   // pistas
   const hint = $('hint');
@@ -572,63 +629,130 @@ function updateHud() {
 }
 
 // ---------- flujo de pantallas ----------
-const scr = ['sTitle', 'sHelp', 'sCount', 'sPause', 'sResults', 'sShop', 'sChars'];
+const scr = ['sTitle', 'sHelp', 'sCount', 'sPause', 'sResults', 'sShop', 'sChars', 'sTravel', 'sPlaceDone'];
 function show(id) { for (const s of scr) $(s).classList.toggle('hidden', s !== id); }
 function hideAll() { show(null); }
-function refreshTitle() { $('tChar').textContent = ch.name; $('tCoins').textContent = fmt(save.coins); $('tBest').textContent = fmt(save.best); $('bSfx').classList.toggle('off', !AU.S.sfxOn); $('bMus').classList.toggle('off', !AU.S.musicOn); }
+function refreshTitle() {
+  $('tChar').textContent = ch.name; $('tCoins').textContent = fmt(save.coins); $('tBest').textContent = fmt(save.best); $('bSfx').classList.toggle('off', !AU.S.sfxOn); $('bMus').classList.toggle('off', !AU.S.musicOn);
+  const P = prog(), lock = PLi >= save.unlocked, doneAll = save.unlocked >= PLACES.length && PLACES.every((q) => progOf(q.id).done);
+  $('pName').textContent = (lock ? '🔒 ' : '') + PL.name; $('pSub').textContent = lock ? 'Limpia ' + PLACES[PLi - 1].name + ' para abrirlo' : PL.sub; $('pNum').textContent = 'Lugar ' + (PLi + 1) + ' de ' + PLACES.length;
+  const left = P.tot ? Math.max(0, P.tot - P.rm.length - P.rn.length) : 0, pct = P.tot ? Math.floor((P.rm.length + P.rn.length) / P.tot * 100) : 0, fresh = P.done && !P.part;
+  $('pFill').style.width = (fresh ? 100 : pct) + '%'; $('pPct').textContent = lock ? '' : fresh ? '✔ Limpio · vuelve a limpiarlo' : pct > 0 ? pct + '% limpio · quedan ' + left : 'Sin empezar';
+  $('bPlay').classList.toggle('locked', lock); $('bPlay').textContent = lock ? 'BLOQUEADO' : pct > 0 && !fresh ? '¡SEGUIR LIMPIANDO!' : '¡A LIMPIAR!';
+  $('bPPrev').style.visibility = PLi > 0 ? 'visible' : 'hidden'; $('bPNext').style.visibility = PLi < PLACES.length - 1 ? 'visible' : 'hidden';
+  $('tNote').style.display = save.mig === 1 ? 'block' : 'none'; if (doneAll) $('pPct').textContent = '🏆 ¡Mundo entero limpio!';
+}
 function toMenu() {
-  setChar(save.char); G.mode = 'menu'; $('hud').classList.remove('on'); joyShow(false); joy.on = false; G.intro = 0; G.combo = 0; G.comboT = 0; G.slow = 0;
-  $('combo').classList.remove('on'); $('alcInd').style.display = 'none'; $('dBanner').classList.remove('on'); resetDemo(); G.A0 = G.A = 0.81; G.R = G.Rv = 0.9; show('sTitle'); refreshTitle(); AU.setMusicMode('menu');
+  persist(); setChar(save.char); G.mode = 'menu'; $('hud').classList.remove('on'); joyShow(false); joy.on = false; G.intro = 0; G.combo = 0; G.comboT = 0; G.slow = 0; G.total = 0; G.left = 0;
+  $('combo').classList.remove('on'); $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('dBanner').classList.remove('on'); resetDemo(); G.A0 = G.A = 0.81; G.R = G.Rv = 0.9; show('sTitle'); refreshTitle(); AU.setMusicMode('menu');
 }
 function startRound() {
+  if (PLi >= save.unlocked) { AU.nope(); return; }
   AU.init(); AU.startMusic('game'); AU.setMusicMode('game'); AU.click();
-  buildWorld((Math.random() * 1e9) | 0); alc = null; alcTimer = 0; alcLevel = 0; botTarget = null;
-  const r0 = startR(); Object.assign(G, { mode: 'count', t: 0, startT: 0, dur: dur(save.ups.time), time: dur(save.ups.time), px: SPAWN.x, pz: SPAWN.z + 3, vx: 0, vz: 0, kx: 0, kz: 0, A0: r0 * r0, A: r0 * r0, R: r0, Rv: r0, lvl: 1, score: 0, coins: 0, swallowed: 0, combo: 0, comboT: 0, bestCombo: 0, rebels: 0, alcaldes: 0, hits: 0, maxTier: 0, crazies: 0, monuments: 0, dist: null, slow: 0, inv: 0, shake: 0, kick: 0, intro: 1, moved: 0, bubbleT: 7, alcSpawned: false, lastTick: 0, ended: 0, countT: 0 });
-  camT.set(G.px, 0, G.pz); camDist = 40;
-  hud.coins = hud.time = hud.lvl = hud.score = hud.prog = hud.combo = -1; $('hud').classList.add('on'); $('bAlc').classList.remove('on'); $('bDona').classList.remove('on'); G.dist = null;
+  const P = prog(); if (P.done && !P.part) { P.rm = []; P.rn = []; } P.part = true; P.att = (P.att || 0) + 1; G.placeDone = false;
+  buildWorld(PL.seed, true); alc = null; alcTimer = 0; alcLevel = 0; botTarget = null;
+  let r0 = startR(); const base = r0, done = P.rm.length + P.rn.length;
+  if (done > 0) { // si ya limpiaste mucho, empiezas lo bastante grande para poder tragar buena parte de lo que queda
+    const rs = []; for (const o of props) rs.push(o.r); for (const m of movers) rs.push(m.r); rs.sort((a, b) => a - b); const n = rs.length, fr = 1 - n / Math.max(1, P.tot);
+    if (n) { const f = n <= 14 ? 1 : fr > 0.8 ? 0.8 : fr > 0.55 ? 0.6 : 0.4, q = rs[Math.min(n - 1, Math.floor(f * (n - 1)))], need = q / (gate() * 0.95); const curve = base * (1 + 9 * Math.pow(Math.max(0, fr), 1.1)); r0 = Math.max(r0, Math.min(n <= 14 ? 16 : 10, Math.max(need, curve))); }
+  }
+  G.boosted = r0 > base + 0.02;
+  Object.assign(G, { mode: 'count', t: 0, startT: 0, dur: dur(), time: dur(), px: SPAWN.x, pz: SPAWN.z + 3, vx: 0, vz: 0, kx: 0, kz: 0, A0: r0 * r0, A: r0 * r0, R: r0, Rv: r0, lvl: 1, score: 0, coins: 0, cf: 0, cleaned: 0, pulseT: pulsePeriod(ut().pulse_l || 1) * 0.4, swallowed: 0, combo: 0, comboT: 0, bestCombo: 0, rebels: 0, alcaldes: 0, hits: 0, maxTier: 0, crazies: 0, monuments: 0, dist: null, slow: 0, inv: 0, shake: 0, kick: 0, intro: 1, moved: 0, bubbleT: 7, alcSpawned: false, lastTick: 0, ended: 0, countT: 0 });
+  G.startLeft = G.left;
+  camT.set(G.px, 0, G.pz); camDist = 40; hud.left = -1;
+  hud.coins = hud.time = hud.lvl = hud.score = hud.prog = hud.combo = -1; $('hud').classList.add('on'); $('bAlc').classList.remove('on'); $('bDona').classList.remove('on'); G.dist = null; $('leftInd').style.display = 'none';
   show('sCount'); countdown(3);
 }
 function countdown(n) {
   if (G.mode !== 'count') return; const e = $('countN'); e.style.animation = 'none'; void e.offsetWidth; e.style.animation = '';
   if (n > 0) { e.textContent = n; AU.beep(false); setTimeout(() => countdown(n - 1), 750); }
-  else { e.textContent = '¡YA!'; AU.beep(true); G.mode = 'play'; G.startT = G.t; hideAll(); toast('¡A LIMPIAR!'); say('dona', ch.start, 1900); G.shout = 1; AU.speak(ch.start, ch.voice.pitch, ch.voice.rate); G.intro = 0; }
+  else { e.textContent = '¡YA!'; AU.beep(true); G.mode = 'play'; G.startT = G.t; hideAll(); toast(G.boosted ? '¡Sigue limpiando!' : '¡A LIMPIAR!'); say('dona', ch.start, 1900); G.shout = 1; AU.speak(ch.start, ch.voice.pitch, ch.voice.rate); G.intro = 0; }
 }
 function endRound() {
-  if (G.mode !== 'play') return; G.mode = 'ending'; joyShow(false); joy.on = false; toast('¡TIEMPO!', 'warn'); AU.roundEnd(true); $('alcInd').style.display = 'none'; $('combo').classList.remove('on');
+  if (G.mode !== 'play') return; G.mode = 'ending'; joyShow(false); joy.on = false; toast('¡TIEMPO!', 'warn'); AU.roundEnd(true); $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('combo').classList.remove('on'); persist();
   setTimeout(showResults, 1500);
 }
 function showResults() {
   save.rounds++; const goals = [
-    { t: 'Tragar 60 cosas', ok: G.swallowed >= 60 }, { t: 'Atrapar a un loco o echar al Alcalde', ok: G.crazies + G.alcaldes > 0 }, { t: 'Tragar un armario-edificio', ok: G.maxTier >= 4 },
+    { t: 'Tragar 120 cosas', ok: G.swallowed >= 120 }, { t: 'Atrapar a un loco o echar al Alcalde', ok: G.crazies + G.alcaldes > 0 }, { t: 'Tragar un armario-edificio o algo gigante', ok: G.maxTier >= 4 },
   ];
-  const stars = goals.filter((g) => g.ok).length, bonus = stars * 25 + (G.monuments > 0 ? 100 : 0); G.coins += bonus; save.coins += bonus;
+  const stars = goals.filter((g) => g.ok).length, bonus = stars * 8 + (G.monuments > 0 ? 30 : 0); G.coins += bonus; save.coins += bonus;
   const rec = Math.round(G.score) > save.best; if (rec) save.best = Math.round(G.score); persist();
-  const rank = G.score < 1500 ? 'Aprendiz de escoba' : G.score < 5000 ? 'Torbellino de salón' : G.score < 12000 ? 'Huracán doméstico' : G.score < 26000 ? 'Señora del Remolino' : 'Reina de Mueblópolis';
-  $('rTitle').textContent = '¡Ronda terminada!'; $('rRank').textContent = rank; $('rScore').textContent = fmt(G.score); $('rRecord').classList.toggle('on', rec);
+  const rank = G.score < 1500 ? 'Aprendiz de escoba' : G.score < 5000 ? 'Torbellino de salón' : G.score < 12000 ? 'Huracán doméstico' : G.score < 26000 ? 'Señora del Remolino' : 'Reina de ' + PL.name;
+  const pct = Math.floor((1 - G.left / Math.max(1, G.total)) * 100), gain = Math.max(0, Math.floor(G.cleaned / Math.max(1, G.total) * 100));
+  $('rTitle').textContent = '¡Tiempo!'; $('rRank').textContent = rank; $('rScore').textContent = fmt(G.score); $('rRecord').classList.toggle('on', rec);
+  $('rPlace').textContent = PL.name; $('rCleanTxt').innerHTML = `<b>${pct}%</b> limpio${gain ? ` <em>(+${gain}% en este intento)</em>` : ''} · quedan <b>${fmt(G.left)}</b>`; $('rCleanBar').style.width = pct + '%';
   $('rStars').innerHTML = [0, 1, 2].map((i) => `<svg class="star ${i < stars ? 'got' : ''}" viewBox="0 0 24 24"><path d="M12 2.2l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17l-5.9 3.2 1.2-6.5L2.5 9.1l6.6-.9z"/></svg>`).join('');
   [...$('rStars').children].forEach((s, i) => setTimeout(() => { s.classList.add('on'); if (i < stars) AU.coin(); }, 350 + i * 300));
-  $('rGrid').innerHTML = `<div><b>${G.swallowed}</b>cosas tragadas</div><div><b>Nivel ${G.lvl}</b>tamaño final</div><div><b>x${G.bestCombo}</b>mejor combo</div><div><b>${G.crazies}</b>locos atrapados</div>` +
+  $('rGrid').innerHTML = `<div><b>${G.cleaned}</b>cosas limpiadas</div><div><b>Nivel ${G.lvl}</b>tamaño final</div><div><b>x${G.bestCombo}</b>mejor combo</div><div><b>${G.crazies}</b>locos atrapados</div>` +
     goals.map((g) => `<div style="grid-column:span 2;display:flex;justify-content:space-between;align-items:center;${g.ok ? 'background:#e3ffe8;color:#1d8a3a' : ''}"><span>${g.t}</span><b style="font-size:18px">${g.ok ? '✔' : '–'}</b></div>`).join('');
   $('rCoins').textContent = '+' + fmt(G.coins - bonus); $('rBonus').textContent = bonus ? `+${bonus} extra (${G.monuments > 0 ? 'monumento + ' : ''}estrellas)` : 'Consigue estrellas para ganar más';
+  $('bRAgain').textContent = 'Seguir limpiando';
   G.mode = 'results'; G.demoT = 0; show('sResults'); $('hud').classList.remove('on'); AU.setMusicMode('menu');
 }
-function pauseGame() { if (G.mode !== 'play') return; G.mode = 'pause'; show('sPause'); joyShow(false); joy.on = false; AU.setWhoosh(0, 1); $('bPSfx').classList.toggle('off', !AU.S.sfxOn); $('bPMus').classList.toggle('off', !AU.S.musicOn); }
+// ---------- ¡lugar limpio! ----------
+function completePlace() {
+  if (G.mode !== 'play' || G.placeDone) return; G.placeDone = true; G.mode = 'ending'; joyShow(false); joy.on = false;
+  const P = prog(), first = !P.done, bonus = (first ? 220 : 70) * (PLi + 1); P.done = true; P.part = false; P.fin = (P.fin || 0) + 1; G.coins += bonus; save.coins += bonus; G.bonusPlace = bonus; save.rounds++;
+  const nextNew = PLi + 2 > save.unlocked && PLi + 1 < PLACES.length; save.unlocked = Math.max(save.unlocked, Math.min(PLACES.length, PLi + 2)); const rec = Math.round(G.score) > save.best; if (rec) save.best = Math.round(G.score); persist();
+  toast('¡' + PL.name + ' LIMPIO!', 'alc'); flash('good'); AU.roundEnd(true); AU.levelUp(8); G.shake = 1.2; $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('combo').classList.remove('on'); if (alc) { alc.state = 3; worldGroup.remove(alc.mesh); alc = null; }
+  say('dona', '¡Todo limpio! ¡Ni una mota de polvo!', 2600); AU.speak('¡Todo limpio!', ch.voice.pitch, ch.voice.rate);
+  let n = 0; const iv = setInterval(() => { n++; if (n > 13 || (G.mode !== 'ending')) { clearInterval(iv); return; } const a = rnd() * 6.28, d = 3 + rnd() * 10 * G.Rv * 0.5, c = [[0xff74c4, 0xffd23f], [0x3fe0b0, 0x4aa8ff], [0xff6b5e, 0xffffff], [0xb06bff, 0xffd23f]][n % 4]; parts.burst(G.px + Math.cos(a) * d, 5 + rnd() * 9, G.pz + Math.sin(a) * d, 34, { color: c, speed: 9, size: 0.8, life: 1.3, shape: 1, g: 5, up: 1 }); rings.spawn(G.px, G.pz, G.Rv * 0.6, G.Rv * (2 + n * 0.3), c[0], 0.9, 0.9); AU.coin(); if (n % 3 === 0) AU.levelUp(3 + (n % 6)); }, 260);
+  setTimeout(() => showPlaceDone(bonus, nextNew), 3800);
+}
+function showPlaceDone(bonus, nextNew) {
+  if (G.mode !== 'ending') return; const P = prog(), nx = PLi + 1 < PLACES.length ? PLACES[PLi + 1] : null;
+  $('pdName').textContent = PL.name; $('pdTitle').textContent = nx ? '¡Lugar limpio!' : '¡MUNDO LIMPIO!';
+  $('pdGrid').innerHTML = `<div><b>${P.att || 1}</b>${(P.att || 1) === 1 ? 'intento' : 'intentos'}</div><div><b>${fmt(G.score)}</b>puntos</div><div><b>x${G.bestCombo}</b>mejor combo</div><div><b>${G.crazies}</b>locos atrapados</div>`;
+  $('pdCoins').innerHTML = `<i class="coin"></i> <b>+${fmt(G.coins)}</b> monedas <span>incluye +${fmt(bonus)} por limpiar el lugar</span>`;
+  $('pdNext').innerHTML = nx ? `<small>Siguiente destino${nextNew ? ' (¡nuevo!)' : ''}</small><b>${nx.name}</b><span>${nx.sub}</span>` : `<small>¡Has limpiado todos los lugares!</small><b>Eres la Reina de la Limpieza</b><span>Puedes volver a limpiar cualquier sitio cuando quieras</span>`;
+  $('bPdGo').textContent = nx ? '¡Viajar a ' + nx.name + '!' : 'Elegir un lugar'; $('bPdGo').dataset.next = nx ? PLi + 1 : -1;
+  G.mode = 'placedone'; G.demoT = 0; show('sPlaceDone'); $('hud').classList.remove('on'); AU.setMusicMode('menu');
+}
+// ---------- viajar entre lugares ----------
+async function enterPlace(idx, cb = () => {}) {
+  PLi = idx; PL = PLACES[idx]; save.place = idx; G.total = 0; G.left = 0;
+  clearWorld(); setDistrictStyle(PL); setPlaceTint(PL.home ? '' : PL.id, PL.home ? null : PL.tint); clearGeoCache();
+  await cb(12, 'Pintando ' + PL.name + '…');
+  if (scene.background && scene.background.dispose) scene.background.dispose(); scene.background = skyTex(PL); disposeScenery(scene, scenery); scenery = buildScenery(scene, PL);
+  scene.fog.color.set(PL.fog); hemi.color.set(PL.hemi[0]); hemi.groundColor.set(PL.hemi[1]); hemi.intensity = PL.hemi[2]; sun.color.set(PL.sun[0]); sun.intensity = PL.sun[1]; rim.color.set(PL.rim);
+  await cb(30, 'Fabricando cosas…');
+  const kinds = Object.keys(KINDS).filter((k) => !KINDS[k].places || KINDS[k].places.includes(PL.id)); let i = 0;
+  for (const k of kinds) { for (let v = 0; v < Math.min(KINDS[k].nv, 8); v++) getGeo(k, v); i++; if (i % 6 === 0) await cb(30 + (i / kinds.length) * 55); }
+  await cb(90, 'Colocando ' + PL.name + '…'); persist();
+}
+async function travelTo(idx, thenPlay) {
+  G.mode = 'travel'; show('sTravel'); $('hud').classList.remove('on'); $('trName').textContent = PLACES[idx].name; $('trSub').textContent = PLACES[idx].sub; $('trNum').textContent = 'Lugar ' + (idx + 1) + ' de ' + PLACES.length; $('trFill').style.width = '0%'; AU.whoosh && AU.whoosh();
+  $('sTravel').style.setProperty('--c', '#' + (PLACES[idx].districts ? PLACES[idx].districts.cocina.c : 0xffc933).toString(16).padStart(6, '0'));
+  const t0 = performance.now(); await new Promise((r) => setTimeout(r, 650));
+  await enterPlace(idx, (p) => { $('trFill').style.width = p + '%'; return new Promise((r) => setTimeout(r, 16)); });
+  const wait = 1600 - (performance.now() - t0); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  $('trFill').style.width = '100%'; G.mode = 'menu'; resetDemo(); if (thenPlay) startRound(); else { show('sTitle'); refreshTitle(); G.mode = 'menu'; }
+}
+function pauseGame() { if (G.mode !== 'play') return; G.mode = 'pause'; persist(); show('sPause'); joyShow(false); joy.on = false; AU.setWhoosh(0, 1); $('bPSfx').classList.toggle('off', !AU.S.sfxOn); $('bPMus').classList.toggle('off', !AU.S.musicOn); }
 function resumeGame() { if (G.mode !== 'pause') return; G.mode = 'play'; hideAll(); AU.click(); }
+// ---------- mejoras de cada personaje ----------
+let shopCh = save.char;
+const ownedList = () => PLAYERS.filter((p) => save.owned[p.id]);
 function renderShop() {
-  $('sCoins').textContent = fmt(save.coins);
-  $('upsList').innerHTML = UPS.map((u) => {
-    const l = save.ups[u.id], max = l >= UPMAX, cost = upCost(l), can = save.coins >= cost;
-    return `<div class="up"><div class="ic" style="background:${u.col}">${u.icon}</div><div class="tx"><b>${u.n}</b><small>${max ? 'Al máximo' : u.d(l)}</small><div class="pips">${Array.from({ length: UPMAX }, (_, i) => `<i class="${i < l ? 'on' : ''}"></i>`).join('')}</div></div>
-    <button class="btn buy ${max ? 'quit' : can ? 'go' : 'shop'}" data-up="${u.id}" ${max ? 'disabled' : ''}>${max ? 'MAX' : `<i class="coin"></i> ${cost}`}</button></div>`;
+  if (!save.owned[shopCh]) shopCh = save.char; const p = PLAYER_BY_ID[shopCh], lv = save.cu[p.id] || [0, 0, 0, 0], list = ownedList();
+  $('sCoins').textContent = fmt(save.coins); $('shName').textContent = p.name; $('shPerk').textContent = p.perk; $('shNum').textContent = 'Personaje ' + (list.indexOf(p) + 1) + ' / ' + list.length + (shopCh === save.char ? ' · elegida' : '');
+  $('bShPrev').style.visibility = $('bShNext').style.visibility = list.length > 1 ? 'visible' : 'hidden';
+  $('shDot').style.background = '#' + p.theme.ring.toString(16).padStart(6, '0');
+  $('upsList').innerHTML = upList(p.id).map((u) => {
+    const l = lv[u.i] || 0, max = l >= UPMAX, cost = upCost(l), can = save.coins >= cost;
+    return `<div class="up"><div class="ic" style="background:${u.col}">${u.icon}</div><div class="tx"><b>${u.n}</b><small>${max ? u.d(u.per * l, l) + ' · ¡al máximo!' : l ? 'Ahora: ' + u.d(u.per * l, l) : u.d(u.per, 1)}</small>${!max && l ? `<small class="nx">Siguiente: ${u.d(u.per * (l + 1), l + 1)}</small>` : ''}<div class="pips">${Array.from({ length: UPMAX }, (_, i) => `<i class="${i < l ? 'on' : ''}"></i>`).join('')}</div></div>
+    <button class="btn buy ${max ? 'quit' : can ? 'go' : 'shop'}" data-up="${u.i}" ${max ? 'disabled' : ''}>${max ? 'MAX' : `<i class="coin"></i> ${fmt(cost)}`}</button></div>`;
   }).join('');
 }
 let shopFrom = 'sTitle';
-function openShop(from) { shopFrom = from; show('sShop'); renderShop(); AU.click(); }
+function openShop(from) { shopFrom = from; shopCh = save.char; show('sShop'); renderShop(); AU.click(); }
 $('upsList').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-up]'); if (!b) return; const id = b.dataset.up, l = save.ups[id], cost = upCost(l);
+  const b = e.target.closest('button[data-up]'); if (!b) return; const p = PLAYER_BY_ID[shopCh], i = +b.dataset.up, arr = save.cu[p.id] || (save.cu[p.id] = [0, 0, 0, 0]), l = arr[i] || 0, cost = upCost(l);
   if (l >= UPMAX) return; if (save.coins < cost) { AU.nope(); b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 200 }); return; }
-  save.coins -= cost; save.ups[id] = l + 1; persist(); AU.buy(); renderShop();
+  save.coins -= cost; arr[i] = l + 1; if (p.id === ch.id) UT = null; persist(); AU.buy(); renderShop();
 });
+const shopMove = (d) => { const l = ownedList(); let i = l.findIndex((p) => p.id === shopCh); i = (i + d + l.length) % l.length; shopCh = l[i].id; AU.select(); setChar(shopCh, false); renderShop(); };
 // ---------- selección de personaje ----------
 let cIdx = 0;
 const hexs = (n) => '#' + n.toString(16).padStart(6, '0');
@@ -662,7 +786,14 @@ on('bPlay', startRound); on('bShop', () => openShop('sTitle')); on('bHelp', () =
 on('bHelpOk', () => { show('sTitle'); AU.click(); save.tut = save.tut; });
 on('bPause', pauseGame); on('bResume', resumeGame); on('bQuit', () => { AU.click(); toMenu(); });
 on('bRAgain', startRound); on('bRShop', () => openShop('sResults')); on('bRMenu', () => { AU.click(); toMenu(); });
-on('bSBack', () => { AU.click(); if (shopFrom === 'sResults') show('sResults'); else show('sTitle'); refreshTitle(); }); on('bSGo', startRound);
+on('bSBack', () => { AU.click(); setChar(save.char); if (shopFrom === 'sResults') show('sResults'); else if (shopFrom === 'sPlaceDone') show('sPlaceDone'); else show('sTitle'); refreshTitle(); }); on('bSGo', () => { setChar(save.char); startRound(); });
+on('bShPrev', () => shopMove(-1)); on('bShNext', () => shopMove(1));
+// lugares
+const placeMove = (d) => { const i = PLi + d; if (i < 0 || i >= PLACES.length || G.mode === 'travel') return; AU.select(); travelTo(i, false); };
+on('bPPrev', () => placeMove(-1)); on('bPNext', () => placeMove(1));
+on('bPdGo', (e) => { const n = +e.target.dataset.next; if (n >= 0) travelTo(n, true); else { AU.click(); toMenu(); } });
+on('bPdMenu', () => { AU.click(); toMenu(); }); on('bPdShop', () => openShop('sPlaceDone'));
+window.addEventListener('pagehide', persist);
 const togSfx = () => { AU.setSfx(!AU.S.sfxOn); AU.setVoice(AU.S.sfxOn); refreshTitle(); $('bPSfx').classList.toggle('off', !AU.S.sfxOn); AU.click(); };
 const togMus = () => { AU.setMusic(!AU.S.musicOn); refreshTitle(); $('bPMus').classList.toggle('off', !AU.S.musicOn); AU.click(); };
 on('bSfx', togSfx); on('bMus', togMus); on('bPSfx', togSfx); on('bPMus', togMus);
@@ -685,15 +816,12 @@ function frame(now) {
 }
 // API para pruebas
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
-window.DR = { G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, UPS, UPMAX, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
+window.DR = { G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
 async function boot() {
   const lf = $('lbarFill'), lt = $('loadTxt'); const tick = (p, t) => { lf.style.width = p + '%'; if (t) lt.textContent = t; return new Promise((r) => setTimeout(r, 16)); };
-  await tick(10, 'Poniendo el parqué…'); scenery = buildScenery(scene);
-  await tick(30, 'Fabricando armarios…');
-  const kinds = Object.keys(KINDS); let i = 0;
-  for (const k of kinds) { for (let v = 0; v < Math.min(KINDS[k].nv, 8); v++) getGeo(k, v); i++; if (i % 6 === 0) await tick(30 + (i / kinds.length) * 40); }
-  await tick(75, 'Barriendo Mueblópolis…'); buildWorld((Math.random() * 1e9) | 0);
+  await tick(5, 'Poniendo el parqué…'); await enterPlace(PLi, (p, t) => tick(p * 0.75, t));
+  await tick(78, 'Barriendo ' + PL.name + '…'); buildWorld((Math.random() * 1e9) | 0);
   await tick(88, 'Peinando a las limpiadoras…'); for (const p of PLAYERS) modelCache[p.id] || (modelCache[p.id] = p.make()); resetDemo(); G.Rv = G.R = 0.9;
   renderer.compile(scene, camera); step(0.016); draw(0.016);
   await tick(100, '¡Lista!'); toMenu(); G.demoT = 0;

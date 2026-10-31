@@ -9,7 +9,7 @@
 <meta name="description" content="La abuela torbellino de Mueblópolis: ¡a limpiar!">
 <link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <div id="app">
@@ -21,11 +21,13 @@
       <div id="timer"><b id="hTime">1:10</b></div>
       <button id="bPause" class="iconbtn" aria-label="Pausa"><i></i><i></i></button>
     </div>
-    <div id="lvl"><div class="lvlrow"><span id="hLvl">Nivel 1</span><span id="hScore">0</span></div><div class="bar"><i id="hLvlBar"></i></div></div>
+    <div id="lvl"><div class="lvlrow"><span id="hLvl">Nivel 1</span><span id="hScore">0</span></div><div class="bar"><i id="hLvlBar"></i></div><div class="bar pbar" id="pulseRow" style="display:none"><i id="hPulse"></i></div></div>
+    <div id="clean"><div class="cl1"><i class="bubble-ic"></i><b id="hCleanPct">0%</b></div><div class="bar"><i id="hCleanBar"></i></div><span id="hCleanLeft">limpio</span></div>
     <div id="combo"><b id="hComboN">x2</b><span>¡COMBO!</span><div class="bar"><i id="hComboBar"></i></div></div>
     <canvas id="mini" width="132" height="132"></canvas>
     <div id="dBanner"></div>
     <div id="alcInd"><span>¡Alcalde!</span></div>
+    <div id="leftInd"><span>¡Aquí!</span></div>
     <div id="hint"></div>
     <div id="bubbles"><div class="bubble dona" id="bDona"></div><div class="bubble alc" id="bAlc"></div></div>
     <div id="pops"></div>
@@ -38,9 +40,11 @@
     <section id="sTitle" class="screen">
       <div class="logo"><div class="l1">Doña</div><div class="l2">Remolina</div><div class="sub">¡La abuela más huracanada de Mueblópolis!</div></div>
       <div class="menu">
+        <div class="placepick"><button class="arrow" id="bPPrev" aria-label="Lugar anterior">‹</button><div class="pinfo"><span id="pNum">Lugar 1 de 6</span><b id="pName">Mueblópolis</b><small id="pSub"></small><div class="bar"><i id="pFill"></i></div><em id="pPct"></em></div><button class="arrow" id="bPNext" aria-label="Lugar siguiente">›</button></div>
         <button class="btn big go" id="bPlay">¡A LIMPIAR!</button>
         <button class="btn chars" id="bChars"><span class="cl">Personajes</span><small id="tChar">Doña Remolina</small></button>
         <div class="row"><button class="btn mid shop" id="bShop">Mejoras</button><button class="btn mid help" id="bHelp">Cómo se juega</button></div>
+        <div id="tNote">Tu partida anterior se ha traspasado: las mejoras ahora son de Doña Remolina y las monedas se han ajustado.</div>
         <div class="statline"><span><i class="coin"></i> <b id="tCoins">0</b></span><span>Récord <b id="tBest">0</b></span></div>
       </div>
       <div class="snd"><button class="iconbtn sm" id="bSfx" aria-label="Sonidos">♪</button><button class="iconbtn sm" id="bMus" aria-label="Música">♫</button></div>
@@ -55,7 +59,8 @@
           <li><i class="n n3">3</i><div>Con cada nivel te cabe algo más grande: sillas, camas, <b>armarios-rascacielos</b>.</div></li>
           <li><i class="n n4">4</i><div>Mueblópolis está llena de <b>locos</b>: sofás que huyen, tostadoras que disparan tostadas, lavadoras bailonas… ¡y una <b>Nevera Gruñona</b> jefa!</div></li>
           <li><i class="n n5">5</i><div>Cuidado con el <b>Alcalde Paraguas</b>: si te pilla pequeña, te multa. ¡Cuando seas grande, trágatelo!</div></li>
-          <li><i class="n n6">6</i><div>Traga seguido para hacer <b>combos</b>. Gasta monedas en <b>Mejoras</b> y desbloquea <b>5 limpiadoras nuevas</b>, cada una con su superpoder. ¡Recorre los 9 distritos y traga un <b>monumento</b>!</div></li>
+          <li><i class="n n6">6</i><div>¡El objetivo es <b>limpiarlo TODO</b>! Mira el <b>% limpio</b> y el mapa: lo oscuro aún está sucio. Si se acaba el tiempo, <b>no pierdes lo limpiado</b>: sigues en otra ronda. Al llegar al 100%, ¡<b>viajas a un lugar nuevo</b>!</div></li>
+          <li><i class="n n6">7</i><div>Las monedas cuestan de ganar: gástalas en <b>mejoras propias de cada limpiadora</b> o para desbloquear <b>nuevas limpiadoras</b>.</div></li>
         </ol>
         <button class="btn mid go" id="bHelpOk">¡Entendido!</button>
       </div>
@@ -87,6 +92,7 @@
         <div class="rtitle" id="rTitle">¡Ronda terminada!</div>
         <div class="stars" id="rStars"></div>
         <div class="rrank" id="rRank"></div>
+        <div class="rplace"><span id="rPlace">Mueblópolis</span><div class="bar big"><i id="rCleanBar"></i></div><div id="rCleanTxt"></div></div>
         <div class="rscore"><span id="rScore">0</span><small>puntos</small><em id="rRecord">¡NUEVO RÉCORD!</em></div>
         <div class="grid" id="rGrid"></div>
         <div class="rcoins"><i class="coin"></i> <b id="rCoins">+0</b> monedas <span id="rBonus"></span></div>
@@ -99,8 +105,20 @@
       <div class="card wide">
         <h2>Mejoras</h2>
         <div class="wallet"><i class="coin"></i> <b id="sCoins">0</b></div>
+        <div class="shopchar"><button class="arrow" id="bShPrev" aria-label="Anterior">‹</button><div class="shinfo"><i id="shDot"></i><b id="shName">Doña Remolina</b><small id="shPerk"></small><em id="shNum"></em></div><button class="arrow" id="bShNext" aria-label="Siguiente">›</button></div>
         <div class="ups" id="upsList"></div>
         <div class="row"><button class="btn mid quit" id="bSBack">Volver</button><button class="btn mid go" id="bSGo">¡A limpiar!</button></div>
+      </div>
+    </section>
+  <section id="sTravel" class="screen hidden"><div class="travel"><div class="trnum" id="trNum">Lugar 2 de 6</div><div class="trin">Viajando a…</div><h1 id="trName">Puerto Pastelero</h1><p id="trSub"></p><div class="lbar"><i id="trFill"></i></div></div></section>
+    <section id="sPlaceDone" class="screen card-screen hidden">
+      <div class="card">
+        <div class="pdburst">★ ★ ★</div><div class="rtitle" id="pdTitle">¡Lugar limpio!</div><h2 id="pdName">Mueblópolis</h2>
+        <div class="grid" id="pdGrid"></div>
+        <div class="rcoins" id="pdCoins"></div>
+        <div class="nextplace" id="pdNext"></div>
+        <button class="btn big go" id="bPdGo" data-next="1">¡Viajar!</button>
+        <div class="row"><button class="btn mid shop" id="bPdShop">Mejoras</button><button class="btn mid quit" id="bPdMenu">Menú</button></div>
       </div>
     </section>
   </div>
@@ -108,6 +126,6 @@
   <div id="loading"><div class="logo small"><div class="l1">Doña</div><div class="l2">Remolina</div></div><div class="lbar"><i id="lbarFill"></i></div><div class="ltxt" id="loadTxt">Preparando Mueblópolis…</div></div>
 </div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/game.js?v=3"></script>
+<script type="module" src="js/game.js?v=4"></script>
 </body>
 </html>
