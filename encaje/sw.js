@@ -1,5 +1,5 @@
-const C = 'encaje-v1';
-const FILES = ['./', './index.html', './style.css', './manifest.json', './js/main.js', './js/puzzles.js', './js/views.js', './js/audio.js', './js/levels.js', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
+const C = 'encaje-v2';
+const FILES = ['./', './index.html', './style.css', './manifest.json', './js/main.js', './js/puzzles.js', './js/views.js', './js/audio.js', './js/fx.js', './js/tutorial.js', './js/levels.js', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(C).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C && k.startsWith('encaje-')).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 // red primero para HTML/JS/CSS (nunca sirve código viejo con conexión); caché si no hay red

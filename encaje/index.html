@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Encaje · puzles para pensar</title>
 <meta name="theme-color" content="#f3eee6">
-<meta name="description" content="Encaje: ocho tipos de pruebas cortas para estimular el cerebro, con música relajante.">
+<meta name="description" content="Encaje: ocho tipos de pruebas para estimular el cerebro, 128 niveles, contrarreloj y medallas, con música relajante.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div id="bg" aria-hidden="true"></div>
@@ -47,9 +47,12 @@
   </div>
   <div class="homeBtns">
     <button class="big primary" id="bContinue"><span class="bIcon">▶</span><span class="bTxt"><b>Continuar</b><small id="contSub">Ronda 1</small></span></button>
-    <button class="big" id="bRoute"><span class="bIcon"><svg viewBox="0 0 48 48"><path d="M8 38 L18 22 L28 30 L40 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="38" r="4" fill="currentColor"/><circle cx="40" cy="10" r="4" fill="currentColor"/></svg></span><span class="bTxt"><b>Ruta de pruebas</b><small id="routeSub">72 niveles</small></span></button>
+    <button class="big" id="bPick"><span class="bIcon"><svg viewBox="0 0 48 48"><g fill="currentColor"><rect x="6" y="6" width="16" height="16" rx="5"/><rect x="26" y="6" width="16" height="16" rx="5" opacity=".55"/><rect x="6" y="26" width="16" height="16" rx="5" opacity=".55"/><rect x="26" y="26" width="16" height="16" rx="5"/></g></svg></span><span class="bTxt"><b>Elegir prueba</b><small id="pickSub">8 tipos para escoger</small></span></button>
+    <button class="big" id="bRoute"><span class="bIcon"><svg viewBox="0 0 48 48"><path d="M8 38 L18 22 L28 30 L40 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="38" r="4" fill="currentColor"/><circle cx="40" cy="10" r="4" fill="currentColor"/></svg></span><span class="bTxt"><b>Modo mezclado</b><small id="routeSub">128 niveles</small></span></button>
     <button class="big" id="bDaily"><span class="bIcon"><svg viewBox="0 0 48 48"><rect x="8" y="10" width="32" height="30" rx="6" fill="none" stroke="currentColor" stroke-width="4"/><path d="M8 20 H40 M16 6 V14 M32 6 V14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="30" r="4" fill="currentColor"/></svg></span><span class="bTxt"><b>Reto del día</b><small id="dailySub">Uno nuevo cada día</small></span></button>
+    <button class="big" id="bTimed"><span class="bIcon"><svg viewBox="0 0 48 48"><circle cx="24" cy="27" r="15" fill="none" stroke="currentColor" stroke-width="4"/><path d="M24 27 V17 M18 6 H30" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M24 27 L31 31" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></span><span class="bTxt"><b>Contrarreloj</b><small id="timedSub">¡Cuantas más, mejor!</small></span></button>
     <div class="smallRow">
+      <button class="small" id="bMedals"><svg class="mdl" viewBox="0 0 24 24"><circle cx="12" cy="15" r="6" fill="currentColor"/><path d="M8 2 L12 9 L16 2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg> Medallas <b id="medN"></b></button>
       <button class="small" id="bSettings">⚙ Ajustes</button>
       <button class="small" id="bBackCover">‹ Portada</button>
     </div>
@@ -59,14 +62,33 @@
 
 <!-- RUTA -->
 <section id="route" class="screen">
-  <header class="bar"><button class="iconbtn" id="rBack" aria-label="Volver">‹</button><div class="barT">Ruta de pruebas</div><div class="homeStars"><span id="rStars">0</span> ★</div></header>
+  <header class="bar"><button class="iconbtn" id="rBack" aria-label="Volver">‹</button><div class="barT">Modo mezclado</div><div class="homeStars"><span id="rStars">0</span> ★</div></header>
   <div id="routeList" class="scroll"></div>
+</section>
+
+<!-- ELEGIR PRUEBA -->
+<section id="pick" class="screen">
+  <header class="bar"><button class="iconbtn" id="pBack" aria-label="Volver">‹</button><div class="barT">Elige una prueba</div><div class="homeStars"><span id="pStars">0</span> ★</div></header>
+  <div id="pickGrid" class="scroll pgrid"></div>
+</section>
+
+<!-- NIVELES DE UN TIPO -->
+<section id="tlist" class="screen">
+  <header class="bar"><button class="iconbtn" id="tBack" aria-label="Volver">‹</button><div class="barT" id="tTitle">Prueba</div><div class="homeStars"><span id="tStars">0</span> ★</div></header>
+  <div class="tlTop"><div class="tlGoal" id="tGoal"></div><div class="tlBtns"><button class="small" id="tHow">▷ Cómo se juega</button><button class="big primary slim" id="tPlay"><span class="bTxt"><b id="tPlayT">Jugar</b></span><span class="bIcon">›</span></button></div></div>
+  <div id="tGrid" class="scroll tgrid"></div>
+</section>
+
+<!-- MEDALLAS -->
+<section id="medals" class="screen">
+  <header class="bar"><button class="iconbtn" id="mBack" aria-label="Volver">‹</button><div class="barT">Medallas</div><div class="homeStars"><span id="mCount">0</span>/<span id="mTotal">0</span></div></header>
+  <div id="medalGrid" class="scroll mgrid"></div>
 </section>
 
 <!-- JUEGO -->
 <section id="game" class="screen">
   <header id="ghead"><button class="iconbtn" id="gBack" aria-label="Volver">‹</button>
-    <div class="gtitle"><div id="gTitle">Prueba</div><div id="gStats"></div></div></header>
+    <div class="gtitle"><div id="gTitle">Prueba</div><div id="gStats"></div><div id="tbar" hidden><i></i></div></div><button class="iconbtn qbtn" id="gHelp" aria-label="Cómo se juega">?</button></header>
   <div id="ghelp"></div>
   <div id="boardWrap"><div id="board"></div></div>
   <div id="panel">
@@ -74,7 +96,8 @@
     <div id="tools">
       <button class="tool" id="bUndo"><svg viewBox="0 0 24 24"><path d="M9 7 L4 12 L9 17 M4 12 H15 a5 5 0 0 1 0 10 H11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-5)"/></svg><span>Deshacer</span></button>
       <button class="tool" id="bReset"><svg viewBox="0 0 24 24"><path d="M5 12 a7 7 0 1 0 2.2-5.1 M5 4 V9 H10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reiniciar</span></button>
-      <button class="tool" id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18 H15 M10 21 H14 M12 3 a6 6 0 0 0 -3.5 10.9 c.7.6 1 1.3 1 2.1 H14.5 c0-.8.3-1.5 1-2.1 A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pista <b id="hintN">3</b></span></button>
+      <button class="tool" id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18 H15 M10 21 H14 M12 3 a6 6 0 0 0 -3.5 10.9 c.7.6 1 1.3 1 2.1 H14.5 c0-.8.3-1.5 1-2.1 A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pista</span></button>
+      <button class="tool" id="bSkip" hidden><svg viewBox="0 0 24 24"><path d="M5 5 L13 12 L5 19z M14 5 L22 12 L14 19z" fill="currentColor"/></svg><span>Saltar −10 s</span></button>
     </div>
   </div>
 </section>
@@ -84,8 +107,33 @@
   <div class="winT" id="winT">¡Resuelto!</div>
   <div class="winStars" id="winStars"><i>★</i><i>★</i><i>★</i></div>
   <div class="winInfo" id="winInfo"></div>
+  <div class="winCombo" id="winCombo" hidden></div>
   <button class="big primary" id="wNext"><span class="bTxt"><b id="wNextT">Siguiente prueba</b></span><span class="bIcon">›</span></button>
-  <div class="smallRow"><button class="small" id="wAgain">↻ Repetir</button><button class="small" id="wRoute">☰ Ruta</button></div>
+  <div class="smallRow"><button class="small" id="wAgain">↻ Repetir</button><button class="small" id="wRoute">☰ Niveles</button></div>
+</div></div>
+
+<!-- CÓMO SE JUEGA -->
+<div id="tut" class="overlay"><div class="card tutCard">
+  <div class="tutHead"><span class="tutIc" id="tutIc"></span><div><div class="tutName" id="tutName"></div><div class="tutGoal" id="tutGoal"></div></div></div>
+  <div class="tutStage" id="tutStage"></div>
+  <div class="tutText"><div class="tutCap" id="tutCap"></div><div class="tutDots" id="tutDots"></div></div>
+  <div class="tutBtns"><button class="small" id="tutAgain">↻ Otra vez</button><button class="big primary slim" id="tutGo"><span class="bTxt"><b>¡Entendido, a jugar!</b></span></button></div>
+</div></div>
+
+<!-- CONTRARRELOJ: PRESENTACIÓN Y RESULTADO -->
+<div id="tmi" class="overlay"><div class="card">
+  <div class="winT">Contrarreloj</div>
+  <div class="tmSteps"><div><b>1</b> Resuelve pruebas, una tras otra.</div><div><b>2</b> Empiezas con <u>2:30</u>.</div><div><b>3</b> Cada prueba resuelta te da <u>+20 s</u>.</div></div>
+  <div class="winInfo" id="tmiRec"></div>
+  <button class="big primary" id="tmGo"><span class="bTxt"><b>¡Empezar!</b></span><span class="bIcon">›</span></button>
+  <button class="small" id="tmNo">‹ Atrás</button>
+</div></div>
+<div id="tres" class="overlay"><div class="card">
+  <div class="winT" id="trT">¡Se acabó el tiempo!</div>
+  <div class="trNum" id="trNum">0</div>
+  <div class="winInfo" id="trInfo"></div>
+  <button class="big primary" id="trAgain"><span class="bTxt"><b>Jugar otra vez</b></span><span class="bIcon">›</span></button>
+  <button class="small" id="trMenu">☰ Menú</button>
 </div></div>
 
 <!-- AJUSTES -->
@@ -99,7 +147,8 @@
   <button class="big primary" id="sClose"><span class="bTxt"><b>Listo</b></span></button>
 </div></div>
 
+<div id="mpop" role="status"></div>
 <div id="toast" role="status"></div>
-<script type="module" src="js/main.js?v=1"></script>
+<script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>

@@ -1,11 +1,15 @@
 // Encaje · vistas (DOM) de cada tipo de prueba
-import {PALETTE,Slide,Gravity,Lights,Pipes,Rings,Mirrors,Trace,orients,rotCW,flipH,centerCell,fitSolve,traceBeam,pipeFlow,rotMask,lightsEffect} from './puzzles.js';
+import {PALETTE,Slide,Gravity,Lights,Pipes,Rings,Mirrors,Trace,orients,rotCW,flipH,centerCell,fitSolve,traceBeam,pipeFlow,rotMask,lightsEffect,lightsTarget,FIGURES} from './puzzles.js';
 export const h=(tag,cls,parent,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;if(parent)parent.appendChild(e);return e;};
 const NS='http://www.w3.org/2000/svg';
 const sv=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const px=(e,l,t,w,hh)=>{e.style.left=l+'px';e.style.top=t+'px';if(w!=null){e.style.width=w+'px';e.style.height=hh+'px';}};
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+// tamaño de casilla para que el tablero quepa en (W×Hh)
+export function sizeBoard(view,board,W,Hh,type,{min=24,max=84}={}){const d=view.dims();const extraCols=type==='slide'?.8:0;let u=Math.floor(Math.min(W/(d.cols+extraCols),Hh/d.rows));u=Math.max(min,Math.min(u,max));
+  board.style.width=d.cols*u+'px';board.style.height=d.rows*u+'px';board.style.setProperty('--u',u+'px');if(extraCols)board.style.marginRight=extraCols*u+'px';return u;}
+const cnt1=(sol)=>{if(!Array.isArray(sol)||!sol.length)return 1;let n=1;while(n<sol.length&&same(sol[n],sol[0]))n++;return n;};
 
 export const ICONS={
  slide:'<svg viewBox="0 0 48 48"><rect x="5" y="19" width="22" height="10" rx="5" fill="currentColor"/><rect x="31" y="8" width="10" height="22" rx="5" fill="currentColor" opacity=".45"/><rect x="10" y="34" width="20" height="8" rx="4" fill="currentColor" opacity=".3"/><path d="M33 24 H44 M40 20 L44 24 L40 28" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -37,6 +41,7 @@ function SlideView(C){const{def,T}=C;const W=def.w,H=def.h;let u=0,board,drag=nu
     update(st){if(drag)return;els.forEach((e,i)=>setPos(e,i,st[i]));},
     hint(mv){V.clearHint();const[i,q]=mv;els[i].classList.add('hint');ghost=h('div','sp ghostp',board);ghost.style.setProperty('--c','transparent');setPos(ghost,i,q);},
     clearHint(){els.forEach(e=>e.classList.remove('hint'));if(ghost){ghost.remove();ghost=null;}},
+    plan(mv){const[i]=mv;return{from:els[i],to:ghost,text:i===0?'Arrastra la ficha dorada hasta el hueco punteado.':'Arrastra la pieza que late hasta el hueco punteado: abre paso.'};},
     celebrate(){const e=els[0];e.style.transition='left .6s cubic-bezier(.5,0,.9,.6),opacity .6s';e.style.left=(W+1)*u+'px';e.style.opacity='0';},
     destroy(){}};
   return V;}
@@ -57,15 +62,15 @@ function FitView(C){const{def}=C;const ors=def.pieces.map(p=>orients(p.shape));c
   const miniShape=(parent,o,size,col,cls)=>{const hh=Math.max(...o.map(c=>c[0]))+1,ww=Math.max(...o.map(c=>c[1]))+1;const box=h('div',cls,parent);box.style.width=ww*size+'px';box.style.height=hh*size+'px';
     for(const[r,c]of o){const k=h('i','pcell',box);px(k,c*size,r*size,size,size);k.style.setProperty('--c',col);}return box;};
   function layoutTray(){const avW=tray.clientWidth||300,avH=tray.clientHeight||150;const rem=def.pieces.filter(p=>!(p.id in C.getState().placed));if(!rem.length)return 20;
-    for(let t=Math.min(Math.floor(u*.62),38);t>=13;t--){let x=0,rowH=0,tot=0,ok=true;const gap=10;
+    for(let t=Math.min(Math.floor(u*.62),38);t>=20;t--){let x=0,rowH=0,tot=0,ok=true;const gap=10;
       for(const p of rem){const o=ors[p.id][ori[p.id]];const w=(Math.max(...o.map(c=>c[1]))+1)*t,hh=(Math.max(...o.map(c=>c[0]))+1)*t;
         if(x>0&&x+w>avW){tot+=rowH+gap;x=0;rowH=0;}x+=w+gap+8;rowH=Math.max(rowH,hh);}
       tot+=rowH;if(tot<=avH)return t;}
-    return 13;}
-  function renderTray(){tray.innerHTML='';const st=C.getState();const t=layoutTray();
+    return 20;}
+  function renderTray(){const sc0=tray.scrollTop;tray.innerHTML='';const st=C.getState();const t=layoutTray();
     for(const p of def.pieces){if(p.id in st.placed)continue;const box=miniShape(tray,ors[p.id][ori[p.id]],t,pc(p.id*5+1),'tp'+(sel===p.id?' sel':''));box.dataset.id=p.id;box.style.padding='0';
       box.onpointerdown=e=>{if(C.locked())return;e.preventDefault();startDrag(e,p.id,'tray');};}
-    if(!tray.children.length)tray.innerHTML='<div class="trayDone">¡Todas colocadas!</div>';}
+    if(!tray.children.length)tray.innerHTML='<div class="trayDone">¡Todas colocadas!</div>';tray.scrollTop=sc0;}
   function renderBoard(){board.querySelectorAll('.fp,.fprev,.fhint').forEach(e=>e.remove());const st=C.getState();
     for(const id in st.placed){const p=st.placed[id];const g=h('div','fp',board);g.dataset.id=id;for(const[dr,dc]of ors[id][p.o]){const k=h('i','pcell',g);px(k,(p.c+dc)*u,(p.r+dr)*u,u,u);k.style.setProperty('--c',pc(id*5+1));}
       g.onpointerdown=e=>{if(C.locked())return;e.preventDefault();const pid=+id;ori[pid]=p.o;const ns=JSON.parse(JSON.stringify(st));delete ns.placed[pid];sel=pid;C.commit(ns,{kind:'lift'});startDrag(e,pid,'board');};}}
@@ -100,8 +105,9 @@ function FitView(C){const{def}=C;const ors=def.pieces.map(p=>orients(p.shape));c
     update(){drag=null;if(sel>=0&&(sel in C.getState().placed))sel=-1;refresh();},
     hint(sol){V.clearHint();sel=sol.id;ori[sol.id]=sol.o;C._fitPrevSel=sol.id;refresh();
       const g=h('div','fhint',board);for(const[dr,dc]of ors[sol.id][sol.o]){const k=h('i','pcell',g);px(k,(sol.c+dc)*u,(sol.r+dr)*u,u,u);k.style.setProperty('--c',pc(sol.id*5+1));}
-      clearTimeout(hintTimer);hintTimer=setTimeout(()=>V.clearHint(),6000);},
+      clearTimeout(hintTimer);hintTimer=setTimeout(()=>V.clearHint(),60000);},
     clearHint(){clearTimeout(hintTimer);board&&board.querySelectorAll('.fhint').forEach(e=>e.remove());},
+    plan(sol){const el=tray.querySelector('.tp[data-id="'+sol.id+'"]');if(el){const tr=tray.getBoundingClientRect(),er=el.getBoundingClientRect();if(er.top<tr.top)tray.scrollTop-=tr.top-er.top+8;else if(er.bottom>tr.bottom)tray.scrollTop+=er.bottom-tr.bottom+8;}const ce=centerCell(ors[sol.id][sol.o]);return{from:el,to:{x:(sol.c+ce[1]+.5)*u,y:(sol.r+ce[0]+.5)*u,rel:board},text:'Arrastra la pieza marcada al hueco punteado (ya está girada).'};},
     reset(){sel=-1;C._fitPrevSel=-1;ori.fill(0);},
     celebrate(){board.classList.add('done');},
     // API de pruebas
@@ -131,6 +137,7 @@ function TraceView(C){const{def,T}=C;const W=def.w,H=def.h;let u=0,board,svg,lin
       cellEls.forEach((k,i)=>{k.classList.toggle('vis',st.includes(i));});},
     hint(mv){V.clearHint();hintEl=cellEls[mv[0]];hintEl.classList.add('hint');},
     clearHint(){if(hintEl){hintEl.classList.remove('hint');hintEl=null;}},
+    plan(mv){return{from:head,to:cellEls[mv[0]],text:'Arrastra el dedo desde la bolita hasta la casilla que late.'};},
     celebrate(){board.classList.add('done');},destroy(){}};
   return V;}
 
@@ -156,6 +163,7 @@ function MirrorsView(C){const{def,T}=C;const n=def.n;let u=0,board,svg,beam,mirE
     update(st,info){const want=st.map(v=>v);def.mirrors.forEach((m,i)=>{if(((ang[i]/90)&1)!==want[i]){ang[i]+=90;mirEls[i].style.transform=`rotate(${ang[i]}deg)`;}});draw(st,true);},
     hint(mv){V.clearHint();hintEl=mirEls[mv[0]];hintEl.classList.add('hint');},
     clearHint(){if(hintEl){hintEl.classList.remove('hint');hintEl=null;}},
+    plan(mv){return{from:mirEls[mv[0]],to:null,text:'Toca el espejo que brilla: el rayo cambia de camino.'};},
     celebrate(){board.classList.add('done');},destroy(){}};
   return V;}
 
@@ -189,22 +197,30 @@ function GravityView(C){const{def,T}=C;const W=def.w,Hh=def.h;let u=0,board,ball
       V._prevPos=st.slice();},
     hint(mv){V.clearHint();hintBtn=btns[mv[0]];hintBtn.classList.add('hint');},
     clearHint(){if(hintBtn){hintBtn.classList.remove('hint');hintBtn=null;}},
+    plan(mv){const d=mv[0];const bw=W*u,bh=Hh*u;const dx=[1,0,-1,0][d],dy=[0,1,0,-1][d];const nm=['la derecha','abajo','la izquierda','arriba'][d];
+      return{from:{x:bw/2-dx*bw*.22,y:bh/2-dy*bh*.22,rel:board},to:{x:bw/2+dx*bw*.22,y:bh/2+dy*bh*.22,rel:board},text:'Desliza el dedo hacia '+nm+' (o toca la flecha que brilla).'};},
     celebrate(){board.classList.add('done');},destroy(){window.onkeydown=null;}};
   V._prevPos=C.getState().slice();
   return V;}
 
 /* ═════════ 6 · INTERRUPTORES ═════════ */
-function LightsView(C){const{def}=C;const n=def.n;let u=0,board,cells=[],hintEl=null;
+function LightsView(C){const{def}=C;const n=def.n;const TG=lightsTarget(def);let u=0,board,cells=[],hintEl=null,willEls=[];
+  const inTg=i=>(TG>>>i)&1;
+  const miniGrid=(parent,nn,fn,cls)=>{const g=h('div','lmini '+(cls||''),parent);g.style.gridTemplateColumns=`repeat(${nn},${nn>=5?11:14}px)`;for(let i=0;i<nn*nn;i++){const e=h('i',fn(i)||'',g);e.style.width=e.style.height=(nn>=5?11:14)+'px';}return g;};
   const V={dims:()=>({cols:n,rows:n}),
     mount(b,uu){u=uu;board=b;board.innerHTML='';board.className='lights';cells=[];const st=C.getState();
-      for(let i=0;i<n*n;i++){const e=h('button','lt',board,'<b></b>');px(e,(i%n)*u+u*.05,Math.floor(i/n)*u+u*.05,u*.9,u*.9);e.dataset.i=i;e.setAttribute('aria-label','Interruptor');e.onclick=()=>{if(C.locked())return;V.clearHint();C.dispatch([i]);};cells.push(e);}
-      const ex=C.extra;ex.innerHTML='<div class="lhint"><span>Cada toque cambia:</span><div class="lmini"></div></div>';const mini=ex.querySelector('.lmini');
-      const cen=n>=3?4:0;const eff=lightsEffect({n:3,mode:def.mode},4);for(let i=0;i<9;i++)h('i',(eff>>>i)&1?'on':'',mini);
+      for(let i=0;i<n*n;i++){const e=h('button','lt'+(def.fig&&inTg(i)?' tg':''),board,'<b></b>');px(e,(i%n)*u+u*.05,Math.floor(i/n)*u+u*.05,u*.9,u*.9);e.dataset.i=i;e.setAttribute('aria-label','Interruptor');e.onclick=()=>{if(C.locked())return;V.clearHint();C.dispatch([i]);};cells.push(e);}
+      const ex=C.extra;ex.innerHTML='';const box=h('div','lhint',ex);
+      const c1=h('div','lcol',box);miniGrid(c1,n,i=>inTg(i)?'on':'');h('span','',c1,def.fig?'<b>Objetivo</b>: esta figura':'<b>Objetivo</b>: todo amarillo');
+      const c2=h('div','lcol',box);const eff=lightsEffect({n:3,mode:def.mode},4);miniGrid(c2,3,i=>((eff>>>i)&1?'on':'')+(i===4?' me':''));h('span','',c2,'<b>Un toque</b> cambia estas');
+      if(def.fig){h('div','lleg',ex,'<i class="sw ok"></i>bien <i class="sw ring"></i>falta <i class="sw bad"></i>sobra');}
       V.update(st,{kind:'init'});},
-    update(st,info){cells.forEach((e,i)=>{const on=(st>>>i)&1;const was=e.classList.contains('on');e.classList.toggle('on',!!on);});
+    update(st,info){cells.forEach((e,i)=>{const on=(st>>>i)&1;e.classList.toggle('on',!!on);e.classList.toggle('bad',!!on&&!inTg(i));});
       if(info&&info.mv){const i=info.mv[0];const eff=lightsEffect(def,i);cells.forEach((e,j)=>{if((eff>>>j)&1){e.classList.remove('pop');e.getBoundingClientRect();e.classList.add('pop');}});}},
-    hint(mv){V.clearHint();hintEl=cells[mv[0]];hintEl.classList.add('hint');},
-    clearHint(){if(hintEl){hintEl.classList.remove('hint');hintEl=null;}},
+    progress(st){const N=n*n;let bad=0;for(let i=0;i<N;i++)if(((st>>>i)&1)!==inTg(i))bad++;return{good:N-bad,total:N};},
+    hint(mv){V.clearHint();hintEl=cells[mv[0]];hintEl.classList.add('hint');const eff=lightsEffect(def,mv[0]);cells.forEach((e,j)=>{if((eff>>>j)&1&&j!==mv[0]){e.classList.add('will');willEls.push(e);}});},
+    clearHint(){if(hintEl){hintEl.classList.remove('hint');hintEl=null;}willEls.forEach(e=>e.classList.remove('will'));willEls=[];},
+    plan(mv){return{from:cells[mv[0]],to:null,text:'Toca la casilla que late. Cambian ella y las de borde azul.'};},
     celebrate(){board.classList.add('done');},destroy(){}};
   return V;}
 
@@ -226,6 +242,7 @@ function PipesView(C){const{def}=C;const W=def.w,H=def.h;let u=0,board,tiles=[],
       const now=new Set();flow.forEach((v,i)=>v&&now.add(i));if(info&&info.kind==='move'&&now.size>wetPrev.size)setTimeout(()=>C.audio.hit(now.size%8),180);wetPrev=now;},
     hint(mv){V.clearHint();hintEl=tiles[mv[0]];hintEl.classList.add('hint');},
     clearHint(){if(hintEl){hintEl.classList.remove('hint');hintEl=null;}},
+    plan(mv,sol){const n=cnt1(sol);return{from:tiles[mv[0]],to:null,text:'Toca la pieza que brilla '+(n===1?'una vez':n+' veces')+' para girarla.'};},
     celebrate(){board.classList.add('done');},destroy(){}};
   return V;}
 
@@ -263,6 +280,8 @@ function RingsView(C){const{def,T}=C;const n=def.n,k=def.k;let u=0,board,svg,gro
     selected:()=>selR,select,
     hint(mv){V.clearHint();select(mv[0]);hintEl=mv[1]>0?btnL:btnR;hintEl.classList.add('hint');groups[mv[0]].classList.add('hintring');},
     clearHint(){if(hintEl){hintEl.classList.remove('hint');hintEl=null;}groups.forEach(g=>g.classList.remove('hintring'));},
+    plan(mv,sol){const n=cnt1(sol);const bw=board.getBoundingClientRect().width;const rad=(R0-(mv[0]+.5)*thick)/100*bw;const btn=mv[1]>0?btnL:btnR;const sel=selR===mv[0];
+      return{from:sel?btn:{x:bw/2,y:bw/2-rad,rel:board},to:sel?null:btn,text:'Anillo marcado: pulsa «'+(mv[1]>0?'Izquierda':'Derecha')+'» '+(n===1?'una vez':n+' veces')+'.'};},
     celebrate(){board.classList.add('done');},destroy(){}};
   return V;}
 

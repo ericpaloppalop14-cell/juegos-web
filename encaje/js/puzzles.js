@@ -13,7 +13,7 @@ function bfs(T,def,st0,cap=250000){
   return null;}
 
 /* ───────── 1 · DESLIZAR AL HUECO (estilo Rush Hour) ───────── */
-const SL_LO=[2,4,6,8,10,12,14,16,18];
+const SL_LO=[2,4,6,8,10,12,14,16,18,19,20,21,22,23,24,25];
 function slOcc(def,pos,skip=-1){const g=new Int8Array(def.w*def.h).fill(-1);
   def.pcs.forEach((p,i)=>{if(i===skip)return;for(let k=0;k<p.len;k++){const r=p.d==='h'?p.ln:pos[i]+k,c=p.d==='h'?pos[i]+k:p.ln;g[r*def.w+c]=i;}});return g;}
 export const Slide={key:'slide',
@@ -71,7 +71,7 @@ export function fitSolve(def,placed,cap=1,maxNodes=300000){
         if(!ok)continue;for(const[dr,dc]of o)g[(r0+dr)*W+c0+dc]=1;used[pi]=true;cur.push({id:rem[pi].id,o:oi,r:r0,c:c0});
         rec();cur.pop();used[pi]=false;for(const[dr,dc]of o)g[(r0+dr)*W+c0+dc]=0;if(sols.length>=cap)return;}}};
   rec();return{count:sols.length,sols};}
-const FIT_N=[3,3,4,4,5,5,6,7,8];
+const FIT_N=[3,3,4,4,5,5,6,7,8,8,9,9,9,10,10,10];
 export const Fit={key:'fit',
   init:()=>({placed:{}}),isWin:(def,st)=>Object.keys(st.placed).length===def.pieces.length,hash:st=>JSON.stringify(st.placed),
   gen(tier,R){const n=FIT_N[tier];
@@ -110,7 +110,7 @@ export const Fit={key:'fit',
   solve(def,st){const r=fitSolve(def,(st&&st.placed)||{},1);return r.sols[0]||null;}};
 
 /* ───────── 3 · UN SOLO TRAZO (camino que cubre todas las casillas) ───────── */
-const TR_SIZE=[[3,3,0],[3,4,0],[4,4,0],[4,4,2],[4,5,2],[5,5,0],[5,5,3],[5,6,3],[6,6,4]];
+const TR_SIZE=[[3,3,0],[3,4,0],[4,4,0],[4,4,2],[4,5,2],[5,5,0],[5,5,3],[5,6,3],[6,6,4],[6,6,5],[6,6,3],[6,7,5],[7,7,5],[7,7,7],[7,7,4],[7,8,6]];
 function trNb(def,i){const{w,h}=def;const r=Math.floor(i/w),c=i%w,o=[];if(r>0)o.push(i-w);if(c<w-1)o.push(i+1);if(r<h-1)o.push(i+w);if(c>0)o.push(i-1);return o.filter(j=>!def.blocked.includes(j));}
 function trSearch(def,path,limit=400000,R=null){
   const N=def.w*def.h,open=N-def.blocked.length;const vis=new Uint8Array(N);def.blocked.forEach(b=>vis[b]=2);path.forEach(p=>vis[p]=1);
@@ -162,7 +162,7 @@ export function traceBeam(def,st){const{n}=def;const mir=new Map();def.mirrors.f
     if(mir.has(idx)){const i=mir.get(idx);d=REFL[st[i]][d];}
     const k=idx*4+d;if(seen.has(k)){end='loop';break;}seen.add(k);}
   return{pts,cells,end};}
-const MI_N=[5,5,6,6,6,7,7,7,8],MI_LO=[1,2,3,3,4,5,5,6,6];
+const MI_N=[5,5,6,6,6,7,7,7,8,8,8,8,8,9,9,9],MI_LO=[1,2,3,3,4,5,5,6,6,6,7,7,7,7,8,7];
 export const Mirrors={key:'mirrors',
   init:def=>def.mirrors.map(m=>m.o0),
   moves:(def,st)=>def.mirrors.map((m,i)=>m.fixed?null:[i]).filter(Boolean),
@@ -173,14 +173,14 @@ export const Mirrors={key:'mirrors',
   gen(tier,R){const n=MI_N[tier],k=Math.min(3+tier+Math.floor(tier/2),13);
     for(let att=0;att<300;att++){
       const occ=new Set();const sr=1+R.int(n-2);const src={r:sr,c:0,d:0};occ.add(sr*n);
-      const walls=[];const nw=Math.floor(tier/2);
+      const walls=[];const nw=Math.min(Math.floor(tier/2),5);
       while(walls.length<nw){const x=R.int(n*n);if(!occ.has(x)&&x%n!==0){walls.push(x);occ.add(x);}}
       const mirrors=[];while(mirrors.length<k){const x=R.int(n*n);if(occ.has(x)||x%n===0&&false)continue;occ.add(x);mirrors.push({r:Math.floor(x/n),c:x%n,o0:R.int(2),fixed:false});}
       const def0={n,src,walls,mirrors,targets:[]};
       const sol=mirrors.map(m=>m.o0);
       const b=traceBeam(def0,sol);const mset=new Set(mirrors.map(m=>m.r*n+m.c));
       let hit=0;b.cells.forEach(c=>{if(mset.has(c))hit++;});
-      if(hit<Math.min(2+Math.floor(tier*0.6),k-1))continue;
+      if(hit<Math.min(2+Math.floor(tier*0.6),7,k-1))continue;
       const free=b.cells.filter((c,i)=>i>0&&!mset.has(c));if(free.length<4)continue;
       const nt=1+Math.floor(tier/3);const targets=[];
       // objetivos repartidos a lo largo del rayo, preferiblemente tras giros
@@ -200,8 +200,8 @@ export const Mirrors={key:'mirrors',
     return null;}};
 
 /* ───────── 5 · GRAVEDAD ───────── */
-const GR_SIZE=[[4,4,2,1],[4,4,3,2],[5,4,4,2],[5,5,5,2],[5,5,5,3],[6,5,6,3],[6,6,7,3],[6,6,8,4],[7,6,9,4]];
-const GR_LO=[2,3,4,5,6,7,8,9,10];
+const GR_SIZE=[[4,4,2,1],[4,4,3,2],[5,4,4,2],[5,5,5,2],[5,5,5,3],[6,5,6,3],[6,6,7,3],[6,6,8,4],[7,6,9,4],[7,6,10,4],[7,7,10,4],[7,7,11,4],[7,7,12,4],[7,7,12,5],[7,7,13,5],[7,7,14,5]];
+const GR_LO=[2,3,4,5,6,7,8,9,10,11,12,12,13,13,14,14];
 export const Gravity={key:'gravity',
   init:def=>def.balls.map(b=>b.r*def.w+b.c),
   moves:()=>[[0],[1],[2],[3]],
@@ -227,8 +227,16 @@ export const Gravity={key:'gravity',
     return null;}};
 
 /* ───────── 6 · INTERRUPTORES (Lights Out) ───────── */
-const LI=[[3,'plus',2],[3,'plus',3],[4,'plus',4],[4,'plus',5],[5,'plus',6],[5,'x',6],[5,'plus',8],[5,'box',9],[5,'plus',12]];
-const LI_LO=[2,3,4,5,5,5,6,6,8];
+// [lado, modo, toques de mezcla, figura|null]  (null = encender TODAS las casillas)
+const LI=[[3,'plus',2,null],[3,'plus',3,null],[3,'plus',3,'cruz'],[4,'plus',4,null],[4,'plus',4,'marco'],[5,'plus',6,null],[4,'plus',5,'rombo'],[5,'x',6,null],[5,'plus',8,'corazon'],[5,'box',9,null],[5,'plus',12,null],[5,'plus',9,'letraH'],[5,'x',8,'aspa'],[5,'box',8,'marco'],[5,'plus',10,'rombo'],[5,'plus',12,'corazon']];
+const LI_LO=[2,3,3,4,4,5,5,5,6,6,8,6,5,5,7,8];
+export const FIGURES={
+  3:{cruz:{n:'la cruz',g:['010','111','010']},equis:{n:'la equis',g:['101','010','101']},aro:{n:'el aro',g:['111','101','111']},letraT:{n:'la letra T',g:['111','010','010']}},
+  4:{marco:{n:'el marco',g:['1111','1001','1001','1111']},rombo:{n:'el rombo',g:['0110','1001','1001','0110']},escalera:{n:'la escalera',g:['1000','1100','1110','1111']}},
+  5:{marco:{n:'el marco',g:['11111','10001','10001','10001','11111']},rombo:{n:'el rombo',g:['00100','01110','11111','01110','00100']},corazon:{n:'el corazón',g:['01010','11111','11111','01110','00100']},letraH:{n:'la letra H',g:['10001','10001','11111','10001','10001']},aspa:{n:'la equis grande',g:['10001','01010','00100','01010','10001']}}};
+export function figureMask(n,name){const f=FIGURES[n][name];let m=0;f.g.forEach((row,r)=>{for(let c=0;c<n;c++)if(row[c]==='1')m|=1<<(r*n+c);});return m>>>0;}
+export const fullMask=n=>((1<<(n*n))-1)>>>0;
+export const lightsTarget=def=>def.fig?figureMask(def.n,def.fig):fullMask(def.n);
 export function lightsEffect(def,i){const n=def.n,r=Math.floor(i/n),c=i%n;let m=0;const add=(rr,cc)=>{if(rr>=0&&cc>=0&&rr<n&&cc<n)m|=1<<(rr*n+cc);};
   add(r,c);if(def.mode==='plus'){add(r-1,c);add(r+1,c);add(r,c-1);add(r,c+1);}
   else if(def.mode==='x'){add(r-1,c-1);add(r-1,c+1);add(r+1,c-1);add(r+1,c+1);}
@@ -238,9 +246,9 @@ export const Lights={key:'lights',
   init:def=>def.start,
   moves:def=>Array.from({length:def.n*def.n},(_,i)=>[i]),
   apply:(def,st,mv)=>(st^lightsEffect(def,mv[0]))>>>0,
-  isWin:(def,st)=>st===((1<<(def.n*def.n))-1)>>>0||(def.n*def.n===32&&false),
+  isWin:(def,st)=>(st>>>0)===lightsTarget(def),
   hash:st=>st,
-  solve(def,st){const N=def.n*def.n;const full=N===32?0xFFFFFFFF:((1<<N)-1)>>>0;const b=(st^full)>>>0;
+  solve(def,st){const N=def.n*def.n;const b=((st^lightsTarget(def))>>>0);
     // filas: ecuación por casilla j: Σ_i efecto_i[j]·x_i = b_j
     const eff=Array.from({length:N},(_,i)=>lightsEffect(def,i));const rows=[];
     for(let j=0;j<N;j++){let m=0;for(let i=0;i<N;i++)if((eff[i]>>>j)&1)m|=(1<<i);rows.push({m:m>>>0,b:(b>>>j)&1});}
@@ -254,15 +262,15 @@ export const Lights={key:'lights',
       for(let r=0;r<rk;r++){let v=rows[r].b;for(const f of free)if(((rows[r].m>>>f)&1)&&x[f])v^=1;x[piv[r]]=v;}
       const wgt=x.reduce((a,v)=>a+v,0);if(!best||wgt<best.w)best={w:wgt,x};}
     return best.x.map((v,i)=>v?[i]:null).filter(Boolean);},
-  gen(tier,R){const[n,mode,m]=LI[tier];const N=n*n;const full=((1<<N)-1)>>>0;
-    for(let att=0;att<200;att++){const def={n,mode,start:full};let st=full;const used=new Set();
+  gen(tier,R){const[n,mode,m,fig]=LI[tier];const N=n*n;
+    for(let att=0;att<300;att++){const def={n,mode,start:0};if(fig)def.fig=fig;const target=lightsTarget(def);def.start=target;let st=target;const used=new Set();
       while(used.size<m){const i=R.int(N);if(used.has(i))continue;used.add(i);st=this.apply(def,st,[i]);}
-      def.start=st;if(st===full)continue;const s=this.solve(def,st);if(!s)continue;
-      if(s.length>=LI_LO[tier]||att>190)return def;}
+      def.start=st;if(st===target)continue;const s=this.solve(def,st);if(!s)continue;
+      if(s.length>=LI_LO[tier]||att>290)return def;}
     return null;}};
 
 /* ───────── 7 · TUBERÍAS ───────── */
-const PI_SIZE=[[3,3],[3,3],[3,4],[3,4],[4,4],[4,4],[4,5],[5,5],[5,5]];
+const PI_SIZE=[[3,3],[3,3],[3,4],[3,4],[4,4],[4,4],[4,5],[5,5],[5,5],[5,5],[5,6],[5,6],[6,6],[6,6],[6,6],[6,7]];
 // bits: 1 arriba,2 derecha,4 abajo,8 izquierda
 export const rotMask=(m,r)=>{for(let i=0;i<(r&3);i++)m=((m<<1)|(m>>3))&15;return m;};
 const bitCount=m=>(m&1)+((m>>1)&1)+((m>>2)&1)+((m>>3)&1);
@@ -316,7 +324,7 @@ export const Pipes={key:'pipes',
     return null;}};
 
 /* ───────── 8 · ANILLOS ───────── */
-const RI=[[6,2,0,3],[6,3,0,4],[8,3,0,5],[8,3,1,5],[8,4,1,7],[10,4,1,8],[10,4,2,9],[12,4,2,10],[12,5,3,11]];
+const RI=[[6,2,0,3],[6,3,0,4],[8,3,0,5],[8,3,1,5],[8,4,1,7],[10,4,1,8],[10,4,2,9],[12,4,2,10],[12,5,3,11],[12,5,3,11],[12,5,2,11],[12,5,3,12],[12,4,3,12],[12,5,3,12],[12,4,4,13],[12,4,3,13]];
 export const Rings={key:'rings',
   init:def=>def.off0.slice(),
   moves:def=>{const o=[];for(let i=0;i<def.k;i++){o.push([i,1]);o.push([i,-1]);}return o;},
@@ -340,14 +348,14 @@ export const Rings={key:'rings',
 export const TYPES=[Slide,Fit,Trace,Mirrors,Gravity,Lights,Pipes,Rings];
 export const TYPE_BY_KEY=Object.fromEntries(TYPES.map(t=>[t.key,t]));
 export const TYPE_INFO={
-  slide:{name:'Deslizar al hueco',help:'Desliza las piezas y deja salir la ficha dorada por la derecha.'},
-  fit:{name:'Encaje perfecto',help:'Rellena la silueta con todas las piezas. Puedes girarlas y voltearlas.'},
-  trace:{name:'Un solo trazo',help:'Dibuja un camino por todas las casillas, sin repetir, hasta la meta.'},
-  mirrors:{name:'Espejos de luz',help:'Toca los espejos para girarlos y lleva el rayo hasta todas las estrellas.'},
-  gravity:{name:'Gravedad',help:'Inclina el tablero: cada bola debe caer en el hueco de su color.'},
-  lights:{name:'Interruptores',help:'Enciende todas las casillas. Al tocar una, cambian ella y sus vecinas.'},
-  pipes:{name:'Tuberías',help:'Toca las piezas para girarlas y conectar todo con la fuente.'},
-  rings:{name:'Anillos',help:'Gira los anillos hasta que los colores queden alineados en rayos.'}};
+  slide:{name:'Deslizar al hueco',short:'Saca la ficha dorada',goal:'Saca la ficha dorada por la salida ›',help:'Arrastra las otras piezas para abrirle paso. Cada pieza solo se mueve en línea recta.'},
+  fit:{name:'Encaje perfecto',short:'Rellena la silueta',goal:'Rellena toda la silueta gris con las piezas',help:'Arrastra cada pieza al tablero. Toca una pieza (o usa Girar y Voltear) para cambiar su posición.'},
+  trace:{name:'Un solo trazo',short:'Un camino por todo',goal:'Dibuja un camino por TODAS las casillas',help:'Empieza en la bolita, no repitas casillas y acaba en la meta ◎. Arrastra el dedo.'},
+  mirrors:{name:'Espejos de luz',short:'Lleva el rayo a las estrellas',goal:'Haz que el rayo de luz llegue a todas las estrellas',help:'Toca los espejos para girarlos. Cuando una estrella se ilumina, ¡esa ya está!'},
+  gravity:{name:'Gravedad',short:'Bolas a su hueco',goal:'Mete cada bola en el hueco de su color',help:'Desliza el dedo por el tablero (o usa las flechas): todas las bolas se mueven a la vez.'},
+  lights:{name:'Interruptores',short:'Todo en amarillo',goal:'Pon TODAS las casillas en amarillo',help:'Al tocar una casilla, ella y sus vecinas cambian: si estaban apagadas se encienden, y al revés.'},
+  pipes:{name:'Tuberías',short:'Conecta con la fuente',goal:'Conecta todas las tuberías con la fuente de agua',help:'Toca una pieza para girarla. Cuando el agua llega a todas, ¡listo!'},
+  rings:{name:'Anillos',short:'Alinea los colores',goal:'Alinea los colores de los anillos en rayos',help:'Toca un anillo y gíralo con los botones, hasta que cada rayo sea de un solo color.'}};
 export function genLevel(type,tier,seed){const T=TYPE_BY_KEY[type];return T.gen(tier,RNG(seed));}
 export function starsFor(type,min,moves,hinted){const slack=(type==='fit'||type==='trace')?0:Math.floor(min/6);let s=moves<=min+slack?3:moves<=Math.ceil(min*1.6)+2?2:1;if(hinted)s=Math.min(s,2);return s;}
 export function minMoves(type,def){const T=TYPE_BY_KEY[type];if(type==='fit')return def.pieces.length;if(type==='trace')return def.w*def.h-def.blocked.length-1;const st=T.init(def);const s=T.solve(def,st);return s?s.length:null;}

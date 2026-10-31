@@ -1,4 +1,4 @@
-import {genLevel,minMoves,TYPE_BY_KEY} from '../js/puzzles.js';
+import {genLevel,minMoves,TYPE_BY_KEY} from './js/puzzles.js';
 const order=['gravity','mirrors','fit','lights','trace','pipes','rings','slide'];
 let worst=0,bad=0,sum=0,n=0;const byType={};
 for(let k=0;k<400;k++){const d=new Date(Date.UTC(2026,9,31)+k*864e5);const y=d.getUTCFullYear(),m=d.getUTCMonth(),day=d.getUTCDate();
