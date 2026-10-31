@@ -1,22 +1,22 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=11.1';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=11.1';
-import './models2.js?v=11.1';
-import './models3.js?v=11.1';
-import { PLACES } from './places.js?v=11.1';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=11.1';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=11.1';
-import { NPC } from './npcs.js?v=11.1';
-import { makeTitle } from './title.js?v=11.1';
-import { makeStage } from './stage.js?v=11.1';
-import { makeThumbs } from './thumbs.js?v=11.1';
-import { GB, setOutlines } from './geo.js?v=11.1';
-import { loadPacks } from './charpack.js?v=11.1';
+import * as AU from './audio.js?v=12';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=12';
+import './models2.js?v=12';
+import './models3.js?v=12';
+import { PLACES } from './places.js?v=12';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=12';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=12';
+import { NPC } from './npcs.js?v=12';
+import { makeTitle } from './title.js?v=12';
+import { makeStage } from './stage.js?v=12';
+import { makeThumbs } from './thumbs.js?v=12';
+import { GB, setOutlines } from './geo.js?v=12';
+import { loadPacks } from './charpack.js?v=12';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=11.1';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=11.1';
+import { Particles, Rings, makeTornado } from './fx.js?v=12';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=12';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -624,10 +624,11 @@ function measureChar() {
 }
 function freeRectChars() {
   const W = window.innerWidth, H = window.innerHeight, sh = document.querySelector('#sChars .chsheet').getBoundingClientRect(), tb = document.querySelector('#sChars .chtop').getBoundingClientRect();
-  const t = tb.bottom + 2;
-  if (W > H * 1.1) return { l: 0, r: Math.max(W * 0.3, sh.left - 4), t, b: H - 6 };
-  return { l: 0, r: W, t, b: Math.max(H * 0.35, sh.top - 2) };
+  const t = tb.bottom + 2, cu = $('chUps'), land = W > H * 1.1; cu.style.maxHeight = Math.max(120, (land ? H - 8 : sh.top - 4) - (land ? tb.bottom + 2 : tb.bottom + 6)) + 'px'; const up = cu.getBoundingClientRect();
+  if (land) return { l: 0, r: Math.max(W * 0.25, Math.min(sh.left, up.left) - 6), t, b: H - 6 };
+  return { l: 0, r: Math.max(W * 0.4, up.left - 4), t, b: Math.max(H * 0.35, sh.top - 2) };
 }
+window.addEventListener('resize', () => { chFree = null; });
 let chCorr = { m: 1, dx: 0, dy: 0 }; const CH_YAW = 0.42;
 function titleInsets() {
   const W = window.innerWidth, H = window.innerHeight, q = (s) => document.querySelector(s).getBoundingClientRect(), lg = q('#sTitle .logo'), st = q('#sTitle .statline'), mn = q('#sTitle .menu');
@@ -935,24 +936,29 @@ function resumeGame() { if (G.mode !== 'pause') return; G.mode = 'play'; hideAll
 // ---------- mejoras de cada personaje ----------
 let shopCh = save.char;
 const ownedList = () => PLAYERS.filter((p) => save.owned[p.id]);
+function upRows(p, locked) {
+  const lv = save.cu[p.id] || [0, 0, 0, 0];
+  return upList(p.id).map((u) => {
+    const l = lv[u.i] || 0, max = l >= UPMAX, cost = upCost(l), can = save.coins >= cost && !locked;
+    return `<div class="up"><div class="ic" style="background:${u.col}">${u.icon}</div><div class="tx"><b>${u.n}</b><small>${max ? u.d(u.per * l, l) + ' · ¡al máximo!' : l ? 'Ahora: ' + u.d(u.per * l, l) : u.d(u.per, 1)}</small>${!max && l ? `<small class="nx">Siguiente: ${u.d(u.per * (l + 1), l + 1)}</small>` : ''}<div class="pips">${Array.from({ length: UPMAX }, (_, i) => `<i class="${i < l ? 'on' : ''}"></i>`).join('')}</div></div>
+    <button class="btn buy ${max ? 'quit' : can ? 'go' : 'shop'}" data-up="${u.i}" ${max || locked ? 'disabled' : ''}>${max ? 'MAX' : locked ? '🔒' : `<i class="coin"></i> ${fmt(cost)}`}</button></div>`;
+  }).join('');
+}
 function renderShop() {
   if (!save.owned[shopCh]) shopCh = save.char; const p = PLAYER_BY_ID[shopCh], lv = save.cu[p.id] || [0, 0, 0, 0], list = ownedList();
   $('sCoins').textContent = fmt(save.coins); $('shName').textContent = p.name; $('shPerk').textContent = p.perk; $('shNum').textContent = 'Personaje ' + (list.indexOf(p) + 1) + ' / ' + list.length + (shopCh === save.char ? ' · elegida' : '');
   $('bShPrev').style.visibility = $('bShNext').style.visibility = list.length > 1 ? 'visible' : 'hidden';
   $('shDot').style.background = '#' + p.theme.ring.toString(16).padStart(6, '0');
-  $('upsList').innerHTML = upList(p.id).map((u) => {
-    const l = lv[u.i] || 0, max = l >= UPMAX, cost = upCost(l), can = save.coins >= cost;
-    return `<div class="up"><div class="ic" style="background:${u.col}">${u.icon}</div><div class="tx"><b>${u.n}</b><small>${max ? u.d(u.per * l, l) + ' · ¡al máximo!' : l ? 'Ahora: ' + u.d(u.per * l, l) : u.d(u.per, 1)}</small>${!max && l ? `<small class="nx">Siguiente: ${u.d(u.per * (l + 1), l + 1)}</small>` : ''}<div class="pips">${Array.from({ length: UPMAX }, (_, i) => `<i class="${i < l ? 'on' : ''}"></i>`).join('')}</div></div>
-    <button class="btn buy ${max ? 'quit' : can ? 'go' : 'shop'}" data-up="${u.i}" ${max ? 'disabled' : ''}>${max ? 'MAX' : `<i class="coin"></i> ${fmt(cost)}`}</button></div>`;
-  }).join('');
+  $('upsList').innerHTML = upRows(p, false);
 }
 let shopFrom = 'sTitle';
 function openShop(from) { shopFrom = from; shopCh = save.char; show('sShop'); renderShop(); AU.click(); }
-$('upsList').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-up]'); if (!b) return; const p = PLAYER_BY_ID[shopCh], i = +b.dataset.up, arr = save.cu[p.id] || (save.cu[p.id] = [0, 0, 0, 0]), l = arr[i] || 0, cost = upCost(l);
-  if (l >= UPMAX) return; if (save.coins < cost) { AU.nope(); b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 200 }); return; }
-  save.coins -= cost; arr[i] = l + 1; if (p.id === ch.id) UT = null; persist(); AU.buy(); renderShop();
-});
+function buyUp(pid, i, b) { // compra de una mejora propia (la usan la tienda y el panel de la selección de personaje)
+  const arr = save.cu[pid] || (save.cu[pid] = [0, 0, 0, 0]), l = arr[i] || 0, cost = upCost(l);
+  if (l >= UPMAX) return false; if (save.coins < cost) { AU.nope(); if (b) b.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 200 }); return false; }
+  save.coins -= cost; arr[i] = l + 1; UT = null; persist(); AU.buy(); return true;
+}
+$('upsList').addEventListener('click', (e) => { const b = e.target.closest('button[data-up]'); if (!b) return; if (buyUp(shopCh, +b.dataset.up, b)) renderShop(); });
 const shopMove = (d) => { const l = ownedList(); let i = l.findIndex((p) => p.id === shopCh); i = (i + d + l.length) % l.length; shopCh = l[i].id; AU.select(); setChar(shopCh, false); renderShop(); };
 // ---------- selección de personaje ----------
 let cIdx = 0;
@@ -965,9 +971,24 @@ function renderChars() {
   if (!thumbs) { try { thumbs = makeThumbs(renderer, (id) => PLAYER_BY_ID[id].make(), PLAYERS); thumbs.drawAll(G.t); } catch (e) { console.warn('thumbs', e); thumbs = null; } }
   $('cDots').innerHTML = PLAYERS.map((q, i) => `<button class="tile ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`).join('');
   if (thumbs) [...$('cDots').children].forEach((b, i) => b.appendChild(thumbs.canvases[i]));
-  $('cStats').innerHTML = '';
+  $('cStats').innerHTML = ''; renderChUps();
   G.kick = 1; G.twirl = 6.28; measureChar(); calibrateChar(); stage.setTheme(p.theme); stage.pulse(parts, G.px, G.pz, G.Rv * 1.18);
 }
+function renderChUps() { // v12: panel de mejoras propias del personaje elegido, a la derecha del muñeco
+  const p = PLAYERS[cIdx], owned = !!save.owned[p.id], lv = save.cu[p.id] || [], tot = lv.reduce((s, x) => s + (x || 0), 0);
+  $('cuTitle').innerHTML = `Mejoras <em>${tot} / ${UPMAX * 4}</em>`; $('cuLock').style.display = owned ? 'none' : 'block'; $('cuLock').textContent = '🔒 Desbloquéala para mejorarla';
+  $('cuList').innerHTML = upRows(p, !owned); $('cCoins').textContent = fmt(save.coins);
+}
+$('cuList').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-up]'); if (!b || b.disabled) return; const p = PLAYERS[cIdx], i = +b.dataset.up, row = b.closest('.up'), l0 = (save.cu[p.id] || [])[i] || 0;
+  if (!buyUp(p.id, i, b)) return;
+  const u = upList(p.id)[i]; renderChUps(); const nr = $('cuList').children[i];
+  if (nr) { nr.classList.add('bought'); const f = document.createElement('span'); f.className = 'fl'; f.textContent = '¡Nivel ' + (l0 + 1) + '!'; nr.appendChild(f); setTimeout(() => f.remove(), 1100); setTimeout(() => nr.classList.remove('bought'), 800); }
+  const w = $('cCoins'); w.classList.remove('pop'); void w.offsetWidth; w.classList.add('pop');
+  const ds = G.Rv * 1.18; G.kick = 1; G.twirl = 6.28; flash('good');
+  parts.burst(G.px, chBox.cy * ds, G.pz, 46, { color: [0xffd23f, 0xff74c4, 0x3fe0b0, 0x4aa8ff, 0xffffff, parseInt(u.col.slice(1), 16)], speed: 7, size: 0.5, life: 1.1, shape: 1, g: 3, up: 4 });
+  stage.pulse(parts, G.px, G.pz, ds);
+});
 function openChars() { cIdx = Math.max(0, PLAYERS.findIndex((p) => p.id === save.char)); G.mode = 'chars'; G.vx = G.vz = 0; $('dBanner').classList.remove('on'); show('sChars'); renderChars(); AU.click(); }
 function charsMove(d) { cIdx = (cIdx + d + PLAYERS.length) % PLAYERS.length; AU.select(); renderChars(); }
 canvas.addEventListener('pointerdown', (e) => { if (G.mode === 'menu' && title && title.active) title.tap(e.clientX, e.clientY); });

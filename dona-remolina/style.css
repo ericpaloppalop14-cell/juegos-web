@@ -342,3 +342,38 @@ html,body{margin:0;height:100%;overflow:hidden;background:#4db8ff;font-family:'F
 #leftInd span,#leftInd2 span,#leftInd3 span{text-shadow:0 1px 3px #8a3000;font-size:12px}
 #leftInd2,#leftInd3{width:50px;height:50px;margin:-25px 0 0 -25px}#leftInd2::after,#leftInd3::after{transform-origin:50% 39px}
 @keyframes radarPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.35) drop-shadow(0 0 8px #ffd23f)}}
+
+/* ===== v12: personaje a la izquierda y panel de mejoras propias a la derecha ===== */
+.chups{pointer-events:auto;position:absolute;right:8px;top:calc(env(safe-area-inset-top) + 46px);width:min(52vw,240px);overflow-y:auto;overscroll-behavior:contain;z-index:3;
+  background:linear-gradient(#fff,#fff0fb);border:3px solid #fff;border-radius:20px;padding:6px 6px 7px;box-shadow:0 8px 22px rgba(60,20,100,.38);display:flex;flex-direction:column;gap:5px;scrollbar-width:thin}
+.cuhead{display:flex;flex-direction:column;gap:3px}
+.cuhead>b{font-size:17px;line-height:1;color:var(--ink);display:flex;justify-content:space-between;align-items:baseline;padding:0 3px}
+.cuhead>b em{font-style:normal;font-size:12px;color:#9a7ac0}
+.cuhead .perk{padding:2px 8px;border-width:2px;border-radius:12px;flex-direction:column;gap:0;align-items:flex-start;text-align:left}
+.cuhead .perk b{display:block;font-size:9px;letter-spacing:.8px}.cuhead .perk span{font-size:11.5px;line-height:1.1;font-weight:700}
+.cuhead small{display:none;font-size:11.5px;font-weight:700;color:#a05c00;background:#fff3c2;border-radius:10px;padding:2px 8px;text-align:center}
+.chups .ups{gap:5px}
+.chups .up{position:relative;padding:4px 5px;gap:6px;border-radius:15px;border-width:2px;box-shadow:0 2px 0 rgba(120,60,160,.18);transition:background .3s}
+.chups .up .ic{width:34px;height:34px;border-radius:11px;border-width:2px}.chups .up .ic svg{width:22px;height:22px}
+.chups .up .tx b{font-size:14px}.chups .up .tx small{font-size:10.5px;margin:1px 0 2px;line-height:1.05}.chups .up .tx small.nx{display:none}
+.chups .pips i{height:6px;max-width:12px;border-radius:3px}
+.chups .up .buy{font-size:13px;padding:5px 7px;min-width:58px;border-radius:14px;border-width:2px;box-shadow:0 3px 0 rgba(0,0,0,.2)}.chups .up .buy .coin{font-size:12px}
+.chups .up .buy:disabled{opacity:.75}
+.chups .up.bought{animation:upBought .8s ease-out}
+@keyframes upBought{0%{background:#fff7a8;transform:scale(1.05)}40%{background:#d6ffd6;transform:scale(1.03)}100%{background:#f6efff;transform:scale(1)}}
+.chups .up .fl{position:absolute;right:8px;top:-6px;font-size:16px;font-weight:700;color:#fff;-webkit-text-stroke:3px #1a9a6a;paint-order:stroke fill;pointer-events:none;animation:upFl 1.1s ease-out forwards;white-space:nowrap}
+@keyframes upFl{0%{transform:translateY(8px) scale(.6);opacity:0}25%{transform:translateY(-4px) scale(1.2);opacity:1}100%{transform:translateY(-26px) scale(1);opacity:0}}
+#cCoins.pop{display:inline-block;animation:coinPop .5s ease-out}
+@keyframes coinPop{0%{transform:scale(1.5);color:#ff4fa3}100%{transform:scale(1)}}
+#sChars .chsheet .chnav{padding:0}
+@media (orientation:landscape) and (max-height:520px){
+  #sChars{flex-direction:row;align-items:flex-end;gap:8px;padding-top:6px}
+  .chups{position:static;margin-left:auto;align-self:flex-end;width:min(33vw,292px)}
+  #sChars .chsheet{margin-left:0;width:min(33vw,292px);flex:none}
+  .dots{grid-template-columns:repeat(6,1fr);gap:4px}.tile{aspect-ratio:1/1.02;border-radius:11px;border-width:2px}.tile.lock::after{font-size:10px}
+  .tile.on{transform:translateY(-2px) scale(1.1)}
+  .chups .up{padding:3px 5px}.chups .up .ic{width:30px;height:30px}.cuhead>b{font-size:15px}
+}
+@keyframes coinPop{0%{transform:scale(1.28);color:#ff4fa3}100%{transform:scale(1)}}
+#cCoins.pop{transform-origin:right center}
+@media (orientation:landscape) and (max-height:520px){#bCPick.unlock,#bCPick.locked{font-size:15px;white-space:nowrap;padding:5px 8px}#bCPick .coin{font-size:15px}}

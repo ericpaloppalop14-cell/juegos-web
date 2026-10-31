@@ -9,7 +9,7 @@
 <meta name="description" content="La abuela torbellino de Mueblópolis: ¡a limpiar!">
 <link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=11.1">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 <div id="app">
@@ -68,9 +68,12 @@
 
     <section id="sChars" class="screen hidden">
       <div class="chtop"><button class="btn mid quit" id="bCBack">‹ Volver</button><div class="wallet"><i class="coin"></i> <b id="cCoins">0</b></div></div>
+      <div class="chups" id="chUps">
+        <div class="cuhead"><b id="cuTitle">Mejoras</b><div class="perk"><b>Superpoder</b><span id="cPerk"></span></div><small id="cuLock"></small></div>
+        <div class="ups" id="cuList"></div>
+      </div>
       <div class="chsheet">
         <div class="chnav"><button class="arrow" id="bCPrev" aria-label="Anterior">‹</button><div class="chtitle"><div class="chnum" id="cNum">1 / 6</div><h2 id="cName">Doña Remolina</h2><div class="chsub" id="cSub"></div></div><button class="arrow" id="bCNext" aria-label="Siguiente">›</button></div>
-        <div class="perk"><b>Superpoder</b><span id="cPerk"></span></div>
         <div class="chstats" id="cStats"></div>
         <div class="dots" id="cDots"></div>
         <button class="btn big go" id="bCPick">¡A LIMPIAR!</button>
@@ -126,6 +129,6 @@
   <div id="loading"><div class="logo small"><div class="l1">Doña</div><div class="l2">Remolina</div></div><div class="lbar"><i id="lbarFill"></i></div><div class="ltxt" id="loadTxt">Preparando Mueblópolis…</div></div>
 </div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/game.js?v=11.1"></script>
+<script type="module" src="js/game.js?v=12"></script>
 </body>
 </html>
