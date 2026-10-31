@@ -1,13 +1,13 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=2';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL } from './models.js?v=2';
-import './models2.js?v=2';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=2';
-import { NPC } from './npcs.js?v=2';
-import { GB } from './geo.js?v=2';
-import { Particles, Rings, makeTornado } from './fx.js?v=2';
-import { buildScenery, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=2';
+import * as AU from './audio.js?v=3';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL } from './models.js?v=3';
+import './models2.js?v=3';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=3';
+import { NPC } from './npcs.js?v=3';
+import { GB, setOutlines } from './geo.js?v=3';
+import { Particles, Rings, makeTornado } from './fx.js?v=3';
+import { buildScenery, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=3';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -36,7 +36,7 @@ const UPS = [
   { id: 'speed', n: 'Velocidad', d: (l) => `Te mueves un +${6 * l}% → +${6 * (l + 1)}%`, col: '#ff9a1f', icon: '<svg viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>' },
   { id: 'loot', n: 'Botín', d: (l) => `Monedas por objeto x${(1 + 0.15 * l).toFixed(2)} → x${(1 + 0.15 * (l + 1)).toFixed(2)}`, col: '#3fbf5a', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.2 1.3-1.8 3-1.8s3 .8 3 2-1.3 1.6-3 2-3 .8-3 2 1.3 2 3 2 3-.7 3-1.8"/></svg>' },
 ];
-const startR = () => 0.9 * (1 + 0.12 * save.ups.size);
+const startR = () => 0.9 * (1 + 0.12 * save.ups.size) * (1 + pk('grow'));
 let ch = PLAYER_BY_ID[save.char] || PLAYERS[0];
 function pk(k) { return (ch.perkK[k] || 0); }
 const gate = () => GATE + pk('gate');
@@ -50,10 +50,10 @@ const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0;
-const scene = new THREE.Scene(); scene.background = skyTex(); scene.fog = new THREE.Fog(0xcdeeff, 60, 260);
+const scene = new THREE.Scene(); scene.background = skyTex(); scene.fog = new THREE.Fog(0xdff0ff, 60, 260);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 900);
-const hemi = new THREE.HemisphereLight(0xe3f4ff, 0xffd9a8, 1.5); scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff0d0, 2.6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.06; sun.shadow.radius = 4;
+const hemi = new THREE.HemisphereLight(0xeaf6ff, 0xffd9b8, 1.75); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.3); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.06; sun.shadow.radius = 4;
 sun.shadow.camera.near = 5; sun.shadow.camera.far = 320; scene.add(sun, sun.target);
 const rim = new THREE.DirectionalLight(0xbfe4ff, 0.7); rim.position.set(-40, 30, -60); scene.add(rim);
 // post-proceso: bloom suave (se apaga solo si el móvil va justo)
@@ -70,7 +70,7 @@ const SUN_OFF = new THREE.Vector3(55, 100, 42);
 const parts = new Particles(scene, 1200);
 const rings = new Rings(scene, 10);
 const tornado = makeTornado(scene);
-let scenery = null, dona = null, viewCh = ch; const modelCache = {};
+let blinkT = 2, blinkP = 0, qLevel = 0; let scenery = null, dona = null, viewCh = ch; const modelCache = {};
 function setChar(id, remember = true) {
   const c = PLAYER_BY_ID[id] || PLAYERS[0]; if (dona) scene.remove(dona);
   dona = modelCache[c.id] || (modelCache[c.id] = c.make()); scene.add(dona); tornado.theme(c.theme);
@@ -195,10 +195,10 @@ function swallow(o) {
   // puntos, monedas, combo
   if (G.mode === 'play') { G.combo++; G.comboT = comboWin(); G.bestCombo = Math.max(G.bestCombo, G.combo); }
   const cm = 1 + Math.min(G.combo, 40) * 0.025;
-  const pts = Math.round((10 + o.area * 14) * (1 + Math.min(10, Math.floor(G.combo / 5)) * 0.2));
+  const pts = Math.round((10 + o.area * 14) * (1 + Math.min(10, Math.floor(G.combo / 5)) * 0.2) * (1 + pk('score')));
   const coins = Math.max(1, Math.round(o.coins * lootMul() * cm));
   const real = G.mode === 'play';
-  if (real) { G.score += pts; G.coins += coins; save.coins += coins; G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper') G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
+  if (real) { G.score += pts; G.coins += coins; save.coins += coins; G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper' || (o.K && o.K.cb)) G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
   const before = G.A; G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * o.area / (1 + G.A / 70)); G.R = Math.sqrt(G.A);
   hud.dirty = true;
   // feedback
@@ -329,9 +329,9 @@ function step(dt) {
     }
     for (let i = wobbling.length - 1; i >= 0; i--) { const o = wobbling[i]; if (o.wf !== frameNo) { if (o.state === 0) { o.mesh.rotation.set(0, o.rot, 0); o.mesh.position.y = o.hy; o.mesh.updateMatrix(); } o.wf = -1; wobbling[i] = wobbling[wobbling.length - 1]; wobbling.pop(); } }
     for (const p of pickups) {
-      if (!p.on) continue; p.mesh.rotation.y += dt * 3; p.mesh.position.y = (p.type === 'coin' ? 1.1 : 1.5) + Math.sin(G.t * 3 + p.ph) * 0.18;
+      if (!p.on) continue; p.mesh.visible = G.mode !== 'chars'; p.mesh.rotation.y += dt * 3; p.mesh.position.y = (p.type === 'coin' ? 1.1 : 1.5) + Math.sin(G.t * 3 + p.ph) * 0.18;
       const d = Math.hypot(p.x - G.px, p.z - G.pz);
-      if (d < G.R + 1.0 && live) { p.on = false; p.state = 1; worldGroup.remove(p.mesh); collectPickup(p); }
+      if (d < G.R + 1.0 + pk('magnet') * (1 + G.R * 0.5) && live) { p.on = false; p.state = 1; worldGroup.remove(p.mesh); collectPickup(p); }
     }
     updateMovers(dt, live); updateToasts(dt, live);
     if (alc) updateAlcalde(alc, dt, play);
@@ -383,7 +383,7 @@ const X = {
   },
   hit(c, nx, nz, o) {
     if (G.mode !== 'play' || G.inv > 0) return false; const hm = hitMul(), f = 0.5 + 0.5 * hm;
-    G.inv = 1.8; G.slow = Math.max(G.slow, (o.slow || 0.8) * f); G.hits++; G.kx = nx * (o.knock || 0) * f; G.kz = nz * (o.knock || 0) * f; G.shake = Math.max(G.shake, 0.8); G.combo = 0; G.comboT = 0;
+    G.inv = 1.8 + pk('inv'); G.slow = Math.max(G.slow, (o.slow || 0.8) * f); G.hits++; G.kx = nx * (o.knock || 0) * f; G.kz = nz * (o.knock || 0) * f; G.shake = Math.max(G.shake, 0.8); G.combo = 0; G.comboT = 0;
     G.A = Math.max(G.A0, G.A - (o.loss || 0.04) * (G.A - G.A0) * hm); G.R = Math.sqrt(G.A); AU.hit(); flash(); toast(o.msg || '¡Ay!', 'warn');
     parts.burst(G.px, 1.5, G.pz, 16, { color: [0xff3d6e, 0xffd23f, 0xffffff], speed: 6, size: 0.45, life: 0.8, shape: 1, g: 6, up: 3 }); rings.spawn(G.px, G.pz, G.Rv, G.Rv * 2.6, 0xff3d6e, 0.5, 0.9); hud.dirty = true; return true;
   },
@@ -432,7 +432,7 @@ function updateAlcalde(a, dt, live) {
   if (!edible && d < G.R * 0.9 + 1.7 && a.cool <= 0 && G.inv <= 0) alcalde_hit(a, dx / d, dz / d);
 }
 function alcalde_hit(a, nx, nz) {
-  a.cool = 2.8; a.rec = 1.4; G.inv = 2.0; G.slow = 1.3 * (0.5 + 0.5 * hitMul()); G.hits++;
+  a.cool = 2.8; a.rec = 1.4; G.inv = 2.0 + pk('inv'); G.slow = 1.3 * (0.5 + 0.5 * hitMul()); G.hits++;
   G.kx = nx * 20 * (0.5 + 0.5 * hitMul()); G.kz = nz * 20 * (0.5 + 0.5 * hitMul()); G.shake = 1; G.combo = 0; G.comboT = 0;
   const loss = 0.09 * (G.A - G.A0) * hitMul(); G.A = Math.max(G.A0, G.A - loss); G.R = Math.sqrt(G.A);
   AU.hit(); flash(); say('alc', '¡MULTA! ¡Por soplona!', 1600); toast('¡Multa!', 'warn'); say('dona', pick(['¡Qué agravio!', '¡Ay, mi espalda!', '¡Eso es abuso municipal!'], (rnd() * 3) | 0), 1200);
@@ -476,7 +476,11 @@ function updateFx(dt) {
   tornado.setAlpha(G.mode === 'chars' ? 0.2 : 1);
   tornado.update(t, R, G.px, 0, G.pz, { x: G.vz * 0.02, z: -G.vx * 0.02 }, pulse);
   const ds = R * 1.18 * (1 + G.kick * 0.1), ud = dona.userData, sw = Math.sin(t * 9), a0 = ud.arms0 || 2.35;
-  dona.scale.setScalar(ds); dona.position.set(G.px, 0.12 * ds + Math.abs(Math.sin(t * 6)) * 0.06 * ds + (ud.hover ? (ud.hover + Math.sin(t * 3) * 0.05) * ds : 0), G.pz);
+  // squash & stretch: rebota al andar, respira al quieto y se estira al tragar
+  const mv = clamp((G.speed || 0) / 9, 0, 1), sqz = (Math.abs(Math.sin(t * 6.5)) - 0.5) * 0.12 * mv + Math.sin(t * 2.3) * 0.022 * (1 - mv) + G.kick * 0.09 + (G.shout > 0 ? 0.04 : 0);
+  dona.scale.set(ds * (1 - sqz * 0.55), ds * (1 + sqz), ds * (1 - sqz * 0.55));
+  if (ud.lids) { blinkT -= dt; if (blinkT < 0) { blinkP = 0.17; blinkT = 1.8 + rnd() * 3.2; } blinkP = Math.max(0, blinkP - dt); const bl = blinkP > 0 ? Math.sin((1 - blinkP / 0.17) * Math.PI) : 0; for (const l of ud.lids) { l.visible = bl > 0.05; l.scale.set(1, Math.max(0.01, bl), 1); } }
+  dona.position.set(G.px, 0.12 * ds + Math.abs(Math.sin(t * 6)) * 0.06 * ds + (ud.hover ? (ud.hover + Math.sin(t * 3) * 0.05) * ds : 0), G.pz);
   dona.rotation.set(G.vz * 0.012, clamp(G.vx * 0.045, -0.5, 0.5) + G.twirl + (G.mode === 'chars' ? Math.sin(t * 1.3) * 0.55 : 0), -G.vx * 0.014);
   ud.arms[1].rotation.z = -(a0 + sw * 0.55 + (G.shout > 0 ? 0.35 : 0)); ud.arms[0].rotation.z = a0 - sw * 0.5 + 0.2; ud.arms[1].rotation.x = Math.cos(t * 9) * 0.3; ud.arms[0].rotation.x = -Math.cos(t * 9) * 0.25;
   ud.head.rotation.z = Math.sin(t * 4.5) * 0.06; ud.head.position.y = (ud.headY || 1.36) + Math.abs(sw) * 0.03;
@@ -501,7 +505,8 @@ function updateFx(dt) {
   const sk = G.shake * G.shake * (0.35 + 0.18 * R); const sx = (rnd() - 0.5) * sk, sy = (rnd() - 0.5) * sk, sz = (rnd() - 0.5) * sk;
   const k = camDist / d;
   camera.position.set(camT.x + sx, h * k + sy, camT.z + d * k + sz);
-  camera.lookAt(camT.x + sx * 0.5, G.mode === 'chars' ? (window.CAMY == null ? 1.35 : window.CAMY) : R * 0.9, G.mode === 'menu' ? camT.z + R * 1.6 : G.mode === 'chars' ? camT.z + (window.CAMZZ == null ? -1 : window.CAMZZ) : camT.z - R * 1.0 - 1.2);
+  camera.lookAt(camT.x + sx * 0.5, G.mode === 'chars' ? (window.CAMY == null ? 0.55 : window.CAMY) : R * 0.9, G.mode === 'menu' ? camT.z + R * 1.6 : G.mode === 'chars' ? camT.z + (window.CAMZZ == null ? -1 : window.CAMZZ) : camT.z - R * 1.0 - 1.2);
+  if (window.CAMOVR) { camera.position.set(...window.CAMOVR.p); camera.lookAt(...window.CAMOVR.t); }
   updateOcclusion(dt);
   // luz y sombras
   const E = 16 + R * 7.2; sun.target.position.set(camT.x, 0, camT.z); sun.position.copy(sun.target.position).add(SUN_OFF);
@@ -674,13 +679,13 @@ function frame(now) {
   draw(dt);
   // resolución adaptativa
   fAvg = fAvg * 0.95 + dt * 1000 * 0.05;
-  if (fAvg > 27 && bloomOn && composer) { if (++slowN > 60) { bloomOn = false; slowN = 0; fAvg = 16; } }
+  if (fAvg > 27 && qLevel < 3 && !window.NOADAPT) { if (++slowN > 60) { qLevel++; if (qLevel === 1) bloomOn = false; else if (qLevel === 2) setOutlines(false); else sun.castShadow = false; slowN = 0; fAvg = 16; } }
   else if (fAvg > 24) { if (++slowN > 90 && pixelRatio > 1.0) { pixelRatio = Math.max(1.0, pixelRatio * 0.88); resize(); slowN = 0; fAvg = 16; } } else slowN = 0;
   if (fAvg < 13 && pixelRatio < pixelCap) { if (++fastN > 400) { pixelRatio = Math.min(pixelCap, pixelRatio * 1.1); resize(); fastN = 0; } } else fastN = 0;
 }
 // API para pruebas
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
-window.DR = { G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, UPS, UPMAX, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
+window.DR = { G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, UPS, UPMAX, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
 async function boot() {
   const lf = $('lbarFill'), lt = $('loadTxt'); const tick = (p, t) => { lf.style.width = p + '%'; if (t) lt.textContent = t; return new Promise((r) => setTimeout(r, 16)); };

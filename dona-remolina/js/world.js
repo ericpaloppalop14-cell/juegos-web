@@ -1,7 +1,7 @@
 // Mueblópolis: suelo de parquet, alfombras-manzana, paredes de papel pintado y generación de objetos
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=2';
-import { KINDS, getGeo, PAL } from './models.js?v=2';
+import { GB, lighten, darken } from './geo.js?v=3';
+import { KINDS, getGeo, PAL } from './models.js?v=3';
 
 export const HALF = 130;          // el torbellino se mueve en [-128, 128]
 export const SPAWN = { x: 0, z: 98 };
@@ -26,8 +26,20 @@ export function districtAt(x, z) {
 
 export function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
+// suaviza la textura (desenfoque que respeta el mosaico), la aclara a pastel y le da un volumen mullido
+function softTex(c) {
+  const w = c.width, h = c.height, o = document.createElement('canvas'); o.width = w; o.height = h; const g = o.getContext('2d');
+  if ('filter' in g) g.filter = 'blur(' + (w / 256 * 1.3).toFixed(2) + 'px)';
+  for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) g.drawImage(c, dx * w, dy * h);
+  g.filter = 'none';
+  g.fillStyle = 'rgba(255,248,250,0.11)'; g.fillRect(0, 0, w, h);
+  const rg = g.createRadialGradient(w / 2, h / 2, w * 0.18, w / 2, h / 2, w * 0.78); rg.addColorStop(0, 'rgba(255,255,255,0.07)'); rg.addColorStop(1, 'rgba(120,70,150,0.07)');
+  g.fillStyle = rg; g.fillRect(0, 0, w, h);
+  return o;
+}
 function canvasTex(w, h, draw, repeat, aniso = 8) {
-  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  let c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  if (aniso >= 8 && w >= 256) c = softTex(c);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso;
   if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
   return t;
@@ -80,7 +92,11 @@ function wallTex() {
   }, [14, 3]);
 }
 export function skyTex() {
-  return canvasTex(8, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#4db8ff'); gr.addColorStop(0.55, '#a8e2ff'); gr.addColorStop(1, '#fff3d6'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, null, 1);
+  return canvasTex(512, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#6bc2ff'); gr.addColorStop(0.45, '#b4e6ff'); gr.addColorStop(0.78, '#ffeedd'); gr.addColorStop(1, '#ffd6ea'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const sun = g.createRadialGradient(w * 0.72, h * 0.34, 4, w * 0.72, h * 0.34, h * 0.5); sun.addColorStop(0, 'rgba(255,250,220,.95)'); sun.addColorStop(0.18, 'rgba(255,244,200,.45)'); sun.addColorStop(1, 'rgba(255,244,200,0)'); g.fillStyle = sun; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 9; i++) { const x = (i * 131) % w, y = h * (0.42 + ((i * 37) % 30) / 100); g.beginPath(); g.ellipse(x, y, 60 + (i % 3) * 26, 9 + (i % 2) * 5, 0, 0, 7); g.fill(); }
+  }, null, 1);
 }
 
 
@@ -200,7 +216,7 @@ export function generate(seed) {
   const kinds = Object.keys(KINDS);
   const pickKind = (tier, dist) => {
     const c = []; let tot = 0;
-    for (const k of kinds) { const K = KINDS[k]; if (K.tier !== tier || K.lm) continue; const th = K.th || []; const w = th.includes(dist) ? 4 : th.length === 0 ? 1 : (tier >= 4 ? 0.05 : 0.14); c.push([k, w]); tot += w; }
+    for (const k of kinds) { const K = KINDS[k]; if (K.tier !== tier || K.lm || K.cb) continue; const th = K.th || []; const w = th.includes(dist) ? 4 : th.length === 0 ? 1 : (tier >= 4 ? 0.05 : 0.14); c.push([k, w]); tot += w; }
     let r = rnd() * tot; for (const [k, w] of c) { r -= w; if (r <= 0) return k; } return c[c.length - 1][0];
   };
   // monumentos
@@ -208,6 +224,15 @@ export function generate(seed) {
   for (const k of kinds) if (KINDS[k].lm) {
     const dn = KINDS[k].th[0], D = DISTRICTS[dn]; let x = D.cx, z = D.cz; if (dn === 'salon') { x = -26; z = 66; } if (dn === 'plaza') { x = 0; z = 0; }
     const geo = getGeo(k, 0); const o = { kind: k, v: 0, x, z, rot: 0, sc: 1, ov: geo.r * 0.95, lm: true }; add(o); out.push(o); landmarks.push(o);
+  }
+  // edificios locos gigantes: 2 de cada, repartidos por sus distritos
+  for (const k of kinds) if (KINDS[k].cb) for (let n = 0; n < 2; n++) {
+    const dn = KINDS[k].th[n % KINDS[k].th.length], D = DISTRICTS[dn], geo = getGeo(k, 0);
+    for (let t = 0; t < 80; t++) {
+      const x = D.cx + R(-36, 36), z = D.cz + R(-36, 36), ov = geo.r * 0.95;
+      if (Math.abs(x) > HALF - 10 || Math.abs(z) > HALF - 10 || spawnD(x, z) < 14 || !free(x, z, ov)) continue;
+      const o = { kind: k, v: 0, x, z, rot: R(-0.5, 0.5), sc: 1, ov }; add(o); out.push(o); break;
+    }
   }
   // [tier, cantidad, d_centro, d_ancho]
   const plan = [[5, 24, 190, 55], [4, 56, 140, 52], [3, 105, 100, 48], [2, 235, 64, 44], [1, 330, 40, 52], [0, 700, 22, 80]];

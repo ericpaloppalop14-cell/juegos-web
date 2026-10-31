@@ -1,6 +1,6 @@
 // Catálogo de objetos de Mueblópolis (todo procedural, original)
 import * as THREE from 'three';
-import { GB, C, mix, lighten, darken, sectorColors, addOutline } from './geo.js?v=2';
+import { GB, C, mix, lighten, darken, sectorColors, addOutline, Q } from './geo.js?v=3';
 
 export const PAL = {
   coral: 0xff6b5e, tang: 0xff9a1f, sun: 0xffd23f, lime: 0x8fdc4a, mint: 0x3fe0b0, turq: 0x1fc4d6, sky: 0x4aa8ff,
@@ -320,10 +320,17 @@ export function getGeo(kind, v) {
   }
   return r;
 }
-export const propMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.0 });
+export const propMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0.0 });
+// brillo suave de borde (fresnel pastel) y un toque de luz rebotada: aspecto de juguete blandito
+propMaterial.onBeforeCompile = (sh) => {
+  sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `
+    float fr = pow(1.0 - saturate(dot(normalize(vNormal), normalize(vViewPosition))), 2.6);
+    outgoingLight += fr * vec3(0.20, 0.17, 0.24) * (0.5 + 0.5 * normalize(vNormal).y) + vec3(0.025, 0.02, 0.03);
+    #include <opaque_fragment>`);
+};
 
 // ---------- personajes ----------
-export const part = (gb, shadow = true, rel = 0.016) => { const m = new THREE.Mesh(gb.build(false, 0.1), propMaterial); m.castShadow = shadow; const g = m.geometry, bb = g.boundingBox; const size = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z); addOutline(m, Math.max(0.012, size * rel)); return m; };
+export const part = (gb, shadow = true, rel = 0.009) => { const m = new THREE.Mesh(gb.build(false, Q.maxSeg > 2 ? 0.55 : 0.1), propMaterial); m.castShadow = shadow; const g = m.geometry, bb = g.boundingBox; const size = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z); addOutline(m, Math.max(0.008, size * rel)); return m; };
 
 export function makeDona() {
   const root = new THREE.Group();

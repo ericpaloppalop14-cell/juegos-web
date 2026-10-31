@@ -178,3 +178,6 @@ html,body{margin:0;height:100%;overflow:hidden;background:#4db8ff;font-family:'F
   #sChars{flex-direction:row;align-items:flex-end}.chtop{position:absolute;top:8px;left:12px;right:12px;width:auto}.chsheet{margin-left:auto;width:min(52vw,420px);padding:8px 12px}
   #mini{width:70px;height:70px}
 }
+/* v3: 12 personajes */
+.dots{flex-wrap:nowrap;gap:4px;max-width:100%;margin:0 auto}
+.dot{width:23px;height:23px;border-width:2px;flex:none}.dot.on{transform:scale(1.22)}.chsub{font-size:13px}.chnum{font-size:12px}

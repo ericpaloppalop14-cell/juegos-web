@@ -1,7 +1,7 @@
 // v2: más objetos por tamaño, temáticos por distrito, y monumentos gigantes
 import * as THREE from 'three';
-import { GB, lighten, darken, mix } from './geo.js?v=2';
-import { KINDS, PAL, wardrobe } from './models.js?v=2';
+import { GB, lighten, darken, mix } from './geo.js?v=3';
+import { KINDS, PAL, wardrobe } from './models.js?v=3';
 const PI = Math.PI;
 const B = [PAL.coral, PAL.tang, PAL.sun, PAL.lime, PAL.mint, PAL.turq, PAL.sky, PAL.violet, PAL.pink, PAL.rasp];
 const pk = (a, v) => a[v % a.length];
@@ -106,4 +106,105 @@ reg('gazebo', 'Cenador', gazebo, 4, 1, 65, ['jardin', 'plaza']); reg('bigtree', 
 // temas de los objetos antiguos
 const T = { sock: ['lavanderia'], cup: ['cocina', 'salon'], yarn: ['salon', 'dormitorio'], cookie: ['cocina'], book: ['biblioteca', 'salon'], slipper: ['dormitorio'], cushion: ['salon', 'dormitorio'], plant: ['jardin', 'salon', 'plaza'], stool: ['cocina'], toaster: ['cocina'], tv: ['salon'], armchair: ['salon', 'biblioteca'], table: ['cocina', 'plaza'], fridge: ['cocina'], dresser: ['dormitorio'], tallclock: ['salon'], sofa: ['salon'], bed: ['dormitorio'], bookshelf: ['biblioteca'], piano: ['salon', 'plaza'], duck: ['bano'], bin: [], chair: [], lamp: [], toycar: [], button: [], minicloset: ['armaropolis', 'dormitorio'], wardrobe: ['armaropolis'], skyscraper: ['armaropolis'] };
 for (const k in T) if (KINDS[k]) KINDS[k].th = T[k];
+
+// ---------- v3: edificios locos gigantes (tier 5) ----------
+const win = (g, x, y, z, ry, r = 0.55, c = 0xfff0a0) => { if (ry === 'a') g.cyl(r, r, 0.34, c, x, y, z, 16, 0, -Math.atan2(z, x), PI / 2); else g.cyl(r, r, 0.34, c, x, y, z, 16, PI / 2, 0, 0); };
+const cb = (id, n, f, coins, th) => { KINDS[id] = { n, tier: 5, f: () => f(), nv: 1, coins, th, cb: true }; };
+const PORC = 0xfdfcff, BLUE = 0x4a7fe0;
+cb('cb_tetera', 'Casa Tetera', () => {
+  const g = new GB(); const pat = (x, y, z) => ((Math.floor((y + 9) * 0.9 + Math.atan2(z, x) * 1.2) % 2 === 0 && y > 3 && y < 10.4) ? 0xcfe0ff : PORC);
+  g.cyl(4.2, 3.8, 1.0, 0x6fa0f0, 0, 0, 0, 28); g.sph(6.2, pat, 0, 6.2, 0, 1.12, 0.95, 1.12, 32);
+  g.torus(5.3, 0.45, BLUE, 0, 3.4, 0, PI / 2, 0, 0, PI * 2, 32); g.torus(4.6, 0.4, BLUE, 0, 10.0, 0, PI / 2, 0, 0, PI * 2, 32);
+  g.sph(3.6, PORC, 0, 11.7, 0, 1, 0.5, 1, 26); g.torus(3.0, 0.3, BLUE, 0, 11.4, 0, PI / 2, 0, 0, PI * 2, 26); g.sph(0.9, 0xff6b9a, 0, 13.0, 0, 1, 1, 1, 16);
+  // pitorro curvo y asa
+  g.cyl(1.0, 2.0, 5.5, PORC, 6.2, 4.8, 0, 18, 0, 0, -0.95); g.cyl(0.95, 1.05, 1.4, PORC, 10.1, 9.2, 0, 18, 0, 0, -0.95); g.sph(0.85, 0x3a2a55, 10.7, 10.0, 0, 1, 0.5, 1, 14, 0, 0, -0.95);
+  g.torus(3.2, 0.85, PORC, -6.4, 6.3, 0, 0, 0, 0, PI * 2, 26); g.torus(2.5, 0.35, BLUE, -6.4, 6.3, 0, 0, 0, 0, PI * 2, 22);
+  // puerta y ventanas
+  g.rbox(2.2, 3.4, 0.6, 0.5, 0x8a4b2a, 0, 0.9, 6.7, 0, 0, 0, 3); g.sph(0.22, PAL.gold, 0.7, 2.6, 7.05, 1, 1, 1, 12);
+  for (const [x, y] of [[-3.4, 6.8], [3.4, 6.8], [0, 9.0]]) { g.sph(1.25, 0x2a1840, x, y, Math.sqrt(Math.max(0, 1 - (x / 6.9) ** 2)) * 5.8, 1, 1, 0.3, 18); g.sph(1.05, 0xfff0a0, x, y, Math.sqrt(Math.max(0, 1 - (x / 6.9) ** 2)) * 5.8 + 0.12, 1, 1, 0.3, 18); }
+  g.cyl(0.5, 0.5, 2.2, 0xd05a4a, -2.2, 12.6, -1.8, 14); for (let i = 0; i < 3; i++) g.sph(0.7 + i * 0.25, 0xffffff, -2.2 + i * 0.6, 15 + i * 1.3, -1.8, 1, 0.8, 1, 12);
+  return [g, 6.3]; }, 160, ['cocina', 'jardin']);
+cb('cb_taza', 'Torre de Tazas', () => {
+  const g = new GB(); const dots = (c1, c2) => (x, y, z) => (Math.floor(Math.atan2(z, x) * 3.2 + y * 1.1) % 2 === 0 ? c2 : c1);
+  const cup = (y, r, h, c1, c2, hx) => { g.cyl(r * 1.35, r * 1.35, 0.4, 0xfff3f8, 0, y, 0, 30); g.cyl(r * 1.08, r * 0.78, h, dots(c1, c2), 0, y + 0.4, 0, 28); g.torus(r * 1.08, 0.22, c2, 0, y + 0.4 + h, 0, PI / 2, 0, 0, PI * 2, 28); g.torus(h * 0.28, h * 0.08 + 0.14, c2, r * 1.0 + hx, y + 0.4 + h * 0.55, 0, 0, 0, 0, PI * 2, 18); };
+  cup(0, 5.6, 7.2, 0xfff0f6, 0xff74c4, 1.5); cup(7.8, 4.6, 6.2, 0xe6fff9, 0x2fc9b5, 1.2); cup(14.4, 3.6, 5.2, 0xfff6d8, 0xffa63a, 0.9);
+  g.cyl(0.35, 0.35, 5, 0xffffff, 0, 19.6, 0, 8, 0, 0, 0.3); g.sph(1.4, 0xff4a6e, 0.3, 25, 0, 1, 1, 1, 14); g.cyl(0.14, 0.14, 1.2, 0x4a8a3a, 0.3, 26.3, 0, 6);
+  for (let i = 0; i < 8; i++) { const a = i * 0.785; g.sph(0.5, 0xffffff, Math.cos(a) * 5.2, 20.3 + Math.sin(i * 2) * 0.1, Math.sin(a) * 5.2, 1, 0.4, 1, 8); }
+  for (const [y, r, c] of [[3.6, 5.6, 0xfff8a0], [10.8, 4.6, 0xfff8a0], [17.0, 3.6, 0xfff8a0]]) for (const a of [0.5, 1.9, 3.3, 4.7]) win(g, Math.cos(a) * r * 0.97, y, Math.sin(a) * r * 0.97, 'a', 0.55, c);
+  return [g, 5.8]; }, 150, ['salon', 'plaza']);
+cb('cb_libros', 'Rascalibros', () => {
+  const g = new GB(); const cols = [0xe8453c, 0x2a7bd9, 0xffc93a, 0x3fbf5a, 0x8a4be0, 0xff7a3a, 0x2fc9b5, 0xff74c4, 0xb04a2a];
+  let y = 0; const dims = [[11.5, 2.4, 8.0], [10.0, 2.1, 7.4], [11.0, 2.6, 8.4], [8.8, 2.0, 6.8], [9.6, 2.3, 7.6], [7.8, 1.9, 6.0], [8.4, 2.2, 6.6], [6.0, 1.8, 4.8]];
+  dims.forEach(([w, h, d], i) => { const c = cols[i % cols.length], ry = (i % 2 ? 1 : -1) * (0.05 + (i % 3) * 0.05);
+    g.rbox(w, h, d, 0.28, c, (i % 2 ? 0.3 : -0.3), y, 0, 0, ry, 0, 3); g.rbox(w * 0.97, h * 0.72, d * 0.94, 0.12, 0xfff6e2, (i % 2 ? 0.3 : -0.3), y + h * 0.14, 0.18, 0, ry, 0, 2);
+    g.rbox(w * 0.97, h * 0.8, 0.5, 0.2, lighten(c, 0.12), (i % 2 ? 0.3 : -0.3), y + h * 0.1, d / 2 - 0.1, 0, ry, 0, 2);
+    for (let k = 0; k < Math.max(2, Math.round(w / 3.2)); k++) { const wx = -w / 2 + 1.5 + k * ((w - 3) / Math.max(1, Math.round(w / 3.2) - 1)); g.rbox(1.2, h * 0.5, 0.2, 0.1, 0xfff0a0, wx, y + h * 0.25, d / 2 + 0.15, 0, ry, 0, 1); }
+    y += h; });
+  g.cyl(0.18, 0.18, 2.6, 0x8a8a9a, 0, y, 0, 8); g.cyl(1.9, 1.5, 1.7, 0xffd23f, 0, y + 2.6, 0, 20, 0, 0, 0); g.sph(0.5, 0xfff7b0, 0, y + 2.4, 0, 1, 1, 1, 12);
+  g.torus(1.0, 0.16, 0x2a1840, 3.2, y + 0.4, 1.6, 0, 0, 0, PI * 2, 14); g.torus(1.0, 0.16, 0x2a1840, 5.2, y + 0.4, 1.6, 0, 0, 0, PI * 2, 14); g.box(1.2, 0.16, 0.16, 0x2a1840, 4.1, y + 0.45, 1.6);
+  g.rbox(0.7, 5, 0.12, 0.05, 0xff4a6e, 5.0, y - 5, 4.2, 0, 0, 0, 1);
+  return [g, 6.0]; }, 170, ['biblioteca', 'dormitorio']);
+cb('cb_tostadora', 'Tostadora Gigante', () => {
+  const g = new GB(); const chrome = (x, y, z) => mix(0xdfe8f6, 0xffffff, Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(x * 0.35 + y * 0.18))));
+  g.rbox(15, 10, 8.4, 2.2, chrome, 0, 0.8, 0, 0, 0, 0, 3); g.rbox(15.6, 1.0, 9, 0.5, 0x2a2a3a, 0, 0, 0, 0, 0, 0, 2);
+  for (const sx of [-1, 1]) g.rbox(5.4, 1.2, 1.4, 0.45, 0x14141e, sx * 3.7, 10.6, 0, 0, 0, 0, 2);
+  for (const sx of [-1, 1]) { g.rbox(4.8, 4.6, 1.0, 0.45, 0xf0b867, sx * 3.7, 10.0, 0, 0, 0.0, sx * 0.07, 3); g.rbox(4.0, 3.8, 1.12, 0.4, 0xffe2b0, sx * 3.7, 10.4, 0, 0, 0, sx * 0.07, 2); }
+  g.rbox(0.9, 5, 0.9, 0.35, 0x2a2a3a, 8.2, 1.6, 0, 0, 0, 0, 2); g.sph(1.0, 0xff4a6e, 8.7, 6.2, 0, 1, 1, 1, 16);
+  for (let i = 0; i < 3; i++) g.sph(0.45, [0xffd23f, 0x3fe0b0, 0xff74c4][i], -5.5 + i * 1.5, 2.4, 4.3, 1, 1, 0.5, 12);
+  g.rbox(8.4, 2.4, 0.3, 0.3, 0x14213d, 0.9, 2.0, 4.25, 0, 0, 0, 2);
+  for (let i = 0; i < 4; i++) win(g, -3.6 + i * 2.4, 6.4, 4.2, 0, 0.8, [0xfff0a0, 0xc9f2ff][i % 2]);
+  return [g, 6.6]; }, 140, ['cocina', 'plaza']);
+cb('cb_lampara', 'Torre Lámpara', () => {
+  const g = new GB();
+  g.cyl(4.2, 4.8, 1.2, 0x7a5af0, 0, 0, 0, 24); g.sph(3.4, 0x9a7aff, 0, 1.2, 0, 1, 0.55, 1, 22);
+  g.cyl(1.7, 2.3, 18, (x, y) => (Math.floor(y * 0.5) % 2 ? 0xffd23f : 0xffe58a), 0, 1.0, 0, 20);
+  for (const y of [5, 9.5, 14]) { g.torus(2.8, 0.3, 0xffffff, 0, y, 0, PI / 2, 0, 0, PI * 2, 24); for (const a of [0.3, 1.9, 3.5]) win(g, Math.cos(a) * 2.0, y + 1.6, Math.sin(a) * 2.0, 'a', 0.4, 0xc9f2ff); }
+  g.cyl(5.8, 8.4, 6.6, (x, y, z) => (Math.floor(Math.atan2(z, x) * 4.0 + 20) % 2 ? 0xff74c4 : 0xffa6d8), 0, 19.0, 0, 28);
+  g.cyl(5.6, 5.8, 0.4, 0xffd23f, 0, 25.4, 0, 28); g.sph(5.2, 0xfff5b0, 0, 19.0, 0, 1, 0.12, 1, 22); g.sph(1.0, 0xffffff, 0, 26.1, 0, 1, 1, 1, 14);
+  g.torus(8.4, 0.4, 0xffd23f, 0, 19.0, 0, PI / 2, 0, 0, PI * 2, 32);
+  return [g, 6.2]; }, 150, ['salon', 'dormitorio']);
+cb('cb_pato', 'Edificio Patito', () => {
+  const g = new GB(); const Y = 0xffd93a, O = 0xff9a2a;
+  g.sph(7.0, Y, 0, 6.2, -0.8, 1.1, 0.9, 1.25, 32); g.sph(4.0, Y, 0, 14.0, 3.6, 1, 1.05, 1, 28);
+  g.sph(2.2, O, 0, 13.2, 7.7, 1.55, 0.5, 1.2, 18); g.sph(1.0, 0xffd0a0, 0, 13.7, 8.2, 1.6, 0.4, 1.1, 12);
+  for (const s of [-1, 1]) { g.sph(0.9, 0xffffff, s * 1.9, 15.2, 6.7, 1, 1.15, 0.7, 14); g.sph(0.5, 0x2a1840, s * 1.9, 15.2, 7.25, 1, 1.1, 0.7, 12); g.sph(0.18, 0xffffff, s * 1.9 + 0.15, 15.5, 7.6, 1, 1, 1, 6); g.sph(0.9, 0xffa7b4, s * 3.0, 13.4, 6.0, 1.2, 0.7, 0.4, 10); }
+  for (const s of [-1, 1]) g.sph(3.0, lighten(Y, 0.05), s * 6.6, 7.4, -1.4, 0.45, 1, 1.55, 18, 0, 0, s * 0.25);
+  g.sph(2.2, Y, 0, 8.2, -9.0, 0.8, 1.0, 1.4, 16, -0.5, 0, 0);
+  g.torus(7.4, 1.2, 0xff4a6e, 0, 1.4, -0.6, PI / 2, 0, 0, PI * 2, 36); for (let i = 0; i < 12; i++) { const a = i / 12 * PI * 2; g.sph(1.22, i % 2 ? 0xffffff : 0xff4a6e, Math.cos(a) * 7.4 * 1.0, 1.4, -0.6 + Math.sin(a) * 7.4 * 1.0, 1, 1, 1, 10); }
+  g.cone(2.2, 3.2, 0x4aa8ff, 0, 17.6, 3.6, 22); g.sph(0.45, 0xffffff, 0, 19.4, 3.6, 1, 1, 1, 10);
+  for (const [x, y] of [[-3.2, 7], [3.2, 7], [0, 9.6], [-3.4, 4.6], [3.4, 4.6]]) { g.cyl(1.0, 1.0, 0.5, 0x2a1840, x, y, 6.2 - Math.abs(x) * 0.12, 18, PI / 2, 0, 0); g.cyl(0.8, 0.8, 0.5, 0xbff0ff, x, y, 6.3 - Math.abs(x) * 0.12, 18, PI / 2, 0, 0); }
+  g.rbox(2.4, 3.2, 0.7, 0.9, 0xb86a2a, 0, 1.4, 7.0, 0, 0, 0, 3);
+  return [g, 7.2]; }, 190, ['bano', 'jardin']);
+cb('cb_moka', 'Cafetera Rascacielos', () => {
+  const g = new GB(); const al = (x, y, z) => mix(0xc4cfe0, 0xf6f9ff, 0.5 + 0.5 * Math.sin(Math.atan2(z, x) * 4 + 0.5));
+  g.cyl(6.0, 4.6, 10.5, al, 0, 0, 0, 8); g.cyl(4.6, 4.6, 1.2, 0x2a2a3a, 0, 10.5, 0, 8); g.cyl(4.6, 6.0, 10.5, al, 0, 11.7, 0, 8);
+  g.cyl(6.2, 6.2, 0.7, 0x3a3a4e, 0, 0, 0, 8); g.cyl(5.9, 6.1, 0.8, 0x3a3a4e, 0, 21.4, 0, 8);
+  g.sph(5.9, 0xdde6f6, 0, 22.2, 0, 1, 0.55, 1, 8 * 2); g.sph(1.0, 0x2a2a3a, 0, 25.4, 0, 1, 1, 1, 14);
+  g.rbox(2.0, 11.5, 1.8, 0.8, 0x2a2a3a, 8.0, 7.0, 0, 0, 0, 0.08, 3); g.rbox(3.6, 2.0, 1.8, 0.8, 0x2a2a3a, 6.8, 17.7, 0, 0, 0, 0.0, 3);
+  g.cone(1.2, 2.4, al, -6.4, 20.3, 0, 8, 0, 0, 1.2);
+  for (let i = 0; i < 5; i++) { win(g, Math.cos(0.3 + i * 0.6 - 1.4) * 5.0, 5.0, Math.sin(0.3 + i * 0.6 - 1.4) * 5.0 + 0.2, 'a', 0.5, 0xfff0a0); win(g, Math.cos(0.3 + i * 0.6 - 1.4) * 5.2, 15.8, Math.sin(0.3 + i * 0.6 - 1.4) * 5.2 + 0.2, 'a', 0.5, 0xc9f2ff); }
+  g.sph(0.9, 0xffffff, 0, 28, 0, 1.4, 0.8, 1, 10); g.sph(1.2, 0xffffff, 0.8, 30.2, 0, 1.4, 0.8, 1, 10);
+  return [g, 6.0]; }, 160, ['lavanderia', 'cocina']);
+cb('cb_zapatilla', 'Casa Zapatilla', () => {
+  const g = new GB(); const R = 0xe8453c;
+  g.rbox(8.6, 1.6, 17, 0.8, 0xfff6e8, 0, 0, 0, 0, 0, 0, 3); g.rbox(8.0, 0.5, 16.6, 0.25, 0x3a3a4e, 0, 0, 0, 0, 0, 0, 2);
+  g.sph(4.3, R, 0, 5.2, -3.6, 1.0, 1.25, 1.35, 30); g.sph(3.9, 0xffffff, 0, 3.2, 5.0, 1, 0.8, 1.45, 26); g.sph(3.6, 0xfff6e8, 0, 1.7, 6.8, 1, 0.6, 1.0, 22);
+  g.rbox(6.2, 5.0, 8.4, 2.0, R, 0, 1.4, 1.4, 0.35, 0, 0, 3);
+  g.rbox(6.0, 1.2, 4.6, 0.55, 0xffd23f, 0, 7.5, 0.5, 0.5, 0, 0, 3); g.sph(2.4, 0xfff6e8, 0, 9.0, -6.6, 1.2, 1, 0.8, 18);
+  for (let i = 0; i < 5; i++) { g.rbox(5.6, 0.45, 0.45, 0.2, 0xffffff, 0, 5.5 + i * 0.5 - i * 0.0, 1.8 - i * 0.55, 0.35, 0, 0, 1); }
+  g.torus(0.9, 0.25, 0xffffff, 1.8, 9.0, -0.7, 0.3, 0, 0, PI * 2, 14); g.torus(0.9, 0.25, 0xffffff, -1.8, 9.0, -0.7, 0.3, 0, 0, PI * 2, 14);
+  for (const s of [-1, 1]) { g.cyl(1.2, 1.2, 0.5, 0x2a1840, s * 3.9, 4.0, -1.8, 18, 0, 0, PI / 2); g.cyl(1.0, 1.0, 0.5, 0xfff0a0, s * 4.1, 4.0, -1.8, 18, 0, 0, PI / 2); g.cyl(0.8, 0.8, 0.5, 0xc9f2ff, s * 3.7, 3.9, 3.4, 18, 0, 0, PI / 2); }
+  g.cyl(0.9, 0.9, 3, 0xb04a2a, -1.5, 9.4, -4.0, 10); g.sph(1.0, 0xffffff, -1.5, 13.4, -4.0, 1.3, 0.8, 1, 10); g.sph(1.3, 0xffffff, -0.8, 15.0, -4.0, 1.3, 0.8, 1, 10);
+  g.rbox(2.2, 3.2, 0.5, 0.8, 0x8a4b2a, 0, 0.6, 8.6, 0, 0, 0, 3);
+  return [g, 8.0]; }, 170, ['dormitorio', 'lavanderia']);
+cb('cb_tarta', 'Torre Tarta', () => {
+  const g = new GB(); const tiers = [[8.0, 6.0, 0xffc2dd, 0xfff0f6], [6.0, 5.2, 0xc9f2ff, 0xffffff], [4.0, 4.4, 0xfff0a0, 0xffe0f0]]; let y = 0;
+  for (const [r, h, c, cr] of tiers) { g.cyl(r, r, h, c, 0, y, 0, 36); g.torus(r, 0.55, cr, 0, y + h, 0, PI / 2, 0, 0, PI * 2, 36);
+    for (let i = 0; i < 16; i++) { const a = i / 16 * PI * 2; g.sph(0.55, cr, Math.cos(a) * r, y + h + 0.35, Math.sin(a) * r, 1, 1.2, 1, 10); g.sph(0.35, [0xff4a6e, 0xffd23f, 0x3fe0b0, 0x4aa8ff][i % 4], Math.cos(a) * (r + 0.2), y + h * 0.55 + Math.sin(i * 2) * 1.2, Math.sin(a) * (r + 0.2), 1, 0.5, 1, 6); }
+    for (let i = 0; i < 6; i++) { const a = i / 6 * PI * 2 + 0.3; win(g, Math.cos(a) * (r - 0.05), y + h * 0.5, Math.sin(a) * (r - 0.05), 'a', 0.6, 0xfff7c0); }
+    y += h; }
+  g.sph(1.1, 0xff2d4d, 0, y + 1.0, 0, 1, 1, 1, 14); g.cyl(0.08, 0.08, 1.4, 0x4a8a3a, 0, y + 1.9, 0, 6);
+  for (const [x, z] of [[-1.8, 0], [1.8, 0], [0, 1.8], [0, -1.8]]) { g.cyl(0.18, 0.18, 1.6, [0xff74c4, 0x4aa8ff][(x + z > 0) | 0], x, y, z, 8); g.sph(0.22, 0xffd23f, x, y + 1.85, z, 1, 1.5, 1, 8); }
+  return [g, 8.2]; }, 180, ['plaza', 'salon']);
+
 export const LANDMARKS = Object.keys(KINDS).filter((k) => KINDS[k].lm);

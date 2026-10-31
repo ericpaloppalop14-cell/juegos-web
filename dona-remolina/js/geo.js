@@ -9,6 +9,10 @@ export function mix(a, b, t) { return new THREE.Color(a).lerp(new THREE.Color(b)
 export function lighten(hex, t) { return mix(hex, 0xffffff, t); }
 export function darken(hex, t) { return mix(hex, 0x2a1840, t); }
 
+// calidad de construcción: seg multiplica segmentos; soft redondea las cajas; boxSeg = subdivisión del bisel
+export const Q = { seg: 1, soft: true, boxSeg: 1, maxSeg: 2, tube: 6, bevel: 0.07 };
+export function hiQ(fn) { const o = { ...Q }; Object.assign(Q, { seg: 1.7, soft: true, boxSeg: 3, maxSeg: 3, tube: 10, bevel: 0.14 }); try { return fn(); } finally { Object.assign(Q, o); } }
+const sg = (n, cap = 40) => Math.min(cap, Math.max(4, Math.round(n * Q.seg)));
 export class GB {
   constructor() { this.p = []; this.n = []; this.c = []; this.i = []; this.base = 0; }
   add(geo, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
@@ -30,12 +34,15 @@ export class GB {
     geo.dispose();
     return this;
   }
-  box(w, h, d, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) { return this.add(new THREE.BoxGeometry(w, h, d), col, x, y + h / 2, z, rx, ry, rz); }
+  box(w, h, d, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+    const m = Math.min(w, h, d);
+    if (Q.soft && m >= (Q.maxSeg > 2 ? 0.05 : 0.2)) return this.rbox(w, h, d, Math.min(m * 0.32, Q.bevel * Math.max(1, Math.min(2.5, m * 3))), col, x, y, z, rx, ry, rz, Q.boxSeg);
+    return this.add(new THREE.BoxGeometry(w, h, d), col, x, y + h / 2, z, rx, ry, rz); }
   rbox(w, h, d, r, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, seg = 3) { return this.add(roundedBox(w, h, d, r, seg), col, x, y + h / 2, z, rx, ry, rz); }
-  cyl(rt, rb, h, col, x = 0, y = 0, z = 0, seg = 12, rx = 0, ry = 0, rz = 0) { return this.add(new THREE.CylinderGeometry(rt, rb, h, seg, 1), col, x, y + h / 2, z, rx, ry, rz); }
-  sph(r, col, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, seg = 12, rx = 0, ry = 0, rz = 0) { return this.add(new THREE.SphereGeometry(r, seg, Math.max(6, seg * 0.7 | 0)), col, x, y, z, rx, ry, rz, sx, sy, sz); }
-  cone(r, h, col, x = 0, y = 0, z = 0, seg = 10, rx = 0, ry = 0, rz = 0) { return this.add(new THREE.ConeGeometry(r, h, seg, 1), col, x, y + h / 2, z, rx, ry, rz); }
-  torus(R, t, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, arc = Math.PI * 2, seg = 12) { return this.add(new THREE.TorusGeometry(R, t, 6, seg, arc), col, x, y, z, rx, ry, rz); }
+  cyl(rt, rb, h, col, x = 0, y = 0, z = 0, seg = 12, rx = 0, ry = 0, rz = 0) { return this.add(new THREE.CylinderGeometry(rt, rb, h, sg(seg), 1), col, x, y + h / 2, z, rx, ry, rz); }
+  sph(r, col, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, seg = 12, rx = 0, ry = 0, rz = 0) { return this.add(new THREE.SphereGeometry(r, sg(seg), Math.max(6, sg(seg) * 0.7 | 0)), col, x, y, z, rx, ry, rz, sx, sy, sz); }
+  cone(r, h, col, x = 0, y = 0, z = 0, seg = 10, rx = 0, ry = 0, rz = 0) { return this.add(new THREE.ConeGeometry(r, h, sg(seg), 1), col, x, y + h / 2, z, rx, ry, rz); }
+  torus(R, t, col, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, arc = Math.PI * 2, seg = 12) { return this.add(new THREE.TorusGeometry(R, t, Q.tube, sg(seg), arc), col, x, y, z, rx, ry, rz); }
   build(centerY = true, ao = 2.2) {
     const g = new THREE.BufferGeometry();
     const pos = new Float32Array(this.p), col = new Float32Array(this.c);
@@ -66,7 +73,7 @@ export class GB {
 
 export function roundedBox(w, h, d, r, seg = 3) {
   r = Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3);
-  const s = Math.min(seg, 2) * 2;
+  const s = Math.min(seg, Q.maxSeg) * 2;
   const g = new THREE.BoxGeometry(w, h, d, s, s, s);
   const pa = g.attributes.position, na = g.attributes.normal;
   const hx = w / 2 - r, hy = h / 2 - r, hz = d / 2 - r, v = new THREE.Vector3(), inner = new THREE.Vector3();
@@ -110,13 +117,15 @@ export function addOutline(mesh, thick) {
     for (let i = 0; i < pa.count; i++) { const a = acc.get(keys[i]); const l = Math.hypot(a[0], a[1], a[2]) || 1; out[i * 3] = a[0] / l; out[i * 3 + 1] = a[1] / l; out[i * 3 + 2] = a[2] / l; }
     geo.setAttribute('aON', new THREE.BufferAttribute(out, 3));
   }
-  const key = Math.round(thick * 200);
+  const key = Math.max(1, Math.round(thick * 200));
   let m = outlineMats.get(key);
   if (!m) {
-    m = new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: { uT: { value: key / 200 } },
-      vertexShader: 'attribute vec3 aON; uniform float uT; void main(){ gl_Position=projectionMatrix*modelViewMatrix*vec4(position+normalize(aON)*uT,1.0); }',
-      fragmentShader: 'void main(){ gl_FragColor=vec4(0.17,0.08,0.3,1.0); }' });
+    m = new THREE.ShaderMaterial({ side: THREE.BackSide, vertexColors: true, uniforms: { uT: { value: key / 200 } },
+      vertexShader: 'attribute vec3 aON; uniform float uT; varying vec3 vC; void main(){ vC=color; gl_Position=projectionMatrix*modelViewMatrix*vec4(position+normalize(aON)*uT,1.0); }',
+      fragmentShader: 'varying vec3 vC; void main(){ vec3 c=mix(vC*vC*0.55, vec3(0.30,0.16,0.42), 0.38); gl_FragColor=vec4(c,1.0); }' });
     outlineMats.set(key, m);
   }
   const o = new THREE.Mesh(geo, m); o.castShadow = false; o.receiveShadow = false; mesh.add(o); return o;
 }
+
+export function setOutlines(on) { for (const m of outlineMats.values()) m.visible = on; }
