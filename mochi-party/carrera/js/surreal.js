@@ -1,6 +1,6 @@
 // Cosas locas y surrealistas por circuito (decorativas, no chocan)
 import * as THREE from 'three';
-import { toon, mesh, outline, makeVehicle } from './gfx.js?v=o48';
+import { toon, mesh, outline, makeVehicle } from './gfx.js?v=o49';
 import { flatten } from './vida.js';
 const V3 = THREE.Vector3;
 const nofog = m => { m.fog = false; return m; };

@@ -8,12 +8,12 @@
 //   podio → podio 1-2-3 con caída de los mochis, el ganador salta de alegría y los demás aplauden
 // ======================================================================
 import * as THREE from 'three';
-import { CHARS } from '../carrera/js/data.js?v=o48';
-import { makeGlowBatch } from './glowbatch.js?v=o48';
-import { makeCharacter, gfxLod, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o48';
-import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o48';
-import { bakeStatic, megaMerge } from './batch3d.js?v=o48';
-import { createDesfile } from './desfile3d.js?v=o48';
+import { CHARS } from '../carrera/js/data.js?v=o49';
+import { makeGlowBatch } from './glowbatch.js?v=o49';
+import { makeCharacter, gfxLod, animCharacter, toon, outline, mesh, glowTex, makeTrophy } from '../carrera/js/gfx.js?v=o49';
+import { makeCrowd, makeStands, crowdMembers } from './multitud.js?v=o49';
+import { bakeStatic, megaMerge } from './batch3d.js?v=o49';
+import { createDesfile } from './desfile3d.js?v=o49';
 const NOOP2 = { samples: 2 }, noop = () => {};
 const BT = [0, .3, .7, 1.3, 1.9, 2.6, 3.3, 4.2, 5.1, 6.7, 8.4, 12.2], BE = ['', 'happy', 'squash', 'sad', '', 'happy', 'sad', '', 'squash', 'happy', '', 'sad'];
 const bakeChar = c => bakeStatic(c, k => animCharacter(c, BT[k], 1, BE[k]), { samples: BT.length });
@@ -21,8 +21,9 @@ const bakeChar = c => bakeStatic(c, k => animCharacter(c, BT[k], 1, BE[k]), { sa
 const CH = id => CHARS.find(c => c.id === id) || CHARS[0];
 const rnd = (a, b) => a + Math.random() * (b - a), lerp = (a, b, t) => a + (b - a) * t;
 let renderer, root;
+const UI = !!(document.getElementById('sChars') && document.getElementById('sMenu')); // o49: decorado/miniaturas pre-renderizados solo en la pantalla principal; la página de Olimpiadas usa la vitrina en vivo (como la o47)
 try {
-  const cv = document.createElement('canvas'); cv.id = 'st3d'; document.body.appendChild(cv);
+  const cv = document.createElement('canvas'); cv.id = 'st3d'; cv.style.opacity = '0'; document.body.appendChild(cv);
   renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: (devicePixelRatio || 1) < 1.5, alpha: true, stencil: true, powerPreference: 'high-performance' });
 } catch (e) { document.body.classList.add('no3d'); window.__LOAD && __LOAD.done(); throw e; }
 renderer.info.autoReset = false; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
@@ -282,7 +283,7 @@ function thumbs(t) {
 const FADE = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { uC: { value: new THREE.Vector2() }, uE: { value: new THREE.Vector2(1, 1) } }, transparent: true, depthTest: false, depthWrite: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcAlphaFactor,
   vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: 'uniform vec2 uC; uniform vec2 uE; void main(){ float d = length((gl_FragCoord.xy - uC) / uE); gl_FragColor = vec4(0., 0., 0., clamp((1. - d) / .38, 0., 1.)); }' }));
 FADE.frustumCulled = false; FADE.renderOrder = 9999; FADE.visible = false; scene.add(FADE);
-let D = null; try { D = createDesfile(renderer, { shared: true, noEnts: true }); window.__desfile3d = D; } catch (e) { console.warn('desfile', e); }
+let D = null; try { D = createDesfile(renderer, { shared: true, noEnts: UI }); window.__desfile3d = D; } catch (e) { console.warn('desfile', e); }
 stMark(scene);
 const HALO = document.getElementById('stageHalo') || document.createElement('div');
 // ---------- bucle ----------
@@ -353,12 +354,12 @@ function liveFrame(el, t1, dt) {
     if (t > 1 && Math.random() < dt * .8) burst(new THREE.Vector3(rnd(-3, 3), rnd(3, 4.5), rnd(-2.5, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff'][Math.random() * 4 | 0], 12, 2.4);
     if (extra.sel != null) { const k = t - extra.sel; if (k < 1.1) { hero.userData.flip = extra.sel; confAmt = 1; } } }
   else if (t > 1 && Math.random() < dt * 1.2) burst(new THREE.Vector3(rnd(-4, 4), rnd(3.2, 4.6), rnd(-3, -1)), ['#ffe27a', '#ff9cc8', '#7ee3c4', '#8fd0ff', '#b9a2f7'][Math.random() * 5 | 0], 16, 2.6);
-  updConf(dt, t); updSparks(dt); updBal(dt, t); thumbsApply(t1); tickDeco(performance.now());
+  updConf(dt, t); updSparks(dt); updBal(dt, t); thumbsApply(t1); if (thMiss) thumbs(t1); tickDeco(performance.now());
   const reg = K.reg; renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.setScissorTest(true); renderer.setScissor(reg.x0, innerHeight - reg.y1, reg.w, reg.h); renderer.clear(); renderer.render(scene, camera);
 }
 
 // ---------- o48: miniaturas de «Elige tu mochi» = tiras pre-renderizadas (12 fotogramas, ida y vuelta) animadas por CSS: sin renders ni copias GL→2D en vivo ----------
-const THS = {}; let thApplyT = 0, thFirst = null;
+const THS = {}; let thApplyT = 0, thFirst = null, thMiss = false;
 async function bakeThumbs(prog) {
   if (!document.getElementById('thCss')) { const L = 2 * 12 - 2, kf = []; for (let i = 0; i < L; i++) { const k = i < 12 ? i : L - i; kf.push((i / L * 100).toFixed(3) + '%{background-position:' + (k * 100 / 11).toFixed(3) + '% 0}'); }
     const st = document.createElement('style'); st.id = 'thCss'; st.textContent = '#charGrid canvas.thSp{background-repeat:no-repeat;background-size:1200% 100%;animation:thAnim 1.2s steps(1,end) infinite}@keyframes thAnim{' + kf.join('') + '}'; document.head.appendChild(st); }
@@ -368,13 +369,16 @@ async function bakeThumbs(prog) {
     const a = mkThumb(c.id, i); a.userData.role = MROLES[i % MROLES.length]; a.visible = true; a.userData.sh.visible = true; const sheet = document.createElement('canvas'); sheet.width = A * 12; sheet.height = A; const sx = sheet.getContext('2d');
     for (let f = 0; f < 12; f++) { pose(a, 3 + f * .1, 0); renderer.setScissorTest(false); renderer.setViewport(0, 0, 58, 58); renderer.clear(); renderer.setScissorTest(true); renderer.setScissor(0, 0, 58, 58); renderer.render(mScene, mCam);
       sx.drawImage(renderer.domElement, 0, renderer.domElement.height - 58 * PRr, 58 * PRr, 58 * PRr, f * A, 0, A, A); }
-    a.visible = false; renderer.setScissorTest(false); THS[c.id] = await new Promise(r => sheet.toBlob(b => r(URL.createObjectURL(b)), 'image/webp', .92)); if (prog) prog(++n / CHARS.length); await tickMs();
+    a.visible = false; renderer.setScissorTest(false); try { // o49: si el navegador no devuelve una tira válida (WebP no soportado, lectura bloqueada, imagen vacía) NO se usa: esas casillas se dibujan en vivo
+      let ok = true; try { const d = sx.getImageData(0, 0, sheet.width, sheet.height).data; ok = false; for (let q = 3; q < d.length; q += 97) if (d[q] > 8) { ok = true; break; } } catch (e) {}
+      if (ok) { let bl = await new Promise(r => sheet.toBlob(r, 'image/webp', .92)); if (!bl || bl.type !== 'image/webp') bl = await new Promise(r => sheet.toBlob(r, 'image/png')); if (bl) { const u = URL.createObjectURL(bl), im = new Image(); im.src = u; await im.decode(); if (im.naturalWidth >= A * 12) THS[c.id] = u; } }
+    } catch (e) { console.warn('thumb strip', c.id, e); } if (prog) prog(++n / CHARS.length); await tickMs();
   }
   renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
 }
 function thumbsApply(t1) {
   const g = document.getElementById('charGrid'); if (!g) return; if (g.firstChild === thFirst && t1 - thApplyT < 1) return; thFirst = g.firstChild; thApplyT = t1;
-  document.querySelectorAll('#charGrid canvas:not(.thSp)').forEach(c => { const u = THS[c.dataset.id]; if (!u) return; c.style.backgroundImage = 'url(' + u + ')'; c.style.animationDelay = '-' + (Math.random() * 1.2).toFixed(2) + 's'; c.classList.add('thSp'); });
+  document.querySelectorAll('#charGrid canvas:not(.thSp)').forEach(c => { const u = THS[c.dataset.id]; if (!u) { thMiss = true; return; } c.style.backgroundImage = 'url(' + u + ')'; c.style.animationDelay = '-' + (Math.random() * 1.2).toFixed(2) + 's'; c.classList.add('thSp'); });
 }
 let READY = false;
 function frame() {
@@ -429,24 +433,24 @@ const LD = (p, t) => window.__LOAD && __LOAD.set(p, t), yieldPaint = () => new P
 try { const T0 = performance.now(); let pj = CHARS[0].id; try { pj = JSON.parse(document.querySelector('.stage3d').dataset.d).pj || pj; } catch (e) {}
   LD(8, 'Montando el escenario…'); await yieldPaint();
   FADE.visible = true; build('chars', { pj }); renderer.compile(scene, camera); warmRender(scene, camera); LD(22, 'Colocando al público…'); await yieldPaint();
-  build('menu', { pj }); renderer.compile(scene, camera); warmRender(scene, camera); FADE.visible = false; LD(36, 'Vistiendo a los mochis…'); await yieldPaint();
+  if (UI) { build('menu', { pj }); renderer.compile(scene, camera); warmRender(scene, camera); } FADE.visible = false; LD(36, 'Vistiendo a los mochis…'); await yieldPaint();
   // o47/o48: todo se crea y compila ahora (detrás de la pantalla de carga), no al pulsar: héroes de «Elige tu mochi», etiquetas y miniaturas
-  const keep = CM.chars && CM.chars.snap && CM.chars.snap.extra.hero; const tg = new THREE.Group(); scene.add(tg); let hi = 0;
+  const keep = (CM.chars && CM.chars.snap ? CM.chars.snap.extra : cur === 'chars' ? extra : {}).hero; const tg = new THREE.Group(); scene.add(tg); let hi = 0;
   for (const c of CHARS) { tg.add(heroFor('chars', c.id)); tagFor(c.id); LD(36 + (++hi) / CHARS.length * 24); await yieldPaint(); }
   renderer.compile(scene, camera); warmRender(scene, camera); scene.remove(tg); tg.clear(); if (keep) CM.chars.root.add(keep); LD(62, 'Ensayando los bailes…'); await yieldPaint();
   hi = 0; for (const [i, c] of CHARS.entries()) { mkThumb(c.id, i); LD(62 + (++hi) / CHARS.length * 14); await yieldPaint(); }
   for (const k in mAct) mAct[k].visible = true; renderer.compile(mScene, mCam); warmRender(mScene, mCam); for (const k in mAct) mAct[k].visible = false; LD(78, 'Pintando el escenario…'); await yieldPaint();
-  { const ids = CHARS.map(c => c.id); // o48: «intro» y «podio» (pantallas intermedias) también se precalientan: shaders, geometrías y texturas ya están en la GPU al entrar
+  if (UI) { const ids = CHARS.map(c => c.id); // o48: «intro» y «podio» (pantallas intermedias) también se precalientan: shaders, geometrías y texturas ya están en la GPU al entrar
     ROOTX.visible = true; build('intro', { pj, rv: ids.filter(i => i !== pj).slice(0, 5) }); renderer.compile(scene, camera); warmRender(scene, camera); await yieldPaint();
     build('podio', { ids: ids.slice(0, 5), meIdx: 0 }); renderer.compile(scene, camera); warmRender(scene, camera); await yieldPaint(); }
-  if (D) await D.sprites(p => LD(78 + p * 6)); await bakeThumbs(); await bakeDeco('chars', p => LD(84 + p * 5)); await bakeDeco('menu', p => LD(89 + p * 5)); LD(94, 'Encendiendo las luces…'); await yieldPaint();
+  if (UI) { if (D) await D.sprites(p => LD(78 + p * 6)); await bakeThumbs(); await bakeDeco('chars', p => LD(84 + p * 5)); await bakeDeco('menu', p => LD(89 + p * 5)); } LD(94, 'Encendiendo las luces…'); await yieldPaint();
   try { D && D.draw(); } catch (e) {} renderer.clear(); if (cur) { CM[cur].snap = snapshot(); CM[cur].root.visible = false; cur = null; } mode = null; extra = {}; ROOTX.visible = false; window.__warmMs = Math.round(performance.now() - T0); } catch (e) { console.warn('warmup', e); }
 // o48: espera a fuentes, imágenes y a la carga de la página; luego muestra TODO de golpe con un fundido
 LD(88, 'Últimos retoques…');
 try { await Promise.race([Promise.all([document.fonts ? document.fonts.ready : 0, ...[...document.images].map(i => i.decode ? i.decode().catch(() => {}) : 0), document.readyState === 'complete' ? 0 : new Promise(r => addEventListener('load', r, { once: true }))]), new Promise(r => setTimeout(r, 12000))]); } catch (e) {}
 let layKey = innerWidth + 'x' + innerHeight, rbT = 0;
-addEventListener('resize', () => { clearTimeout(rbT); rbT = setTimeout(async () => { const k = innerWidth + 'x' + innerHeight; if (k === layKey || !READY) return; layKey = k; READY = false; window.__LOAD && __LOAD.show('Ajustando la pantalla…'); try { hideDeco(); size(); await yieldPaint(); if (D) { D.resize(); await D.sprites(p => LD(p * 30)); } await bakeDeco('chars', p => LD(30 + p * 35)); await bakeDeco('menu', p => LD(65 + p * 35)); } catch (e) { console.warn('rebake', e); } READY = true; window.__LOAD && __LOAD.done(); }, 450); });
-document.body.classList.remove('no3d'); READY = true; LD(97, '¡Listo!'); requestAnimationFrame(frame); await yieldPaint(); await yieldPaint(); window.__LOAD && __LOAD.done();
+addEventListener('resize', () => { if (!UI) return; clearTimeout(rbT); rbT = setTimeout(async () => { const k = innerWidth + 'x' + innerHeight; if (k === layKey || !READY) return; layKey = k; READY = false; renderer.domElement.style.opacity = '0'; try { hideDeco(); size(); await yieldPaint(); if (D) { D.resize(); await D.sprites(p => LD(p * 30)); } await bakeDeco('chars', p => LD(30 + p * 35)); await bakeDeco('menu', p => LD(65 + p * 35)); } catch (e) { console.warn('rebake', e); } READY = true; requestAnimationFrame(() => requestAnimationFrame(() => { renderer.domElement.style.opacity = '1'; })); }, 450); });
+document.body.classList.remove('no3d'); READY = true; { const c3 = renderer.domElement; c3.style.transition = 'opacity .5s ease-out'; requestAnimationFrame(() => requestAnimationFrame(() => { c3.style.opacity = '1'; })); } LD(97, '¡Listo!'); requestAnimationFrame(frame); await yieldPaint(); await yieldPaint(); window.__LOAD && __LOAD.done();
 // tocar el escenario: voltereta del protagonista
 addEventListener('pointerdown', e => { const el = document.querySelector('.scr.on .stage3d'); if (!el || !extra.hero) return; const r = el.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return; const u = extra.hero.userData; if (now() - t0 - u.flip > .9) { u.flip = now() - t0; burst(extra.hero.position.clone().add(new THREE.Vector3(0, 1.5, 0)), '#ff9cc8', 14, 3); } });
 window.MP3D = { ok: true, thumbs3d: true, get scene() { return scene; }, get info() { return renderer.info; }, get mode() { return mode; },

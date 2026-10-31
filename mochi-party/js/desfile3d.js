@@ -3,11 +3,11 @@
 // profundidad real (parallax por distancia, niebla), PMREM para reflejos, calidad automática.
 // Solo usa las bandas de arriba/abajo de la pantalla para no tapar botones ni personajes.
 import * as THREE from 'three';
-import { buildWorld, cloudTex } from './mundo3d.js?v=o48';
-import { makeGlowBatch, HOOK } from './glowbatch.js?v=o48';
-import { mkLod } from './lod3d.js?v=o48';
+import { buildWorld, cloudTex } from './mundo3d.js?v=o49';
+import { makeGlowBatch, HOOK } from './glowbatch.js?v=o49';
+import { mkLod } from './lod3d.js?v=o49';
 const LD = mkLod(.5);
-import { bakeStatic, megaMerge } from './batch3d.js?v=o48';
+import { bakeStatic, megaMerge } from './batch3d.js?v=o49';
 const CFG0 = window.__DESFILE3D || {};
 /* o47: createDesfile(rd, {shared:true}) usa el MISMO renderer/canvas que el 3D principal: el mundo se pre-renderiza una vez en 2 capas y solo los personajes del desfile se dibujan en vivo */
 export function createDesfile(rd, opts = {}) {

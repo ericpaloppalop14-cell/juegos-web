@@ -197,28 +197,16 @@ canvas#c{z-index:9}
 @keyframes n3ring{to{transform:translate(-50%,-50%) rotate(360deg)}}
 #bOlimp{box-shadow:0 6px 0 #d0702a,0 0 0 3px #fff,0 10px 30px rgba(255,150,60,.6),0 0 40px rgba(255,210,90,.45)}
 </style>
-<script>window.FX_NOCHE={z:4,n:20,vig:.12,canvas:false}</script><script src="js/fx-noche.js?v=o48"></script>
+<script>window.FX_NOCHE={z:4,n:20,vig:.12,canvas:false}</script><script src="js/fx-noche.js?v=o49"></script>
 <script type="importmap">{ "imports": { "three": "./carrera/lib/three.module.min.js" } }</script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>{if(r.scope.endsWith("/mochi-party/"))r.unregister()}));if(window.caches)caches.keys().then(k=>k.filter(n=>n.startsWith("mochi-v")).forEach(n=>caches.delete(n)))}</script><style>/* noche 25-10: color más vivo (GPU) */canvas{filter:saturate(1.1) contrast(1.04)}#st3d,#menuBg,.dsfLayer,#fxNoche,#charGrid canvas{filter:none}.dsfLayer{will-change:transform;transform-origin:50% 50%}.dsfA{animation:dsfA 19s ease-in-out infinite alternate}.dsfB{animation:dsfB 13s ease-in-out infinite alternate}@keyframes dsfA{from{transform:translate3d(-1.6%,.6%,0) scale(1.05)}to{transform:translate3d(1.6%,-.5%,0) scale(1.08)}}@keyframes dsfB{from{transform:translate3d(1.4%,-.4%,0) scale(1.07) rotate(-.4deg)}to{transform:translate3d(-1.4%,.7%,0) scale(1.05) rotate(.4deg)}}</style>
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
 <style id="mpLoadCss">
-#mpLoad{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:radial-gradient(ellipse at 50% 38%,#ffe6f2 0%,#ffc9e4 38%,#c9b6ff 78%,#a590f0 100%);color:#6a3f9a;font-family:'Fredoka',system-ui,sans-serif;transition:opacity .7s ease;touch-action:none;user-select:none}
-#mpLoad.out{opacity:0;pointer-events:none}
-#mpLoad .lg{font-weight:700;font-size:clamp(44px,12vmin,84px);line-height:.9;text-align:center;letter-spacing:.5px;text-shadow:0 4px 0 rgba(255,255,255,.7),0 10px 24px rgba(120,60,180,.25)}
-#mpLoad .lg b{display:block;color:#ff5fa2}#mpLoad .lg i{display:block;font-style:normal;color:#7a55e0}
-#mpLoad .mo{margin-top:34px;width:84px;height:70px;border-radius:50% 50% 46% 46%/62% 62% 38% 38%;background:linear-gradient(#ffb3d6,#ff7fb6);position:relative;box-shadow:inset 0 -8px 0 rgba(200,60,130,.25),0 12px 22px rgba(150,60,170,.3);animation:mpHop .9s cubic-bezier(.3,0,.4,1) infinite}
-#mpLoad .mo::before,#mpLoad .mo::after{content:'';position:absolute;top:26px;width:11px;height:15px;border-radius:50%;background:#2a1838}
-#mpLoad .mo::before{left:22px}#mpLoad .mo::after{right:22px}
-@keyframes mpHop{0%,100%{transform:translateY(0) scale(1.1,.88)}45%{transform:translateY(-34px) scale(.92,1.08)}}
-#mpLoad .bar{width:min(300px,70vw);height:16px;border-radius:99px;background:rgba(255,255,255,.65);box-shadow:inset 0 2px 4px rgba(120,60,180,.25);overflow:hidden}
-#mpLoad .bar>i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#ff8fc4,#ffd84a,#7ee3c4);transition:width .25s ease-out}
-#mpLoad .tx{font-weight:600;font-size:15px;opacity:.85;min-height:20px}
 .decoLoop{animation:decoIn .5s both}@keyframes decoIn{from{opacity:0}to{opacity:1}}body.mpMeasure .scr,body.mpMeasure .scr *{animation:none!important;transition:none!important}
 </style>
 </head>
 <body>
-<div id="mpLoad" role="status" aria-live="polite"><div class="lg"><b>Mochi</b><i>Party</i></div><div class="mo"></div><div class="bar"><i id="mpLoadBar"></i></div><div class="tx" id="mpLoadTx">Preparando la fiesta…</div></div>
-<script>(function(){var b=document.getElementById('mpLoadBar'),t=document.getElementById('mpLoadTx'),cur=0;window.__LOAD={set:function(p,x){if(p>cur)cur=p;b.style.width=Math.min(100,cur)+'%';if(x)t.textContent=x},show:function(x){cur=0;b.style.transition='none';b.style.width='0';void b.offsetWidth;b.style.transition='';t.textContent=x||'';var e=document.getElementById('mpLoad');e.style.display='';e.style.visibility='';void e.offsetWidth;e.classList.remove('out')},done:function(){b.style.width='100%';var e=document.getElementById('mpLoad');if(!e)return;e.classList.add('out');document.documentElement.classList.add('mpReady');setTimeout(function(){if(e.classList.contains('out'))e.style.visibility='hidden'},800)}}})();</script>
+<script>window.__LOAD={set:function(){},show:function(){},done:function(){}};</script>
 
 <div id="stageHalo" aria-hidden="true"></div>
 <div id="bgGrad"></div>
@@ -273,13 +261,13 @@ canvas#c{z-index:9}
   <div class="bar"><button class="btn" id="bNext">Siguiente</button><button class="btn s" id="bPodioMenu">Menú</button></div>
 </div>
 
-<script src="js/musica.js?v=o48"></script>
-<script src="js/disco2d.js?v=o48"></script><script src="js/rivals.js?v=o48"></script>
-<script src="js/pruebas.js?v=o48"></script>
-<script src="js/torneo.js?v=o48"></script>
-<script src="js/fpsmeter.js?v=o48"></script><script src="js/inicio.js?v=o48"></script>
-<script type="module" src="js/escena3d.js?v=o48"></script>
+<script src="js/musica.js?v=o49"></script>
+<script src="js/disco2d.js?v=o49"></script><script src="js/rivals.js?v=o49"></script>
+<script src="js/pruebas.js?v=o49"></script>
+<script src="js/torneo.js?v=o49"></script>
+<script src="js/fpsmeter.js?v=o49"></script><script src="js/inicio.js?v=o49"></script>
+<script type="module" src="js/escena3d.js?v=o49"></script>
 
-<script src="js/play-extras-cfg.js?v=o48"></script><script src="js/play-extras.js?v=o48"></script>
+<script src="js/play-extras-cfg.js?v=o49"></script><script src="js/play-extras.js?v=o49"></script>
 </body>
 </html>

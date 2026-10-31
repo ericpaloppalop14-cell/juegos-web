@@ -4,10 +4,10 @@
 // ======================================================================
 import * as THREE from 'three';
 import { CHARS } from '../data.js';
-import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, makeTrophy } from '../gfx.js?v=o48';
+import { makeCharacter, animCharacter, toon, outline, mesh, glowTex, shadowMat, makeTrophy } from '../gfx.js?v=o49';
 import { Audio } from '../audio.js';
-import { makePost } from '../post.js?v=o48';
-import { OLIMPIADAS, PTS } from './catalogo.js?v=o48';
+import { makePost } from '../post.js?v=o49';
+import { OLIMPIADAS, PTS } from './catalogo.js?v=o49';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
