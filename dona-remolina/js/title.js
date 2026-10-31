@@ -1,11 +1,11 @@
 // v5: pantalla de inicio viva — un tornado gigante chupando muebles, personajes bailando y persiguiéndose,
 // el Alcalde Paraguas volando con su sombrero, globos de texto, confeti y todo tocable.
-import { makeSkyline } from './stage.js?v=13';
+import { makeSkyline } from './stage.js?v=14';
 import * as THREE from 'three';
-import * as AU from './audio.js?v=13';
-import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=13';
-import { Particles, makeTornado } from './fx.js?v=13';
-import { PLAYERS } from './players.js?v=13';
+import * as AU from './audio.js?v=14';
+import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=14';
+import { Particles, makeTornado } from './fx.js?v=14';
+import { PLAYERS } from './players.js?v=14';
 
 const rnd = Math.random, PI = Math.PI;
 const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v));

@@ -377,3 +377,82 @@ html,body{margin:0;height:100%;overflow:hidden;background:#4db8ff;font-family:'F
 @keyframes coinPop{0%{transform:scale(1.28);color:#ff4fa3}100%{transform:scale(1)}}
 #cCoins.pop{transform-origin:right center}
 @media (orientation:landscape) and (max-height:520px){#bCPick.unlock,#bCPick.locked{font-size:15px;white-space:nowrap;padding:5px 8px}#bCPick .coin{font-size:15px}}
+
+/* ===== v14: mapa de ciudades (miniaturas ilustradas + camino numerado) ===== */
+.wmap{width:100%;display:flex;flex-direction:column;gap:5px}
+.wmhint{align-self:center;display:flex;align-items:center;gap:6px;background:linear-gradient(90deg,#7a4be0,#c04ad8);color:#fff;font-weight:700;font-size:11.5px;line-height:1.1;padding:3px 11px 3px 8px;border-radius:14px;border:2px solid #fff;box-shadow:0 2px 0 rgba(60,20,100,.35);text-align:center}
+.wmhint i{font-style:normal;font-size:13px;animation:wmwig 2.4s ease-in-out infinite;display:inline-block}
+@keyframes wmwig{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(10deg) scale(1.15)}}
+.wmtabs{display:flex;align-items:center;justify-content:center;gap:5px;color:#fff;font-weight:700;font-size:12px}
+.wmtabs i{font-style:normal;opacity:.8}
+.wmtab{pointer-events:auto;font-family:inherit;font-weight:700;font-size:11px;padding:1px 10px;border-radius:12px;border:2px solid #fff;background:rgba(74,42,107,.5);color:#fff;cursor:pointer}
+.wmtab.on{background:linear-gradient(#ffd23f,#ff9a1f);color:#5a2a00;box-shadow:0 2px 0 #c4570a}
+.wmgrid{display:grid;grid-template-columns:1fr 20px 1fr 20px 1fr;align-items:center;row-gap:3px;padding:8px 2px 2px}
+.ct{position:relative;pointer-events:auto;display:flex;flex-direction:column;align-items:stretch;padding:0 0 1px;border:3px solid #fff;border-radius:15px;background:#fff;font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 0 rgba(90,40,130,.35),0 6px 10px rgba(60,20,100,.2);transition:transform .2s cubic-bezier(.3,1.6,.5,1),box-shadow .2s;min-width:0}
+.ct.empty{visibility:hidden;pointer-events:none}
+.ct:active{transform:translateY(2px)}
+.ctimg{position:relative;display:block;aspect-ratio:16/9.4;overflow:hidden;border-radius:11px 11px 4px 4px;background:var(--c,#cde)}
+.ctimg svg{display:block;width:100%;height:100%}
+.ctname{display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1.05;color:#4a2a6b;text-align:center;padding:3px 2px 2px;min-height:2.2em;font-weight:700}
+.ctn{position:absolute;left:-8px;top:-8px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#5a2a00;background:linear-gradient(#ffe27a,#ffb02a);border:2px solid #fff;box-shadow:0 2px 0 #c4570a;z-index:3}
+.ctok{position:absolute;right:-7px;top:-8px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff;background:linear-gradient(#5fe0a0,#1fb070);border:2px solid #fff;box-shadow:0 2px 0 #0f7a4a;z-index:3}
+.ctcur{position:absolute;right:-6px;top:-12px;font-size:11px;font-weight:700;color:#fff;background:linear-gradient(#ff7a59,#e8283c);border:2px solid #fff;border-radius:11px;padding:0 7px;box-shadow:0 2px 0 #8a1020;z-index:3;animation:ctbounce 1s ease-in-out infinite}
+@keyframes ctbounce{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-4px) rotate(3deg)}}
+.ct.done{border-color:#8de8b0}
+.ct.lock .ctimg svg{filter:grayscale(.9) brightness(.72) contrast(.9)}
+.ct.lock{border-color:#d9d0e8}.ct.lock .ctname{color:#8a7aa8}
+.ctlock{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(22px,7vw,30px);text-shadow:0 2px 6px rgba(0,0,0,.5);animation:wmwig 3s ease-in-out infinite}
+.ct.sel{border-color:#ffd23f;transform:scale(1.07);z-index:2;box-shadow:0 0 0 3px rgba(255,210,63,.55),0 5px 0 rgba(150,90,0,.4),0 10px 18px rgba(80,30,120,.35)}
+.ct.sel .ctname{color:#c0158a}
+.ct.cur::after{content:'';position:absolute;inset:-5px;border-radius:19px;border:3px solid #ff7a59;pointer-events:none;animation:ctring 1.5s ease-out infinite}
+@keyframes ctring{0%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:scale(1.14)}}
+.ctarr{display:block;width:20px;height:20px}
+.ctarr svg{display:block;width:100%;height:100%;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1.5px 0 rgba(74,42,107,.6))}
+.ctarr.on svg{stroke:#ffd23f;animation:ctflow 1.1s ease-in-out infinite}
+.ctarr.off svg{stroke:rgba(255,255,255,.55);stroke-dasharray:3 4}
+.ctarr.next svg{stroke:#ff7a59}
+@keyframes ctflow{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+.ctwrap{grid-column:1/-1;display:block;height:14px;margin:0 6%}
+.ctwrap svg{display:block;width:100%;height:100%;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1.5px 0 rgba(74,42,107,.6));overflow:visible}
+.ctwrap.on svg path{stroke:#ffd23f;stroke-dasharray:7 5;animation:ctdash .8s linear infinite}
+.ctwrap.off svg path{stroke:rgba(255,255,255,.55);stroke-dasharray:3 5}
+@keyframes ctdash{to{stroke-dashoffset:-12}}
+/* animaciones de las ilustraciones */
+.ct svg .cd1{animation:svgdrift 9s ease-in-out infinite alternate}.ct svg .cd2{animation:svgdrift 12s ease-in-out infinite alternate-reverse}
+@keyframes svgdrift{from{transform:translateX(-6px)}to{transform:translateX(8px)}}
+.ct svg .bob{animation:svgbob 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+.ct svg .bob2{animation:svgbob 1.7s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes svgbob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-1.6px) scale(1.012,.99)}}
+.ct svg .sway{animation:svgsway 3s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes svgsway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+.ct svg .tw{animation:svgtw 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes svgtw{0%,100%{opacity:.25;transform:scale(.6)}50%{opacity:1;transform:scale(1.2)}}
+.ct svg .wv{animation:svgwave 2.6s linear infinite}
+@keyframes svgwave{from{transform:translateX(0)}to{transform:translateX(-20px)}}
+.ct svg .flag{animation:svgflag .9s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:0 50%}
+@keyframes svgflag{from{transform:skewY(-6deg) scaleX(1)}to{transform:skewY(6deg) scaleX(.86)}}
+.ct svg .bub{animation:svgbub 3.4s ease-in-out infinite;transform-box:fill-box}
+@keyframes svgbub{0%{transform:translateY(4px);opacity:.2}30%{opacity:1}100%{transform:translateY(-14px);opacity:0}}
+.ct svg .sw{animation:svgsway 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 0}
+.ct svg .spin{animation:svgspin 6s linear infinite;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes svgspin{to{transform:rotate(360deg)}}
+.ct svg .rb{animation:svgbob 3s ease-in-out infinite}
+.ct svg .glow{animation:svgglow 1.3s ease-in-out infinite alternate}
+@keyframes svgglow{from{opacity:.72}to{opacity:1}}
+.ct svg .fl2{animation:svgglow .9s ease-in-out infinite alternate}
+.ct svg .fly1{animation:svgfly 5s ease-in-out infinite alternate}.ct svg .fly2{animation:svgfly 4s ease-in-out infinite alternate-reverse}
+@keyframes svgfly{from{transform:translate(-8px,2px)}to{transform:translate(12px,-4px)}}
+#sTitle .wmap+.placepick{margin-top:0}
+#sTitle .pinfo b{font-size:16px}
+@media (orientation:landscape) and (max-height:520px){
+  #sTitle .menu{width:min(50vw,440px);padding:5px 7px 6px;gap:4px}
+  .wmhint{font-size:10px;padding:2px 9px 2px 6px}.wmhint i{font-size:11px}
+  .wmgrid{grid-template-columns:1fr 14px 1fr 14px 1fr;padding:6px 2px 0}
+  .ctarr{width:14px;height:14px}.ctname{font-size:9.5px;min-height:2em;padding:1px 1px}
+  .ctimg{aspect-ratio:16/8.6}.ctn,.ctok{width:18px;height:18px;font-size:11px;left:-6px;top:-6px}.ctok{left:auto;right:-5px}
+  .ctcur{font-size:9.5px;top:-9px}
+  .ctwrap{height:9px}
+  #sTitle .btn.big{padding:3px 14px;font-size:19px}
+  #sTitle .row .btn{padding:3px 4px;font-size:13px}
+  .ctlock{font-size:18px}
+}

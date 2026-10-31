@@ -1,22 +1,23 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=13';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=13';
-import './models2.js?v=13';
-import './models3.js?v=13';
-import { PLACES } from './places.js?v=13';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=13';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=13';
-import { NPC } from './npcs.js?v=13';
-import { makeTitle } from './title.js?v=13';
-import { makeStage } from './stage.js?v=13';
-import { makeThumbs } from './thumbs.js?v=13';
-import { GB, setOutlines } from './geo.js?v=13';
-import { loadPacks, initCharEnv } from './charpack.js?v=13';
+import * as AU from './audio.js?v=14';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=14';
+import './models2.js?v=14';
+import './models3.js?v=14';
+import { PLACES } from './places.js?v=14';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=14';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=14';
+import { NPC } from './npcs.js?v=14';
+import { makeTitle } from './title.js?v=14';
+import { makeStage } from './stage.js?v=14';
+import { citySVG } from './citymap.js?v=14';
+import { makeThumbs } from './thumbs.js?v=14';
+import { GB, setOutlines } from './geo.js?v=14';
+import { loadPacks, initCharEnv } from './charpack.js?v=14';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=13';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=13';
+import { Particles, Rings, makeTornado } from './fx.js?v=14';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=14';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -817,6 +818,28 @@ function refreshTitle() {
   $('bPlay').classList.toggle('locked', lock); $('bPlay').textContent = lock ? 'BLOQUEADO' : pct > 0 && !fresh ? '¡SEGUIR LIMPIANDO!' : '¡A LIMPIAR!';
   $('bPPrev').style.visibility = PLi > 0 ? 'visible' : 'hidden'; $('bPNext').style.visibility = PLi < PLACES.length - 1 ? 'visible' : 'hidden';
   $('tNote').style.display = save.mig === 1 ? 'block' : 'none'; if (doneAll) $('pPct').textContent = '🏆 ¡Mundo entero limpio!';
+  renderMap();
+}
+
+// v14: mapa de ciudades: miniaturas ilustradas, camino numerado con flechas, estados (completada / actual / bloqueada) y aviso de cómo se desbloquea
+let mapPage = 0, mapKey = '', mapPLi = -1; const MAP_PER = 6;
+function renderMap() {
+  const N = PLACES.length, pages = Math.ceil(N / MAP_PER);
+  if (mapPLi !== PLi) { mapPLi = PLi; mapPage = Math.floor(PLi / MAP_PER); mapKey = ''; }
+  const done = PLACES.map((q) => !!progOf(q.id).done), cur = PLACES.findIndex((q, i) => i < save.unlocked && !done[i]);
+  const key = [mapPage, PLi, save.unlocked, done.map((d) => +d).join('')].join('|'); if (key === mapKey) return; mapKey = key;
+  const tabs = $('wmTabs'); tabs.style.display = pages > 1 ? 'flex' : 'none';
+  tabs.innerHTML = Array.from({ length: pages }, (_, p) => `<button class="wmtab${p === mapPage ? ' on' : ''}" data-p="${p}">${p * MAP_PER + 1}–${Math.min(N, (p + 1) * MAP_PER)}</button>`).join('<i>›</i>');
+  const tile = (idx) => {
+    if (idx >= N) return '<span class="ct empty"></span>';
+    const q = PLACES[idx], lock = idx >= save.unlocked, dn = done[idx], isCur = idx === cur, sel = idx === PLi;
+    return `<button class="ct ${lock ? 'lock' : dn ? 'done' : 'open'}${sel ? ' sel' : ''}${isCur ? ' cur' : ''}" data-i="${idx}" style="--c:${q.sky[1]}" aria-label="${q.name}${lock ? ' (bloqueada)' : dn ? ' (completada)' : ''}"><span class="ctimg">${citySVG(q.id)}${lock ? '<span class="ctlock">🔒</span>' : ''}</span><span class="ctn">${idx + 1}</span>${dn ? '<span class="ctok">✔</span>' : ''}${isCur ? '<span class="ctcur">¡Aquí!</span>' : ''}<b class="ctname">${q.name}</b></button>`;
+  };
+  const arr = (idx) => `<i class="ctarr ${idx + 1 < save.unlocked ? 'on' : 'off'}${idx + 1 === cur ? ' next' : ''}"><svg viewBox="0 0 24 24"><path d="M3 12h13M11 5l8 7l-8 7" /></svg></i>`;
+  const wrap = (idx) => `<i class="ctwrap ${idx + 1 < save.unlocked ? 'on' : 'off'}"><svg viewBox="0 0 300 20" preserveAspectRatio="none"><path d="M262 0v9H38v8" /><path class="hd" d="M31 11l7 8l7-8" /></svg></i>`;
+  const b = mapPage * MAP_PER; let html = '';
+  for (let k = 0; k < MAP_PER; k++) { html += tile(b + k); if (k % 3 < 2) html += (b + k + 1 < N ? arr(b + k) : '<i></i>'); else if (k === 2) html += wrap(b + k); }
+  $('wmGrid').innerHTML = html;
 }
 function toMenu() {
   persist(); setChar(save.char); G.mode = 'menu'; $('hud').classList.remove('on'); joyShow(false); joy.on = false; G.intro = 0; G.combo = 0; G.comboT = 0; G.slow = 0; G.total = 0; G.left = 0;
@@ -1019,6 +1042,8 @@ on('bSBack', () => { AU.click(); setChar(save.char); if (shopFrom === 'sResults'
 on('bShPrev', () => shopMove(-1)); on('bShNext', () => shopMove(1));
 // lugares
 const placeMove = (d) => { const i = PLi + d; if (i < 0 || i >= PLACES.length || G.mode === 'travel') return; AU.select(); travelTo(i, false); };
+$('wmGrid').addEventListener('click', (e) => { const t = e.target.closest('.ct[data-i]'); if (t) { const i = +t.dataset.i; if (i !== PLi) placeMove(i - PLi); else AU.click && AU.click(); } });
+$('wmTabs').addEventListener('click', (e) => { const t = e.target.closest('.wmtab'); if (t) { mapPage = +t.dataset.p; mapKey = ''; AU.select && AU.select(); renderMap(); } });
 on('bPPrev', () => placeMove(-1)); on('bPNext', () => placeMove(1));
 on('bPdGo', (e) => { const n = +e.target.dataset.next; if (n >= 0) travelTo(n, true); else { AU.click(); toMenu(); } });
 on('bPdMenu', () => { AU.click(); toMenu(); }); on('bPdShop', () => openShop('sPlaceDone'));
