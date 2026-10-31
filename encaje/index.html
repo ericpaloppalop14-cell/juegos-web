@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es" data-theme="alba">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Encaje · puzles para pensar</title>
+<meta name="theme-color" content="#f3eee6">
+<meta name="description" content="Encaje: ocho tipos de pruebas cortas para estimular el cerebro, con música relajante.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="bg" aria-hidden="true"></div>
+
+<!-- PORTADA -->
+<section id="cover" class="screen on">
+  <button class="iconbtn corner" id="coverSnd" aria-label="Música">♪</button>
+  <div class="coverMain">
+    <div class="mark" aria-hidden="true">
+      <i class="mp mp1"></i><i class="mp mp2"></i><i class="mp mp3"></i><i class="mp mp4"></i><i class="mp mp5"></i>
+    </div>
+    <h1 class="logo">Encaje</h1>
+    <p class="tag">puzles para pensar con calma</p>
+  </div>
+  <div class="coverAsk">
+    <div class="askT">¿Cómo quieres jugar?</div>
+    <div class="askRow">
+      <button class="orient" id="oV" data-o="v">
+        <span class="pw"><span class="phone v"><b></b><span class="mini"><i></i><i></i><i></i><i></i></span></span></span>
+        <span class="olab">Vertical</span><span class="osub">Toca para empezar</span>
+      </button>
+      <button class="orient" id="oH" data-o="h">
+        <span class="pw"><span class="phone h"><b></b><span class="mini"><i></i><i></i><i></i><i></i></span></span></span>
+        <span class="olab">Horizontal</span><span class="osub">Toca para empezar</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- INICIO -->
+<section id="home" class="screen">
+  <div class="homeHead">
+    <div class="logo sm">Encaje</div>
+    <div class="homeStars"><span id="hStars">0</span> ★</div>
+  </div>
+  <div class="homeBtns">
+    <button class="big primary" id="bContinue"><span class="bIcon">▶</span><span class="bTxt"><b>Continuar</b><small id="contSub">Ronda 1</small></span></button>
+    <button class="big" id="bRoute"><span class="bIcon"><svg viewBox="0 0 48 48"><path d="M8 38 L18 22 L28 30 L40 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="38" r="4" fill="currentColor"/><circle cx="40" cy="10" r="4" fill="currentColor"/></svg></span><span class="bTxt"><b>Ruta de pruebas</b><small id="routeSub">72 niveles</small></span></button>
+    <button class="big" id="bDaily"><span class="bIcon"><svg viewBox="0 0 48 48"><rect x="8" y="10" width="32" height="30" rx="6" fill="none" stroke="currentColor" stroke-width="4"/><path d="M8 20 H40 M16 6 V14 M32 6 V14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="30" r="4" fill="currentColor"/></svg></span><span class="bTxt"><b>Reto del día</b><small id="dailySub">Uno nuevo cada día</small></span></button>
+    <div class="smallRow">
+      <button class="small" id="bSettings">⚙ Ajustes</button>
+      <button class="small" id="bBackCover">‹ Portada</button>
+    </div>
+  </div>
+  <div id="rotHint" class="rotHint" hidden><span class="rotPh"></span><span id="rotTxt">Gira el móvil para jugar en horizontal</span><button class="small" id="rotOk">Jugar así</button></div>
+</section>
+
+<!-- RUTA -->
+<section id="route" class="screen">
+  <header class="bar"><button class="iconbtn" id="rBack" aria-label="Volver">‹</button><div class="barT">Ruta de pruebas</div><div class="homeStars"><span id="rStars">0</span> ★</div></header>
+  <div id="routeList" class="scroll"></div>
+</section>
+
+<!-- JUEGO -->
+<section id="game" class="screen">
+  <header id="ghead"><button class="iconbtn" id="gBack" aria-label="Volver">‹</button>
+    <div class="gtitle"><div id="gTitle">Prueba</div><div id="gStats"></div></div></header>
+  <div id="ghelp"></div>
+  <div id="boardWrap"><div id="board"></div></div>
+  <div id="panel">
+    <div id="extra"></div>
+    <div id="tools">
+      <button class="tool" id="bUndo"><svg viewBox="0 0 24 24"><path d="M9 7 L4 12 L9 17 M4 12 H15 a5 5 0 0 1 0 10 H11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-5)"/></svg><span>Deshacer</span></button>
+      <button class="tool" id="bReset"><svg viewBox="0 0 24 24"><path d="M5 12 a7 7 0 1 0 2.2-5.1 M5 4 V9 H10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reiniciar</span></button>
+      <button class="tool" id="bHint"><svg viewBox="0 0 24 24"><path d="M9 18 H15 M10 21 H14 M12 3 a6 6 0 0 0 -3.5 10.9 c.7.6 1 1.3 1 2.1 H14.5 c0-.8.3-1.5 1-2.1 A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pista <b id="hintN">3</b></span></button>
+    </div>
+  </div>
+</section>
+
+<!-- VICTORIA -->
+<div id="win" class="overlay"><div class="card winCard">
+  <div class="winT" id="winT">¡Resuelto!</div>
+  <div class="winStars" id="winStars"><i>★</i><i>★</i><i>★</i></div>
+  <div class="winInfo" id="winInfo"></div>
+  <button class="big primary" id="wNext"><span class="bTxt"><b id="wNextT">Siguiente prueba</b></span><span class="bIcon">›</span></button>
+  <div class="smallRow"><button class="small" id="wAgain">↻ Repetir</button><button class="small" id="wRoute">☰ Ruta</button></div>
+</div></div>
+
+<!-- AJUSTES -->
+<div id="settings" class="overlay"><div class="card setCard">
+  <div class="winT">Ajustes</div>
+  <div class="setRow"><span>Música</span><div class="seg" data-k="music"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+  <div class="setRow"><span>Sonidos</span><div class="seg" data-k="sfx"><button data-v="1">Sí</button><button data-v="0">No</button></div></div>
+  <div class="setRow"><span>Colores</span><div class="seg" data-k="theme"><button data-v="alba">Alba</button><button data-v="dusk">Crepúsculo</button></div></div>
+  <div class="setRow"><span>Pantalla</span><div class="seg" data-k="orient"><button data-v="v">Vertical</button><button data-v="h">Horizontal</button></div></div>
+  <button class="small danger" id="bWipe">Borrar mi progreso</button>
+  <button class="big primary" id="sClose"><span class="bTxt"><b>Listo</b></span></button>
+</div></div>
+
+<div id="toast" role="status"></div>
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>
