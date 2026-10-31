@@ -1,11 +1,11 @@
 // v5: pantalla de inicio viva — un tornado gigante chupando muebles, personajes bailando y persiguiéndose,
 // el Alcalde Paraguas volando con su sombrero, globos de texto, confeti y todo tocable.
-import { makeSkyline } from './stage.js?v=12';
+import { makeSkyline } from './stage.js?v=13';
 import * as THREE from 'three';
-import * as AU from './audio.js?v=12';
-import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=12';
-import { Particles, makeTornado } from './fx.js?v=12';
-import { PLAYERS } from './players.js?v=12';
+import * as AU from './audio.js?v=13';
+import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=13';
+import { Particles, makeTornado } from './fx.js?v=13';
+import { PLAYERS } from './players.js?v=13';
 
 const rnd = Math.random, PI = Math.PI;
 const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -51,6 +51,8 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
   scene.add(new THREE.HemisphereLight(0xf2f8ff, 0xffd9c8, 2.0));
   const sun = new THREE.DirectionalLight(0xfff0d8, 2.2); sun.position.set(14, 26, 18); scene.add(sun);
   const rimL = new THREE.DirectionalLight(0xbfe4ff, 0.9); rimL.position.set(-18, 10, -10); scene.add(rimL);
+  // v13: luz de estudio: relleno frío de frente y contraluz rosa
+  const fillL = new THREE.DirectionalLight(0xcfe0ff, 0.7); fillL.position.set(-16, 8, 22); scene.add(fillL); const kickL = new THREE.DirectionalLight(0xffb0e8, 1.3); kickL.position.set(10, 14, -22); scene.add(kickL);
   const parts = new Particles(scene, 700);
   // suelo
   const ground = new THREE.Mesh(new THREE.CircleGeometry(90, 48).rotateX(-PI / 2), new THREE.MeshStandardMaterial({ map: groundTexture(), roughness: 1 })); ground.position.y = -0.02; scene.add(ground);

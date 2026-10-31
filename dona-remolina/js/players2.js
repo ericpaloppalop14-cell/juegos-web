@@ -1,8 +1,8 @@
 // v3: 6 limpiadoras más (12 en total) + utilidades de cara (ojos brillantes y parpadeo)
 import * as THREE from 'three';
-import { buildChar } from './charpack.js?v=12';
-import { GB, lighten, darken, mix, hiQ } from './geo.js?v=12';
-import { PAL, part, propMaterial } from './models.js?v=12';
+import { buildChar } from './charpack.js?v=13';
+import { GB, lighten, darken, mix, hiQ } from './geo.js?v=13';
+import { PAL, part, propMaterial } from './models.js?v=13';
 const PI = Math.PI;
 const INK = 0x2a1840;
 

@@ -1,7 +1,7 @@
 // v2: más objetos por tamaño, temáticos por distrito, y monumentos gigantes
 import * as THREE from 'three';
-import { GB, lighten, darken, mix } from './geo.js?v=12';
-import { KINDS, PAL, wardrobe } from './models.js?v=12';
+import { GB, lighten, darken, mix } from './geo.js?v=13';
+import { KINDS, PAL, wardrobe } from './models.js?v=13';
 const PI = Math.PI;
 const B = [PAL.coral, PAL.tang, PAL.sun, PAL.lime, PAL.mint, PAL.turq, PAL.sky, PAL.violet, PAL.pink, PAL.rasp];
 const pk = (a, v) => a[v % a.length];

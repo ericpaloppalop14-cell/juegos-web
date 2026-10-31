@@ -1,6 +1,6 @@
 // Catálogo de objetos de Mueblópolis (todo procedural, original)
 import * as THREE from 'three';
-import { GB, C, mix, lighten, darken, sectorColors, addOutline, Q } from './geo.js?v=12';
+import { GB, C, mix, lighten, darken, sectorColors, addOutline, Q } from './geo.js?v=13';
 
 export const PAL = {
   coral: 0xff6b5e, tang: 0xff9a1f, sun: 0xffd23f, lime: 0x8fdc4a, mint: 0x3fe0b0, turq: 0x1fc4d6, sky: 0x4aa8ff,

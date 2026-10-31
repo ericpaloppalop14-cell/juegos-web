@@ -1,22 +1,22 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=12';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=12';
-import './models2.js?v=12';
-import './models3.js?v=12';
-import { PLACES } from './places.js?v=12';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=12';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=12';
-import { NPC } from './npcs.js?v=12';
-import { makeTitle } from './title.js?v=12';
-import { makeStage } from './stage.js?v=12';
-import { makeThumbs } from './thumbs.js?v=12';
-import { GB, setOutlines } from './geo.js?v=12';
-import { loadPacks } from './charpack.js?v=12';
+import * as AU from './audio.js?v=13';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=13';
+import './models2.js?v=13';
+import './models3.js?v=13';
+import { PLACES } from './places.js?v=13';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=13';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=13';
+import { NPC } from './npcs.js?v=13';
+import { makeTitle } from './title.js?v=13';
+import { makeStage } from './stage.js?v=13';
+import { makeThumbs } from './thumbs.js?v=13';
+import { GB, setOutlines } from './geo.js?v=13';
+import { loadPacks, initCharEnv } from './charpack.js?v=13';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
-{ const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=12';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=12';
+{ const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
+import { Particles, Rings, makeTornado } from './fx.js?v=13';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=13';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -78,6 +78,7 @@ const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0;
+initCharEnv(renderer); // v13: entorno de estudio (solo reflejos de los personajes)
 const scene = new THREE.Scene(); scene.background = skyTex(); scene.fog = new THREE.Fog(0xdff0ff, 60, 260);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 900);
 const hemi = new THREE.HemisphereLight(0xeaf6ff, 0xffd9b8, 1.75); scene.add(hemi);
@@ -109,7 +110,7 @@ function setChar(id, remember = true) {
 setChar(save.char);
 const worldGroup = new THREE.Group(); scene.add(worldGroup);
 let title = null, titleStar = '';
-let pixelCap = Math.min(window.devicePixelRatio || 1, 2.25), pixelRatio = pixelCap;
+let pixelCap = Math.min(window.devicePixelRatio || 1, 2), pixelRatio = pixelCap;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w, h, false); if (composer) { composer.setPixelRatio(pixelRatio); composer.setSize(w, h); bloom.resolution.set(w * pixelRatio * 0.5, h * pixelRatio * 0.5); }
@@ -917,7 +918,7 @@ async function enterPlace(idx, cb = () => {}) {
   clearWorld(); setDistrictStyle(PL); setPlaceTint(PL.home ? '' : PL.id, PL.home ? null : PL.tint); clearGeoCache();
   await cb(12, 'Pintando ' + PL.name + '…');
   if (scene.background && scene.background.dispose) scene.background.dispose(); scene.background = skyTex(PL); disposeScenery(scene, scenery); scenery = buildScenery(scene, PL);
-  scene.fog.color.set(PL.fog); hemi.color.set(PL.hemi[0]); hemi.groundColor.set(PL.hemi[1]); hemi.intensity = PL.hemi[2]; sun.color.set(PL.sun[0]); sun.intensity = PL.sun[1]; rim.color.set(PL.rim);
+  scene.fog.color.set(PL.fog); hemi.color.set(PL.hemi[0]); hemi.groundColor.set(PL.hemi[1]); hemi.intensity = PL.hemi[2]; sun.color.set(PL.sun[0]); sun.intensity = PL.sun[1]; rim.color.set(PL.rim); renderer.toneMappingExposure = PL.exp || 1.0;
   await cb(30, 'Fabricando cosas…');
   const kinds = Object.keys(KINDS).filter((k) => !KINDS[k].places || KINDS[k].places.includes(PL.id)); let i = 0;
   for (const k of kinds) { for (let v = 0; v < Math.min(KINDS[k].nv, 8); v++) getGeo(k, v); i++; if (i % 6 === 0) await cb(30 + (i / kinds.length) * 55); }

@@ -61,6 +61,10 @@ export function makeStage(scene, getParts) {
   // suelo con aros
   const floor = new THREE.Mesh(new THREE.CircleGeometry(15, 64).rotateX(-PI / 2), new THREE.MeshBasicMaterial({ map: floorTex, transparent: true, depthWrite: false, fog: false, color: 0xffffff }));
   floor.position.y = -0.04; floor.renderOrder = -2; group.add(floor);
+  // v13: iluminación de estudio (principal cálida, relleno frío y dos contraluces); solo existe mientras el escenario está activo
+  const key = new THREE.DirectionalLight(0xfff0e0, 0.9), fillS = new THREE.DirectionalLight(0xbfd6ff, 0.25), kick1 = new THREE.DirectionalLight(0xff9ee0, 1.1), kick2 = new THREE.DirectionalLight(0x9fe8ff, 0.9);
+  key.position.set(-3.5, 5, 6); fillS.position.set(5, 2, 5); kick1.position.set(3.5, 4.5, -5); kick2.position.set(-4, 3, -5);
+  for (const l of [key, fillS, kick1, kick2]) { group.add(l); group.add(l.target); }
   // pedestal de dos escalones + aro luminoso
   const pedMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0.1 }), ped2Mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
   const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.7, 0.3, 56), pedMat); ped.position.y = -0.1; ped.receiveShadow = true; group.add(ped);

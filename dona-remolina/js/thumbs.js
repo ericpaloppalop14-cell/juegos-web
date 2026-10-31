@@ -3,9 +3,10 @@ import * as THREE from 'three';
 const W = 112, H = 124;
 export function makeThumbs(renderer, makeModel, players) {
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xeaf6ff, 0xffd9b8, 2.3));
-  const sun = new THREE.DirectionalLight(0xfff0d8, 2.6); sun.position.set(2.5, 4, 5); scene.add(sun);
-  const rim = new THREE.DirectionalLight(0xbfe4ff, 0.9); rim.position.set(-3, 2, -4); scene.add(rim);
+  scene.add(new THREE.HemisphereLight(0xeaf6ff, 0xffd9b8, 1.6));
+  const sun = new THREE.DirectionalLight(0xfff2e0, 2.3); sun.position.set(-2.5, 4, 5); scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xbfd8ff, 0.7); fill.position.set(4, 1.5, 4); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xffa8e4, 1.4); rim.position.set(2, 3, -4); scene.add(rim);
   const cam = new THREE.PerspectiveCamera(24, W / H, 0.1, 60);
   const rt = new THREE.WebGLRenderTarget(W, H, { samples: 4, colorSpace: THREE.SRGBColorSpace, depthBuffer: true });
   const buf = new Uint8Array(W * H * 4);
