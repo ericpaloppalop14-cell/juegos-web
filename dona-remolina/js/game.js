@@ -1,22 +1,22 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=10';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=10';
-import './models2.js?v=10';
-import './models3.js?v=10';
-import { PLACES } from './places.js?v=10';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=10';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=10';
-import { NPC } from './npcs.js?v=10';
-import { makeTitle } from './title.js?v=10';
-import { makeStage } from './stage.js?v=10';
-import { makeThumbs } from './thumbs.js?v=10';
-import { GB, setOutlines } from './geo.js?v=10';
-import { loadPacks } from './charpack.js?v=10';
+import * as AU from './audio.js?v=11';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=11';
+import './models2.js?v=11';
+import './models3.js?v=11';
+import { PLACES } from './places.js?v=11';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=11';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=11';
+import { NPC } from './npcs.js?v=11';
+import { makeTitle } from './title.js?v=11';
+import { makeStage } from './stage.js?v=11';
+import { makeThumbs } from './thumbs.js?v=11';
+import { GB, setOutlines } from './geo.js?v=11';
+import { loadPacks } from './charpack.js?v=11';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=10';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=10';
+import { Particles, Rings, makeTornado } from './fx.js?v=11';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=11';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -26,6 +26,8 @@ const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const fmt = (n) => Math.round(n).toLocaleString('es-ES');
+// v11: el lugar se da por limpio por PESO (volumen aprox. r^2,5: lo pequeño casi no pesa) o cuando quedan pocas cosas
+const WT = (r) => Math.pow(r, 2.5), FIN_W = 0.03, FIN_N = 40, RADAR_AT = 0.78;
 const GROW_SAT = 190;       // el crecimiento se frena muy poco: los objetos grandes se comen pronto
 const GATE = 0.72;            // un objeto se traga si su radio <= radio del torbellino * GATE
 const GROW_K = 0.30;          // crecimiento del área por área del objeto
@@ -278,6 +280,10 @@ function buildWorld(seed, play) {
   for (const d of w.npcs) { if (d.type === 'patitos') left -= addPatitos(d, rn); else { if (rn && rn.has(d.gid * 8)) { left--; continue; } addNpc(d).key = d.gid * 8; } }
   for (const d of w.pickups) addPickup(d);
   G.total = play ? total : 0; G.left = play ? left : 0; if (P) P.tot = total;
+  { let wl = 0, wr = 0; for (const o of props) { o.w = WT(o.r); wl += o.w; } for (const m of movers) { m.w = WT(m.r); wl += m.w; }
+    if (rm) { for (const d of w.objs) if (rm.has(d.gid)) wr += WT(getGeo(d.kind, d.v).r * d.sc); signs.forEach((s, i) => { if (rm.has(900000 + i)) wr += WT(3.2); }); }
+    if (rn) for (const d of w.npcs) { const def = NPC[d.type]; if (d.type === 'patitos') { for (let i = 0; i < 5; i++) if (rn.has(d.gid * 8 + i)) wr += WT(def.r); } else if (rn.has(d.gid * 8)) wr += WT(def.r); }
+    G.wLeft = wl; G.wTot = wl + wr; G.bigLeft = 0; for (const o of props) if (o.tier >= 3) G.bigLeft++; for (const m of movers) if (m.def.boss || m.r >= 2.4) G.bigLeft++; G.finale = false; G.finT = 0; G.rad = []; }
   camera.updateMatrixWorld(); updateInst(0, true);
 }
 const addCoins = (x) => { G.cf += x; const n = Math.floor(G.cf); if (n > 0) { G.cf -= n; G.coins += n; save.coins += n; } return n; };
@@ -299,7 +305,7 @@ function swallow(o) {
   const coinsF = o.coins * lootMul() * cm * COIN_K;
   const real = G.mode === 'play';
   if (real) { G.score += pts; addCoins(coinsF); G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper' || (o.K && o.K.cb)) G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
-  const before = G.A; G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * (1 + (ut().gain || 0)) * o.area / (1 + G.A / GROW_SAT)); G.R = Math.sqrt(G.A);
+  const before = G.A; if (!G.finale) G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * (1 + (ut().gain || 0)) * o.area / (1 + G.A / GROW_SAT)); G.R = Math.sqrt(G.A);
   hud.dirty = true;
   // feedback
   const big = o.tier >= 2 || o.npc || o.alc;
@@ -314,7 +320,7 @@ function swallow(o) {
   if (o.tier >= 6 && real) { G.monuments++; toast('¡' + o.name + ' tragado!', 'alc'); popText('+' + fmt(pts), o.x, o.hy * 2 + 2, o.z, 'big'); G.shake = 1.4; flash('good'); AU.roundEnd(true); AU.levelUp(6); }
   if (o.npc && real) { G.crazies++; if (o.def.onSwallow) o.def.onSwallow(o, X); }
   checkLevel();
-  if (real && !o.alc && G.total) { G.left--; G.cleaned++; const P = prog(); if (o.npc) P.rn.push(o.key); else P.rm.push(o.gid); hud.dirty = true; if (G.left <= 0) completePlace(); }
+  if (real && !o.alc && G.total) { G.left--; G.cleaned++; G.wLeft = Math.max(0, G.wLeft - (o.w || 0)); if (o.tier >= 3 || (o.npc && (o.def.boss || o.r >= 2.4))) G.bigLeft = Math.max(0, G.bigLeft - 1); const P = prog(); if (o.npc) P.rn.push(o.key); else P.rm.push(o.gid); P.cf = cleanFrac(); hud.dirty = true; if (!G.finale && (G.left <= 0 || finaleReady())) startFinale(); }
 }
 function checkLevel() {
   const L = 1 + Math.floor(Math.log(G.R / G.A0 ** 0.5) / Math.log(1.32) + 1e-6);
@@ -391,13 +397,15 @@ function step(dt) {
   G.twirl = Math.max(0, G.twirl - dt * 14);
   const R = G.Rv;
   if (play) {
-    G.time -= dt; G.inv = Math.max(0, G.inv - dt); G.slow = Math.max(0, G.slow - dt);
-    if (G.time <= 0) endRound();
+    if (!G.finale) G.time -= dt; G.inv = Math.max(0, G.inv - dt); G.slow = Math.max(0, G.slow - dt);
+    if (G.time <= 0 && !G.finale) endRound();
+    if (!G.finale && !(frameNo % 20) && finaleReady()) startFinale();
+    if (G.finale && !G.placeDone) { G.finT += dt; if ((G.finT > 1.0 && sucked.length === 0) || G.finT > 5) completePlace(); }
     else if (G.time < 10.5 && Math.ceil(G.time) !== G.lastTick) { G.lastTick = Math.ceil(G.time); AU.tick(G.time < 5); }
     { const pl = ut().pulse_l || 0; if (pl > 0) { G.pulseT += dt; if (G.pulseT >= pulsePeriod(pl)) { G.pulseT = 0; doPulse(pl); } } }
     if (G.comboT > 0) { G.comboT -= dt; if (G.comboT <= 0) { G.combo = 0; hud.dirty = true; } }
-    if (!alc && alcTimer <= 0 && G.alcSpawned !== true && G.t - G.startT > 10) { G.alcSpawned = true; spawnAlcalde(0); }
-    if (G.alcSpawned && !alc) { alcTimer -= dt; if (alcTimer <= 0 && G.time > 12) spawnAlcalde(alcLevel); }
+    if (!G.finale && !alc && alcTimer <= 0 && G.alcSpawned !== true && G.t - G.startT > 10) { G.alcSpawned = true; spawnAlcalde(0); }
+    if (G.alcSpawned && !alc && !G.finale) { alcTimer -= dt; if (alcTimer <= 0 && G.time > 12) spawnAlcalde(alcLevel); }
     G.bubbleT -= dt; if (G.bubbleT <= 0) { G.bubbleT = 9 + rnd() * 7; if (G.mode === 'play') { const l = pick(ch.say, (rnd() * 99) | 0); say('dona', l, 1600); G.shout = 0.6; } }
   }
   if (G.mode === 'count') { G.intro = Math.max(0, G.intro - dt * 0.9); }
@@ -418,7 +426,7 @@ function step(dt) {
     for (let a = rc - span; a <= rc + span; a++) for (let b = rz - span; b <= rz + span; b++) {
       const l = grid.get(gkey(a, b)); if (!l) continue;
       for (let i = l.length - 1; i >= 0; i--) {
-        const o = l[i]; if (o.r > G.R * gate()) continue;
+        const o = l[i]; if (!o || o.r > G.R * gate()) continue;
         const dx = o.x - G.px, dz = o.z - G.pz, d = Math.hypot(dx, dz);
         if (d < capR && live) { swallow(o); continue; }
         if (d < G.R * 1.5 && !o.inst) {
@@ -461,7 +469,7 @@ function collectPickup(p) {
   hud.dirty = true;
 }
 function updateSucked(o, dt, R) {
-  const s = o.sw; s.t += dt; const u = Math.min(1, s.t / s.T), H = 3.6 * R;
+  const s = o.sw; if (s.d > 0) { s.d -= dt; return false; } s.t += dt; const u = Math.min(1, s.t / s.T), H = 3.6 * R;
   const e = u * u * (3 - 2 * u) * 0.55 + u * 0.45;
   const y0 = o.hy, y = y0 * (1 - u * 0.6) + (H * 0.88) * e * (o.tier >= 4 ? 0.75 : 1);
   const fr = R * (0.5 + 1.0 * Math.min(1, y / H)), target = Math.max(0.25, fr * 0.8 - o.r * 0.3);
@@ -732,16 +740,7 @@ function updateFx(dt) {
       ind.style.display = 'flex'; ind.style.left = (cx + vx * s2) + 'px'; ind.style.top = (cy + vy * s2 + 20) + 'px'; ind.style.setProperty('--rot', (Math.atan2(vy, vx) * 180 / Math.PI + 90) + 'deg');
     } else ind.style.display = 'none';
   } else ind.style.display = 'none';
-  // flecha hacia lo que queda por limpiar
-  const li = $('leftInd');
-  if (G.mode === 'play' && G.total && G.left > 0 && G.left <= 40 && !(frameNo % 6 && li._t)) {
-    let best = null, bd = 1e9; for (const o of props) if (o.state === 0) { const d = Math.hypot(o.x - G.px, o.z - G.pz); if (d < bd) { bd = d; best = o; } } for (const m of movers) if (m.state === 0) { const d = Math.hypot(m.x - G.px, m.z - G.pz); if (d < bd) { bd = d; best = m; } }
-    li._t = best ? { o: best, d: bd } : null;
-  }
-  if (G.mode === 'play' && li._t && li._t.o.state === 0 && G.left <= 40 && G.left > 0) {
-    const o = li._t.o, p = toScreen(o.x, (o.hy || 0), o.z), W = window.innerWidth, Hh = window.innerHeight; const off = p.behind || p.x < 24 || p.x > W - 24 || p.y < 110 || p.y > Hh - 24;
-    if (off) { let cx = W / 2, cy = Hh / 2, vx = p.x - cx, vy = p.y - cy; if (p.behind) { vx = -vx; vy = -vy; } const sx2 = (W / 2 - 46) / Math.abs(vx || 1e-3), sy2 = (Hh / 2 - 100) / Math.abs(vy || 1e-3), s2 = Math.min(sx2, sy2); li.style.display = 'flex'; li.style.left = (cx + vx * s2) + 'px'; li.style.top = (cy + vy * s2 + 20) + 'px'; li.style.setProperty('--rot', (Math.atan2(vy, vx) * 180 / Math.PI + 90) + 'deg'); } else li.style.display = 'none';
-  } else { li.style.display = 'none'; if (G.mode !== 'play') li._t = null; }
+  updateRadar();
 }
 function placeBubble(b, x, y, z) { if (!b.classList.contains('on')) return; const p = toScreen(x, y, z); b.style.left = clamp(p.x, 100, window.innerWidth - 100) + 'px'; b.style.top = clamp(p.y, 130, window.innerHeight - 60) + 'px'; }
 
@@ -771,7 +770,8 @@ function drawMini() {
     for (let iz = 0; iz < CN; iz++) for (let ix = 0; ix < CN; ix++) { const h = heat[iz * CN + ix]; if (h > 0) { g.fillStyle = `rgba(42,24,64,${Math.min(0.62, 0.16 + h * 0.025).toFixed(2)})`; g.fillRect(ix * cs * k, iz * cs * k, cs * k + 0.6, cs * k + 0.6); } }
     const few = G.left <= 60; g.lineWidth = 1.2; g.strokeStyle = '#fff'; g.fillStyle = '#ff2d6e';
     const dot = (o, r) => { g.beginPath(); g.arc((o.x + HALF) * k, (o.z + HALF) * k, r, 0, 7); g.fill(); g.stroke(); };
-    for (const o of props) if (o.state === 0 && (few || o.tier >= 4)) dot(o, few ? 2.4 : 2.0); for (const m of movers) if (m.state === 0 && (few || m.def.boss)) dot(m, 2.6);
+    for (const o of props) if (o.state === 0 && (few || (G.radar ? o.tier >= 3 : o.tier >= 4))) dot(o, few ? 2.4 : 2.0);
+    if (G.radar && G.rad) { g.fillStyle = '#ffd23f'; g.strokeStyle = '#ff2d6e'; g.lineWidth = 2; for (const o of G.rad) if (o.state === 0) { g.beginPath(); g.arc((o.x + HALF) * k, (o.z + HALF) * k, 4.6, 0, 7); g.fill(); g.stroke(); } } for (const m of movers) if (m.state === 0 && (few || m.def.boss)) dot(m, 2.6);
   }
   g.fillStyle = '#fff';
   for (const o of landmarks) { if (o.state !== 0 && o.state !== undefined) continue; const x = (o.x + HALF) * k, y = (o.z + HALF) * k; g.beginPath(); g.moveTo(x, y - 4); g.lineTo(x + 3, y); g.lineTo(x, y + 4); g.lineTo(x - 3, y); g.fill(); }
@@ -788,7 +788,7 @@ function updateHud() {
   if (G.lvl !== hud.lvl) { hud.lvl = G.lvl; $('hLvl').textContent = 'Nivel ' + G.lvl; }
   const sc = Math.round(G.score); if (sc !== hud.score) { hud.score = sc; $('hScore').textContent = fmt(sc); }
   const prog = clamp(Math.log(G.R / Math.sqrt(G.A0)) / Math.log(1.32) % 1, 0, 1); const pq = Math.round(prog * 100); if (pq !== hud.prog) { hud.prog = pq; $('hLvlBar').style.width = pq + '%'; }
-  if (G.total) { const lf = G.left; if (lf !== hud.left) { hud.left = lf; const pc = Math.floor((1 - lf / G.total) * 100); $('hCleanPct').textContent = (lf === 0 ? 100 : Math.min(99, pc)) + '%'; $('hCleanLeft').textContent = lf === 0 ? '¡Todo!' : 'quedan ' + lf; $('hCleanBar').style.width = (100 - lf / G.total * 100) + '%'; } }
+  if (G.total) { const cf = G.finale ? 1 : cleanFrac(), key = Math.round(cf * 1000) * 1000 + G.left; if (key !== hud.left) { hud.left = key; const pc = G.finale ? 100 : Math.min(99, Math.floor(cf * 100)); $('hCleanPct').textContent = pc + '%'; $('hCleanLeft').textContent = G.finale ? '¡Lugar limpio!' : G.left <= FIN_N ? 'quedan ' + G.left : G.bigLeft > 0 ? G.bigLeft + ' grandes' : 'quedan ' + G.left; $('hCleanBar').style.width = (cf * 100) + '%'; } }
   const plv = ut().pulse_l || 0; $('pulseRow').style.display = plv ? 'block' : 'none'; if (plv) $('hPulse').style.width = clamp(G.pulseT / pulsePeriod(plv) * 100, 0, 100) + '%';
   const c = $('combo'); if (G.combo >= 3) { c.classList.add('on'); if (G.combo !== hud.combo) { hud.combo = G.combo; $('hComboN').textContent = 'x' + G.combo; } $('hComboBar').style.width = (G.comboT / comboWin() * 100) + '%'; } else { c.classList.remove('on'); hud.combo = -1; }
   // pistas
@@ -808,7 +808,7 @@ function refreshTitle() {
   $('tChar').textContent = ch.name; $('tCoins').textContent = fmt(save.coins); $('tBest').textContent = fmt(save.best); $('bSfx').classList.toggle('off', !AU.S.sfxOn); $('bMus').classList.toggle('off', !AU.S.musicOn);
   const P = prog(), lock = PLi >= save.unlocked, doneAll = save.unlocked >= PLACES.length && PLACES.every((q) => progOf(q.id).done);
   $('pName').textContent = (lock ? '🔒 ' : '') + PL.name; $('pSub').textContent = lock ? 'Limpia ' + PLACES[PLi - 1].name + ' para abrirlo' : PL.sub; $('pNum').textContent = 'Lugar ' + (PLi + 1) + ' de ' + PLACES.length;
-  const left = P.tot ? Math.max(0, P.tot - P.rm.length - P.rn.length) : 0, pct = P.tot ? Math.floor((P.rm.length + P.rn.length) / P.tot * 100) : 0, fresh = P.done && !P.part;
+  const left = P.tot ? Math.max(0, P.tot - P.rm.length - P.rn.length) : 0, pct = P.tot ? (P.cf != null ? Math.min(99, Math.floor(P.cf * 100)) : Math.floor((P.rm.length + P.rn.length) / P.tot * 100)) : 0, fresh = P.done && !P.part;
   $('pFill').style.width = (fresh ? 100 : pct) + '%'; $('pPct').textContent = lock ? '' : fresh ? '✔ Limpio · vuelve a limpiarlo' : pct > 0 ? pct + '% limpio · quedan ' + left : 'Sin empezar';
   $('bPlay').classList.toggle('locked', lock); $('bPlay').textContent = lock ? 'BLOQUEADO' : pct > 0 && !fresh ? '¡SEGUIR LIMPIANDO!' : '¡A LIMPIAR!';
   $('bPPrev').style.visibility = PLi > 0 ? 'visible' : 'hidden'; $('bPNext').style.visibility = PLi < PLACES.length - 1 ? 'visible' : 'hidden';
@@ -821,7 +821,7 @@ function toMenu() {
 function startRound() {
   if (PLi >= save.unlocked) { AU.nope(); return; }
   AU.init(); AU.startMusic('game'); AU.setMusicMode('game'); AU.click();
-  const P = prog(); if (P.done && !P.part) { P.rm = []; P.rn = []; } P.part = true; P.att = (P.att || 0) + 1; G.placeDone = false;
+  const P = prog(); if (P.done && !P.part) { P.rm = []; P.rn = []; P.cf = 0; } P.part = true; P.att = (P.att || 0) + 1; G.placeDone = false;
   buildWorld(PL.seed, true); alc = null; alcTimer = 0; alcLevel = 0; botTarget = null;
   let r0 = startR(); const base = r0, done = P.rm.length + P.rn.length;
   if (done > 0) { // si ya limpiaste mucho, empiezas lo bastante grande para poder tragar buena parte de lo que queda
@@ -841,7 +841,7 @@ function countdown(n) {
   else { e.textContent = '¡YA!'; AU.beep(true); G.mode = 'play'; G.startT = G.t; hideAll(); toast(G.boosted ? '¡Sigue limpiando!' : '¡A LIMPIAR!'); say('dona', ch.start, 1900); G.shout = 1; AU.speak(ch.start, ch.voice.pitch, ch.voice.rate); G.intro = 0; }
 }
 function endRound() {
-  if (G.mode !== 'play') return; G.mode = 'ending'; joyShow(false); joy.on = false; toast('¡TIEMPO!', 'warn'); AU.roundEnd(true); $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('combo').classList.remove('on'); persist();
+  if (G.mode !== 'play') return; if (G.finale && !G.placeDone) { completePlace(); return; } G.mode = 'ending'; joyShow(false); joy.on = false; toast('¡TIEMPO!', 'warn'); AU.roundEnd(true); $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('combo').classList.remove('on'); persist();
   setTimeout(showResults, 1500);
 }
 function showResults() {
@@ -851,7 +851,7 @@ function showResults() {
   const stars = goals.filter((g) => g.ok).length, bonus = stars * 8 + (G.monuments > 0 ? 30 : 0); G.coins += bonus; save.coins += bonus;
   const rec = Math.round(G.score) > save.best; if (rec) save.best = Math.round(G.score); persist();
   const rank = G.score < 1500 ? 'Aprendiz de escoba' : G.score < 5000 ? 'Torbellino de salón' : G.score < 12000 ? 'Huracán doméstico' : G.score < 26000 ? 'Señora del Remolino' : 'Reina de ' + PL.name;
-  const pct = Math.floor((1 - G.left / Math.max(1, G.total)) * 100), gain = Math.max(0, Math.floor(G.cleaned / Math.max(1, G.total) * 100));
+  const pct = Math.min(99, Math.floor(cleanFrac() * 100)), gain = Math.max(0, Math.floor(G.cleaned / Math.max(1, G.total) * 100));
   $('rTitle').textContent = '¡Tiempo!'; $('rRank').textContent = rank; $('rScore').textContent = fmt(G.score); $('rRecord').classList.toggle('on', rec);
   $('rPlace').textContent = PL.name; $('rCleanTxt').innerHTML = `<b>${pct}%</b> limpio${gain ? ` <em>(+${gain}% en este intento)</em>` : ''} · quedan <b>${fmt(G.left)}</b>`; $('rCleanBar').style.width = pct + '%';
   $('rStars').innerHTML = [0, 1, 2].map((i) => `<svg class="star ${i < stars ? 'got' : ''}" viewBox="0 0 24 24"><path d="M12 2.2l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17l-5.9 3.2 1.2-6.5L2.5 9.1l6.6-.9z"/></svg>`).join('');
@@ -861,6 +861,37 @@ function showResults() {
   $('rCoins').textContent = '+' + fmt(G.coins - bonus); $('rBonus').textContent = bonus ? `+${bonus} extra (${G.monuments > 0 ? 'monumento + ' : ''}estrellas)` : 'Consigue estrellas para ganar más';
   $('bRAgain').textContent = 'Seguir limpiando';
   G.mode = 'results'; G.demoT = 0; show('sResults'); $('hud').classList.remove('on'); AU.setMusicMode('menu');
+}
+// ---------- v11: umbral por peso, final automático y radar ----------
+const finaleReady = () => G.mode === 'play' && G.total > 0 && !G.placeDone && (G.wLeft <= G.wTot * FIN_W || G.left <= FIN_N);
+const cleanFrac = () => { if (!G.total) return 0; const a = (1 - G.wLeft / Math.max(1e-6, G.wTot)) / (1 - FIN_W), b = (G.total - G.left) / Math.max(1, G.total - FIN_N); return clamp(Math.max(a, b), 0, 1); };
+function startFinale() {
+  if (G.finale || G.placeDone) return; G.finale = true; G.finT = 0; G.finInfo = { left: G.left, wfrac: +(G.wLeft / G.wTot).toFixed(4), big: G.bigLeft, t: Math.round(G.dur - G.time) }; $('leftInd').style.display = 'none'; for (const e of radarEls) e.style.display = 'none';
+  toast('¡LUGAR LIMPIO!', 'alc'); flash('good'); AU.levelUp(7); G.shake = Math.max(G.shake, 0.9); say('dona', '¡Lo que queda, para dentro!', 2200);
+  const rest = []; for (const o of props) if (o.state === 0) rest.push(o); for (const m of movers) if (m.state === 0) rest.push(m);
+  rest.sort((a, b) => Math.hypot(a.x - G.px, a.z - G.pz) - Math.hypot(b.x - G.px, b.z - G.pz));
+  rest.forEach((o, i) => { if (o.alc) return; swallow(o); if (o.sw) o.sw.d = Math.min(1.7, i * 0.025) + rnd() * 0.15; });
+  if (alc && alc.state === 0) { alc.state = 3; worldGroup.remove(alc.mesh); alc = null; }
+}
+const radarEls = [$('leftInd')]; for (let i = 2; i <= 3; i++) { const e = $('leftInd').cloneNode(true); e.id = 'leftInd' + i; $('leftInd').parentNode.appendChild(e); radarEls.push(e); }
+function updateRadar() {
+  const on = G.mode === 'play' && G.total && !G.finale && (cleanFrac() >= RADAR_AT || G.left <= 60); G.radar = !!on;
+  if (!on) { G.rad = []; for (const e of radarEls) e.style.display = 'none'; return; }
+  if (!(frameNo % 6) || !G.rad.length || G.rad.some((o) => o.state !== 0)) { // los 3 más pesados que quedan (si empatan, el más cercano)
+    const cand = []; const consider = (o) => { if (o.state !== 0 || o.alc) return; cand.push(o); };
+    for (const o of props) consider(o); for (const m of movers) consider(m);
+    cand.sort((a, b) => (b.w || 0) - (a.w || 0) || Math.hypot(a.x - G.px, a.z - G.pz) - Math.hypot(b.x - G.px, b.z - G.pz)); G.rad = cand.slice(0, 3);
+  }
+  const W = window.innerWidth, Hh = window.innerHeight;
+  radarEls.forEach((li, i) => {
+    const o = G.rad[i]; if (!o) { li.style.display = 'none'; return; }
+    const p = toScreen(o.x, (o.hy || 0), o.z), off = p.behind || p.x < 24 || p.x > W - 24 || p.y < 110 || p.y > Hh - 24;
+    if (!off) { li.style.display = 'none'; return; }
+    let cx = W / 2, cy = Hh / 2, vx = p.x - cx, vy = p.y - cy; if (p.behind) { vx = -vx; vy = -vy; }
+    const sx2 = (W / 2 - 46) / Math.abs(vx || 1e-3), sy2 = (Hh / 2 - 100) / Math.abs(vy || 1e-3), s2 = Math.min(sx2, sy2);
+    li.style.display = 'flex'; li.style.left = (cx + vx * s2) + 'px'; li.style.top = (cy + vy * s2 + 20) + 'px'; li.style.setProperty('--rot', (Math.atan2(vy, vx) * 180 / Math.PI + 90) + 'deg');
+    li.firstChild.textContent = Math.round(Math.hypot(o.x - G.px, o.z - G.pz)) + 'm';
+  });
 }
 // ---------- ¡lugar limpio! ----------
 function completePlace() {
