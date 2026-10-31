@@ -1,10 +1,11 @@
 // v5: pantalla de inicio viva — un tornado gigante chupando muebles, personajes bailando y persiguiéndose,
 // el Alcalde Paraguas volando con su sombrero, globos de texto, confeti y todo tocable.
+import { makeSkyline } from './stage.js?v=10';
 import * as THREE from 'three';
-import * as AU from './audio.js?v=9';
-import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=9';
-import { Particles, makeTornado } from './fx.js?v=9';
-import { PLAYERS } from './players.js?v=9';
+import * as AU from './audio.js?v=10';
+import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=10';
+import { Particles, makeTornado } from './fx.js?v=10';
+import { PLAYERS } from './players.js?v=10';
 
 const rnd = Math.random, PI = Math.PI;
 const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -56,6 +57,8 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
   // nubes
   const ctex = cloudTexture(), clouds = [];
   for (let i = 0; i < 9; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.5), new THREE.MeshBasicMaterial({ map: ctex, transparent: true, opacity: 0.9, fog: false, depthWrite: false })); const s = 14 + rnd() * 14; m.scale.set(s, s, 1); m.position.set(-60 + i * 15 + rnd() * 6, 14 + rnd() * 16, -50 - rnd() * 20); m.userData.sp = 0.3 + rnd() * 0.5; scene.add(m); clouds.push(m); }
+  // v10: ciudad loca al fondo
+  const skyline = makeSkyline(scene, { z: -42, n: 15, spread: 62, w: 12 });
   // arcoíris
   const rb = new THREE.Group(); [0xff6b5e, 0xffd23f, 0x8fdc4a, 0x4aa8ff, 0xb08cff].forEach((c, i) => { const t = new THREE.Mesh(new THREE.TorusGeometry(26 - i * 1.5, 0.75, 6, 40, PI), new THREE.MeshBasicMaterial({ color: c, fog: false, transparent: true, opacity: 0.8 })); rb.add(t); });
   rb.position.set(20, -2, -55); scene.add(rb);
@@ -256,7 +259,7 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
     for (const m of ringM) { const i = m.userData.i, y = 0.5 + i * (HMAX / (NR - 1)), r = radAt(y) * (1 + kick * 0.12), ph = y * 0.42 - T * 1.7, amp = 0.35 + 0.9 * (y / HMAX);
       m.position.set(TC.x + Math.sin(ph) * amp, y, TC.z + Math.cos(ph) * amp); m.scale.set(r, r, r); m.rotation.set(PI / 2 + Math.sin(T * 2 + i) * 0.09, 0, Math.cos(T * 1.7 + i * 0.7) * 0.09); }
     { const fy = HMAX * 0.3, r = radAt(fy) * (1 + kick * 0.12); face.position.set(TC.x + Math.sin(fy * 0.42 - T * 1.7) * 0.9, fy, TC.z + r * 0.92 + 1.1); face.scale.setScalar(RK / 3.9 * (1 + kick * 0.1)); const bl = (T % 3.4) < 0.12 ? 0.1 : 1; for (const e of eyes) e.scale.y = bl; mouth.scale.set(1 + kick * 0.3, 1 + kick * 1.2 * 0 + (kick > 0.1 ? -0.5 : 0), 1); }
-    rb.position.y = -2 + Math.sin(T * 0.4) * 0.4; for (const c of clouds) { c.position.x += c.userData.sp * dt; if (c.position.x > 70) c.position.x = -70; }
+    skyline.update(T); rb.position.y = -2 + Math.sin(T * 0.4) * 0.4; for (const c of clouds) { c.position.x += c.userData.sp * dt; if (c.position.x > 70) c.position.x = -70; }
     updateFlyers(dt); updateActors(dt); updateAlcalde(dt); updateBubbles(dt);
     if (rnd() < dt * 18) sparkle();
     nextSay -= dt; if (nextSay <= 0) { nextSay = 1.4 + rnd() * 1.8; if (rnd() < 0.7) { const a = pick(actors); say(() => V.set(a.x, 0, a.z), a.def && rnd() < 0.45 ? pick(a.def.say) : pick(GENERIC), 1900, 1.8 * a.sc + 0.2); } else { const f = pick(flyers); if (f.popT <= 0 && f.pos.y < 8 && FLY_SAY[f.kind]) say(() => f.pos, pick(FLY_SAY[f.kind]), 1500, f.size * 0.8 + 0.6, 'fly'); } }

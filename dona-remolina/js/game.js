@@ -1,21 +1,22 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=9';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=9';
-import './models2.js?v=9';
-import './models3.js?v=9';
-import { PLACES } from './places.js?v=9';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=9';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=9';
-import { NPC } from './npcs.js?v=9';
-import { makeTitle } from './title.js?v=9';
-import { makeStage } from './stage.js?v=9';
-import { GB, setOutlines } from './geo.js?v=9';
-import { loadPacks } from './charpack.js?v=9';
+import * as AU from './audio.js?v=10';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=10';
+import './models2.js?v=10';
+import './models3.js?v=10';
+import { PLACES } from './places.js?v=10';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=10';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=10';
+import { NPC } from './npcs.js?v=10';
+import { makeTitle } from './title.js?v=10';
+import { makeStage } from './stage.js?v=10';
+import { makeThumbs } from './thumbs.js?v=10';
+import { GB, setOutlines } from './geo.js?v=10';
+import { loadPacks } from './charpack.js?v=10';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=9';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=9';
+import { Particles, Rings, makeTornado } from './fx.js?v=10';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=10';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -25,9 +26,10 @@ const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const fmt = (n) => Math.round(n).toLocaleString('es-ES');
+const GROW_SAT = 190;       // el crecimiento se frena muy poco: los objetos grandes se comen pronto
 const GATE = 0.72;            // un objeto se traga si su radio <= radio del torbellino * GATE
-const GROW_K = 0.22;          // crecimiento del área por área del objeto
-const R_MAX = 22, BOUND = HALF - 2;
+const GROW_K = 0.30;          // crecimiento del área por área del objeto
+const R_MAX = 1000, BOUND = HALF - 2; // v10: el torbellino crece sin tope
 const COMBO_WIN = 2.0;
 
 // ---------- partida guardada (v4: mejoras por personaje + progreso por lugar) ----------
@@ -93,7 +95,7 @@ const parts = new Particles(scene, 1200);
 const rings = new Rings(scene, 10);
 const stage = makeStage(scene); let stageOn = false, stageHidden = [], bgKeep = null;
 const tornado = makeTornado(scene);
-let blinkT = 2, blinkP = 0, qLevel = 0; let scenery = null, dona = null, viewCh = ch; const modelCache = {};
+let thumbs = null; let blinkT = 2, blinkP = 0, qLevel = 0; let scenery = null, dona = null, viewCh = ch; const modelCache = {};
 function setChar(id, remember = true) {
   const c = PLAYER_BY_ID[id] || PLAYERS[0]; if (dona) scene.remove(dona);
   dona = modelCache[c.id] || (modelCache[c.id] = c.make()); scene.add(dona); tornado.theme(c.theme);
@@ -149,6 +151,7 @@ const rnd = Math.random; const pick = (a, i) => a[i % a.length];
 const rugs = [];
 function clearWorld() {
   for (const o of props) { worldGroup.remove(o.mesh); }
+  for (const iv of instVars.values()) { if (iv.im) { worldGroup.remove(iv.im); iv.im.dispose(); } } instVars.clear(); instDead = 0; instCount = 0;
   const disp = (o) => o.mesh.traverse((c) => { if (c.isMesh && c.geometry) c.geometry.dispose(); });
   for (const m of movers) { worldGroup.remove(m.mesh); disp(m); }
   for (const t of toasts) worldGroup.remove(t.mesh); toasts = []; for (const p of bubPool) { p.who = null; p.e.classList.remove('on'); }
@@ -168,8 +171,61 @@ function makeClockMesh() {
   const bell1 = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), new THREE.MeshStandardMaterial({ color: 0xff6b5e })); bell1.position.set(-0.6, 0.8, 0); const bell2 = bell1.clone(); bell2.position.x = 0.6;
   g.add(b, f, h1, h2, bell1, bell2); return g;
 }
+// ---- v10: objetos pequeños y medianos en InstancedMesh (miles sin matar el móvil) ----
+const INST_H = 2.3, DUMMY = new THREE.Object3D(), instVars = new Map(), _tm = new THREE.Object3D(), _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sp = new THREE.Sphere(); _tm.rotation.order = 'XZY';
+let instDead = 0, instT = 0, instLX = 1e9, instLZ = 1e9, instLD = 0, instCount = 0;
+function instVar(kind, v, geo) {
+  const key = kind + ':' + v; let iv = instVars.get(key); if (iv) return iv;
+  iv = { key, geo: geo.geo, list: [], mats: new Float32Array(16 * 64), n: 0, im: null, cap: 0 }; instVars.set(key, iv); return iv;
+}
+function addInst(o, d, geo) {
+  const iv = instVar(d.kind, d.v, geo); o.inst = iv; o.vi = iv.n++; iv.list.push(o);
+  if (iv.mats.length < iv.n * 16) { const m = new Float32Array(iv.mats.length * 2); m.set(iv.mats); iv.mats = m; }
+  _tm.position.set(d.x, o.hy, d.z); _tm.rotation.set(0, d.rot, 0); _tm.scale.setScalar(d.sc); _tm.updateMatrix(); _tm.matrix.toArray(iv.mats, o.vi * 16);
+  o.mesh = DUMMY; o.slot = -1; o.wf = -1; instCount++;
+}
+function finishInst() { // crea los InstancedMesh (uno por variante) con capacidad para lo que haya cerca a la vez
+  for (const iv of instVars.values()) {
+    const cap = Math.min(iv.n, 900); iv.cap = cap; const im = new THREE.InstancedMesh(iv.geo, propMaterial, cap); im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; im.count = 0; im.visible = false; im.castShadow = false;
+    iv.im = im; worldGroup.add(im);
+  }
+  instLX = 1e9;
+}
+function hideInst(o) { const iv = o.inst; if (!iv || o.slot < 0 || !iv.im) return; const a = iv.im.instanceMatrix.array, b = o.slot * 16; for (let j = 0; j < 12; j++) a[b + j] = 0; iv.im.instanceMatrix.needsUpdate = true; o.slot = -1; }
+function detachInst(o, makeMesh) {
+  const iv = o.inst; hideInst(o); o.inst = null; instDead++;
+  if (!makeMesh) { o.mesh = DUMMY; return; }
+  const m = new THREE.Mesh(iv.geo, propMaterial); m.rotation.order = 'XZY'; m.position.set(o.x, o.hy, o.z); m.rotation.set(0, o.rot, 0); m.scale.setScalar(o.sc); worldGroup.add(m); o.mesh = m;
+}
+function updateInst(dt, force) {
+  instT -= dt; const mv = Math.hypot(camT.x - instLX, camT.z - instLZ);
+  if (!force && instT > 0 && mv < 2.5 && Math.abs(camDist - instLD) < 2) return; instT = 0.12; instLX = camT.x; instLZ = camT.z; instLD = camDist;
+  camera.updateMatrixWorld(); _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _fr.setFromProjectionMatrix(_pm);
+  const vr = clamp(scene.fog.far * 0.9, 120, 250), r0 = vr * 0.72 * (qLevel >= 1 ? 0.8 : 1), r1 = vr * 0.88, cx = camT.x, cz = camT.z, minR = camDist * 0.0022;
+  const compact = instDead > 400;
+  for (const iv of instVars.values()) {
+    const im = iv.im; if (!im) continue; const arr = im.instanceMatrix.array, mats = iv.mats, list = iv.list; let n = 0;
+    if (compact) { let w = 0; for (let i = 0; i < list.length; i++) { const o = list[i]; if (o.inst === iv) list[w++] = o; } list.length = w; }
+    for (let i = 0; i < list.length; i++) {
+      const o = list[i]; if (o.state !== 0 || o.inst !== iv) { continue; } o.slot = -1;
+      if (o.r < minR) continue;
+      const dx = o.x - cx, dz = o.z - cz, d2 = dx * dx + dz * dz, lim = o.tier === 0 ? r0 : r1; if (d2 > lim * lim) continue;
+      _sp.center.set(o.x, o.hy, o.z); _sp.radius = o.r + 2.2; if (!_fr.intersectsSphere(_sp)) continue;
+      if (n >= iv.cap) break;
+      const b = o.vi * 16, a = n * 16; for (let j = 0; j < 16; j++) arr[a + j] = mats[b + j];
+      o.slot = n++;
+    }
+    im.count = n; im.visible = n > 0; im.instanceMatrix.needsUpdate = true;
+  }
+  if (compact) instDead = 0;
+}
 function addProp(d, shadow = true) {
   const geo = getGeo(d.kind, d.v), K = KINDS[d.kind];
+  if (K.tier <= 1 && !K.lm && !K.cb && geo.halfH * d.sc * 2 < INST_H) {
+    const o = { id: props.length, gid: d.gid, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
+    o.area = o.r * o.r; o.hw = Math.max(geo.geo.userData.w, geo.geo.userData.d) * d.sc * 0.5; addInst(o, d, geo); props.push(o);
+    const k = gkey(cellOf(d.x), cellOf(d.z)); (grid.get(k) || grid.set(k, []).get(k)).push(o); o.cell = k; return o;
+  }
   const m = new THREE.Mesh(geo.geo, propMaterial); m.castShadow = shadow; m.rotation.order = 'XZY';
   const o = { id: props.length, gid: d.gid, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, mesh: m, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
   o.area = o.r * o.r; o.hw = Math.max(geo.geo.userData.w, geo.geo.userData.d) * d.sc * 0.5; m.position.set(d.x, o.hy, d.z); m.rotation.set(0, d.rot, 0); m.scale.setScalar(d.sc); m.updateMatrix(); m.matrixAutoUpdate = false;
@@ -211,10 +267,18 @@ function buildWorld(seed, play) {
   let total = w.objs.length; for (const d of w.npcs) total += d.type === 'patitos' ? 5 : 1;
   let left = total;
   for (const d of w.objs) { if (rm && rm.has(d.gid)) { left--; continue; } addProp(d); }
+  const signs = (scenery && scenery.userData.signs) || []; signs.forEach((s, i) => { // carteles de distrito: también se tragan
+    total++; left++; const gid = 900000 + i; if (rm && rm.has(gid)) { left--; s.holder.visible = false; return; }
+    const h = s.holder; h.visible = true; h.position.set(s.x, 6.4, s.z); h.rotation.set(0, 0, 0); h.scale.set(1, 1, 1); h.rotation.order = 'XZY'; worldGroup.add(h);
+    const K = { n: s.name, tier: 4, coins: 14 }; const o = { id: props.length, gid, kind: 'sign', K, tier: 4, r: 3.2, sc: 1, x: s.x, z: s.z, hy: 6.4, rot: 0, mesh: h, state: 0, area: 10, coins: 14, ov: 3, wf: -1, name: s.name, hw: 5, sign: true };
+    props.push(o); const k = gkey(cellOf(s.x), cellOf(s.z)); (grid.get(k) || grid.set(k, []).get(k)).push(o); o.cell = k;
+  });
+  finishInst();
   landmarks = props.filter((o) => o.K.lm);
   for (const d of w.npcs) { if (d.type === 'patitos') left -= addPatitos(d, rn); else { if (rn && rn.has(d.gid * 8)) { left--; continue; } addNpc(d).key = d.gid * 8; } }
   for (const d of w.pickups) addPickup(d);
   G.total = play ? total : 0; G.left = play ? left : 0; if (P) P.tot = total;
+  camera.updateMatrixWorld(); updateInst(0, true);
 }
 const addCoins = (x) => { G.cf += x; const n = Math.floor(G.cf); if (n > 0) { G.cf -= n; G.coins += n; save.coins += n; } return n; };
 
@@ -222,10 +286,12 @@ const addCoins = (x) => { G.cf += x; const n = Math.floor(G.cf); if (n > 0) { G.
 function removeFromGrid(o) { if (o.cell == null) return; const l = grid.get(o.cell); if (l) { const i = l.indexOf(o); if (i >= 0) { l[i] = l[l.length - 1]; l.pop(); } } o.cell = null; }
 const SPARK = [0xffd23f, 0xff74c4, 0x3fe0b0, 0x4aa8ff, 0xff6b5e, 0xffffff];
 function swallow(o) {
+  const quick = !!o.inst && sucked.length > 70; // con tantas a la vez, las diminutas desaparecen sin animación
+  if (o.inst) detachInst(o, !quick);
   o.state = 2; removeFromGrid(o); if (o.mesh) o.mesh.matrixAutoUpdate = true; if (o.fm) { o.fm.m.opacity = 1; }
   const dx = o.x - G.px, dz = o.z - G.pz, rho = Math.hypot(dx, dz);
   o.sw = { t: 0, T: 1.05 + 0.32 * Math.sqrt(o.r) + (o.tier >= 4 ? 0.4 : 0), ang: Math.atan2(dz, dx), rho, rho0: rho, wx: (rnd() < 0.5 ? -1 : 1) * (3 + rnd() * 5), wy: (rnd() - 0.5) * 8, wz: (rnd() < 0.5 ? -1 : 1) * (3 + rnd() * 5), sp: 0 };
-  sucked.push(o);
+  if (quick) o.state = 3; else sucked.push(o);
   // puntos, monedas, combo
   if (G.mode === 'play') { G.combo++; G.comboT = comboWin(); G.bestCombo = Math.max(G.bestCombo, G.combo); }
   const cm = 1 + Math.min(G.combo, 40) * 0.025;
@@ -233,12 +299,12 @@ function swallow(o) {
   const coinsF = o.coins * lootMul() * cm * COIN_K;
   const real = G.mode === 'play';
   if (real) { G.score += pts; addCoins(coinsF); G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper' || (o.K && o.K.cb)) G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
-  const before = G.A; G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * (1 + (ut().gain || 0)) * o.area / (1 + G.A / 70)); G.R = Math.sqrt(G.A);
+  const before = G.A; G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * (1 + (ut().gain || 0)) * o.area / (1 + G.A / GROW_SAT)); G.R = Math.sqrt(G.A);
   hud.dirty = true;
   // feedback
   const big = o.tier >= 2 || o.npc || o.alc;
-  AU.pop(G.combo, o.tier); if (o.coins >= 8) AU.coin();
-  const n = Math.min(26, 5 + Math.floor(o.r * 4)); parts.burst(o.x, o.hy * 0.8 + 0.3, o.z, n, { color: SPARK, speed: 3 + o.r * 1.4, size: 0.28 + o.r * 0.1, life: 0.8, shape: 1, g: 6, up: 2 });
+  if (!quick) AU.pop(G.combo, o.tier); if (o.coins >= 8) AU.coin();
+  const n = Math.min(26, 5 + Math.floor(o.r * 4)); if (!quick) parts.burst(o.x, o.hy * 0.8 + 0.3, o.z, n, { color: SPARK, speed: 3 + o.r * 1.4, size: 0.28 + o.r * 0.1, life: 0.8, shape: 1, g: 6, up: 2 });
   if (big) { G.shake = Math.max(G.shake, Math.min(0.9, 0.12 + o.r * 0.1)); parts.burst(o.x, 0.3, o.z, 8 + Math.min(18, o.r * 4), { color: [0xfff0d2, 0xffd9ec, 0xffffff], speed: 2 + o.r, size: 0.9 + o.r * 0.3, size1: 2 + o.r * 0.8, life: 0.8, shape: 4, g: -0.5, alpha: 0.55, flat: true, up: 0.6 }); rings.spawn(o.x, o.z, o.r * 0.5, o.r * 1.8 + 1, 0xffffff, 0.5, 0.7, 0.4); }
   if (real && (o.tier >= 3 || o.rebel || (o.npc && o.coins >= 24))) popText('+' + fmt(pts), o.x, o.hy * 2 + 1, o.z, o.tier >= 4 ? 'big' : '');
   if (real && G.combo >= 3) { const c = $('combo'); c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
@@ -355,7 +421,7 @@ function step(dt) {
         const o = l[i]; if (o.r > G.R * gate()) continue;
         const dx = o.x - G.px, dz = o.z - G.pz, d = Math.hypot(dx, dz);
         if (d < capR && live) { swallow(o); continue; }
-        if (d < G.R * 1.5) {
+        if (d < G.R * 1.5 && !o.inst) {
           const k = clamp(1 - (d - G.R * 0.7) / (G.R * 0.8), 0, 1), m = o.mesh; if (!m.matrixAutoUpdate) m.matrixAutoUpdate = true;
           const lean = 0.42 * k, ux = dx / (d || 1), uz = dz / (d || 1), sh = Math.sin(G.t * 38 + o.id * 7) * 0.05 * k;
           m.rotation.set(-uz * lean * -1 + sh, o.rot, -ux * lean + sh); m.position.y = o.hy + k * 0.25 * Math.min(1, o.r);
@@ -516,7 +582,7 @@ function updateOcclusion(dt) {
   for (let a = x0; a <= x1; a++) for (let b = z0; b <= z1; b++) {
     const l = grid.get(gkey(a, b)); if (!l) continue;
     for (const o of l) {
-      const top = o.hy * 2; if (top < 2.4 || o.state !== 0 || !o.mesh.visible) continue;
+      const top = o.hy * 2; if (top < 2.4 || o.sign || o.state !== 0 || !o.mesh.visible) continue;
       if (!occludes(o.x, o.z, top, o.hw, cx, cy, cz, px, pz, R, vx, vz, L2, den)) continue;
       if (!o.fm && !startFade(o)) continue; o.of = frameNo;
     }
@@ -633,21 +699,21 @@ function updateFx(dt) {
       if (inCh) { bgKeep = scene.background; stageHidden = scene.children.filter((o) => o.visible && o !== dona && o !== stage.group && o !== parts.pts && o !== tornado.group && o !== tornado.bits && !o.isLight && !(o.type === 'Object3D') && o.renderOrder < 5); stageHidden.forEach((o) => { o.visible = false; }); }
       else { stageHidden.forEach((o) => { o.visible = true; }); stageHidden = []; if (bgKeep) scene.background = bgKeep; for (let k = 0; k < parts.max; k++) { parts.life[k] = 0; parts.size[k] = 0; parts.pos[k * 3 + 1] = -999; } }
     }
-    if (inCh) { if (stage.bg) scene.background = stage.bg; stage.update(dt, G.px, G.pz, G.Rv * 1.18, parts, camera); } }
+    if (inCh) { if (stage.bg) scene.background = stage.bg; stage.update(dt, G.px, G.pz, G.Rv * 1.18, parts, camera); if (thumbs && inCh) thumbs.update(dt, G.t, cIdx); } }
   // cámara
   const pf = camera.aspect < 1 ? 1 + (1 - camera.aspect) * 0.55 : 1;
   const menuZ = G.mode === 'chars' ? (window.CAMZ || 0.43) : (G.mode === 'menu' || G.mode === 'results' || G.mode === 'shop') ? 0.66 : 1; G.mz = G.mz == null ? menuZ : G.mz + (menuZ - G.mz) * Math.min(1, dt * 2.5);
   const intro = G.intro, zoom = (G.mz + intro * 0.9 + G.kick * 0.1) * pf;
   camT.x += (G.px + G.vx * 0.22 - camT.x) * Math.min(1, dt * 6); camT.z += (G.pz + G.vz * 0.22 - camT.z) * Math.min(1, dt * 6);
   const d = (8.2 + R * 3.1) * zoom * (G.mode === 'chars' ? 1 : CAM_BACK), h = (8.2 + R * 4.1) * zoom * (G.mode === 'chars' ? (window.CAMH || 0.42) : CAM_UP);
-  camDist += (d - camDist) * Math.min(1, dt * 4);
+  camDist += (d - camDist) * Math.min(1, dt * 4); const farW = Math.max(900, camDist * 9 + 500); if (Math.abs(camera.far - farW) > 60) { camera.far = farW; camera.updateProjectionMatrix(); }
   const sk = G.shake * G.shake * (0.35 + 0.18 * R); const sx = (rnd() - 0.5) * sk, sy = (rnd() - 0.5) * sk, sz = (rnd() - 0.5) * sk;
   const k = camDist / d;
   camera.position.set(camT.x + sx, h * k + sy, camT.z + d * k + sz);
   camera.lookAt(camT.x + sx * 0.5, G.mode === 'chars' ? (window.CAMY == null ? 0.55 : window.CAMY) : R * 0.9, G.mode === 'menu' ? camT.z + R * 1.6 : G.mode === 'chars' ? camT.z + (window.CAMZZ == null ? -1 : window.CAMZZ) : camT.z - R * 1.0 - 1.2);
   if (G.mode === 'chars') frameChar(); else if (camera.userData.cf || (camera.view && camera.view.enabled)) { camera.clearViewOffset(); if (camera.userData.cf) { camera.userData.cf = 0; resize(); } }
   if (window.CAMOVR) { camera.position.set(...window.CAMOVR.p); camera.lookAt(...window.CAMOVR.t); }
-  updateOcclusion(dt);
+  updateOcclusion(dt); updateInst(dt);
   // luz y sombras
   const E = 16 + R * 7.2; sun.target.position.set(camT.x, 0, camT.z); sun.position.copy(sun.target.position).add(SUN_OFF);
   const sc = sun.shadow.camera; if (Math.abs(sc.right - E) > 0.5) { sc.left = -E; sc.right = E; sc.top = E; sc.bottom = -E; sc.updateProjectionMatrix(); }
@@ -683,10 +749,10 @@ function placeBubble(b, x, y, z) { if (!b.classList.contains('on')) return; cons
 function cull() {
   const vr = clamp(scene.fog.far * 0.9, 120, 250), olR = scene.fog.near + 30, olR2 = olR * olR, E = sun.shadow.camera.right + 10, cx = camT.x, cz = camT.z;
   for (const o of props) {
-    if (o.state !== 0) continue; const dx = o.x - cx, dz = o.z - cz, d2 = dx * dx + dz * dz, ext = o.hy > 8 ? vr + 70 : o.tier === 0 ? vr * (qLevel >= 1 ? 0.45 : 0.72) : o.tier === 1 ? vr * 0.88 : vr;
+    if (o.state !== 0 || o.inst) continue; const dx = o.x - cx, dz = o.z - cz, d2 = dx * dx + dz * dz, ext = o.hy > 8 ? vr + 70 : o.tier === 0 ? vr * (qLevel >= 1 ? 0.45 : 0.72) : o.tier === 1 ? vr * 0.88 : vr;
     const vis = d2 < ext * ext; if (o.vis !== vis) { o.vis = vis; o.mesh.visible = vis; }
-    if (vis) { if (!o.ol) { o.ol = []; o.mesh.traverse((c) => { if (c.isMesh && c.material && c.material.isShaderMaterial) o.ol.push(c); }); o.olv = true; } const ov = o.tier === 0 ? false : (d2 < olR2 || o.hy > 8); if (ov !== o.olv) { o.olv = ov; if (!o.fm) for (const c of o.ol) c.visible = ov; } }
-    const cs = vis && d2 < (E * 1.25) * (E * 1.25) && !(o.tier === 0 && d2 > 400) && !(o.tier <= 1 && qLevel >= 1); if (o.cs !== cs) { o.cs = cs; o.mesh.castShadow = cs; }
+    if (vis) { if (!o.ol) { o.ol = []; o.mesh.traverse((c) => { if (c.isMesh && c.material && c.material.isShaderMaterial) o.ol.push(c); }); o.olv = true; } const big = o.r > G.Rv * 0.09, ov = o.tier === 0 || !big ? false : (d2 < olR2 || o.hy > 8); if (ov !== o.olv) { o.olv = ov; if (!o.fm) for (const c of o.ol) c.visible = ov; } }
+    const cs = vis && d2 < (E * 1.25) * (E * 1.25) && !(o.tier === 0 && d2 > 400) && !(o.tier <= 1 && qLevel >= 1) && o.r > G.Rv * 0.07; if (o.cs !== cs) { o.cs = cs; o.mesh.castShadow = cs; }
   }
 }
 function banner(dn) {
@@ -867,7 +933,9 @@ function renderChars() {
   $('cName').textContent = p.name; $('cSub').textContent = p.sub; $('cPerk').textContent = p.perk; $('cCoins').textContent = fmt(save.coins); $('cNum').textContent = (cIdx + 1) + ' / ' + PLAYERS.length;
   const b = $('bCPick'), lockP = PLi >= save.unlocked; b.className = 'btn big ' + (owned ? 'go' : save.coins >= p.price ? 'unlock' : 'locked');
   b.innerHTML = owned ? `¡A LIMPIAR!${lockP ? '<small>en ' + PLACES[save.unlocked - 1].name + '</small>' : ''}` : `<i class="coin"></i> ${fmt(p.price)} · DESBLOQUEAR`;
-  $('cDots').innerHTML = PLAYERS.map((q, i) => `<button class="dot ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`).join('');
+  if (!thumbs) { try { thumbs = makeThumbs(renderer, (id) => PLAYER_BY_ID[id].make(), PLAYERS); thumbs.drawAll(G.t); } catch (e) { console.warn('thumbs', e); thumbs = null; } }
+  $('cDots').innerHTML = PLAYERS.map((q, i) => `<button class="tile ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`).join('');
+  if (thumbs) [...$('cDots').children].forEach((b, i) => b.appendChild(thumbs.canvases[i]));
   $('cStats').innerHTML = '';
   G.kick = 1; G.twirl = 6.28; measureChar(); calibrateChar(); stage.setTheme(p.theme); stage.pulse(parts, G.px, G.pz, G.Rv * 1.18);
 }

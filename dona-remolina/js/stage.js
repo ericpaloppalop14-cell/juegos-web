@@ -31,6 +31,24 @@ function shapeTex(kind) {
   });
 }
 const SHAPES = [shapeTex(0), shapeTex(1), shapeTex(2)];
+// v10: ciudad loca de fondo — edificios torcidos con ventanas y cosas voladoras
+const EMO = ['🛋️', '🪑', '🦆', '🫖', '🧦', '🍪', '💡', '📺', '🧸', '🎈', '🧹', '🍞', '🧺', '🪴', '⏰', '🛁', '🍩', '🪁'];
+const emoTex = (e) => mk(128, 128, (g) => { g.font = '92px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(60,20,100,.35)'; g.shadowBlur = 8; g.fillText(e, 64, 70); });
+const EMO_TEX = new Map(); const getEmo = (i) => EMO_TEX.get(i) || (EMO_TEX.set(i, emoTex(EMO[i % EMO.length])), EMO_TEX.get(i));
+function buildingTex(i) {
+  return mk(128, 256, (g, w, h) => {
+    const hue = (i * 47) % 360, bw = 100 - (i % 3) * 14, x0 = (w - bw) / 2, top = 40 + (i % 4) * 22;
+    g.fillStyle = `hsl(${hue},70%,62%)`; g.beginPath(); g.roundRect ? g.roundRect(x0, top, bw, h - top, 10) : g.rect(x0, top, bw, h - top); g.fill();
+    g.fillStyle = `hsl(${hue},75%,45%)`; g.fillRect(x0, top, bw, 12);
+    // tejado loco
+    g.fillStyle = `hsl(${(hue + 40) % 360},85%,58%)`; if (i % 3 === 0) { g.beginPath(); g.moveTo(x0 - 4, top); g.lineTo(w / 2, top - 34); g.lineTo(x0 + bw + 4, top); g.fill(); } else if (i % 3 === 1) { g.beginPath(); g.arc(w / 2, top, bw / 2 - 4, PI, 0); g.fill(); } else { g.fillRect(w / 2 - 3, top - 36, 6, 36); g.beginPath(); g.arc(w / 2, top - 38, 9, 0, 7); g.fill(); }
+    const cols = 3, rows = Math.floor((h - top - 40) / 30);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const lit = ((r * 7 + c * 3 + i) % 5) > 1; g.fillStyle = lit ? '#fff3b0' : `hsl(${hue},40%,32%)`; g.fillRect(x0 + 12 + c * ((bw - 24) / cols), top + 22 + r * 30, (bw - 24) / cols - 8, 20); }
+    g.fillStyle = `hsl(${hue},60%,30%)`; g.fillRect(w / 2 - 9, h - 26, 18, 26);
+    g.globalCompositeOperation = 'source-atop'; const q = g.createLinearGradient(0, 0, w, 0); q.addColorStop(0, 'rgba(255,255,255,.32)'); q.addColorStop(0.5, 'rgba(255,255,255,0)'); q.addColorStop(1, 'rgba(40,0,80,.22)'); g.fillStyle = q; g.fillRect(0, 0, w, h);
+  });
+}
+const BTEX = Array.from({ length: 6 }, (_, i) => buildingTex(i));
 const BEAM_VS = 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }';
 const BEAM_FS = 'uniform vec3 uCol; uniform float uA; varying vec2 vUv; void main(){ float a=uA*(0.25+0.75*vUv.y)*(0.55+0.45*vUv.y); gl_FragColor=vec4(uCol,a); }';
 
@@ -63,6 +81,18 @@ export function makeStage(scene, getParts) {
     const s = 0.8 + rnd() * 0.8; sp.scale.set(s, s * (kind === 2 ? 1.25 : 1), 1); sp.renderOrder = -1;
     const side = i % 2 ? 1 : -1; const f = { sp, x0: side * (0.35 + rnd() * 0.6), z: -2 - rnd() * 9, u: rnd(), sp_: 0.05 + rnd() * 0.07, ph: rnd() * 6, s, kind }; floaters.push(f); group.add(sp);
   }
+  // edificios locos bailarines
+  const blds = [];
+  for (let i = 0; i < 11; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: BTEX[i % 6], transparent: true, depthWrite: false, fog: false })); sp.center.set(0.5, 0); sp.renderOrder = -2;
+    const row = i % 2; blds.push({ sp, row, x: (i / 10) * 2 - 1, ph: rnd() * 6, hh: 0.9 + rnd() * 0.6 }); group.add(sp);
+  }
+  // cosas voladoras (muebles, patitos, calcetines…)
+  const flyers = [];
+  for (let i = 0; i < 10; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: getEmo(i), transparent: true, depthWrite: false, fog: false })); sp.renderOrder = -1;
+    const dir = i % 2 ? 1 : -1; flyers.push({ sp, u: rnd(), dir, v: 0.035 + rnd() * 0.05, y: 0.12 + rnd() * 0.8, z: -2.5 - rnd() * 8, s: 0.9 + rnd() * 0.9, ph: rnd() * 6, spin: (rnd() - 0.5) * 2 }); group.add(sp);
+  }
   let on = false, T = 0, confT = 0, bubT = 0, spkT = 0; const bgTex = new Map();
   function setTheme(th) {
     ring.set(th.ring); const cb = (th.bits || bits).filter((c) => c !== 0xffffff).concat([0xffd23f, 0xff74c4]); glow.set(th.glow || th.ring); bits = th.bits || bits;
@@ -73,6 +103,7 @@ export function makeStage(scene, getParts) {
     rays.material.color.copy(new THREE.Color().setHSL(hsl.h, 0.9, 0.85)); floor.material.color.copy(new THREE.Color().setHSL(hsl.h, 0.9, 0.9));
     beams.forEach((b, i) => { b.mat.uniforms.uCol.value.set(cb[(i * 2) % cb.length]).lerp(new THREE.Color(0xffffff), 0.35); });
     floaters.forEach((f, i) => f.sp.material.color.set(cb[i % cb.length]).lerp(new THREE.Color(0xffffff), 0.12));
+    blds.forEach((b, i) => b.sp.material.color.set(cb[(i + 1) % cb.length]).lerp(new THREE.Color(0xffffff), 0.55 + (b.row ? 0.1 : 0)));
   }
   function active(v) { on = v; group.visible = v; }
   const V = new THREE.Vector3();
@@ -93,6 +124,8 @@ export function makeStage(scene, getParts) {
       f.u += dt * f.sp_; if (f.u > 1) f.u -= 1; const hh = hhAt(f.z), y = -0.5 + f.u * (cy + hh + 1), hw = hwAt(f.z); f.sp.position.set(f.x0 * hw + Math.sin(T * 0.8 + f.ph) * 0.35, y, f.z); f.sp.material.rotation = Math.sin(T + f.ph) * 0.25;
       f.sp.material.opacity = 0.92 * Math.min(1, f.u * 8, (1 - f.u) * 5);
     }
+    for (const b of blds) { const zb = b.row ? -22 : -15, hw = hwAt(zb), w = hw * 0.34, h = w * 2 * b.hh * (1 + Math.sin(T * 3.2 + b.ph) * 0.035); b.sp.position.set(b.x * hw * 1.05, -0.5, zb); b.sp.scale.set(w, h, 1); b.sp.material.rotation = Math.sin(T * 1.4 + b.ph) * 0.05; }
+    for (const f of flyers) { f.u += dt * f.v; if (f.u > 1) f.u -= 1; const z = f.z, hw = hwAt(z), hh = hhAt(z); f.sp.position.set(f.dir * (f.u * 2 - 1) * hw * 1.15, cy - hh + (f.y + Math.sin(T * 1.3 + f.ph) * 0.05) * hh * 2, z); const s = f.s * hw * 0.15; f.sp.scale.set(s, s, 1); f.sp.material.rotation = T * f.spin * 0.6; }
     if (!parts) return;
     confT -= dt; if (confT <= 0) { confT = 0.05; const hwc = hwAt(-4) * ds, x = px + (rnd() - 0.5) * 2 * hwc, c = bits[(rnd() * bits.length) | 0]; parts.emit({ x, y: (cy + hhAt(-4)) * ds + 0.5, z: pz - 0.5 * ds - rnd() * 8, vx: (rnd() - 0.5) * 1.5, vy: -1.5 - rnd() * 1.5, vz: 0, life: 5, size: 0.3 * ds + 0.1, color: c, shape: 1, g: 0.2, drag: 0.6 }); }
     bubT -= dt; if (bubT <= 0) { bubT = 0.12; const hwb = hwAt(-3) * ds; parts.emit({ x: px + (rnd() - 0.5) * 2 * hwb, y: 0.2, z: pz - 1 - rnd() * 4, vx: (rnd() - 0.5) * 0.6, vy: 1.4 + rnd() * 1.4, vz: 0, life: 4, size: (0.4 + rnd() * 0.5) * ds, size1: (0.5 + rnd() * 0.5) * ds, color: [0xffffff, 0xbfe8ff, 0xffd9f4][(rnd() * 3) | 0], alpha: 0.7, shape: 2, g: -0.1, drag: 0.4 }); }
@@ -103,4 +136,15 @@ export function makeStage(scene, getParts) {
     parts.burst(px, 1.5 * ds, pz - 1.6 * ds, 14, { color: [0xffffff, 0xfff0a0], speed: 5 * ds, size: 0.6 * ds, life: 0.9, shape: 3, g: 0, up: 1, drag: 2 });
   }
   return { group, setTheme, active, update, pulse, get bg() { return group.userData.bg; } };
+}
+
+// v10: skyline de ciudad loca (edificios torcidos y bailarines) para otros fondos (portada)
+export function makeSkyline(scene, { z = -50, n = 14, spread = 70, w = 11, fog = true } = {}) {
+  const items = [];
+  for (let i = 0; i < n; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: BTEX[i % 6], transparent: true, depthWrite: false, fog })); sp.center.set(0.5, 0);
+    const row = i % 2, ww = w * (0.8 + rnd() * 0.5); items.push({ sp, x: (i / (n - 1) * 2 - 1) * spread + (rnd() - 0.5) * 3, z: z - row * 14 - rnd() * 4, ww, hh: 1.8 + rnd() * 1.2, ph: rnd() * 6 }); scene.add(sp);
+    sp.material.color.setHSL(rnd(), 0.5, 0.8);
+  }
+  return { items, update(T) { for (const b of items) { const h = b.ww * 2 * b.hh * (1 + Math.sin(T * 3 + b.ph) * 0.03); b.sp.position.set(b.x, -0.3, b.z); b.sp.scale.set(b.ww, h, 1); b.sp.material.rotation = Math.sin(T * 1.3 + b.ph) * 0.05; } } };
 }

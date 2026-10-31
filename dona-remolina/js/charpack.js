@@ -1,16 +1,27 @@
 // v7: personajes esculpidos (SDF + surface-nets) horneados a .bin y montados como grupos animables
 import * as THREE from 'three';
-import { GB, addOutline } from './geo.js?v=9';
-import { MeshoptDecoder } from './meshopt.js?v=9';
+import { GB, addOutline } from './geo.js?v=10';
+import { MeshoptDecoder } from './meshopt.js?v=10';
 
 const LUT = new Float32Array(256); for (let i = 0; i < 256; i++) { const c = i / 255; LUT[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
 
 // material de personaje: standard + luz de contorno cálida y rebote hemisférico (aspecto "juguete" de alta gama)
 export const charMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.52, metalness: 0.0 });
 charMat.onBeforeCompile = (sh) => {
+  // v10: aspecto "figura de vinilo": luz en bandas nítidas (cel), brillo duro tipo barniz, luz de contorno y rebote
   sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', `
-    { vec3 vN = normalize(normal); float fr = pow(1.0 - clamp(dot(vN, normalize(vViewPosition)), 0.0, 1.0), 2.6);
-      float up = vN.y * 0.5 + 0.5; outgoingLight += diffuseColor.rgb * fr * vec3(1.0, 0.82, 0.78) * 0.34 + diffuseColor.rgb * vec3(0.05, 0.03, 0.07) * (1.0 - up); }
+    { vec3 vN = normalize(normal), vV = normalize(vViewPosition);
+      float L0 = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)) + 1e-3, f = dot(outgoingLight, vec3(0.3, 0.59, 0.11)) / L0;
+      float q = 0.50 + 0.26 * smoothstep(0.40, 0.46, f) + 0.26 * smoothstep(0.80, 0.86, f) + 0.20 * smoothstep(1.18, 1.24, f);
+      outgoingLight *= mix(f, q, 0.78) / max(f, 1e-3);
+      float fr = pow(1.0 - clamp(dot(vN, vV), 0.0, 1.0), 2.6);
+      float up = vN.y * 0.5 + 0.5; outgoingLight += diffuseColor.rgb * fr * vec3(1.0, 0.82, 0.78) * 0.34 + diffuseColor.rgb * vec3(0.05, 0.03, 0.07) * (1.0 - up);
+      #if NUM_DIR_LIGHTS > 0
+      vec3 hv = normalize(directionalLights[0].direction + vV); float nh = dot(vN, hv);
+      float glint = smoothstep(0.972, 0.982, nh) * 0.34 + smoothstep(0.90, 0.915, nh) * 0.07;
+      outgoingLight += mix(vec3(1.0), diffuseColor.rgb, 0.25) * glint;
+      #endif
+    }
     #include <opaque_fragment>`);
 };
 export const eyeMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.1, metalness: 0.0 });
@@ -82,6 +93,10 @@ export function buildChar(id) {
   ud.arms = ['armL', 'armR'].map((n, i) => { const a = mk(n); a.rotation.z = -(i ? 1 : -1) * ud.arms0; return a; });
   for (const x of M.extras || []) { const g = mk(x.name, x.parent === 'head' ? head : null); ud[x.name] = g; }
   const X = EXTRA[id]; if (X) ud.extra = X(ud, root);
+  // v10: centrar el personaje: el pivote (raíz) queda en el centro de los pies/cuerpo (sin contar brazos ni accesorios)
+  { const bb = new THREE.Box3(), t = new THREE.Box3(); const add = (geo, ox, oy, oz) => { t.copy(geo.boundingBox); t.min.x += ox; t.max.x += ox; t.min.z += oz; t.max.z += oz; bb.union(t); };
+    add(P.body.geo, 0, 0, 0); if (M.legs) for (const n of ['legL', 'legR']) { const pv = P[n].info.pivot; add(P[n].geo, pv[0], pv[1], pv[2]); }
+    const cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2; ud.cx = cx; ud.cz = cz; if (Math.abs(cx) + Math.abs(cz) > 1e-4) for (const c of root.children) { c.position.x -= cx; c.position.z -= cz; } }
   root.userData = ud; return root;
 }
 // comportamientos propios de cada personaje (cola, capa, tentáculos...)

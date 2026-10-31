@@ -1,8 +1,8 @@
 // Mueblópolis: suelo de parquet, alfombras-manzana, paredes de papel pintado y generación de objetos
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=9';
-import { KINDS, getGeo, PAL } from './models.js?v=9';
-import { PLACES } from './places.js?v=9';
+import { GB, lighten, darken } from './geo.js?v=10';
+import { KINDS, getGeo, PAL } from './models.js?v=10';
+import { PLACES } from './places.js?v=10';
 
 export const HALF = 130;          // el torbellino se mueve en [-128, 128]
 export const SPAWN = { x: 0, z: 98 };
@@ -198,10 +198,12 @@ export function buildScenery(scene, place) {
   for (const id in DISTRICTS) {
     const D = DISTRICTS[id]; const sx = D.cx + (D.cx > 0 ? -34 : 34), sz = D.cz + (D.cz > 0 ? -38 : 38);
     const post = new GB(); post.cyl(0.35, 0.45, 9, 0xfff7e0, 0, 0, 0, 8); post.sph(0.6, D.c, 0, 9.2, 0, 1, 1, 1, 8);
-    const pm = new THREE.Mesh(post.build(false, 0.1), propMaterialLite.clone()); pm.material.transparent = true; pm.position.set(sx, 0, sz); pm.castShadow = true; grp.add(pm);
-    const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 3.125), new THREE.MeshBasicMaterial({ map: signTex(D.name.toUpperCase(), D.c), transparent: true, side: THREE.DoubleSide, fog: false }));
-    sg.position.set(sx, 11.2, sz); sg.rotation.y = 0; grp.add(sg);
-    (grp.userData.occl || (grp.userData.occl = [])).push({ x: sx, z: sz, top: 12.8, hw: 5.4, ms: [pm, sg], fade: 1 });
+    // v10: los carteles de distrito también se pueden tragar (se registran como "carteles" y game.js los convierte en objetos)
+    const pm = new THREE.Mesh(post.build(false, 0.1), propMaterialLite.clone()); pm.position.set(0, -6.4, 0); pm.castShadow = true;
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 3.125), new THREE.MeshBasicMaterial({ map: signTex(D.name.toUpperCase(), D.c), side: THREE.DoubleSide, fog: false }));
+    sg.position.set(0, 11.2 - 6.4, 0);
+    const holder = new THREE.Group(); holder.add(pm, sg); holder.position.set(sx, 6.4, sz); grp.add(holder);
+    (grp.userData.signs || (grp.userData.signs = [])).push({ x: sx, z: sz, holder, name: 'Cartel de ' + D.name, id });
   }
   // manchas de luz de las ventanas
   const lg = new GB(); const lc = 0xfff3c8;
@@ -281,8 +283,9 @@ export function generate(seed, place) {
   }
   // [tier, cantidad, d_centro, d_ancho]
   // v9: la ciudad es ~3x más grande que en la v1, así que se multiplica la cantidad de cosas (sobre todo las pequeñas) para mantener la misma densidad
-  const DENS = [2.6, 2.0, 1.5, 1.25, 1, 1];
-  const plan = P.plan.map(([t, n, dc, dw]) => [t, Math.round(n * DENS[t]), t === 0 ? 18 : dc, t === 0 ? 70 : dw]);
+  // v10: densidad MUY superior a la v1 (x4-5 en pequeño y mediano) y repartida por todo el mapa (nunca hay zonas vacías)
+  const DENS = [7, 8, 4, 1.5, 1, 1];
+  const plan = P.plan.map(([t, n, dc, dw]) => [t, Math.round(n * DENS[t]), t === 0 ? 0 : t === 1 ? 0 : t === 2 ? 30 : dc, t === 0 ? 420 : t === 1 ? 320 : t === 2 ? 170 : dw]);
   for (const [tier, count, dc, dw] of plan) {
     let tries = count * 50, made = 0;
     while (made < count && tries-- > 0) {
@@ -300,6 +303,21 @@ export function generate(seed, place) {
       const o = { kind, v, x, z, rot, sc, ov }; add(o); out.push(o); made++;
     }
   }
+  // alfombras de cositas por las calles y plazas
+  const smallKind = (x, z, tier) => pickKind(tier, districtAt(x, z));
+  const placeSmall = (x, z, tier, rr) => {
+    if (Math.abs(x) > HALF - 5 || Math.abs(z) > HALF - 5 || spawnD(x, z) < 2.5) return null;
+    const kind = smallKind(x, z, tier), K = KINDS[kind], v = (rnd() * K.nv) | 0, geo = getGeo(kind, v), sc = R(0.9, 1.15);
+    const ov = 0.5 * Math.hypot(geo.geo.userData.w * sc, geo.geo.userData.d * sc) * 0.7; if (!free(x, z, ov * rr)) return null;
+    const o = { kind, v, x, z, rot: R(0, 6.28), sc, ov: ov * rr }; add(o); out.push(o); return o;
+  };
+  for (const c of [-86, -43, 0, 43, 86]) for (let t = -HALF + 6; t < HALF - 6; t += 2.4) { placeSmall(c + R(-3.4, 3.4), t, rnd() < 0.8 ? 0 : 1, 0.9); placeSmall(t, c + R(-3.4, 3.4), rnd() < 0.8 ? 0 : 1, 0.9); }
+  // montones: grupos de la misma cosa
+  const nClu = Math.round(60 + 55 * (P.plan[0][1] / 330));
+  for (let ci = 0; ci < nClu; ci++) {
+    const cx = R(-HALF + 8, HALF - 8), cz = R(-HALF + 8, HALF - 8), tier = rnd() < 0.7 ? 0 : 1, kind = pickKind(tier, districtAt(cx, cz)), K = KINDS[kind], n = 9 + ((rnd() * 14) | 0), rad = 2.2 + rnd() * 2.6;
+    for (let i = 0; i < n; i++) { const a = rnd() * 6.283, d = Math.sqrt(rnd()) * rad, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d; if (Math.abs(x) > HALF - 5 || Math.abs(z) > HALF - 5 || spawnD(x, z) < 2.5) continue; const v = (rnd() * K.nv) | 0, geo = getGeo(kind, v), sc = R(0.85, 1.2), ov = 0.5 * Math.hypot(geo.geo.userData.w * sc, geo.geo.userData.d * sc) * 0.5; if (!free(x, z, ov)) continue; const o = { kind, v, x, z, rot: R(0, 6.28), sc, ov }; add(o); out.push(o); }
+  }
   // farolas (lámparas de pie) en las calles entre manzanas
   for (const c of [-86, -43, 0, 43, 86]) for (let t = -HALF + 10; t < HALF - 4; t += 21) {
     for (const [x, z] of [[c + 3.2, t], [t, c + 3.2]]) {
@@ -310,8 +328,8 @@ export function generate(seed, place) {
   }
   // anillo de cositas junto al punto de salida
   const starters = ['sock', 'button', 'cookie', 'cup', 'duck', 'yarn', 'book', 'slipper', 'dice', 'pillow'];
-  for (let i = 0; i < 110; i++) {
-    const a = rnd() * Math.PI * 2, d = R(2.2, i < 50 ? 12 : 22);
+  for (let i = 0; i < 320; i++) {
+    const a = rnd() * Math.PI * 2, d = R(2.2, i < 100 ? 12 : i < 200 ? 22 : 34);
     const x = SPAWN.x + Math.cos(a) * d, z = SPAWN.z + Math.sin(a) * d * 0.9; if (z > HALF - 3) continue;
     const kind = starters[(rnd() * starters.length) | 0], v = (rnd() * KINDS[kind].nv) | 0, sc = R(0.9, 1.15);
     getGeo(kind, v); if (!free(x, z, 0.5)) continue;
