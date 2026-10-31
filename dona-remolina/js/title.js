@@ -1,10 +1,10 @@
 // v5: pantalla de inicio viva — un tornado gigante chupando muebles, personajes bailando y persiguiéndose,
 // el Alcalde Paraguas volando con su sombrero, globos de texto, confeti y todo tocable.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=6';
-import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=6';
-import { Particles, makeTornado } from './fx.js?v=6';
-import { PLAYERS } from './players.js?v=6';
+import * as AU from './audio.js?v=7';
+import { KINDS, getGeo, propMaterial, makeAlcalde } from './models.js?v=7';
+import { Particles, makeTornado } from './fx.js?v=7';
+import { PLAYERS } from './players.js?v=7';
 
 const rnd = Math.random, PI = Math.PI;
 const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -200,6 +200,8 @@ export function makeTitle({ getModel, popHost, bubHost, onNote = () => {} }) {
       // brazos, cabeza, boca, parpadeo (igual que en la partida)
       const a0 = ud.arms0 || 2.35;
       if (ud.arms) { ud.arms[1].rotation.z = -(a0 + sw * 0.55 + armsUp * 0.3); ud.arms[0].rotation.z = a0 - sw * 0.5 + 0.2 + armsUp * 0.1; ud.arms[1].rotation.x = Math.cos(t * 9) * 0.3; ud.arms[0].rotation.x = -Math.cos(t * 9) * 0.25; }
+      if (a.react > 0 && ud.arms) { const cw = Math.sin(t * 16 + a.ph); ud.arms[1].rotation.z = -(0.5 + cw * 0.28); ud.arms[0].rotation.z = 0.5 - cw * 0.28; ud.arms[1].rotation.x = ud.arms[0].rotation.x = 0; }
+      if (ud.legs) { const k = Math.min(1, Math.hypot(a.vx || 0, a.vz || 0) / 2.5) || 0, lk = a.react > 0 ? 0.5 : k; ud.legs[0].rotation.x = Math.sin(t * hopF + a.ph) * 0.85 * lk; ud.legs[1].rotation.x = -Math.sin(t * hopF + a.ph) * 0.85 * lk; }
       if (ud.head) { ud.head.rotation.z = Math.sin(t * 4.5 + a.ph) * 0.09; ud.head.position.y = (ud.headY || 1.36) + Math.abs(sw) * 0.03; }
       if (ud.mouth) ud.mouth.scale.set(1, 1.1 + Math.sin(t * 9 + a.ph) * 0.35 + (a.react > 0 ? 0.4 : 0), 1);
       if (ud.lids) { a.blinkT -= dt; if (a.blinkT < 0) { a.blinkP = 0.17; a.blinkT = 1.5 + rnd() * 3; } a.blinkP = Math.max(0, a.blinkP - dt); const bl = a.blinkP > 0 ? Math.sin((1 - a.blinkP / 0.17) * PI) : 0; for (const l of ud.lids) { l.visible = bl > 0.05; l.scale.set(1, Math.max(0.01, bl), 1); } }

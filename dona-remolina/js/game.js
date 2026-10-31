@@ -1,17 +1,20 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=6';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=6';
-import './models2.js?v=6';
-import './models3.js?v=6';
-import { PLACES } from './places.js?v=6';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=6';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=6';
-import { NPC } from './npcs.js?v=6';
-import { makeTitle } from './title.js?v=6';
-import { GB, setOutlines } from './geo.js?v=6';
-import { Particles, Rings, makeTornado } from './fx.js?v=6';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=6';
+import * as AU from './audio.js?v=7';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=7';
+import './models2.js?v=7';
+import './models3.js?v=7';
+import { PLACES } from './places.js?v=7';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=7';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=7';
+import { NPC } from './npcs.js?v=7';
+import { makeTitle } from './title.js?v=7';
+import { GB, setOutlines } from './geo.js?v=7';
+import { loadPacks } from './charpack.js?v=7';
+// los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
+{ const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
+import { Particles, Rings, makeTornado } from './fx.js?v=7';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=7';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -596,6 +599,8 @@ function updateFx(dt) {
   dona.position.set(G.px, 0.12 * ds + Math.abs(Math.sin(t * 6)) * 0.06 * ds + (ud.hover ? (ud.hover + Math.sin(t * 3) * 0.05) * ds : 0), G.pz);
   dona.rotation.set(G.vz * 0.012, clamp(G.vx * 0.045, -0.5, 0.5) + G.twirl + (G.mode === 'chars' ? Math.sin(t * 1.3) * 0.55 : 0), -G.vx * 0.014);
   ud.arms[1].rotation.z = -(a0 + sw * 0.55 + (G.shout > 0 ? 0.35 : 0)); ud.arms[0].rotation.z = a0 - sw * 0.5 + 0.2; ud.arms[1].rotation.x = Math.cos(t * 9) * 0.3; ud.arms[0].rotation.x = -Math.cos(t * 9) * 0.25;
+  if (G.shout > 0) { const cw = Math.sin(t * 16); ud.arms[1].rotation.z = -(0.5 + cw * 0.28); ud.arms[0].rotation.z = 0.5 - cw * 0.28; ud.arms[1].rotation.x = ud.arms[0].rotation.x = 0; } // celebrar: brazos arriba
+  if (ud.legs) { const ls = Math.sin(t * 9) * 0.8 * mv + (G.shout > 0 ? Math.sin(t * 16) * 0.35 : 0); ud.legs[0].rotation.x = ls; ud.legs[1].rotation.x = -ls }
   ud.head.rotation.z = Math.sin(t * 4.5) * 0.06; ud.head.position.y = (ud.headY || 1.36) + Math.abs(sw) * 0.03;
   ud.mouth.scale.set(1, G.shout > 0 || G.combo > 3 ? 1.4 + Math.sin(t * 25) * 0.25 : 0.85 + Math.sin(t * 3) * 0.1, 1);
   if (ud.extra) ud.extra(t, G);
@@ -912,7 +917,7 @@ function initLogo() {
 async function boot() {
   initLogo();
   const lf = $('lbarFill'), lt = $('loadTxt'); const tick = (p, t) => { lf.style.width = p + '%'; if (t) lt.textContent = t; return new Promise((r) => setTimeout(r, 16)); };
-  await tick(5, 'Poniendo el parqué…'); await enterPlace(PLi, (p, t) => tick(p * 0.75, t));
+  await tick(30, 'Poniendo el parqué…'); await enterPlace(PLi, (p, t) => tick(30 + p * 0.45, t));
   await tick(78, 'Barriendo ' + PL.name + '…'); buildWorld((Math.random() * 1e9) | 0);
   await tick(88, 'Peinando a las limpiadoras…'); for (const p of PLAYERS) modelCache[p.id] || (modelCache[p.id] = p.make()); resetDemo(); G.Rv = G.R = 0.9;
   title = makeTitle({ getModel: (id) => modelCache[id] || (modelCache[id] = PLAYER_BY_ID[id].make()), popHost: $('tpops'), bubHost: $('tbubs') }); window.DR_title = title; title.setActive(true, ch.id); title.setActive(false); title.resize(window.innerWidth, window.innerHeight, pixelRatio);

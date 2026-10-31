@@ -1,7 +1,8 @@
 // v3: 6 limpiadoras más (12 en total) + utilidades de cara (ojos brillantes y parpadeo)
 import * as THREE from 'three';
-import { GB, lighten, darken, mix, hiQ } from './geo.js?v=6';
-import { PAL, part, propMaterial } from './models.js?v=6';
+import { buildChar } from './charpack.js?v=7';
+import { GB, lighten, darken, mix, hiQ } from './geo.js?v=7';
+import { PAL, part, propMaterial } from './models.js?v=7';
 const PI = Math.PI;
 const INK = 0x2a1840;
 
@@ -259,37 +260,37 @@ function makeDisco() {
 
 const T = (a, b, c) => [[a[0], a[1]], [b[0], b[1]], [c[0], c[1]]];
 export const EXTRA_PLAYERS = [
-  { id: 'pulpo', name: 'Pulpo Plumero', sub: 'Ocho brazos, ocho plumeros, cero vergüenza', price: 11500, make: () => hiQ(makePulpo),
+  { id: 'pulpo', name: 'Pulpo Plumero', sub: 'Ocho brazos, ocho plumeros, cero vergüenza', price: 11500, make: () => buildChar('pulpo'),
     perk: 'Ocho plumeros: +12 % de puntos por objeto', perkK: { score: 0.12 },
     theme: { f: T([0xffb3cc, 0xff5a8c], [0xffd9e6, 0xff8ab0], [0xffffff, 0xffc2d8]), ring: 0xff5a8c, glow: 0xff7aa8, bits: [0xff4a6e, 0xff9a2a, 0xffd23f, 0x3fe0b0, 0x4aa8ff, 0xb06bff], spd: 1.1, freq: 1.2 },
     fx: { colors: [0xff4a6e, 0xffd23f, 0x3fe0b0, 0x4aa8ff, 0xb06bff], shape: 2, rate: 20, g: -0.8, up: 1.3, alpha: 0.95, sz: 1.1 },
     say: ['¡Ocho brazos, ocho plumeros!', '¡Esto es una limpieza de tinta china!', 'Tengo más manos que excusas.', '¿Pulpo a feira? ¡Pulpo a limpiar!', '¡Le quito el polvo hasta a las dudas!', '¡Cuidado, que me enredo con mis propios plumeros!', '¡Tinta no, que mancha!', '¡Sacudo, sacudo, sacudo… y me sacudo!'],
     voice: { pitch: 1.3, rate: 1.1 }, start: '¡Ocho brazos, ocho plumeros!' },
-  { id: 'jamon', name: 'Don Jamón Jamonero', sub: 'Curado en salero y en limpieza', price: 15000, make: () => hiQ(makeJamon),
+  { id: 'jamon', name: 'Don Jamón Jamonero', sub: 'Curado en salero y en limpieza', price: 15000, make: () => buildChar('jamon'),
     perk: 'Pata negra: empiezas un 14 % más grande', perkK: { grow: 0.14 },
     theme: { f: T([0xffb0b8, 0xc23c56], [0xffe2d6, 0xe8607a], [0xfff4ea, 0xffb0b8]), ring: 0xc23c56, glow: 0xe8607a, bits: [0xc23c56, 0xfff0e2, 0xffd23f, 0x2a2a3a], spd: 0.9, freq: 1.0 },
     fx: { colors: [0xe8607a, 0xfff0e2, 0xffd23f, 0xc23c56], shape: 4, rate: 16, g: -0.2, up: 1.1, alpha: 0.75, sz: 1.5 },
     say: ['¡Esto está de pata negra!', '¡A limpiar con salero y sal gorda!', '¡Más fino que una loncha cortada a cuchillo!', '¡Ni un hueso sin repasar!', 'Yo no me corto… bueno, un poquito.', '¡Que me pongan un bocata de esta mugre!', '¡Olé, qué curado estoy de todo!', '¡Hasta el jamón limpia mejor que tu cuñado!'],
     voice: { pitch: 0.7, rate: 0.95 }, start: '¡Olé! ¡Jamón y limpieza!' },
-  { id: 'croqueta', name: 'Croqueta Ciclón', sub: 'Crujiente por fuera, bechamel por dentro', price: 19000, make: () => hiQ(makeCroqueta),
+  { id: 'croqueta', name: 'Croqueta Ciclón', sub: 'Crujiente por fuera, bechamel por dentro', price: 19000, make: () => buildChar('croqueta'),
     perk: 'Rebozado de combo: el combo dura 1,3 s más', perkK: { combo: 1.3 },
     theme: { f: T([0xffe0a0, 0xe9a94c], [0xfff3cf, 0xf0b85a], [0xffffff, 0xffe9b8]), ring: 0xe9a94c, glow: 0xf6cf7c, bits: [0xe9a94c, 0xf6cf7c, 0xfff6dc, 0x3fbf5a], spd: 1.25, freq: 1.4 },
     fx: { colors: [0xe9a94c, 0xf6cf7c, 0xfff6dc, 0x3fbf5a], shape: 1, rate: 22, g: 3.2, up: 1.6, alpha: 1, sz: 0.9 },
     say: ['¡Crujiente por fuera, limpia por dentro!', '¡Rebozada en polvo y a freír!', '¡Que no me falte la bechamel!', '¡Ni me frías ni me aspires… bueno, aspira!', '¡Soy la croqueta de la abuela, pero con turbo!', '¡Cuidado, que quemo!', '¡Tres croquetas por una escoba!', '¡Dame perejil y moveré el mundo!'],
     voice: { pitch: 1.1, rate: 1.2 }, start: '¡Croqueta ciclón, a por todas!' },
-  { id: 'genio', name: 'Genio del Fregadero', sub: 'Concede tres deseos, todos de limpieza', price: 24000, make: () => hiQ(makeGenio),
+  { id: 'genio', name: 'Genio del Fregadero', sub: 'Concede tres deseos, todos de limpieza', price: 24000, make: () => buildChar('genio'),
     perk: 'Tres deseos: tras un golpe eres invulnerable 1,4 s más', perkK: { inv: 1.4 },
     theme: { f: T([0xbfefff, 0x3bb4ff], [0xe0f8ff, 0x7ad4ff], [0xffffff, 0xbfefff]), ring: 0x3bb4ff, glow: 0x5ac8ff, bits: [0xffffff, 0xb6ff3a, 0x3bb4ff, 0xffd23f, 0xff74c4], spd: 1.35, freq: 1.6 },
     fx: { colors: [0xffffff, 0xbff3ff, 0xb6ff3a, 0xffd23f], shape: 3, rate: 28, g: -1.6, up: 1.5, alpha: 0.95, sz: 1.2 },
     say: ['¡Deseo concedido: suelo limpio!', '¡Frotad la lámpara… y la sartén también!', '¡Tres deseos: polvo fuera, polvo fuera y polvo fuera!', '¡Abracadabra, espumita!', '¡Más espuma que un jacuzzi de abuelas!', '¡Estoy hasta el gorro… de esponja!', '¡Qué bien huelo a limón!', '¡Soy el genio que fregó el cielo!'],
     voice: { pitch: 0.55, rate: 1.0 }, start: '¡Deseo concedido: suelo limpio!' },
-  { id: 'fantasma', name: 'Fantasmo Sabanilla', sub: 'Asusta a la mugre desde ultratumba', price: 30000, make: () => hiQ(makeFantasma),
+  { id: 'fantasma', name: 'Fantasmo Sabanilla', sub: 'Asusta a la mugre desde ultratumba', price: 30000, make: () => buildChar('fantasma'),
     perk: 'Intangible: +6 % de velocidad y golpes un 25 % más suaves', perkK: { speed: 0.06, hit: 0.75 },
     theme: { f: T([0xf0eaff, 0xb9a8ff], [0xffffff, 0xd8ccff], [0xfdfaff, 0xe8e0ff]), ring: 0xb9a8ff, glow: 0xd8ccff, bits: [0xffffff, 0xe8d8ff, 0xb9a8ff, 0xffd6e6], spd: 0.85, freq: 0.9 },
     fx: { colors: [0xffffff, 0xe8d8ff, 0xffd6e6, 0xb9a8ff], shape: 4, rate: 20, g: -1.0, up: 1.5, alpha: 0.6, sz: 1.7 },
     say: ['¡Buuu… perdón, buenas!', '¡Soy un fantasma muy limpio!', '¡Me han lavado a 40 grados y sigo aquí!', '¡Buuu! ¡Barriendo desde ultratumba!', 'Atravieso paredes… y manchas.', '¡Tiemblo de emoción, no de miedo!', '¡Mi sábana está de oferta, mi alma no!', '¡Ay, qué susto me he dado yo solo!'],
     voice: { pitch: 1.5, rate: 0.85 }, start: '¡Buuu! ¡A limpiar de ultratumba!' },
-  { id: 'disco', name: 'Disco Dolores', sub: 'Brilla, barre y baila el sábado noche', price: 38000, make: () => hiQ(makeDisco),
+  { id: 'disco', name: 'Disco Dolores', sub: 'Brilla, barre y baila el sábado noche', price: 38000, make: () => buildChar('disco'),
     perk: 'Imán de purpurina: atrae monedas y relojes de más lejos', perkK: { magnet: 0.7, coins: 0.1 },
     theme: { f: T([0xffb3e8, 0xa8f0ff], [0xffe0f6, 0xd8b8ff], [0xffffff, 0xfff0a0]), ring: 0xff4aa8, glow: 0xff74c4, bits: [0xff4aa8, 0xa8f0ff, 0xffd23f, 0xb06bff, 0xffffff, 0x3fe0b0], spd: 1.7, freq: 1.8 },
     fx: { colors: [0xff4aa8, 0xa8f0ff, 0xffd23f, 0xb06bff, 0xffffff], shape: 3, rate: 36, g: 0, up: 0.9, alpha: 1, sz: 1.0, fast: true },
