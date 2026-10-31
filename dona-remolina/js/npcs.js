@@ -1,7 +1,7 @@
 // Los personajes locos de Mueblópolis (NPC): modelos procedurales + comportamiento.
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=11';
-import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=11';
+import { GB, lighten, darken } from './geo.js?v=11.1';
+import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=11.1';
 const PI = Math.PI, INK = 0x2a1840;
 const pick = (a, v) => a[v % a.length];
 

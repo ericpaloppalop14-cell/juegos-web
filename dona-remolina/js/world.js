@@ -1,8 +1,8 @@
 // Mueblópolis: suelo de parquet, alfombras-manzana, paredes de papel pintado y generación de objetos
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=11';
-import { KINDS, getGeo, PAL } from './models.js?v=11';
-import { PLACES } from './places.js?v=11';
+import { GB, lighten, darken } from './geo.js?v=11.1';
+import { KINDS, getGeo, PAL } from './models.js?v=11.1';
+import { PLACES } from './places.js?v=11.1';
 
 export const HALF = 130;          // el torbellino se mueve en [-128, 128]
 export const SPAWN = { x: 0, z: 98 };

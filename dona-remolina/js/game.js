@@ -1,22 +1,22 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=11';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=11';
-import './models2.js?v=11';
-import './models3.js?v=11';
-import { PLACES } from './places.js?v=11';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=11';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=11';
-import { NPC } from './npcs.js?v=11';
-import { makeTitle } from './title.js?v=11';
-import { makeStage } from './stage.js?v=11';
-import { makeThumbs } from './thumbs.js?v=11';
-import { GB, setOutlines } from './geo.js?v=11';
-import { loadPacks } from './charpack.js?v=11';
+import * as AU from './audio.js?v=11.1';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=11.1';
+import './models2.js?v=11.1';
+import './models3.js?v=11.1';
+import { PLACES } from './places.js?v=11.1';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=11.1';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=11.1';
+import { NPC } from './npcs.js?v=11.1';
+import { makeTitle } from './title.js?v=11.1';
+import { makeStage } from './stage.js?v=11.1';
+import { makeThumbs } from './thumbs.js?v=11.1';
+import { GB, setOutlines } from './geo.js?v=11.1';
+import { loadPacks } from './charpack.js?v=11.1';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 7, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=11';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=11';
+import { Particles, Rings, makeTornado } from './fx.js?v=11.1';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=11.1';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -50,6 +50,8 @@ try {
     }
   }
 } catch (e) {}
+// v11.1: el mundo se generaba distinto en cada versión, así que el progreso parcial antiguo no vale (y dejaba ciudades casi vacías): se reinicia lo no terminado
+if (!save.mv11) { save.mv11 = 1; for (const id in save.pl || {}) { const q = save.pl[id]; if (q && !q.done) { q.rm = []; q.rn = []; q.cf = 0; q.part = false; q.tot = 0; } else if (q) { q.rm = []; q.rn = []; q.part = false; } } try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 if (!PLAYER_BY_ID[save.char]) save.char = 'dona';
 if (!(save.place >= 0 && save.place < PLACES.length)) save.place = 0;
 save.unlocked = Math.max(1, Math.min(PLACES.length, save.unlocked | 0));
@@ -823,11 +825,7 @@ function startRound() {
   AU.init(); AU.startMusic('game'); AU.setMusicMode('game'); AU.click();
   const P = prog(); if (P.done && !P.part) { P.rm = []; P.rn = []; P.cf = 0; } P.part = true; P.att = (P.att || 0) + 1; G.placeDone = false;
   buildWorld(PL.seed, true); alc = null; alcTimer = 0; alcLevel = 0; botTarget = null;
-  let r0 = startR(); const base = r0, done = P.rm.length + P.rn.length;
-  if (done > 0) { // si ya limpiaste mucho, empiezas lo bastante grande para poder tragar buena parte de lo que queda
-    const rs = []; for (const o of props) rs.push(o.r); for (const m of movers) rs.push(m.r); rs.sort((a, b) => a - b); const n = rs.length, fr = 1 - n / Math.max(1, P.tot);
-    if (n) { const f = n <= 14 ? 1 : fr > 0.8 ? 0.8 : fr > 0.55 ? 0.6 : 0.4, q = rs[Math.min(n - 1, Math.floor(f * (n - 1)))], need = q / (gate() * 0.95); const curve = base * (1 + 9 * Math.pow(Math.max(0, fr), 1.1)); r0 = Math.max(r0, Math.min(n <= 14 ? 16 : 10, Math.max(need, curve))); }
-  }
+  const r0 = startR(), base = r0; // v11.1: el torbellino siempre empieza con su radio inicial (sin ayudas heredadas del progreso)
   G.boosted = r0 > base + 0.02;
   Object.assign(G, { mode: 'count', t: 0, startT: 0, dur: dur(), time: dur(), px: SPAWN.x, pz: SPAWN.z + 3, vx: 0, vz: 0, kx: 0, kz: 0, A0: r0 * r0, A: r0 * r0, R: r0, Rv: r0, lvl: 1, score: 0, coins: 0, cf: 0, cleaned: 0, pulseT: pulsePeriod(ut().pulse_l || 1) * 0.4, swallowed: 0, combo: 0, comboT: 0, bestCombo: 0, rebels: 0, alcaldes: 0, hits: 0, maxTier: 0, crazies: 0, monuments: 0, dist: null, slow: 0, inv: 0, shake: 0, kick: 0, intro: 1, moved: 0, bubbleT: 7, alcSpawned: false, lastTick: 0, ended: 0, countT: 0 });
   G.startLeft = G.left;
@@ -863,7 +861,7 @@ function showResults() {
   G.mode = 'results'; G.demoT = 0; show('sResults'); $('hud').classList.remove('on'); AU.setMusicMode('menu');
 }
 // ---------- v11: umbral por peso, final automático y radar ----------
-const finaleReady = () => G.mode === 'play' && G.total > 0 && !G.placeDone && (G.wLeft <= G.wTot * FIN_W || G.left <= FIN_N);
+const finaleReady = () => G.mode === 'play' && G.total > 0 && G.wTot > 0 && !G.placeDone && G.t - G.startT > 15 && (G.wLeft <= G.wTot * FIN_W || G.left <= FIN_N);
 const cleanFrac = () => { if (!G.total) return 0; const a = (1 - G.wLeft / Math.max(1e-6, G.wTot)) / (1 - FIN_W), b = (G.total - G.left) / Math.max(1, G.total - FIN_N); return clamp(Math.max(a, b), 0, 1); };
 function startFinale() {
   if (G.finale || G.placeDone) return; G.finale = true; G.finT = 0; G.finInfo = { left: G.left, wfrac: +(G.wLeft / G.wTot).toFixed(4), big: G.bigLeft, t: Math.round(G.dur - G.time) }; $('leftInd').style.display = 'none'; for (const e of radarEls) e.style.display = 'none';
