@@ -456,3 +456,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#4db8ff;font-family:'F
   #sTitle .row .btn{padding:3px 4px;font-size:13px}
   .ctlock{font-size:18px}
 }
+
+/* v15: Sorpréndeme */
+#frenzy{position:fixed;left:50%;top:max(96px,calc(env(safe-area-inset-top) + 88px));transform:translate(-50%,-14px) scale(.8);z-index:30;pointer-events:none;opacity:0;transition:.25s;font-weight:700;font-size:15px;color:#5a2a00;background:linear-gradient(#ffe27a,#ffb02a);border:3px solid #fff;border-radius:18px;padding:3px 14px;box-shadow:0 3px 0 #c4570a,0 0 18px rgba(255,210,63,.8);white-space:nowrap}
+#frenzy.on{opacity:1;transform:translate(-50%,0) scale(1);animation:frz .7s ease-in-out infinite alternate}
+@keyframes frz{from{filter:brightness(1)}to{filter:brightness(1.18) saturate(1.2)}}

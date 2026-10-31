@@ -1,23 +1,25 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=14';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=14';
-import './models2.js?v=14';
-import './models3.js?v=14';
-import { PLACES } from './places.js?v=14';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=14';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=14';
-import { NPC } from './npcs.js?v=14';
-import { makeTitle } from './title.js?v=14';
-import { makeStage } from './stage.js?v=14';
-import { citySVG } from './citymap.js?v=14';
-import { makeThumbs } from './thumbs.js?v=14';
-import { GB, setOutlines } from './geo.js?v=14';
-import { loadPacks, initCharEnv } from './charpack.js?v=14';
+import * as AU from './audio.js?v=15';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=15';
+import './models2.js?v=15';
+import './models3.js?v=15';
+import './models4.js?v=15';
+import { PLACES } from './places.js?v=15';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=15';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=15';
+import { NPC } from './npcs.js?v=15';
+import { makeTitle } from './title.js?v=15';
+import { makeStage } from './stage.js?v=15';
+import { citySVG } from './citymap.js?v=15';
+import { phrase } from './phrases.js?v=15';
+import { makeThumbs } from './thumbs.js?v=15';
+import { GB, setOutlines } from './geo.js?v=15';
+import { loadPacks, initCharEnv } from './charpack.js?v=15';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=14';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=14';
+import { Particles, Rings, makeTornado } from './fx.js?v=15';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=15';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -151,6 +153,7 @@ function say(who, txt, ms = 1900) {
 }
 function flash(cls = '') { const f = $('flash'); f.className = 'on ' + cls; void f.offsetWidth; requestAnimationFrame(() => requestAnimationFrame(() => { f.className = ''; })); }
 const ALC_LINES = ['¡Alto en nombre del Ayuntamiento!', '¡Exijo un permiso de torbellino!', '¡Esto es una vergüenza municipal!', '¡Voy a ponerle una multa!', '¡Aquí mando yo!'];
+const lastSay = { big: -99, hit: -99 };
 const rnd = Math.random; const pick = (a, i) => a[i % a.length];
 
 // ---------- mundo ----------
@@ -305,8 +308,8 @@ function swallow(o) {
   // puntos, monedas, combo
   if (G.mode === 'play') { G.combo++; G.comboT = comboWin(); G.bestCombo = Math.max(G.bestCombo, G.combo); }
   const cm = 1 + Math.min(G.combo, 40) * 0.025;
-  const pts = Math.round((10 + o.area * 14) * (1 + Math.min(10, Math.floor(G.combo / 5)) * 0.2) * (1 + pk('score')));
-  const coinsF = o.coins * lootMul() * cm * COIN_K;
+  const pts = Math.round((G.frenzy > 0 ? 2 : 1) * (10 + o.area * 14) * (1 + Math.min(10, Math.floor(G.combo / 5)) * 0.2) * (1 + pk('score')));
+  const coinsF = (G.frenzy > 0 ? 2 : 1) * o.coins * lootMul() * cm * COIN_K;
   const real = G.mode === 'play';
   if (real) { G.score += pts; addCoins(coinsF); G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper' || (o.K && o.K.cb)) G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
   const before = G.A; if (!G.finale) G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * (1 + (ut().gain || 0)) * o.area / (1 + G.A / GROW_SAT)); G.R = Math.sqrt(G.A);
@@ -319,20 +322,49 @@ function swallow(o) {
   if (real && (o.tier >= 3 || o.rebel || (o.npc && o.coins >= 24))) popText('+' + fmt(pts), o.x, o.hy * 2 + 1, o.z, o.tier >= 4 ? 'big' : '');
   if (real && G.combo >= 3) { const c = $('combo'); c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); }
   if (o.rebel && real) { G.rebels++; popText('¡Sofá atrapado!', o.x, o.hy * 2 + 3, o.z, 'big'); toast('¡Sofá atrapado!', ''); G.shake = 0.6; say('dona', '¡Quieto ahí, sofá!', 1500); AU.sofaScream(); }
+  if (real && !o.rebel && !o.alc && (o.tier >= 4 || (o.K && (o.K.cb || o.K.lm)) || (o.npc && o.r >= 1.8)) && G.t - lastSay.big > 5 && rnd() < 0.8) { lastSay.big = G.t; say('dona', phrase(ch.id, 'big'), 1800); }
+  if (o.bonus && real) { say('dona', phrase(ch.id, 'gold'), 1900); flash('good'); AU.levelUp(6); G.shake = Math.max(G.shake, 0.8); rings.spawn(G.px, G.pz, G.Rv, G.Rv * 4.2, 0xffd23f, 0.9, 1.0); popText('+10 s ✨', o.x, o.hy * 2 + 3, o.z, 'big'); }
   if (o.alc && real) { G.alcaldes++; toast('¡Alcalde fuera!', 'alc'); say('alc', '¡Aaay, mi paraguas!', 1700); G.shake = 1; flash('good'); AU.roundEnd(true); alc = null; alcTimer = 13; alcLevel++; AU.levelUp(3); }
   if (o.kind === 'skyscraper' && real) { toast('¡Rascacielos!', ''); G.shake = 1.1; flash('good'); }
   if (o.tier >= 6 && real) { G.monuments++; toast('¡' + o.name + ' tragado!', 'alc'); popText('+' + fmt(pts), o.x, o.hy * 2 + 2, o.z, 'big'); G.shake = 1.4; flash('good'); AU.roundEnd(true); AU.levelUp(6); }
   if (o.npc && real) { G.crazies++; if (o.def.onSwallow) o.def.onSwallow(o, X); }
   checkLevel();
-  if (real && !o.alc && G.total) { G.left--; G.cleaned++; G.wLeft = Math.max(0, G.wLeft - (o.w || 0)); if (o.tier >= 3 || (o.npc && (o.def.boss || o.r >= 2.4))) G.bigLeft = Math.max(0, G.bigLeft - 1); const P = prog(); if (o.npc) P.rn.push(o.key); else P.rm.push(o.gid); P.cf = cleanFrac(); hud.dirty = true; if (!G.finale && (G.left <= 0 || finaleReady())) startFinale(); }
+  if (real && !o.alc && !o.bonus && G.total) { G.left--; G.cleaned++; G.wLeft = Math.max(0, G.wLeft - (o.w || 0)); if (o.tier >= 3 || (o.npc && (o.def.boss || o.r >= 2.4))) G.bigLeft = Math.max(0, G.bigLeft - 1); const P = prog(); if (o.npc) P.rn.push(o.key); else P.rm.push(o.gid); P.cf = cleanFrac(); hud.dirty = true; if (!G.finale && (G.left <= 0 || finaleReady())) startFinale(); }
 }
+// v15: «Sorpréndeme»: Tesoro Dorado (un bicho dorado que huye) y eventos locos al azar (Hora Loca x2, Lluvia de monedas)
+let frenzyEl = null;
+function surprise(dt) {
+  if (G.frenzy > 0) { G.frenzy -= dt; if (!frenzyEl) { frenzyEl = document.createElement('div'); frenzyEl.id = 'frenzy'; document.body.appendChild(frenzyEl); } frenzyEl.textContent = '⚡ ¡HORA LOCA! x2 · ' + Math.ceil(G.frenzy) + ' s'; frenzyEl.classList.add('on'); if (G.frenzy <= 0) { G.frenzy = 0; frenzyEl.classList.remove('on'); toast('Se acabó la hora loca', ''); } }
+  if (G.gold) {
+    if (G.gold.state !== 0) G.gold = null;
+    else { G.goldLife -= dt; if (G.goldLife <= 0) { const m = G.gold; G.gold = null; m.state = 3; worldGroup.remove(m.mesh); disp(m); const i = movers.indexOf(m); if (i >= 0) movers.splice(i, 1); parts.burst(m.x, 2, m.z, 16, { color: [0xffd23f, 0xffffff], speed: 4, size: 0.5, life: 0.8, shape: 3, g: 2, up: 2 }); toast('¡Se escapó el tesoro!', 'warn'); G.goldT = 30 + rnd() * 20; } }
+  } else {
+    G.goldT -= dt;
+    if (G.goldT <= 0 && G.time > 12) {
+      const a = rnd() * 6.28, d = 24 + rnd() * 12; let x = G.px + Math.cos(a) * d, z = G.pz + Math.sin(a) * d; x = clamp(x, -HALF + 8, HALF - 8); z = clamp(z, -HALF + 8, HALF - 8);
+      const o = addNpc({ type: 'dorado', x, z, v: 0 }); o.bonus = true; o.w = 0; G.gold = o; G.goldLife = 24; G.goldT = 30;
+      toast('✨ ¡TESORO DORADO! ¡Atrápalo! ✨', 'alc'); AU.levelUp(2); parts.burst(x, 2, z, 22, { color: [0xffd23f, 0xffffff, 0xfff0a0], speed: 5, size: 0.6, life: 1, shape: 3, g: 1, up: 3 });
+    }
+  }
+  G.evtT -= dt;
+  if (G.evtT <= 0 && G.time > 14) {
+    G.evtT = 40 + rnd() * 25;
+    if (rnd() < 0.55) { G.frenzy = 10; toast('⚡ ¡HORA LOCA! Todo vale el doble', 'alc'); flash('good'); AU.levelUp(5); say('dona', phrase(ch.id, 'gen'), 1700); rings.spawn(G.px, G.pz, G.Rv, G.Rv * 4, 0xffd23f, 0.9, 1.0); }
+    else {
+      toast('🌟 ¡LLUVIA DE MONEDAS!', 'alc'); flash('good'); AU.levelUp(4);
+      for (let i = 0; i < 18; i++) { const a = i / 18 * 6.28 + rnd(), d = 6 + rnd() * 10 + G.R; const x = clamp(G.px + Math.cos(a) * d, -HALF + 4, HALF - 4), z = clamp(G.pz + Math.sin(a) * d, -HALF + 4, HALF - 4); addPickup({ type: i === 0 ? 'clock' : 'coin', x, z }); }
+      parts.burst(G.px, 4, G.pz, 30, { color: [0xffd23f, 0xfff0a0, 0xffffff], speed: 7, size: 0.6, life: 1.2, shape: 3, g: 3, up: 6 });
+    }
+  }
+}
+
 function checkLevel() {
   const L = 1 + Math.floor(Math.log(G.R / G.A0 ** 0.5) / Math.log(1.32) + 1e-6);
   if (L > G.lvl && G.mode === 'play') {
     G.lvl = L; G.kick = 1; G.twirl = 6.28 * 2; G.shake = Math.max(G.shake, 0.55);
     toast(L >= 7 ? '¡GIGANTE!' : '¡MÁS GRANDE!'); AU.levelUp(L); rings.spawn(G.px, G.pz, G.Rv, G.Rv * 3.2, 0xff74c4, 0.8, 0.9); rings.spawn(G.px, G.pz, G.Rv * 0.6, G.Rv * 2.4, 0xffd23f, 0.6, 0.9);
     parts.burst(G.px, 1.2 * G.Rv, G.pz, 36, { color: SPARK, speed: 6 + G.Rv, size: 0.5 + 0.1 * G.Rv, life: 1.1, shape: 1, g: 4, up: 3 });
-    if (rnd() < 0.8) { const l = pick(ch.say, (rnd() * 99) | 0); say('dona', l, 1700); if (L % 2 === 0) AU.speak(l, ch.voice.pitch, ch.voice.rate); }
+    if (rnd() < 0.8) { const l = phrase(ch.id, 'gen'); say('dona', l, 1700); if (L % 2 === 0) AU.speak(l, ch.voice.pitch, ch.voice.rate); }
     hud.dirty = true;
   } else if (L > G.lvl) G.lvl = L;
 }
@@ -388,7 +420,7 @@ function botDir() {
   for (const m of movers) { if (m.state !== 0 || !HAZ[m.kind] || m.r <= R * gate()) continue; const ax = G.px - m.x, az = G.pz - m.z, ad = Math.hypot(ax, az), rr = 7 + R * 0.6 + m.r; if (ad < rr) { const w = (rr - ad) / rr * 1.4; tx += ax / ad * w; tz += az / ad * w; l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l; } }
   return { x: tx, z: tz, m: 0.85 };
 }
-const HAZ = { cortacesped: 1, globo: 1, nevera: 1, lavadora: 1, vater: 1, tostadora: 0, donut: 1, monito: 1, caballero: 1, nubarron: 1, calabaza: 1, neveraP: 1, neveraJ: 1, neveraC: 1, neveraN: 1, neveraH: 1 };
+const HAZ = { cortacesped: 1, globo: 1, nevera: 1, lavadora: 1, vater: 1, tostadora: 0, donut: 1, monito: 1, caballero: 1, nubarron: 1, calabaza: 1, neveraP: 1, neveraJ: 1, neveraC: 1, neveraN: 1, neveraH: 1, cangrejo: 1, camello: 1, osopolar: 1, gorila: 1, rover: 1, dragoncito: 1, neveraMar: 1, neveraDes: 1, neveraPol: 1, neveraSel: 1, neveraEsp: 1, neveraVol: 1 };
 
 // ---------- actualización ----------
 const hud = { left: -1, dirty: true, coins: -1, time: -1, lvl: -1, score: -1, prog: -1, combo: -1 };
@@ -410,7 +442,8 @@ function step(dt) {
     if (G.comboT > 0) { G.comboT -= dt; if (G.comboT <= 0) { G.combo = 0; hud.dirty = true; } }
     if (!G.finale && !alc && alcTimer <= 0 && G.alcSpawned !== true && G.t - G.startT > 10) { G.alcSpawned = true; spawnAlcalde(0); }
     if (G.alcSpawned && !alc && !G.finale) { alcTimer -= dt; if (alcTimer <= 0 && G.time > 12) spawnAlcalde(alcLevel); }
-    G.bubbleT -= dt; if (G.bubbleT <= 0) { G.bubbleT = 9 + rnd() * 7; if (G.mode === 'play') { const l = pick(ch.say, (rnd() * 99) | 0); say('dona', l, 1600); G.shout = 0.6; } }
+    if (G.mode === 'play' && !G.finale) surprise(dt);
+    G.bubbleT -= dt; if (G.bubbleT <= 0) { G.bubbleT = 9 + rnd() * 7; if (G.mode === 'play') { const l = phrase(ch.id, 'gen'); say('dona', l, 1600); G.shout = 0.6; } }
   }
   if (G.mode === 'count') { G.intro = Math.max(0, G.intro - dt * 0.9); }
   // movimiento
@@ -506,7 +539,7 @@ const X = {
   hit(c, nx, nz, o) {
     if (G.mode !== 'play' || G.inv > 0) return false; const hm = hitMul(), f = 0.5 + 0.5 * hm;
     G.inv = 1.8 + pk('inv'); G.slow = Math.max(G.slow, (o.slow || 0.8) * f); G.hits++; G.kx = nx * (o.knock || 0) * f; G.kz = nz * (o.knock || 0) * f; G.shake = Math.max(G.shake, 0.8); G.combo = 0; G.comboT = 0;
-    G.A = Math.max(G.A0, G.A - (o.loss || 0.04) * (G.A - G.A0) * hm); G.R = Math.sqrt(G.A); AU.hit(); flash(); toast(o.msg || '¡Ay!', 'warn');
+    G.A = Math.max(G.A0, G.A - (o.loss || 0.04) * (G.A - G.A0) * hm); G.R = Math.sqrt(G.A); AU.hit(); flash(); toast(o.msg || '¡Ay!', 'warn'); if (G.t - lastSay.hit > 3.5) { lastSay.hit = G.t; say('dona', phrase(ch.id, 'hit'), 1500); }
     parts.burst(G.px, 1.5, G.pz, 16, { color: [0xff3d6e, 0xffd23f, 0xffffff], speed: 6, size: 0.45, life: 0.8, shape: 1, g: 6, up: 3 }); rings.spawn(G.px, G.pz, G.Rv, G.Rv * 2.6, 0xff3d6e, 0.5, 0.9); hud.dirty = true; return true;
   },
 };
@@ -557,7 +590,7 @@ function alcalde_hit(a, nx, nz) {
   a.cool = 4.2; a.rec = 1.8; G.inv = 2.0 + pk('inv'); G.slow = 1.3 * (0.5 + 0.5 * hitMul()); G.hits++;
   G.kx = nx * 20 * (0.5 + 0.5 * hitMul()); G.kz = nz * 20 * (0.5 + 0.5 * hitMul()); G.shake = 1; G.combo = 0; G.comboT = 0;
   const loss = 0.09 * (G.A - G.A0) * hitMul(); G.A = Math.max(G.A0, G.A - loss); G.R = Math.sqrt(G.A);
-  AU.hit(); flash(); say('alc', '¡MULTA! ¡Por soplona!', 1600); toast('¡Multa!', 'warn'); say('dona', pick(['¡Qué agravio!', '¡Ay, mi espalda!', '¡Eso es abuso municipal!'], (rnd() * 3) | 0), 1200);
+  AU.hit(); flash(); say('alc', '¡MULTA! ¡Por soplona!', 1600); toast('¡Multa!', 'warn'); say('dona', phrase(ch.id, 'hit'), 1300);
   parts.burst(G.px, 1.5, G.pz, 20, { color: [0x7b3fe4, 0xffd23f, 0xffffff], speed: 6, size: 0.45, life: 0.8, shape: 1, g: 6, up: 3 }); rings.spawn(G.px, G.pz, G.Rv, G.Rv * 2.8, 0xff3d6e, 0.5, 0.9);
   hud.dirty = true;
 }
@@ -852,7 +885,7 @@ function startRound() {
   buildWorld(PL.seed, true); alc = null; alcTimer = 0; alcLevel = 0; botTarget = null;
   const r0 = startR(), base = r0; // v11.1: el torbellino siempre empieza con su radio inicial (sin ayudas heredadas del progreso)
   G.boosted = r0 > base + 0.02;
-  Object.assign(G, { mode: 'count', t: 0, startT: 0, dur: dur(), time: dur(), px: SPAWN.x, pz: SPAWN.z + 3, vx: 0, vz: 0, kx: 0, kz: 0, A0: r0 * r0, A: r0 * r0, R: r0, Rv: r0, lvl: 1, score: 0, coins: 0, cf: 0, cleaned: 0, pulseT: pulsePeriod(ut().pulse_l || 1) * 0.4, swallowed: 0, combo: 0, comboT: 0, bestCombo: 0, rebels: 0, alcaldes: 0, hits: 0, maxTier: 0, crazies: 0, monuments: 0, dist: null, slow: 0, inv: 0, shake: 0, kick: 0, intro: 1, moved: 0, bubbleT: 7, alcSpawned: false, lastTick: 0, ended: 0, countT: 0 });
+  Object.assign(G, { mode: 'count', t: 0, startT: 0, dur: dur(), time: dur(), px: SPAWN.x, pz: SPAWN.z + 3, vx: 0, vz: 0, kx: 0, kz: 0, A0: r0 * r0, A: r0 * r0, R: r0, Rv: r0, lvl: 1, score: 0, coins: 0, cf: 0, cleaned: 0, pulseT: pulsePeriod(ut().pulse_l || 1) * 0.4, swallowed: 0, combo: 0, comboT: 0, bestCombo: 0, rebels: 0, alcaldes: 0, hits: 0, maxTier: 0, crazies: 0, monuments: 0, dist: null, slow: 0, inv: 0, shake: 0, kick: 0, intro: 1, moved: 0, bubbleT: 7, goldT: 20 + rnd() * 10, goldLife: 0, gold: null, evtT: 34 + rnd() * 14, frenzy: 0, alcSpawned: false, lastTick: 0, ended: 0, countT: 0 });
   G.startLeft = G.left;
   camT.set(G.px, 0, G.pz); camDist = 40; hud.left = -1;
   hud.coins = hud.time = hud.lvl = hud.score = hud.prog = hud.combo = -1; $('hud').classList.add('on'); $('bAlc').classList.remove('on'); $('bDona').classList.remove('on'); G.dist = null; $('leftInd').style.display = 'none';
@@ -861,9 +894,10 @@ function startRound() {
 function countdown(n) {
   if (G.mode !== 'count') return; const e = $('countN'); e.style.animation = 'none'; void e.offsetWidth; e.style.animation = '';
   if (n > 0) { e.textContent = n; AU.beep(false); setTimeout(() => countdown(n - 1), 750); }
-  else { e.textContent = '¡YA!'; AU.beep(true); G.mode = 'play'; G.startT = G.t; hideAll(); toast(G.boosted ? '¡Sigue limpiando!' : '¡A LIMPIAR!'); say('dona', ch.start, 1900); G.shout = 1; AU.speak(ch.start, ch.voice.pitch, ch.voice.rate); G.intro = 0; }
+  else { e.textContent = '¡YA!'; AU.beep(true); G.mode = 'play'; G.startT = G.t; hideAll(); toast(G.boosted ? '¡Sigue limpiando!' : '¡A LIMPIAR!'); const sl = phrase(ch.id, 'start'); say('dona', sl, 1900); G.shout = 1; AU.speak(sl, ch.voice.pitch, ch.voice.rate); G.intro = 0; }
 }
 function endRound() {
+  G.frenzy = 0; if (frenzyEl) frenzyEl.classList.remove('on');
   if (G.mode !== 'play') return; if (G.finale && !G.placeDone) { completePlace(); return; } G.mode = 'ending'; joyShow(false); joy.on = false; toast('¡TIEMPO!', 'warn'); AU.roundEnd(true); $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('combo').classList.remove('on'); persist();
   setTimeout(showResults, 1500);
 }
@@ -890,7 +924,7 @@ const finaleReady = () => G.mode === 'play' && G.total > 0 && G.wTot > 0 && !G.p
 const cleanFrac = () => { if (!G.total) return 0; const a = (1 - G.wLeft / Math.max(1e-6, G.wTot)) / (1 - FIN_W), b = (G.total - G.left) / Math.max(1, G.total - FIN_N); return clamp(Math.max(a, b), 0, 1); };
 function startFinale() {
   if (G.finale || G.placeDone) return; G.finale = true; G.finT = 0; G.finInfo = { left: G.left, wfrac: +(G.wLeft / G.wTot).toFixed(4), big: G.bigLeft, t: Math.round(G.dur - G.time) }; $('leftInd').style.display = 'none'; for (const e of radarEls) e.style.display = 'none';
-  toast('¡LUGAR LIMPIO!', 'alc'); flash('good'); AU.levelUp(7); G.shake = Math.max(G.shake, 0.9); say('dona', '¡Lo que queda, para dentro!', 2200);
+  toast('¡LUGAR LIMPIO!', 'alc'); flash('good'); AU.levelUp(7); G.shake = Math.max(G.shake, 0.9); say('dona', phrase(ch.id, 'clear'), 2200);
   const rest = []; for (const o of props) if (o.state === 0) rest.push(o); for (const m of movers) if (m.state === 0) rest.push(m);
   rest.sort((a, b) => Math.hypot(a.x - G.px, a.z - G.pz) - Math.hypot(b.x - G.px, b.z - G.pz));
   rest.forEach((o, i) => { if (o.alc) return; swallow(o); if (o.sw) o.sw.d = Math.min(1.7, i * 0.025) + rnd() * 0.15; });
@@ -922,7 +956,7 @@ function completePlace() {
   const P = prog(), first = !P.done, bonus = (first ? 220 : 70) * (PLi + 1); P.done = true; P.part = false; P.fin = (P.fin || 0) + 1; G.coins += bonus; save.coins += bonus; G.bonusPlace = bonus; save.rounds++;
   const nextNew = PLi + 2 > save.unlocked && PLi + 1 < PLACES.length; save.unlocked = Math.max(save.unlocked, Math.min(PLACES.length, PLi + 2)); const rec = Math.round(G.score) > save.best; if (rec) save.best = Math.round(G.score); persist();
   toast('¡' + PL.name + ' LIMPIO!', 'alc'); flash('good'); AU.roundEnd(true); AU.levelUp(8); G.shake = 1.2; $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('combo').classList.remove('on'); if (alc) { alc.state = 3; worldGroup.remove(alc.mesh); alc = null; }
-  say('dona', '¡Todo limpio! ¡Ni una mota de polvo!', 2600); AU.speak('¡Todo limpio!', ch.voice.pitch, ch.voice.rate);
+  say('dona', phrase(ch.id, 'clear'), 2600); AU.speak('¡Todo limpio!', ch.voice.pitch, ch.voice.rate);
   let n = 0; const iv = setInterval(() => { n++; if (n > 13 || (G.mode !== 'ending')) { clearInterval(iv); return; } const a = rnd() * 6.28, d = 3 + rnd() * 10 * G.Rv * 0.5, c = [[0xff74c4, 0xffd23f], [0x3fe0b0, 0x4aa8ff], [0xff6b5e, 0xffffff], [0xb06bff, 0xffd23f]][n % 4]; parts.burst(G.px + Math.cos(a) * d, 5 + rnd() * 9, G.pz + Math.sin(a) * d, 34, { color: c, speed: 9, size: 0.8, life: 1.3, shape: 1, g: 5, up: 1 }); rings.spawn(G.px, G.pz, G.Rv * 0.6, G.Rv * (2 + n * 0.3), c[0], 0.9, 0.9); AU.coin(); if (n % 3 === 0) AU.levelUp(3 + (n % 6)); }, 260);
   setTimeout(() => showPlaceDone(bonus, nextNew), 3800);
 }
