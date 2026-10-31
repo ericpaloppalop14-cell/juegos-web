@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#4db8ff">
+<title>Doña Remolina</title>
+<meta property="og:title" content="Doña Remolina"><meta property="og:site_name" content="Doña Remolina">
+<meta name="description" content="La abuela torbellino de Mueblópolis: ¡a limpiar!">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+
+  <div id="hud">
+    <div id="topbar">
+      <div class="pill" id="pCoins"><i class="coin"></i><b id="hCoins">0</b></div>
+      <div id="timer"><b id="hTime">1:10</b></div>
+      <button id="bPause" class="iconbtn" aria-label="Pausa"><i></i><i></i></button>
+    </div>
+    <div id="lvl"><div class="lvlrow"><span id="hLvl">Nivel 1</span><span id="hScore">0</span></div><div class="bar"><i id="hLvlBar"></i></div></div>
+    <div id="combo"><b id="hComboN">x2</b><span>¡COMBO!</span><div class="bar"><i id="hComboBar"></i></div></div>
+    <div id="alcInd"><span>¡Alcalde!</span></div>
+    <div id="hint"></div>
+    <div id="bubbles"><div class="bubble dona" id="bDona"></div><div class="bubble alc" id="bAlc"></div></div>
+    <div id="pops"></div>
+    <div id="toast"></div>
+  </div>
+  <div id="joy"><i id="joyBase"></i><i id="joyKnob"></i></div>
+  <div id="flash"></div>
+
+  <div id="screens">
+    <section id="sTitle" class="screen">
+      <div class="logo"><div class="l1">Doña</div><div class="l2">Remolina</div><div class="sub">¡La abuela más huracanada de Mueblópolis!</div></div>
+      <div class="menu">
+        <button class="btn big go" id="bPlay">¡A LIMPIAR!</button>
+        <div class="row"><button class="btn mid shop" id="bShop">Mejoras</button><button class="btn mid help" id="bHelp">Cómo se juega</button></div>
+        <div class="statline"><span><i class="coin"></i> <b id="tCoins">0</b></span><span>Récord <b id="tBest">0</b></span></div>
+      </div>
+      <div class="snd"><button class="iconbtn sm" id="bSfx" aria-label="Sonidos">♪</button><button class="iconbtn sm" id="bMus" aria-label="Música">♫</button></div>
+    </section>
+
+    <section id="sHelp" class="screen card-screen hidden">
+      <div class="card">
+        <h2>Cómo se juega</h2>
+        <ol class="steps">
+          <li><i class="n n1">1</i><div><b>Arrastra el dedo</b> para mover el torbellino. Se mueve hacia donde arrastres.</div></li>
+          <li><i class="n n2">2</i><div><b>Traga lo pequeño primero</b>: calcetines, tazas, cojines… ¡y crecerás!</div></li>
+          <li><i class="n n3">3</i><div>Con cada nivel te cabe algo más grande: sillas, camas, <b>armarios-rascacielos</b>.</div></li>
+          <li><i class="n n4">4</i><div>Los <b>Sofás Rebeldes</b> huyen corriendo. ¡Arrincónalos contra la pared!</div></li>
+          <li><i class="n n5">5</i><div>Cuidado con el <b>Alcalde Paraguas</b>: si te pilla pequeña, te multa. ¡Cuando seas grande, trágatelo!</div></li>
+          <li><i class="n n6">6</i><div>Traga seguido para hacer <b>combos</b>. Coge monedas y relojes y gasta en <b>Mejoras</b>.</div></li>
+        </ol>
+        <button class="btn mid go" id="bHelpOk">¡Entendido!</button>
+      </div>
+    </section>
+
+    <section id="sCount" class="screen hidden"><div id="countN">3</div></section>
+
+    <section id="sPause" class="screen card-screen hidden">
+      <div class="card small"><h2>Pausa</h2>
+        <button class="btn mid go" id="bResume">Seguir</button>
+        <div class="row"><button class="btn mid shop" id="bPSfx">Sonidos</button><button class="btn mid shop" id="bPMus">Música</button></div>
+        <button class="btn mid quit" id="bQuit">Salir al menú</button>
+      </div>
+    </section>
+
+    <section id="sResults" class="screen card-screen hidden">
+      <div class="card">
+        <div class="rtitle" id="rTitle">¡Ronda terminada!</div>
+        <div class="stars" id="rStars"></div>
+        <div class="rrank" id="rRank"></div>
+        <div class="rscore"><span id="rScore">0</span><small>puntos</small><em id="rRecord">¡NUEVO RÉCORD!</em></div>
+        <div class="grid" id="rGrid"></div>
+        <div class="rcoins"><i class="coin"></i> <b id="rCoins">+0</b> monedas <span id="rBonus"></span></div>
+        <div class="row"><button class="btn mid shop" id="bRShop">Mejoras</button><button class="btn mid go" id="bRAgain">Otra ronda</button></div>
+        <button class="linkbtn" id="bRMenu">Menú</button>
+      </div>
+    </section>
+
+    <section id="sShop" class="screen card-screen hidden">
+      <div class="card wide">
+        <h2>Mejoras de Doña Remolina</h2>
+        <div class="wallet"><i class="coin"></i> <b id="sCoins">0</b></div>
+        <div class="ups" id="upsList"></div>
+        <div class="row"><button class="btn mid quit" id="bSBack">Volver</button><button class="btn mid go" id="bSGo">¡A limpiar!</button></div>
+      </div>
+    </section>
+  </div>
+  <div id="rotate">Gira el móvil en vertical para jugar mejor</div>
+  <div id="loading"><div class="logo small"><div class="l1">Doña</div><div class="l2">Remolina</div></div><div class="lbar"><i id="lbarFill"></i></div><div class="ltxt" id="loadTxt">Preparando Mueblópolis…</div></div>
+</div>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module" src="js/game.js?v=1"></script>
+</body>
+</html>
