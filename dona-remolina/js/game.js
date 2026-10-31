@@ -1,25 +1,25 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=15';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=15';
-import './models2.js?v=15';
-import './models3.js?v=15';
-import './models4.js?v=15';
-import { PLACES } from './places.js?v=15';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=15';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=15';
-import { NPC } from './npcs.js?v=15';
-import { makeTitle } from './title.js?v=15';
-import { makeStage } from './stage.js?v=15';
-import { citySVG } from './citymap.js?v=15';
-import { phrase } from './phrases.js?v=15';
-import { makeThumbs } from './thumbs.js?v=15';
-import { GB, setOutlines } from './geo.js?v=15';
-import { loadPacks, initCharEnv } from './charpack.js?v=15';
+import * as AU from './audio.js?v=16';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=16';
+import './models2.js?v=16';
+import './models3.js?v=16';
+import './models4.js?v=16';
+import { PLACES } from './places.js?v=16';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=16';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=16';
+import { NPC } from './npcs.js?v=16';
+import { makeTitle } from './title.js?v=16';
+import { makeStage } from './stage.js?v=16';
+import { citySVG } from './citymap.js?v=16';
+import { phrase } from './phrases.js?v=16';
+import { makeThumbs } from './thumbs.js?v=16';
+import { GB, setOutlines } from './geo.js?v=16';
+import { loadPacks, initCharEnv } from './charpack.js?v=16';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
-{ const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=15';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=15';
+{ const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco', 'pinguino', 'cactus', 'rex', 'ninja', 'abeja', 'torero', 'vikingo', 'astro', 'yeti', 'unicornio'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
+import { Particles, Rings, makeTornado } from './fx.js?v=16';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=16';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -745,7 +745,7 @@ function updateFx(dt) {
       if (inCh) { bgKeep = scene.background; stageHidden = scene.children.filter((o) => o.visible && o !== dona && o !== stage.group && o !== parts.pts && o !== tornado.group && o !== tornado.bits && !o.isLight && !(o.type === 'Object3D') && o.renderOrder < 5); stageHidden.forEach((o) => { o.visible = false; }); }
       else { stageHidden.forEach((o) => { o.visible = true; }); stageHidden = []; if (bgKeep) scene.background = bgKeep; for (let k = 0; k < parts.max; k++) { parts.life[k] = 0; parts.size[k] = 0; parts.pos[k * 3 + 1] = -999; } }
     }
-    if (inCh) { if (stage.bg) scene.background = stage.bg; stage.update(dt, G.px, G.pz, G.Rv * 1.18, parts, camera); if (thumbs && inCh) thumbs.update(dt, G.t, cIdx); } }
+    if (inCh) { if (stage.bg) scene.background = stage.bg; stage.update(dt, G.px, G.pz, G.Rv * 1.18, parts, camera); if (thumbs && inCh) thumbs.update(dt, G.t, cIdx, thumbVis); } }
   // cámara
   const pf = camera.aspect < 1 ? 1 + (1 - camera.aspect) * 0.55 : 1;
   const menuZ = G.mode === 'chars' ? (window.CAMZ || 0.43) : (G.mode === 'menu' || G.mode === 'results' || G.mode === 'shop') ? 0.66 : 1; G.mz = G.mz == null ? menuZ : G.mz + (menuZ - G.mz) * Math.min(1, dt * 2.5);
@@ -1021,14 +1021,19 @@ const shopMove = (d) => { const l = ownedList(); let i = l.findIndex((p) => p.id
 // ---------- selección de personaje ----------
 let cIdx = 0;
 const hexs = (n) => '#' + n.toString(16).padStart(6, '0');
+const DPAGE = 12;
+const thumbVis = (i) => { const dd = $('cDots'), w = dd.clientWidth || 1, x = dd.scrollLeft / w, p = Math.floor(i / DPAGE); return p >= Math.floor(x) && p <= Math.ceil(x); };
+function drawPager(cur, want) { const pg = $('cPg'); if (!pg) return; const np = Math.ceil(PLAYERS.length / DPAGE), a = want == null ? cur : want; pg.innerHTML = Array.from({ length: np }, (_, i) => `<button data-pg="${i}" class="${i === a ? 'on' : ''}" aria-label="Página ${i + 1}"></button>`).join(''); }
 function renderChars() {
   const p = PLAYERS[cIdx]; setChar(p.id, false); const owned = !!save.owned[p.id], sel = save.char === p.id;
   $('cName').textContent = p.name; $('cSub').textContent = p.sub; $('cPerk').textContent = p.perk; $('cCoins').textContent = fmt(save.coins); $('cNum').textContent = (cIdx + 1) + ' / ' + PLAYERS.length;
   const b = $('bCPick'), lockP = PLi >= save.unlocked; b.className = 'btn big ' + (owned ? 'go' : save.coins >= p.price ? 'unlock' : 'locked');
   b.innerHTML = owned ? `¡A LIMPIAR!${lockP ? '<small>en ' + PLACES[save.unlocked - 1].name + '</small>' : ''}` : `<i class="coin"></i> ${fmt(p.price)} · DESBLOQUEAR`;
   if (!thumbs) { try { thumbs = makeThumbs(renderer, (id) => PLAYER_BY_ID[id].make(), PLAYERS); thumbs.drawAll(G.t); } catch (e) { console.warn('thumbs', e); thumbs = null; } }
-  $('cDots').innerHTML = PLAYERS.map((q, i) => `<button class="tile ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`).join('');
-  if (thumbs) [...$('cDots').children].forEach((b, i) => b.appendChild(thumbs.canvases[i]));
+  { const dd = $('cDots'), prevL = dd.scrollLeft, np = Math.ceil(PLAYERS.length / DPAGE); // v16: miniaturas en páginas de 12 (desliza o toca los puntos)
+    dd.innerHTML = Array.from({ length: np }, (_, pg) => `<div class="dpage">${PLAYERS.slice(pg * DPAGE, pg * DPAGE + DPAGE).map((q, k) => { const i = pg * DPAGE + k; return `<button class="tile ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`; }).join('')}</div>`).join('');
+    if (thumbs) [...dd.querySelectorAll('.tile')].forEach((b, i) => b.appendChild(thumbs.canvases[i]));
+    dd.scrollLeft = prevL; const w = dd.clientWidth, pg = Math.floor(cIdx / DPAGE); if (w && Math.abs(dd.scrollLeft - pg * w) > 2) dd.scrollTo({ left: pg * w, behavior: 'smooth' }); drawPager(w ? Math.round(dd.scrollLeft / w) : pg, pg); }
   $('cStats').innerHTML = ''; renderChUps();
   G.kick = 1; G.twirl = 6.28; measureChar(); calibrateChar(); stage.setTheme(p.theme); stage.pulse(parts, G.px, G.pz, G.Rv * 1.18);
 }
@@ -1055,6 +1060,8 @@ canvas.addEventListener('pointerdown', (e) => { if (G.mode === 'chars') swipe = 
 canvas.addEventListener('pointerup', (e) => { if (G.mode === 'chars' && swipe && swipe.id === e.pointerId) { const dx = e.clientX - swipe.x; if (Math.abs(dx) > 40) charsMove(dx < 0 ? 1 : -1); swipe = null; } });
 const on = (id, fn) => $(id).addEventListener('click', (e) => { AU.init(); fn(e); });
 on('bChars', openChars); on('bCPrev', () => charsMove(-1)); on('bCNext', () => charsMove(1));
+$('cPg').addEventListener('click', (e) => { const b = e.target.closest('button[data-pg]'); if (!b) return; const dd = $('cDots'); AU.init(); AU.select(); dd.scrollTo({ left: +b.dataset.pg * dd.clientWidth, behavior: 'smooth' }); drawPager(+b.dataset.pg); });
+$('cDots').addEventListener('scroll', () => { const dd = $('cDots'); if (dd.clientWidth) drawPager(Math.round(dd.scrollLeft / dd.clientWidth)); }, { passive: true });
 $('cDots').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (!b) return; AU.init(); cIdx = +b.dataset.i; AU.select(); renderChars(); });
 on('bCBack', () => { AU.click(); setChar(save.owned[PLAYERS[cIdx].id] ? PLAYERS[cIdx].id : save.char); G.mode = 'menu'; show('sTitle'); refreshTitle(); });
 on('bCPick', async () => {

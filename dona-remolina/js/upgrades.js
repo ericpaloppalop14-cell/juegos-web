@@ -36,6 +36,16 @@ export const CHAR_UPS = {
   genio: [['inv', 0.35], ['loot', 0.15], ['clock', 2], ['pulse', 1]],
   fantasma: [['hit', 0.1], ['speed', 0.05], ['magnet', 0.3], ['gate', 0.028]],
   disco: [['magnet', 0.4], ['loot', 0.18], ['score', 0.09], ['clock', 1.5]],
+  pinguino: [['speed', 0.06], ['time', 5], ['clock', 1.5], ['loot', 0.14]],
+  cactus: [['hit', 0.1], ['inv', 0.35], ['size', 0.07], ['score', 0.09]],
+  rex: [['gate', 0.035], ['gain', 0.08], ['size', 0.08], ['loot', 0.14]],
+  ninja: [['speed', 0.06], ['inv', 0.35], ['combo', 0.35], ['pulse', 1]],
+  abeja: [['loot', 0.2], ['magnet', 0.35], ['clock', 1.8], ['speed', 0.05]],
+  torero: [['combo', 0.4], ['score', 0.1], ['inv', 0.3], ['speed', 0.05]],
+  vikingo: [['size', 0.08], ['hit', 0.1], ['gain', 0.08], ['score', 0.09]],
+  astro: [['time', 6], ['magnet', 0.4], ['pulse', 1], ['clock', 2]],
+  yeti: [['size', 0.09], ['gain', 0.09], ['hit', 0.1], ['gate', 0.03]],
+  unicornio: [['score', 0.11], ['loot', 0.2], ['magnet', 0.4], ['combo', 0.35]],
 };
 export const upList = (charId) => (CHAR_UPS[charId] || CHAR_UPS.dona).map(([stat, per], i) => ({ i, stat, per, ...STATS[stat] }));
 // total de un stat para un personaje con sus niveles guardados (save.cu[char] = [l0,l1,l2,l3])

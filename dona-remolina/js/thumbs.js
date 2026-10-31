@@ -1,4 +1,4 @@
-// v10: miniaturas 3D en vivo de los 12 personajes (un solo renderer, render-to-texture pequeño y a baja frecuencia)
+// v10: miniaturas 3D en vivo de todos los personajes (v16: solo se animan las de la página visible) (un solo renderer, render-to-texture pequeño y a baja frecuencia)
 import * as THREE from 'three';
 const W = 112, H = 124;
 export function makeThumbs(renderer, makeModel, players) {
@@ -40,7 +40,7 @@ export function makeThumbs(renderer, makeModel, players) {
   return {
     canvases: items.map((it) => it.canvas),
     // la seleccionada se anima cada frame; las demás se reparten (≈ 12 fps cada una)
-    update(dt, t, sel) { acc += dt; draw(sel, t); const n = 2; for (let k = 0; k < n; k++) { rr = (rr + 1) % items.length; if (rr !== sel) draw(rr, t); } },
+    update(dt, t, sel, vis) { acc += dt; draw(sel, t); const n = 2; for (let k = 0; k < n; k++) { let g = 0; do { rr = (rr + 1) % items.length; g++; } while (vis && !vis(rr) && g <= items.length); if (rr !== sel && (!vis || vis(rr))) draw(rr, t); } },
     drawAll(t) { for (let i = 0; i < items.length; i++) draw(i, t); },
     items,
   };

@@ -98,6 +98,8 @@ export const PHR = {
     gold: ['¡Disco de oro, nena!', '¡Brilla más que mi vestido!']
   }
 };
+import { PHR2 } from './phrases2.js?v=16';
+Object.assign(PHR, PHR2);
 // bolsa sin repetición por personaje y situación
 const bags = {};
 export function phrase(charId, kind) {

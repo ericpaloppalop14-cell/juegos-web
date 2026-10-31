@@ -1,9 +1,10 @@
 // Las 6 limpiadoras jugables de Mueblópolis. Todo el arte es original y procedural.
 import * as THREE from 'three';
-import { buildChar } from './charpack.js?v=15';
-import { GB, lighten, darken, mix, hiQ } from './geo.js?v=15';
-import { addLids, EXTRA_PLAYERS } from './players2.js?v=15';
-import { PAL, part, makeDona } from './models.js?v=15';
+import { buildChar } from './charpack.js?v=16';
+import { GB, lighten, darken, mix, hiQ } from './geo.js?v=16';
+import { addLids, EXTRA_PLAYERS } from './players2.js?v=16';
+import { EXTRA_PLAYERS3 } from './players3.js?v=16';
+import { PAL, part, makeDona } from './models.js?v=16';
 const PI = Math.PI;
 const INK = 0x2a1840;
 
@@ -273,5 +274,5 @@ const BASE_PLAYERS = [
     fx: { colors: [0xff5a4d, 0xfff3e0, 0x4aa8ff, 0xffd23f], shape: 1, rate: 22, g: 2, up: 1.5, alpha: 1, sz: 1.1 }, say: ['¡Por el honor del par perdido!', '¡Ningún pie quedará sin pareja!', '¡El calcetín nunca olvida!', '¡Con gran agujero viene gran responsabilidad!', '¡Mi capa huele a suavizante!', '¡Ni lavadora ni secadora me detendrán!', '¡Soy el héroe que tu cajón merece!', '¡Calcetines del mundo, uníos!'],
     voice: { pitch: 0.85, rate: 0.95 }, start: '¡Por el honor del par perdido!' },
 ];
-export const PLAYERS = [...BASE_PLAYERS, ...EXTRA_PLAYERS];
+export const PLAYERS = [...BASE_PLAYERS, ...EXTRA_PLAYERS, ...EXTRA_PLAYERS3];
 export const PLAYER_BY_ID = Object.fromEntries(PLAYERS.map((p) => [p.id, p]));

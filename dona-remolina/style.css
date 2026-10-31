@@ -461,3 +461,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:#4db8ff;font-family:'F
 #frenzy{position:fixed;left:50%;top:max(96px,calc(env(safe-area-inset-top) + 88px));transform:translate(-50%,-14px) scale(.8);z-index:30;pointer-events:none;opacity:0;transition:.25s;font-weight:700;font-size:15px;color:#5a2a00;background:linear-gradient(#ffe27a,#ffb02a);border:3px solid #fff;border-radius:18px;padding:3px 14px;box-shadow:0 3px 0 #c4570a,0 0 18px rgba(255,210,63,.8);white-space:nowrap}
 #frenzy.on{opacity:1;transform:translate(-50%,0) scale(1);animation:frz .7s ease-in-out infinite alternate}
 @keyframes frz{from{filter:brightness(1)}to{filter:brightness(1.18) saturate(1.2)}}
+
+/* ===== v16: 22 personajes → miniaturas en páginas de 12 (deslizables) + puntos de página ===== */
+#cDots.dots{display:flex;flex-wrap:nowrap;grid-template-columns:none;gap:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;margin:-7px 0 -9px;width:100%;max-width:100%;touch-action:pan-x}
+#cDots.dots::-webkit-scrollbar{display:none}
+.dpage{flex:0 0 100%;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:7px 8px 9px;align-content:start}
+.dpg{display:flex;justify-content:center;gap:7px;margin:7px 0 0}
+.dpg button{pointer-events:auto;width:9px;height:9px;padding:0;border-radius:6px;border:0;background:rgba(255,255,255,.55);box-shadow:0 1px 0 rgba(60,20,100,.35);transition:width .2s,background .2s;cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative}
+.dpg button::after{content:'';position:absolute;inset:-9px -5px}
+.dpg button.on{width:26px;background:#fff}
+@media (orientation:landscape) and (max-height:520px){ .dpage{gap:4px;padding:6px 7px 8px}.dpg{margin-top:4px}.dpg button{width:7px;height:7px}.dpg button.on{width:20px} }

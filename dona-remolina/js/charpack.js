@@ -1,8 +1,8 @@
 // v7: personajes esculpidos (SDF + surface-nets) horneados a .bin y montados como grupos animables
 import * as THREE from 'three';
-import { GB } from './geo.js?v=15';
+import { GB } from './geo.js?v=16';
 import { RoomEnvironment } from '../lib/addons/environments/RoomEnvironment.js';
-import { MeshoptDecoder } from './meshopt.js?v=15';
+import { MeshoptDecoder } from './meshopt.js?v=16';
 
 const LUT = new Float32Array(256); for (let i = 0; i < 256; i++) { const c = i / 255; LUT[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
 
@@ -197,5 +197,15 @@ const EXTRA = {
   jamon: (ud) => (t) => { ud.head.rotation.y = Math.sin(t * 1.7) * 0.12; },
   croqueta: (ud) => (t) => { ud.head.rotation.z = Math.sin(t * 3.1) * 0.07; },
   genio: (ud) => (t) => { ud.bodyM.rotation.y = Math.sin(t * 2.0) * 0.25; },
+  rex: (ud) => (t) => { if (ud.tail) { ud.tail.rotation.y = Math.sin(t * 3.2) * 0.35; ud.tail.rotation.x = Math.sin(t * 2.1) * 0.05; } ud.head.rotation.y = Math.sin(t * 1.5) * 0.1; },
+  unicornio: (ud) => (t) => { if (ud.tail) { ud.tail.rotation.y = Math.sin(t * 3.4) * 0.3; ud.tail.rotation.z = Math.sin(t * 2.3) * 0.12; } ud.head.rotation.z = Math.sin(t * 2.6) * 0.06; },
+  ninja: (ud) => (t, st) => { if (ud.scarf) { ud.scarf.rotation.x = 0.1 + Math.sin(t * 6) * 0.14 + Math.min(0.5, (st && st.speed || 0) * 0.03); ud.scarf.rotation.y = Math.sin(t * 3.7) * 0.2; } },
+  abeja: (ud) => (t) => { if (ud.wings) { ud.wings.scale.x = 0.62 + 0.38 * Math.abs(Math.sin(t * 34)); ud.wings.rotation.z = Math.sin(t * 34) * 0.06; } ud.head.rotation.z = Math.sin(t * 3.3) * 0.07; },
+  astro: (ud) => (t) => { ud.head.rotation.y = Math.sin(t * 1.6) * 0.1; },
+  yeti: (ud) => (t) => { const b = ud.bodyM; b.scale.set(1 + Math.sin(t * 2.6) * 0.015, 1 - Math.sin(t * 2.6) * 0.012, 1 + Math.sin(t * 2.6) * 0.015); ud.head.rotation.z = Math.sin(t * 1.9) * 0.06; },
+  vikingo: (ud) => (t) => { ud.head.rotation.y = Math.sin(t * 1.4) * 0.1; },
+  torero: (ud) => (t) => { ud.head.rotation.z = Math.sin(t * 2.2) * 0.07; },
+  cactus: (ud) => (t) => { ud.head.rotation.z = Math.sin(t * 2.8) * 0.08; },
+  pinguino: (ud) => (t) => { ud.head.rotation.z = Math.sin(t * 2.4) * 0.07; ud.bodyM.rotation.z = Math.sin(t * 3.1) * 0.04; },
   fantasma: (ud) => (t) => { const b = ud.bodyM; b.scale.set(1 + Math.sin(t * 3) * 0.03, 1 - Math.sin(t * 3) * 0.02, 1 + Math.sin(t * 3) * 0.03); ud.head.rotation.z = Math.sin(t * 2.1) * 0.09; },
 };
