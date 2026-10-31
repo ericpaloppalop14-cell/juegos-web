@@ -1,6 +1,6 @@
 // Catálogo de objetos de Mueblópolis (todo procedural, original)
 import * as THREE from 'three';
-import { GB, C, mix, lighten, darken, sectorColors } from './geo.js?v=1';
+import { GB, C, mix, lighten, darken, sectorColors, addOutline } from './geo.js?v=2';
 
 export const PAL = {
   coral: 0xff6b5e, tang: 0xff9a1f, sun: 0xffd23f, lime: 0x8fdc4a, mint: 0x3fe0b0, turq: 0x1fc4d6, sky: 0x4aa8ff,
@@ -236,15 +236,15 @@ export function wardrobe(w, h, d, body, opts = {}) {
   const y0 = pl + 0.55, depth = 0.14;
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const x = -w / 2 + 0.3 + cw * (c + 0.5), y = y0 + rh * r;
-    g.rbox(cw - 0.22, rh - 0.22, depth * 2, 0.06, door, x, y, d / 2, 0, 0, 0, 2);
+    g.rbox(cw - 0.22, rh - 0.22, depth * 2, 0.06, door, x, y, d / 2, 0, 0, 0, 1);
     const lit = ((r * 5 + c * 3 + (opts.seed || 0)) % 4);
     if (opts.windows && rows > 1) {
       const gl = lit === 0 ? 0xffe27a : lit === 1 ? 0xc9f2ff : lit === 2 ? 0xffc9a8 : 0xa6dcff;
-      g.rbox(cw * 0.58, rh * 0.52, depth * 2.2, 0.04, gl, x, y + rh * 0.3, d / 2 + 0.05, 0, 0, 0, 2);
+      g.rbox(cw * 0.58, rh * 0.52, depth * 2.2, 0.04, gl, x, y + rh * 0.3, d / 2 + 0.05, 0, 0, 0, 1);
       g.box(cw * 0.62, 0.08, depth * 2.6, trim, x, y + rh * 0.3 + rh * 0.26, d / 2 + 0.05);
       g.sph(0.1, PAL.gold, x + (c % 2 ? -1 : 1) * cw * 0.34, y + rh * 0.22, d / 2 + 0.2, 1, 1, 1, 6);
     } else {
-      g.rbox(cw * 0.6, rh * 0.55, depth * 2.2, 0.05, lighten(body, 0.3), x, y + rh * 0.28, d / 2 + 0.04, 0, 0, 0, 2);
+      g.rbox(cw * 0.6, rh * 0.55, depth * 2.2, 0.05, lighten(body, 0.3), x, y + rh * 0.28, d / 2 + 0.04, 0, 0, 0, 1);
       g.sph(0.14, PAL.gold, x + (c % 2 ? -1 : 1) * cw * 0.36, y + rh * 0.45, d / 2 + 0.25, 1, 1, 1, 8);
     }
   }
@@ -323,7 +323,7 @@ export function getGeo(kind, v) {
 export const propMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.0 });
 
 // ---------- personajes ----------
-const part = (gb, shadow = true) => { const m = new THREE.Mesh(gb.build(false, 0.1), propMaterial); m.castShadow = shadow; return m; };
+export const part = (gb, shadow = true, rel = 0.016) => { const m = new THREE.Mesh(gb.build(false, 0.1), propMaterial); m.castShadow = shadow; const g = m.geometry, bb = g.boundingBox; const size = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z); addOutline(m, Math.max(0.012, size * rel)); return m; };
 
 export function makeDona() {
   const root = new THREE.Group();

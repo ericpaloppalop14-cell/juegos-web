@@ -9,7 +9,7 @@
 <meta name="description" content="La abuela torbellino de Mueblópolis: ¡a limpiar!">
 <link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div id="app">
@@ -23,6 +23,8 @@
     </div>
     <div id="lvl"><div class="lvlrow"><span id="hLvl">Nivel 1</span><span id="hScore">0</span></div><div class="bar"><i id="hLvlBar"></i></div></div>
     <div id="combo"><b id="hComboN">x2</b><span>¡COMBO!</span><div class="bar"><i id="hComboBar"></i></div></div>
+    <canvas id="mini" width="132" height="132"></canvas>
+    <div id="dBanner"></div>
     <div id="alcInd"><span>¡Alcalde!</span></div>
     <div id="hint"></div>
     <div id="bubbles"><div class="bubble dona" id="bDona"></div><div class="bubble alc" id="bAlc"></div></div>
@@ -37,6 +39,7 @@
       <div class="logo"><div class="l1">Doña</div><div class="l2">Remolina</div><div class="sub">¡La abuela más huracanada de Mueblópolis!</div></div>
       <div class="menu">
         <button class="btn big go" id="bPlay">¡A LIMPIAR!</button>
+        <button class="btn chars" id="bChars"><span class="cl">Personajes</span><small id="tChar">Doña Remolina</small></button>
         <div class="row"><button class="btn mid shop" id="bShop">Mejoras</button><button class="btn mid help" id="bHelp">Cómo se juega</button></div>
         <div class="statline"><span><i class="coin"></i> <b id="tCoins">0</b></span><span>Récord <b id="tBest">0</b></span></div>
       </div>
@@ -50,11 +53,22 @@
           <li><i class="n n1">1</i><div><b>Arrastra el dedo</b> para mover el torbellino. Se mueve hacia donde arrastres.</div></li>
           <li><i class="n n2">2</i><div><b>Traga lo pequeño primero</b>: calcetines, tazas, cojines… ¡y crecerás!</div></li>
           <li><i class="n n3">3</i><div>Con cada nivel te cabe algo más grande: sillas, camas, <b>armarios-rascacielos</b>.</div></li>
-          <li><i class="n n4">4</i><div>Los <b>Sofás Rebeldes</b> huyen corriendo. ¡Arrincónalos contra la pared!</div></li>
+          <li><i class="n n4">4</i><div>Mueblópolis está llena de <b>locos</b>: sofás que huyen, tostadoras que disparan tostadas, lavadoras bailonas… ¡y una <b>Nevera Gruñona</b> jefa!</div></li>
           <li><i class="n n5">5</i><div>Cuidado con el <b>Alcalde Paraguas</b>: si te pilla pequeña, te multa. ¡Cuando seas grande, trágatelo!</div></li>
-          <li><i class="n n6">6</i><div>Traga seguido para hacer <b>combos</b>. Coge monedas y relojes y gasta en <b>Mejoras</b>.</div></li>
+          <li><i class="n n6">6</i><div>Traga seguido para hacer <b>combos</b>. Gasta monedas en <b>Mejoras</b> y desbloquea <b>5 limpiadoras nuevas</b>, cada una con su superpoder. ¡Recorre los 9 distritos y traga un <b>monumento</b>!</div></li>
         </ol>
         <button class="btn mid go" id="bHelpOk">¡Entendido!</button>
+      </div>
+    </section>
+
+    <section id="sChars" class="screen hidden">
+      <div class="chtop"><button class="btn mid quit" id="bCBack">‹ Volver</button><div class="wallet"><i class="coin"></i> <b id="cCoins">0</b></div></div>
+      <div class="chsheet">
+        <div class="chnav"><button class="arrow" id="bCPrev" aria-label="Anterior">‹</button><div class="chtitle"><div class="chnum" id="cNum">1 / 6</div><h2 id="cName">Doña Remolina</h2><div class="chsub" id="cSub"></div></div><button class="arrow" id="bCNext" aria-label="Siguiente">›</button></div>
+        <div class="perk"><b>Superpoder</b><span id="cPerk"></span></div>
+        <div class="chstats" id="cStats"></div>
+        <div class="dots" id="cDots"></div>
+        <button class="btn big go" id="bCPick">¡ELEGIR!</button>
       </div>
     </section>
 
@@ -83,7 +97,7 @@
 
     <section id="sShop" class="screen card-screen hidden">
       <div class="card wide">
-        <h2>Mejoras de Doña Remolina</h2>
+        <h2>Mejoras</h2>
         <div class="wallet"><i class="coin"></i> <b id="sCoins">0</b></div>
         <div class="ups" id="upsList"></div>
         <div class="row"><button class="btn mid quit" id="bSBack">Volver</button><button class="btn mid go" id="bSGo">¡A limpiar!</button></div>
@@ -94,6 +108,6 @@
   <div id="loading"><div class="logo small"><div class="l1">Doña</div><div class="l2">Remolina</div></div><div class="lbar"><i id="lbarFill"></i></div><div class="ltxt" id="loadTxt">Preparando Mueblópolis…</div></div>
 </div>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
-<script type="module" src="js/game.js?v=1"></script>
+<script type="module" src="js/game.js?v=2"></script>
 </body>
 </html>

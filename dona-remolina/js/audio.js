@@ -112,3 +112,12 @@ export function startMusic(mode = 'game') {
 export function stopMusic() { if (mTimer) { clearInterval(mTimer); mTimer = null; } }
 export function setMusicMode(m) { mMode = m; }
 export function suspend(on) { if (!ctx) return; on ? ctx.suspend() : ctx.resume(); }
+
+// ---------- v2: sonidos de los personajes locos ----------
+export function cuckoo() { if (!ctx) return; const t = now(); tone('sine', N(16), t, 0.16, 0.2, N(15)); tone('sine', N(12), t + 0.2, 0.22, 0.2, N(11)); }
+export function quack() { if (!ctx) return; const t = now(); tone('sawtooth', 520, t, 0.12, 0.1, 380); tone('square', 540, t + 0.01, 0.1, 0.05, 400); }
+export function toastShot() { if (!ctx) return; const t = now(); tone('square', 300, t, 0.1, 0.12, 800); noise(t, 0.12, 0.12, 2000, 800, 1); }
+export function stomp() { if (!ctx) return; const t = now(); tone('sine', 120, t, 0.35, 0.5, 35); noise(t, 0.3, 0.3, 500, 60, 0.7, 'lowpass'); }
+export function select() { if (!ctx) return; const t = now(); [0, 7, 12].forEach((s, i) => tone('triangle', N(s + 9), t + i * 0.05, 0.12, 0.2)); }
+export function unlock() { if (!ctx) return; const t = now(); [0, 4, 7, 12, 16, 19, 24].forEach((s, i) => { tone('triangle', N(s + 5), t + i * 0.06, 0.25, 0.22); tone('sine', N(s + 17), t + i * 0.06, 0.2, 0.08); }); noise(t, 0.6, 0.15, 500, 6000, 0.8); }
+export function puff() { if (!ctx) return; noise(now(), 0.25, 0.14, 900, 200, 0.8, 'bandpass'); tone('sine', 700, now(), 0.15, 0.1, 200); }

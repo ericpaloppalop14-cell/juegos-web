@@ -99,19 +99,28 @@ export function makeTornado(scene) {
   // anillo y mancha del suelo
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.93, 1.0, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff74c4, transparent: true, opacity: 0.85, depthWrite: false }));
   ring.position.y = 0.3; ring.renderOrder = 4; scene.add(ring);
-  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const gr = x.createRadialGradient(64, 64, 8, 64, 64, 64); gr.addColorStop(0, 'rgba(255,120,200,.55)'); gr.addColorStop(0.55, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); const gr = x.createRadialGradient(64, 64, 8, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,.6)'); gr.addColorStop(0.55, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })); glow.position.y = 0.28; glow.renderOrder = 3; scene.add(glow);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, color: 0xff74c4, transparent: true, depthWrite: false })); glow.position.y = 0.28; glow.renderOrder = 3; scene.add(glow);
   // escombros que giran (puntitos de colores)
   const N = 70, pa = new Float32Array(N * 3), pc = new Float32Array(N * 3), seeds = [];
   const cols = [0xff6b5e, 0xffd23f, 0x3fe0b0, 0x4aa8ff, 0xff74c4, 0xffffff];
   const tc = new THREE.Color();
   for (let i = 0; i < N; i++) { seeds.push({ a: Math.random() * 6.28, h: Math.random(), sp: 2.5 + Math.random() * 4 }); tc.set(cols[i % cols.length]); pc[i * 3] = tc.r; pc[i * 3 + 1] = tc.g; pc[i * 3 + 2] = tc.b; }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pa, 3)); pg.setAttribute('color', new THREE.BufferAttribute(pc, 3));
-  const pm = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, sizeAttenuation: true, depthWrite: false });
+  const dc = document.createElement('canvas'); dc.width = dc.height = 32; const dx = dc.getContext('2d'); const dg = dx.createRadialGradient(16, 16, 2, 16, 16, 15); dg.addColorStop(0, '#fff'); dg.addColorStop(0.65, '#fff'); dg.addColorStop(1, 'rgba(255,255,255,0)'); dx.fillStyle = dg; dx.fillRect(0, 0, 32, 32);
+  const pm = new THREE.PointsMaterial({ size: 0.2, vertexColors: true, sizeAttenuation: true, depthWrite: false, map: new THREE.CanvasTexture(dc), transparent: true, alphaTest: 0.05 });
   const bits = new THREE.Points(pg, pm); bits.frustumCulled = false; scene.add(bits);
   return {
     group: g, ring, glow, bits, funnels,
+    setAlpha(k) { funnels.forEach((f, i) => { f.material.uniforms.uAlpha.value += (defs[i].al * k - f.material.uniforms.uAlpha.value) * 0.15; }); },
+    theme(th) {
+      const tc2 = new THREE.Color();
+      funnels.forEach((f, i) => { const [a, b] = th.f[i]; tc2.set(a); f.material.uniforms.uA.value.set(tc2.r, tc2.g, tc2.b); tc2.set(b); f.material.uniforms.uB.value.set(tc2.r, tc2.g, tc2.b); f.material.uniforms.uSpeed.value = defs[i].speed * (th.spd || 1); f.material.uniforms.uFreq.value = defs[i].f * (th.freq || 1); });
+      ring.material.color.set(th.ring); glow.material.color.set(th.glow);
+      for (let i = 0; i < N; i++) { tc2.set(th.bits[i % th.bits.length]); pc[i * 3] = tc2.r; pc[i * 3 + 1] = tc2.g; pc[i * 3 + 2] = tc2.b; }
+      pg.attributes.color.needsUpdate = true;
+    },
     update(t, R, px, py, pz, lean, pulse = 1) {
       g.position.set(px, py, pz); g.scale.setScalar(R * pulse * 1.12); g.rotation.set(lean.x, 0, lean.z);
       ring.position.set(px, 0.3, pz); ring.scale.set(R, 1, R); glow.position.set(px, 0.28, pz); glow.scale.setScalar(R * 1.9);

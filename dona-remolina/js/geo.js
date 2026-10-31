@@ -66,7 +66,7 @@ export class GB {
 
 export function roundedBox(w, h, d, r, seg = 3) {
   r = Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3);
-  const s = seg * 2;
+  const s = Math.min(seg, 2) * 2;
   const g = new THREE.BoxGeometry(w, h, d, s, s, s);
   const pa = g.attributes.position, na = g.attributes.normal;
   const hx = w / 2 - r, hy = h / 2 - r, hz = d / 2 - r, v = new THREE.Vector3(), inner = new THREE.Vector3();
@@ -94,4 +94,29 @@ export function sectorColors(geo, n, c1, c2) {
   }
   g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
   return g;
+}
+
+// ---------- contorno de dibujo animado (casco invertido) ----------
+const outlineMats = new Map();
+export function addOutline(mesh, thick) {
+  const geo = mesh.geometry;
+  if (!geo.attributes.aON) {
+    const pa = geo.attributes.position, na = geo.attributes.normal, acc = new Map(), keys = [];
+    for (let i = 0; i < pa.count; i++) {
+      const k = Math.round(pa.getX(i) * 400) + '_' + Math.round(pa.getY(i) * 400) + '_' + Math.round(pa.getZ(i) * 400); keys.push(k);
+      const a = acc.get(k) || [0, 0, 0]; a[0] += na.getX(i); a[1] += na.getY(i); a[2] += na.getZ(i); acc.set(k, a);
+    }
+    const out = new Float32Array(pa.count * 3);
+    for (let i = 0; i < pa.count; i++) { const a = acc.get(keys[i]); const l = Math.hypot(a[0], a[1], a[2]) || 1; out[i * 3] = a[0] / l; out[i * 3 + 1] = a[1] / l; out[i * 3 + 2] = a[2] / l; }
+    geo.setAttribute('aON', new THREE.BufferAttribute(out, 3));
+  }
+  const key = Math.round(thick * 200);
+  let m = outlineMats.get(key);
+  if (!m) {
+    m = new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: { uT: { value: key / 200 } },
+      vertexShader: 'attribute vec3 aON; uniform float uT; void main(){ gl_Position=projectionMatrix*modelViewMatrix*vec4(position+normalize(aON)*uT,1.0); }',
+      fragmentShader: 'void main(){ gl_FragColor=vec4(0.17,0.08,0.3,1.0); }' });
+    outlineMats.set(key, m);
+  }
+  const o = new THREE.Mesh(geo, m); o.castShadow = false; o.receiveShadow = false; mesh.add(o); return o;
 }
