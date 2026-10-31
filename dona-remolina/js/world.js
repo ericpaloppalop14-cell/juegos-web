@@ -198,9 +198,10 @@ export function buildScenery(scene, place) {
   for (const id in DISTRICTS) {
     const D = DISTRICTS[id]; const sx = D.cx + (D.cx > 0 ? -34 : 34), sz = D.cz + (D.cz > 0 ? -38 : 38);
     const post = new GB(); post.cyl(0.35, 0.45, 9, 0xfff7e0, 0, 0, 0, 8); post.sph(0.6, D.c, 0, 9.2, 0, 1, 1, 1, 8);
-    const pm = new THREE.Mesh(post.build(false, 0.1), propMaterialLite); pm.position.set(sx, 0, sz); pm.castShadow = true; grp.add(pm);
+    const pm = new THREE.Mesh(post.build(false, 0.1), propMaterialLite.clone()); pm.material.transparent = true; pm.position.set(sx, 0, sz); pm.castShadow = true; grp.add(pm);
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(10, 3.125), new THREE.MeshBasicMaterial({ map: signTex(D.name.toUpperCase(), D.c), transparent: true, side: THREE.DoubleSide, fog: false }));
     sg.position.set(sx, 11.2, sz); sg.rotation.y = 0; grp.add(sg);
+    (grp.userData.occl || (grp.userData.occl = [])).push({ x: sx, z: sz, top: 12.8, hw: 5.4, ms: [pm, sg], fade: 1 });
   }
   // manchas de luz de las ventanas
   const lg = new GB(); const lc = 0xfff3c8;

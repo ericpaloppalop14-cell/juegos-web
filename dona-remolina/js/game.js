@@ -480,26 +480,53 @@ function resetDemo() { G.demoT = 0; buildWorld((rnd() * 1e9) | 0); G.px = SPAWN.
 
 
 // ---------- los edificios que tapan al torbellino se vuelven transparentes ----------
-const fadePool = []; for (let i = 0; i < 28; i++) { const m = propMaterial.clone(); m.transparent = true; m.opacity = 1; fadePool.push({ m, used: false }); }
+const OCC_A = 0.22;   // opacidad de lo que tapa la vista
+const fadePool = []; for (let i = 0; i < 72; i++) { const m = propMaterial.clone(); m.transparent = true; m.opacity = 1; fadePool.push({ m, used: false }); }
 let fading = [];
+// ¿tapa este objeto la línea cámara → torbellino? (segmento en planta + altura del rayo + margen que crece hacia la cámara)
+function occludes(ox, oz, top, hw, cx, cy, cz, px, pz, R, vx, vz, L2, den) {
+  const t = ((ox - cx) * vx + (oz - cz) * vz) / L2; if (t > 1.02) return false;           // detrás del torbellino: no tapa
+  const s = t < 0 ? 0 : t > 1 ? 1 : t, lx = cx + vx * s - ox, lz = cz + vz * s - oz;
+  const hwm = R * 1.7 * s + hw + 0.8 + (1 - s) * den * 0.33; if (lx * lx + lz * lz > hwm * hwm) return false;
+  const yRay = cy + (R * 1.1 - cy) * s; return top >= yRay - R * 0.9;
+}
+function startFade(o) {
+  const slot = fadePool.find((q) => !q.used); if (!slot) return false; slot.used = true; o.fm = slot; o.fade = 1;
+  if (o.npc) { o.fl = []; o.mesh.traverse((c) => { if (!c.isMesh || !c.material) return; if (c.material.isShaderMaterial) { if (c.visible) { c.visible = false; o.fl.push([c, 0]); } } else if (c.material === propMaterial) { c.material = slot.m; o.fl.push([c, 1]); } }); }
+  else { o.mesh.material = slot.m; if (!o.ol) { o.ol = []; o.mesh.traverse((c) => { if (c.isMesh && c.material && c.material.isShaderMaterial) o.ol.push(c); }); o.olv = true; } for (const c of o.ol) c.visible = false; }
+  fading.push(o); return true;
+}
+function endFade(o) {
+  if (o.npc) { for (const [c, k] of o.fl) { if (k) c.material = propMaterial; else c.visible = true; } o.fl = null; }
+  else { o.mesh.material = propMaterial; if (o.ol) for (const c of o.ol) c.visible = o.olv !== false; }
+  o.fm.used = false; o.fm.m.opacity = 1; o.fm = null;
+}
 function updateOcclusion(dt) {
   const R = G.Rv, cx = camera.position.x, cy = camera.position.y, cz = camera.position.z, px = G.px, pz = G.pz;
-  const den = cz - pz; if (den < 1) return;
-  const x0 = cellOf(px - (R * 1.8 + 22)), x1 = cellOf(px + (R * 1.8 + 22)), z0 = cellOf(pz - R * 1.2), z1 = cellOf(cz + 4);
+  if (G.mode === 'menu') return;
+  const vx = px - cx, vz = pz - cz, L2 = vx * vx + vz * vz, den = Math.sqrt(L2); if (den < 1) return;
+  const pad = 16 + R, x0 = cellOf(Math.min(cx, px) - pad), x1 = cellOf(Math.max(cx, px) + pad), z0 = cellOf(Math.min(cz, pz) - pad), z1 = cellOf(Math.max(cz, pz) + pad);
   for (let a = x0; a <= x1; a++) for (let b = z0; b <= z1; b++) {
     const l = grid.get(gkey(a, b)); if (!l) continue;
     for (const o of l) {
-      const top = o.hy * 2; if (top < 2.6 || o.z < pz - R * 1.2 || o.z > cz - 1) continue;
-      const f = (cz - o.z) / den, lat = cx + (px - cx) * f, hw = R * 1.7 * f + o.hw + 0.5 + (1 - f) * den * 0.33;
-      if (Math.abs(o.x - lat) > hw) continue;
-      const yRay = cy + (R * 1.6 - cy) * f; if (top < yRay - R * 1.4) continue;
-      if (!o.fm) { const slot = fadePool.find((s) => !s.used); if (!slot) continue; slot.used = true; o.fm = slot; o.fade = 1; o.mesh.material = slot.m; fading.push(o); }
-      o.of = frameNo;
+      const top = o.hy * 2; if (top < 2.4 || o.state !== 0 || !o.mesh.visible) continue;
+      if (!occludes(o.x, o.z, top, o.hw, cx, cy, cz, px, pz, R, vx, vz, L2, den)) continue;
+      if (!o.fm && !startFade(o)) continue; o.of = frameNo;
     }
   }
+  for (const m of movers) { // los personajes locos grandes también (neveras jefas, lavadoras…)
+    const top = m.hy * 2 * (m.sy || 1); if (top < 2.6 || m.state !== 0 || !m.mesh.visible) continue;
+    if (!occludes(m.x, m.z, top, m.r, cx, cy, cz, px, pz, R, vx, vz, L2, den)) continue;
+    if (!m.fm && !startFade(m)) continue; m.of = frameNo;
+  }
   for (let i = fading.length - 1; i >= 0; i--) {
-    const o = fading[i], tgt = o.of === frameNo ? 0.16 : 1; o.fade += (tgt - o.fade) * Math.min(1, dt * 9); o.fm.m.opacity = o.fade;
-    if (tgt === 1 && o.fade > 0.97 || o.state !== 0) { o.mesh.material = propMaterial; o.fm.used = false; o.fm.m.opacity = 1; o.fm = null; fading[i] = fading[fading.length - 1]; fading.pop(); }
+    const o = fading[i], tgt = o.of === frameNo ? OCC_A : 1; o.fade += (tgt - o.fade) * Math.min(1, dt * 9); o.fm.m.opacity = o.fade;
+    if (tgt === 1 && o.fade > 0.97 || o.state !== 0) { endFade(o); fading[i] = fading[fading.length - 1]; fading.pop(); }
+  }
+  // decorado del escenario (postes y carteles de distrito)
+  const oc = scenery && scenery.userData.occl; if (oc) for (const e of oc) {
+    const hit = occludes(e.x, e.z, e.top, e.hw, cx, cy, cz, px, pz, R, vx, vz, L2, den); e.fade += ((hit ? OCC_A : 1) - e.fade) * Math.min(1, dt * 9);
+    for (const m of e.ms) { m.material.opacity = e.fade; m.visible = true; }
   }
 }
 
@@ -582,7 +609,7 @@ function cull() {
   for (const o of props) {
     if (o.state !== 0) continue; const dx = o.x - cx, dz = o.z - cz, d2 = dx * dx + dz * dz, ext = o.hy > 8 ? vr + 70 : o.tier === 0 ? vr * 0.72 : o.tier === 1 ? vr * 0.88 : vr;
     const vis = d2 < ext * ext; if (o.vis !== vis) { o.vis = vis; o.mesh.visible = vis; }
-    if (vis) { if (!o.ol) { o.ol = []; o.mesh.traverse((c) => { if (c.isMesh && c.material && c.material.isShaderMaterial) o.ol.push(c); }); o.olv = true; } const ov = d2 < olR2 || o.hy > 8; if (ov !== o.olv) { o.olv = ov; for (const c of o.ol) c.visible = ov; } }
+    if (vis) { if (!o.ol) { o.ol = []; o.mesh.traverse((c) => { if (c.isMesh && c.material && c.material.isShaderMaterial) o.ol.push(c); }); o.olv = true; } const ov = d2 < olR2 || o.hy > 8; if (ov !== o.olv) { o.olv = ov; if (!o.fm) for (const c of o.ol) c.visible = ov; } }
     const cs = vis && d2 < (E * 1.25) * (E * 1.25) && !(o.tier === 0 && d2 > 2500); if (o.cs !== cs) { o.cs = cs; o.mesh.castShadow = cs; }
   }
 }
@@ -825,7 +852,7 @@ function frame(now) {
 }
 // API para pruebas
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
-window.DR = { G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
+window.DR = { get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
 function initLogo() {
   const L = document.querySelector('#sTitle .logo'); if (!L) return; L.setAttribute('aria-label', 'Doña Remolina'); let n = 0;
