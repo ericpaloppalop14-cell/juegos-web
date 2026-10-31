@@ -1,7 +1,7 @@
 // v4: objetos, edificios locos y monumentos de los lugares nuevos
 import * as THREE from 'three';
-import { GB, lighten, darken, mix } from './geo.js?v=4';
-import { KINDS, PAL } from './models.js?v=4';
+import { GB, lighten, darken, mix } from './geo.js?v=5';
+import { KINDS, PAL } from './models.js?v=5';
 const PI = Math.PI, pk = (a, v) => a[v % a.length], INK = 0x2a1840;
 const N = (id, n, f, tier, nv, coins, th, pl) => { KINDS[id] = { n, tier, f, nv, coins, th, places: [pl], notint: true }; };
 const CB = (id, n, f, coins, th, pl) => { KINDS[id] = { n, tier: 5, f: () => f(), nv: 1, coins, th, places: [pl], notint: true, cb: true }; };

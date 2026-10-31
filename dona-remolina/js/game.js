@@ -1,16 +1,17 @@
 // Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=4';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=4';
-import './models2.js?v=4';
-import './models3.js?v=4';
-import { PLACES } from './places.js?v=4';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=4';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=4';
-import { NPC } from './npcs.js?v=4';
-import { GB, setOutlines } from './geo.js?v=4';
-import { Particles, Rings, makeTornado } from './fx.js?v=4';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=4';
+import * as AU from './audio.js?v=5';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=5';
+import './models2.js?v=5';
+import './models3.js?v=5';
+import { PLACES } from './places.js?v=5';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=5';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=5';
+import { NPC } from './npcs.js?v=5';
+import { makeTitle } from './title.js?v=5';
+import { GB, setOutlines } from './geo.js?v=5';
+import { Particles, Rings, makeTornado } from './fx.js?v=5';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=5';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -94,12 +95,14 @@ function setChar(id, remember = true) {
 }
 setChar(save.char);
 const worldGroup = new THREE.Group(); scene.add(worldGroup);
+let title = null, titleStar = '';
 let pixelCap = Math.min(window.devicePixelRatio || 1, 2.25), pixelRatio = pixelCap;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w, h, false); if (composer) { composer.setPixelRatio(pixelRatio); composer.setSize(w, h); bloom.resolution.set(w * pixelRatio * 0.5, h * pixelRatio * 0.5); }
   camera.aspect = w / h; camera.fov = w / h < 1 ? 56 : 46; camera.updateProjectionMatrix();
   parts.mat.uniforms.uScale.value = (h * pixelRatio * 0.5) / Math.tan(camera.fov * Math.PI / 360);
+  if (title) title.resize(w, h, pixelRatio);
   $('rotate').style.display = 'none';
 }
 window.addEventListener('resize', resize); resize();
@@ -545,7 +548,7 @@ function updateFx(dt) {
   // luz y sombras
   const E = 16 + R * 7.2; sun.target.position.set(camT.x, 0, camT.z); sun.position.copy(sun.target.position).add(SUN_OFF);
   const sc = sun.shadow.camera; if (Math.abs(sc.right - E) > 0.5) { sc.left = -E; sc.right = E; sc.top = E; sc.bottom = -E; sc.updateProjectionMatrix(); }
-  scene.fog.near = camDist * 2.2; scene.fog.far = camDist * 7 + 80;
+  const fk = PL.fogK || 1; scene.fog.near = camDist * 2.2 * fk; scene.fog.far = (camDist * 7 + 80) * fk;
   // globos de texto
   placeBubble($('bDona'), G.px, 2.5 * R * 1.18 + 0.2 * R, G.pz);
   for (const p of bubPool) { if (!p.who) continue; const w = p.who; if (w.state !== 0) { p.who = null; p.e.classList.remove('on'); continue; } placeBubble(p.e, w.x, w.hy * 2 * (w.sy || 1) + (w.yo || 0) + 0.5, w.z); }
@@ -759,28 +762,32 @@ const hexs = (n) => '#' + n.toString(16).padStart(6, '0');
 function renderChars() {
   const p = PLAYERS[cIdx]; setChar(p.id, false); const owned = !!save.owned[p.id], sel = save.char === p.id;
   $('cName').textContent = p.name; $('cSub').textContent = p.sub; $('cPerk').textContent = p.perk; $('cCoins').textContent = fmt(save.coins); $('cNum').textContent = (cIdx + 1) + ' / ' + PLAYERS.length;
-  const b = $('bCPick'); b.className = 'btn big ' + (owned ? 'go' : save.coins >= p.price ? 'unlock' : 'locked');
-  b.innerHTML = owned ? (sel ? '✔ ELEGIDA' : '¡ELEGIR!') : `<i class="coin"></i> ${p.price} · DESBLOQUEAR`;
+  const b = $('bCPick'), lockP = PLi >= save.unlocked; b.className = 'btn big ' + (owned ? 'go' : save.coins >= p.price ? 'unlock' : 'locked');
+  b.innerHTML = owned ? `¡A LIMPIAR!<small>con ${p.name}${lockP ? ' · en ' + PLACES[save.unlocked - 1].name : ''}</small>` : `<i class="coin"></i> ${fmt(p.price)} · DESBLOQUEAR`;
   $('cDots').innerHTML = PLAYERS.map((q, i) => `<button class="dot ${i === cIdx ? 'on' : ''} ${save.owned[q.id] ? '' : 'lock'}" data-i="${i}" style="--c:${hexs(q.theme.ring)};--d:${hexs(q.theme.f[0][1])}" aria-label="${q.name}"></button>`).join('');
   $('cStats').innerHTML = (owned ? '' : '<span class="lk">🔒 Bloqueada</span>') + `<span class="ph">“${p.start}”</span>`;
   G.kick = 1; G.twirl = 6.28; X.puff(G.px, 0.8 * G.Rv, G.pz); say('dona', pick(p.say, (rnd() * 99) | 0), 2600);
 }
 function openChars() { cIdx = Math.max(0, PLAYERS.findIndex((p) => p.id === save.char)); G.mode = 'chars'; G.vx = G.vz = 0; show('sChars'); renderChars(); AU.click(); }
 function charsMove(d) { cIdx = (cIdx + d + PLAYERS.length) % PLAYERS.length; AU.select(); renderChars(); }
+canvas.addEventListener('pointerdown', (e) => { if (G.mode === 'menu' && title && title.active) title.tap(e.clientX, e.clientY); });
 let swipe = null;
 canvas.addEventListener('pointerdown', (e) => { if (G.mode === 'chars') swipe = { x: e.clientX, id: e.pointerId }; });
 canvas.addEventListener('pointerup', (e) => { if (G.mode === 'chars' && swipe && swipe.id === e.pointerId) { const dx = e.clientX - swipe.x; if (Math.abs(dx) > 40) charsMove(dx < 0 ? 1 : -1); swipe = null; } });
 const on = (id, fn) => $(id).addEventListener('click', (e) => { AU.init(); fn(e); });
 on('bChars', openChars); on('bCPrev', () => charsMove(-1)); on('bCNext', () => charsMove(1));
 $('cDots').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (!b) return; AU.init(); cIdx = +b.dataset.i; AU.select(); renderChars(); });
-on('bCBack', () => { AU.click(); setChar(save.char); G.mode = 'menu'; show('sTitle'); refreshTitle(); });
-on('bCPick', () => {
+on('bCBack', () => { AU.click(); setChar(save.owned[PLAYERS[cIdx].id] ? PLAYERS[cIdx].id : save.char); G.mode = 'menu'; show('sTitle'); refreshTitle(); });
+on('bCPick', async () => {
   const p = PLAYERS[cIdx];
   if (!save.owned[p.id]) {
-    if (save.coins < p.price) { AU.nope(); $('bCPick').animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 220 }); $('cStats').innerHTML = `<span class="lk">Te faltan ${p.price - save.coins} monedas</span>`; return; }
+    if (save.coins < p.price) { AU.nope(); $('bCPick').animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 220 }); $('cStats').innerHTML = `<span class="lk">Te faltan ${fmt(p.price - save.coins)} monedas</span>`; return; }
     save.coins -= p.price; save.owned[p.id] = true; AU.unlock(); flash('good'); parts.burst(G.px, 2 * G.Rv, G.pz, 40, { color: [0xffd23f, 0xff74c4, 0x3fe0b0, 0x4aa8ff, 0xffffff], speed: 8, size: 0.6, life: 1.2, shape: 1, g: 4, up: 4 }); toast('¡' + p.name + ' desbloqueada!', '');
+    save.char = p.id; ch = p; UT = null; persist(); renderChars(); return; // ahora el botón pasa a ser ¡A LIMPIAR!
   }
-  save.char = p.id; ch = p; persist(); AU.select(); AU.speak(p.start, p.voice.pitch, p.voice.rate); renderChars();
+  setChar(p.id, true); persist(); AU.select(); AU.speak(p.start, p.voice.pitch, p.voice.rate);
+  if (PLi >= save.unlocked) await enterPlace(save.unlocked - 1); // si el lugar elegido está bloqueado, vamos al último abierto
+  startRound();
 });
 on('bPlay', startRound); on('bShop', () => openShop('sTitle')); on('bHelp', () => { show('sHelp'); AU.click(); });
 on('bHelpOk', () => { show('sTitle'); AU.click(); save.tut = save.tut; });
@@ -806,8 +813,10 @@ function draw(dt) { if (composer && bloomOn) composer.render(dt); else renderer.
 function frame(now) {
   requestAnimationFrame(frame);
   if (!last) last = now; let dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (G.mode !== 'pause') step(dt); else { G.t += 0; updateFx(0); }
-  draw(dt);
+  const tOn = !!title && G.mode === 'menu';
+  if (title && title.active !== tOn) title.setActive(tOn, ch.id);
+  if (tOn) { if (titleStar !== ch.id) { titleStar = ch.id; title.setStar(ch.id); title.theme(ch.theme); } G.t += dt; title.update(dt); title.render(renderer); }
+  else { if (G.mode !== 'pause') step(dt); else { G.t += 0; updateFx(0); } draw(dt); }
   // resolución adaptativa
   fAvg = fAvg * 0.95 + dt * 1000 * 0.05;
   if (fAvg > 27 && qLevel < 3 && !window.NOADAPT) { if (++slowN > 60) { qLevel++; if (qLevel === 1) bloomOn = false; else if (qLevel === 2) setOutlines(false); else sun.castShadow = false; slowN = 0; fAvg = 16; } }
@@ -818,12 +827,19 @@ function frame(now) {
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
 window.DR = { G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
+function initLogo() {
+  const L = document.querySelector('#sTitle .logo'); if (!L) return; L.setAttribute('aria-label', 'Doña Remolina'); let n = 0;
+  for (const c of ['l1', 'l2']) { const e = L.querySelector('.' + c), tx = e.textContent; e.setAttribute('aria-hidden', 'true'); e.innerHTML = [...tx].map((ch2) => `<span style="--i:${n++};--r:${n % 2 ? 1 : -1}">${ch2}</span>`).join(''); }
+  L.addEventListener('pointerdown', (e) => { e.stopPropagation(); AU.init(); AU.select(); L.classList.remove('squish'); void L.offsetWidth; L.classList.add('squish'); if (title && title.active) title.air(e.clientX, e.clientY); });
+}
 async function boot() {
+  initLogo();
   const lf = $('lbarFill'), lt = $('loadTxt'); const tick = (p, t) => { lf.style.width = p + '%'; if (t) lt.textContent = t; return new Promise((r) => setTimeout(r, 16)); };
   await tick(5, 'Poniendo el parqué…'); await enterPlace(PLi, (p, t) => tick(p * 0.75, t));
   await tick(78, 'Barriendo ' + PL.name + '…'); buildWorld((Math.random() * 1e9) | 0);
   await tick(88, 'Peinando a las limpiadoras…'); for (const p of PLAYERS) modelCache[p.id] || (modelCache[p.id] = p.make()); resetDemo(); G.Rv = G.R = 0.9;
-  renderer.compile(scene, camera); step(0.016); draw(0.016);
+  title = makeTitle({ getModel: (id) => modelCache[id] || (modelCache[id] = PLAYER_BY_ID[id].make()), popHost: $('tpops'), bubHost: $('tbubs') }); window.DR_title = title; title.setActive(true, ch.id); title.setActive(false); title.resize(window.innerWidth, window.innerHeight, pixelRatio);
+  renderer.compile(scene, camera); renderer.compile(title.scene, title.camera); step(0.016); draw(0.016);
   await tick(100, '¡Lista!'); toMenu(); G.demoT = 0;
   setTimeout(() => $('loading').classList.add('out'), 200); setTimeout(() => $('loading').remove(), 900);
   requestAnimationFrame(frame);
