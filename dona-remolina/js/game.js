@@ -1,25 +1,27 @@
 // TORNADO LIMPIEZA — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=17';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=17';
-import './models2.js?v=17';
-import './models3.js?v=17';
-import './models4.js?v=17';
-import { PLACES } from './places.js?v=17';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=17';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=17';
-import { NPC } from './npcs.js?v=17';
-import { makeTitle } from './title.js?v=17';
-import { makeStage } from './stage.js?v=17';
-import { citySVG } from './citymap.js?v=17';
-import { phrase } from './phrases.js?v=17';
-import { makeThumbs } from './thumbs.js?v=17';
-import { GB, setOutlines } from './geo.js?v=17';
-import { loadPacks, initCharEnv } from './charpack.js?v=17';
+import * as AU from './audio.js?v=18';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=18';
+import './models2.js?v=18';
+import './models3.js?v=18';
+import './models4.js?v=18';
+import './models5.js?v=18';
+import { makeWool } from './wool.js?v=18';
+import { PLACES } from './places.js?v=18';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=18';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=18';
+import { NPC } from './npcs.js?v=18';
+import { makeTitle } from './title.js?v=18';
+import { makeStage } from './stage.js?v=18';
+import { citySVG } from './citymap.js?v=18';
+import { phrase } from './phrases.js?v=18';
+import { makeThumbs } from './thumbs.js?v=18';
+import { GB, setOutlines } from './geo.js?v=18';
+import { loadPacks, initCharEnv } from './charpack.js?v=18';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco', 'pinguino', 'cactus', 'rex', 'ninja', 'abeja', 'torero', 'vikingo', 'astro', 'yeti', 'unicornio'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=17';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=17';
+import { Particles, Rings, makeTornado } from './fx.js?v=18';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=18';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -57,6 +59,7 @@ try {
 if (!save.mv11) { save.mv11 = 1; for (const id in save.pl || {}) { const q = save.pl[id]; if (q && !q.done) { q.rm = []; q.rn = []; q.cf = 0; q.part = false; q.tot = 0; } else if (q) { q.rm = []; q.rn = []; q.part = false; } } try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 if (!PLAYER_BY_ID[save.char]) save.char = 'dona';
 if (!(save.place >= 0 && save.place < PLACES.length)) save.place = 0;
+if ((save.unlocked | 0) === 12 && save.pl && save.pl.volcan && save.pl.volcan.done) save.unlocked = 13; // v18: quien ya limpió la 12 abre la 13
 save.unlocked = Math.max(1, Math.min(PLACES.length, save.unlocked | 0));
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
 let PLi = save.place, PL = PLACES[PLi];
@@ -103,10 +106,11 @@ const parts = new Particles(scene, 1200);
 const rings = new Rings(scene, 10);
 const stage = makeStage(scene); let stageOn = false, stageHidden = [], bgKeep = null;
 const tornado = makeTornado(scene);
+const wool = makeWool(scene);
 let thumbs = null; let blinkT = 2, blinkP = 0, qLevel = 0; let scenery = null, dona = null, viewCh = ch; const modelCache = {};
 function setChar(id, remember = true) {
   const c = PLAYER_BY_ID[id] || PLAYERS[0]; if (dona) scene.remove(dona);
-  dona = modelCache[c.id] || (modelCache[c.id] = c.make()); scene.add(dona); tornado.theme(c.theme);
+  dona = modelCache[c.id] || (modelCache[c.id] = c.make()); scene.add(dona); tornado.theme(c.theme); wool.attach(dona);
   viewCh = c; if (remember) { ch = c; save.char = c.id; UT = null; }
   return c;
 }
@@ -231,12 +235,12 @@ function updateInst(dt, force) {
 function addProp(d, shadow = true) {
   const geo = getGeo(d.kind, d.v), K = KINDS[d.kind];
   if (K.tier <= 1 && !K.lm && !K.cb && geo.halfH * d.sc * 2 < INST_H) {
-    const o = { id: props.length, gid: d.gid, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
+    const o = { id: props.length, gid: d.gid, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, v: d.v, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
     o.area = o.r * o.r; o.hw = Math.max(geo.geo.userData.w, geo.geo.userData.d) * d.sc * 0.5; addInst(o, d, geo); props.push(o);
     const k = gkey(cellOf(d.x), cellOf(d.z)); (grid.get(k) || grid.set(k, []).get(k)).push(o); o.cell = k; return o;
   }
   const m = new THREE.Mesh(geo.geo, propMaterial); m.castShadow = shadow; m.rotation.order = 'XZY';
-  const o = { id: props.length, gid: d.gid, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, mesh: m, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
+  const o = { id: props.length, gid: d.gid, kind: d.kind, K, tier: K.tier, r: geo.r * d.sc, sc: d.sc, x: d.x, z: d.z, hy: geo.halfH * d.sc, rot: d.rot, v: d.v, mesh: m, state: 0, area: 0, coins: K.coins, ov: d.ov, wf: -1, name: K.n };
   o.area = o.r * o.r; o.hw = Math.max(geo.geo.userData.w, geo.geo.userData.d) * d.sc * 0.5; m.position.set(d.x, o.hy, d.z); m.rotation.set(0, d.rot, 0); m.scale.setScalar(d.sc); m.updateMatrix(); m.matrixAutoUpdate = false;
   worldGroup.add(m); props.push(o);
   const k = gkey(cellOf(d.x), cellOf(d.z)); (grid.get(k) || grid.set(k, []).get(k)).push(o); o.cell = k;
@@ -311,6 +315,11 @@ function swallow(o) {
   const pts = Math.round((G.frenzy > 0 ? 2 : 1) * (10 + o.area * 14) * (1 + Math.min(10, Math.floor(G.combo / 5)) * 0.2) * (1 + pk('score')));
   const coinsF = (G.frenzy > 0 ? 2 : 1) * o.coins * lootMul() * cm * COIN_K;
   const real = G.mode === 'play';
+  if (real && o.K && o.K.sweater) { // v18: cada jersey tragado se pone encima del personaje
+    const wt = [0.2, 0.4, 0.9, 1.8, 3.0][Math.min(4, o.tier)] * (o.K.sweater > 1 ? 2.5 : 1), nn = o.K.sweater;
+    for (let i = 0; i < nn; i++) wool.add((o.v | 0) + i * 3, wt / nn, G.t);
+    if (wool.n % 12 === 0 && wool.n > 0) { toast('🧶 ¡' + wool.n + ' jerséis puestos!', ''); G.shout = Math.max(G.shout, 0.5); if (rnd() < 0.6) say('dona', ['¡Qué calentito!', '¡Otro jersey más!', '¡Estoy hecha un ovillo!', '¡Ya no me cabe ni uno!', '¡Voy hecha una cebolla de lana!'][(rnd() * 5) | 0], 1700); }
+  }
   if (real) { G.score += pts; addCoins(coinsF); G.swallowed++; if (o.kind === 'wardrobe') G.maxTier = Math.max(G.maxTier, 4); else if (o.kind === 'skyscraper' || (o.K && o.K.cb)) G.maxTier = 5; else G.maxTier = Math.max(G.maxTier, o.tier); }
   const before = G.A; if (!G.finale) G.A = Math.min(R_MAX * R_MAX, G.A + GROW_K * (1 + (ut().gain || 0)) * o.area / (1 + G.A / GROW_SAT)); G.R = Math.sqrt(G.A);
   hud.dirty = true;
@@ -718,7 +727,7 @@ function updateFx(dt) {
   tornado.update(t, R, G.px, 0, G.pz, { x: G.vz * 0.02, z: -G.vx * 0.02 }, pulse);
   const ds = R * 1.18 * (1 + G.kick * 0.1), ud = dona.userData, sw = Math.sin(t * 9), a0 = ud.arms0 || 2.35;
   // squash & stretch: rebota al andar, respira al quieto y se estira al tragar
-  const mv = clamp((G.speed || 0) / 9, 0, 1), sqz = (Math.abs(Math.sin(t * 6.5)) - 0.5) * 0.12 * mv + Math.sin(t * 2.3) * 0.022 * (1 - mv) + G.kick * 0.09 + (G.shout > 0 ? 0.04 : 0);
+  const mv = clamp((G.speed || 0) / 9, 0, 1), sqz = (Math.abs(Math.sin(t * 6.5)) - 0.5) * 0.12 * mv + Math.sin(t * 2.3) * 0.022 * (1 - mv) + G.kick * 0.09 + (G.shout > 0 ? 0.04 : 0) + wool.update(dt, t, G.speed);
   dona.scale.set(ds * (1 - sqz * 0.55), ds * (1 + sqz), ds * (1 - sqz * 0.55));
   if (ud.lids) { blinkT -= dt; if (blinkT < 0) { blinkP = 0.17; blinkT = 1.8 + rnd() * 3.2; } blinkP = Math.max(0, blinkP - dt); const bl = blinkP > 0 ? Math.sin((1 - blinkP / 0.17) * Math.PI) : 0; for (const l of ud.lids) { l.visible = bl > 0.05; l.scale.set(1, Math.max(0.01, bl), 1); } }
   dona.position.set(G.px, 0.12 * ds + Math.abs(Math.sin(t * 6)) * 0.06 * ds + (ud.hover ? (ud.hover + Math.sin(t * 3) * 0.05) * ds : 0), G.pz);
@@ -873,14 +882,15 @@ function renderMap() { // v17: tira compacta de ciudades (carrusel horizontal) e
   if (centerNow) sc();
   mapPage = mapPageAt(); drawTabs(pages);
 }
-function mapPageAt() { const g = $('wmGrid'); let pg = 0; for (let p = 1; p * MAP_PER < PLACES.length; p++) { const c = g.querySelector('.ct[data-i="' + p * MAP_PER + '"]'); if (c && c.offsetLeft <= g.scrollLeft + g.clientWidth * 0.45) pg = p; } return pg; }
-function drawTabs(pages) { const N = PLACES.length, tabs = $('wmTabs'); tabs.style.display = pages > 1 ? 'flex' : 'none'; tabs.innerHTML = Array.from({ length: pages }, (_, p) => `<button class="wmtab${p === mapPage ? ' on' : ''}" data-p="${p}">${p * MAP_PER + 1}–${Math.min(N, (p + 1) * MAP_PER)}</button>`).join('<i>›</i>'); }
+function mapPageAt() { const g = $('wmGrid'); let pg = 0; if (g.scrollWidth > g.clientWidth + 8 && g.scrollLeft + g.clientWidth >= g.scrollWidth - 6) return Math.ceil(PLACES.length / MAP_PER) - 1; for (let p = 1; p * MAP_PER < PLACES.length; p++) { const c = g.querySelector('.ct[data-i="' + p * MAP_PER + '"]'); if (c && c.offsetLeft <= g.scrollLeft + g.clientWidth * 0.45) pg = p; } return pg; }
+function drawTabs(pages) { const N = PLACES.length, tabs = $('wmTabs'); tabs.style.display = pages > 1 ? 'flex' : 'none'; tabs.innerHTML = Array.from({ length: pages }, (_, p) => `<button class="wmtab${p === mapPage ? ' on' : ''}" data-p="${p}">${p * MAP_PER + 1 === Math.min(N, (p + 1) * MAP_PER) ? N : (p * MAP_PER + 1) + '–' + Math.min(N, (p + 1) * MAP_PER)}</button>`).join('<i>›</i>'); }
 function toMenu() {
-  persist(); setChar(save.char); G.mode = 'menu'; $('hud').classList.remove('on'); joyShow(false); joy.on = false; G.intro = 0; G.combo = 0; G.comboT = 0; G.slow = 0; G.total = 0; G.left = 0;
+  wool.clear(); persist(); setChar(save.char); G.mode = 'menu'; $('hud').classList.remove('on'); joyShow(false); joy.on = false; G.intro = 0; G.combo = 0; G.comboT = 0; G.slow = 0; G.total = 0; G.left = 0;
   $('combo').classList.remove('on'); $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('dBanner').classList.remove('on'); resetDemo(); G.A0 = G.A = 0.81; G.R = G.Rv = 0.9; show('sTitle'); refreshTitle(); AU.setMusicMode('menu');
 }
 function startRound() {
   if (PLi >= save.unlocked) { AU.nope(); return; }
+  wool.clear();
   AU.init(); AU.startMusic('game'); AU.setMusicMode('game'); AU.click();
   const P = prog(); if (P.done && !P.part) { P.rm = []; P.rn = []; P.cf = 0; } P.part = true; P.att = (P.att || 0) + 1; G.placeDone = false;
   buildWorld(PL.seed, true); alc = null; alcTimer = 0; alcLevel = 0; botTarget = null;
@@ -1115,7 +1125,7 @@ function frame(now) {
 }
 // API para pruebas
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
-window.DR = { stage, charScreenBox, get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
+window.DR = { wool, stage, charScreenBox, get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
 const SWIRL = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="tlg" cx="40%" cy="35%" r="75%"><stop offset="0" stop-color="#ff9ad6"/><stop offset="1" stop-color="#8a3df0"/></radialGradient></defs><circle cx="20" cy="20" r="16" fill="url(#tlg)" stroke="#b3175f" stroke-width="4.5"/><path d="M20 20.5a1.6 1.6 0 0 1 3.2 0a4.4 4.4 0 0 1-8.8 0a7.3 7.3 0 0 1 14.6 0a10.4 10.4 0 0 1-20.8 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>';
 function initLogo() {

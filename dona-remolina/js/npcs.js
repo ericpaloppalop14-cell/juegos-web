@@ -1,7 +1,7 @@
 // Los personajes locos de Mueblópolis (NPC): modelos procedurales + comportamiento.
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=17';
-import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=17';
+import { GB, lighten, darken } from './geo.js?v=18';
+import { PAL, part, makeRebel, makeAlcalde } from './models.js?v=18';
 const PI = Math.PI, INK = 0x2a1840;
 const pick = (a, v) => a[v % a.length];
 
@@ -422,6 +422,7 @@ NPC.neveraDes = neveraV('Nevera de Turrón (Jefa)', [0xffc07a, 0xfff0d2], '¡Tur
 NPC.neveraPol = neveraV('Congelador Polar (Jefe)', [0x8ad0ff, 0xf0f8ff], '¡Congelador polar roto! +8 s');
 NPC.neveraSel = neveraV('Nevera Tropical (Jefa)', [0x3fbf5a, 0xffe03a], '¡Nevera tropical! +8 s');
 NPC.neveraEsp = neveraV('Nevera Orbital (Jefa)', [0xb06bff, 0xe8e0ff], '¡Nevera orbital! +8 s');
+NPC.neveraJer = neveraV('Nevera de Punto (Jefa)', [0xff4a8c, 0xffd23f], '¡Nevera de lana! +8 s');
 NPC.neveraVol = neveraV('Nevera Magmática (Jefa)', [0xe8452a, 0xffb02a], '¡Nevera de magma! +8 s');
 
 // v15 «Sorpréndeme»: Tesoro Dorado (huye muy rápido; si lo atrapas: +10 s, monedas y fiesta)

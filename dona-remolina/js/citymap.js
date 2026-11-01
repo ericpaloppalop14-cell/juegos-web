@@ -138,6 +138,20 @@ const ART = {
     s += `<g class="fly1"><ellipse cx="34" cy="30" rx="12" ry="4" fill="#b8b0d8"/><ellipse cx="34" cy="26" rx="6" ry="5" fill="#bfe8ff"/><circle cx="26" cy="31" r="1.3" fill="#ffe66a"/><circle cx="34" cy="32" r="1.3" fill="#ffe66a"/><circle cx="42" cy="31" r="1.3" fill="#ffe66a"/></g>`;
     return s;
   },
+  // Villa Jersey: jersey-casa gigante, ovillo con ojos, agujas locas y suelo de punto
+  jersey() {
+    let s = defs('j', [[0, '#4cc4ff'], [0.55, '#b0eeff'], [1, '#fff0d0']]);
+    s += cloud(34, 18, 0.9, '#fff', 'cd1') + cloud(130, 12, 0.7, '#fff', 'cd2');
+    s += `<path d="M0 30q20 -14 40 0t40 0t40 0t40 0" stroke="#ff4a8c" stroke-width="3" fill="none" opacity=".7"/>`;
+    s += `<rect y="74" width="${W}" height="26" fill="#ffb86a"/>` + Array.from({ length: 16 }, (_, i) => `<path d="M${i * 11 + 1} 78l4 8l4 -8M${i * 11 + 1} 90l4 8l4 -8" stroke="#ff8a3a" stroke-width="3" fill="none" stroke-linecap="round"/>`).join('');
+    s += `<g class="bob2"><line x1="22" y1="86" x2="62" y2="2" stroke="#2ad0c8" stroke-width="3.6" stroke-linecap="round"/><circle cx="62" cy="2" r="4.6" fill="#ffd23f"/><line x1="140" y1="86" x2="102" y2="6" stroke="#ffc02a" stroke-width="3.6" stroke-linecap="round"/><circle cx="102" cy="6" r="4.6" fill="#ff4a8c"/></g>`;
+    s += `<g class="bob"><path d="M58 40Q80 52 102 40L112 52L106 82H54L48 52Z" fill="#ff3d5e"/><path d="M46 52L30 76q-2 4 3 6l8 -2l12 -22z" fill="#ff3d5e"/><path d="M114 52L130 76q2 4 -3 6l-8 -2l-12 -22z" fill="#ff3d5e"/><rect x="52" y="76" width="56" height="8" rx="3" fill="#fff0d8"/><ellipse cx="80" cy="41" rx="14" ry="6" fill="#fff0d8"/><ellipse cx="80" cy="41" rx="9" ry="3.4" fill="#5a2a4a"/>`;
+    [66, 80, 94].forEach((x) => { s += `<path d="M${x} 52q4 4 0 8t0 8t0 8" stroke="#ffd0d8" stroke-width="2.6" fill="none" stroke-linecap="round"/>`; });
+    s += `<circle cx="70" cy="46" r="0" fill="#fff"/></g>`;
+    s += `<g class="bob2"><circle cx="24" cy="80" r="15" fill="#ff8ac8"/><path d="M10 76q14 -10 28 4M10 84q14 -10 28 0M18 68q14 4 12 24" stroke="#ffd0e8" stroke-width="2.4" fill="none"/><circle cx="19" cy="78" r="3.8" fill="#fff"/><circle cx="20" cy="79" r="1.9" fill="#2a1840"/><circle cx="30" cy="78" r="3.8" fill="#fff"/><circle cx="31" cy="79" r="1.9" fill="#2a1840"/><path d="M21 86q4 4 8 0" stroke="#2a1840" stroke-width="1.8" fill="none"/></g>`;
+    s += `<g class="sway"><circle cx="136" cy="80" r="11" fill="#9be64a"/><path d="M127 76q9 -6 18 2M127 84q9 -6 18 0" stroke="#e4ffc0" stroke-width="2" fill="none"/><path d="M140 90q8 4 12 -2" stroke="#9be64a" stroke-width="2" fill="none"/></g>`;
+    return s + sparkle(44, 40, 4, '#fff', 0) + sparkle(122, 30, 3, '#ffd23f', 0.8) + sparkle(78, 20, 3, '#ff4a8c', 1.4);
+  },
   // Volcán Chocolatero: volcán en erupción, lava y brasas
   volcan() {
     let s = defs('vo', [[0, '#ff6a3a'], [0.55, '#ff9a4a'], [1, '#ffe090']]);
@@ -151,4 +165,4 @@ const ART = {
   },
 };
 export function citySVG(id) { const f = ART[id]; return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${f ? f() : ''}</svg>`; }
-export const CITY_ICON = { muebl: '🏛️', puerto: '🧁', jungla: '🧱', castillo: '🏰', nube: '☁️', halloween: '🎃', mar: '🐚', desierto: '🍬', polo: '🐧', selva: '🍍', espacio: '🪐', volcan: '🌋' };
+export const CITY_ICON = { muebl: '🏛️', puerto: '🧁', jungla: '🧱', castillo: '🏰', nube: '☁️', halloween: '🎃', mar: '🐚', desierto: '🍬', polo: '🐧', selva: '🍍', espacio: '🪐', volcan: '🌋', jersey: '🧶' };

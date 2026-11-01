@@ -1,5 +1,5 @@
 // v16: 10 limpiadores más (22 en total), cada uno con su torbellino de colores, su ventaja y su modelo 3D esculpido
-import { buildChar } from './charpack.js?v=17';
+import { buildChar } from './charpack.js?v=18';
 const T = (a, b, c) => [[a[0], a[1]], [b[0], b[1]], [c[0], c[1]]];
 const mk = (id) => () => buildChar(id);
 export const EXTRA_PLAYERS3 = [
