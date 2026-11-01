@@ -471,3 +471,58 @@ html,body{margin:0;height:100%;overflow:hidden;background:#4db8ff;font-family:'F
 .dpg button::after{content:'';position:absolute;inset:-9px -5px}
 .dpg button.on{width:26px;background:#fff}
 @media (orientation:landscape) and (max-height:520px){ .dpage{gap:4px;padding:6px 7px 8px}.dpg{margin-top:4px}.dpg button{width:7px;height:7px}.dpg button.on{width:20px} }
+
+/* ===== v17: TORNADO LIMPIEZA — logotipo animado + selector de ciudad en tira compacta (sin tapar el tornado ni el título) ===== */
+/* logotipo: dos líneas, letras que botan, la O es un torbellino que gira */
+#sTitle .logo{display:block;max-width:none;align-self:flex-start;margin:8px 0 0 10px;text-align:left;transform:rotate(-3deg);position:relative}
+#sTitle .logo .l1,#sTitle .logo .l2{justify-content:flex-start}
+#sTitle .logo .l1{font-size:min(14vw,58px);letter-spacing:1px;margin:0;-webkit-text-stroke:min(1.3vw,5px) #b3175f;text-shadow:0 min(1.1vw,4px) 0 #b3175f,0 10px 16px rgba(60,20,100,.35)}
+#sTitle .logo .l2{font-size:min(10.6vw,44px);letter-spacing:2px;margin:-.06em 0 0;-webkit-text-stroke:min(1.1vw,4px) #7a0f40;text-shadow:0 min(.9vw,3.5px) 0 #7a0f40,0 10px 16px rgba(60,20,100,.35)}
+#sTitle .logo .l1 span:nth-child(odd){color:#ffe14a}#sTitle .logo .l1 span:nth-child(even){color:#ff9a2a}
+#sTitle .logo .l2 span:nth-child(odd){color:#fff}#sTitle .logo .l2 span:nth-child(even){color:#bff3ff}
+#sTitle .logo .l1 span.lo{display:inline-grid;place-items:center;width:.74em;margin:0 .03em}
+#sTitle .logo .l1 span.lo svg{display:block;width:.86em;height:.86em;overflow:visible;animation:lswirl 1.7s linear infinite;filter:drop-shadow(0 .05em 0 #7a0f40)}
+@keyframes lswirl{to{transform:rotate(-360deg)}}
+#sTitle .statline{left:auto;right:12px;top:calc(env(safe-area-inset-top) + 50px);flex-direction:column;align-items:flex-end;gap:3px}
+#sTitle .logo .sub{display:inline-block;margin-top:6px;font-size:min(3.8vw,16px);padding:3px 13px}
+#sTitle .logo::before,#sTitle .logo::after{content:'✦';position:absolute;color:#fff;text-shadow:0 0 8px #ffd23f,0 0 16px #ff74c4;font-size:min(6vw,24px);animation:ltw 1.6s ease-in-out infinite;pointer-events:none}
+#sTitle .logo::before{left:-3%;top:6%}#sTitle .logo::after{right:-2%;top:36%;animation-delay:-.8s;font-size:min(4.6vw,18px)}
+@keyframes ltw{0%,100%{opacity:.2;transform:scale(.5) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(25deg)}}
+#sTitle .logo.squish{animation:lsquish .7s cubic-bezier(.3,1.6,.5,1)}
+/* selector: sin panel de fondo; tira de miniaturas deslizable abajo */
+#sTitle .menu{background:none;backdrop-filter:none;-webkit-backdrop-filter:none;border:0;box-shadow:none;padding:0;gap:6px;max-width:520px;width:100%}
+#sTitle .wmap{gap:2px;position:relative}
+.wmtop{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;padding:0 6px}
+#sTitle .wmhint{align-self:auto;font-size:10.5px;padding:2px 9px 2px 6px;border-width:2px}
+#sTitle .wmtabs{gap:3px;font-size:11px}
+#sTitle .wmtab{font-size:11px;padding:1px 9px;border-width:2px}
+#sTitle .wmgrid{display:flex;grid-template-columns:none;align-items:center;gap:0;row-gap:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:none;position:relative;padding:15px 12px 9px;margin:0 -2px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%)}
+#sTitle .wmgrid::-webkit-scrollbar{display:none}
+#sTitle .wmgrid .ct{flex:0 0 clamp(88px,24vw,112px);scroll-snap-align:center;background:rgba(255,255,255,.92)}
+#sTitle .wmgrid .ct.sel{transform:scale(1.08)}
+#sTitle .wmgrid .ctarr{flex:0 0 18px;width:18px;height:18px}
+#sTitle .wmgrid .ctname{font-size:10.5px;min-height:2.1em;padding:2px 1px 1px}
+#sTitle .wmgrid .ctn,#sTitle .wmgrid .ctok{width:20px;height:20px;font-size:12px}
+#sTitle .wmgrid .ctcur{font-size:10px;top:-11px}
+#sTitle .wmgrid .ctlock{font-size:20px}
+#sTitle .placepick .pinfo{background:rgba(255,255,255,.88)}
+@media (orientation:landscape) and (max-height:520px){
+  #sTitle{padding:6px 12px 6px}
+  #sTitle .logo{align-self:flex-start;margin:4px 0 0 6px;text-align:left;max-width:48vw}
+  #sTitle .logo .l1{font-size:min(15vh,52px)}#sTitle .logo .l2{font-size:min(11vh,38px)}
+  #sTitle .logo .sub{display:none}
+  #sTitle .logo .l1,#sTitle .logo .l2{justify-content:flex-start}
+  #sTitle .statline{top:calc(env(safe-area-inset-top) + 56px);bottom:auto;left:auto;right:14px;flex-direction:row;gap:6px}
+  #sTitle .menu{width:min(34vw,300px);max-width:none;margin:0 0 0 auto;align-self:flex-end;padding:0;gap:4px}
+  #sTitle .wmap{position:absolute;left:10px;bottom:6px;width:calc(100vw - min(34vw,300px) - 36px)}
+  #sTitle .wmgrid{padding:13px 12px 6px}
+  #sTitle .wmgrid .ct{flex:0 0 clamp(80px,12.5vw,104px)}
+  #sTitle .wmgrid .ctimg{aspect-ratio:16/8.4}
+  #sTitle .wmgrid .ctname{font-size:9.5px;min-height:1.9em}
+  #sTitle .wmgrid .ctarr{flex-basis:14px;width:14px;height:14px}
+  #sTitle .wmgrid .ctn,#sTitle .wmgrid .ctok{width:17px;height:17px;font-size:10.5px}
+  #sTitle .wmgrid .ctcur{font-size:9px;top:-9px}
+  #sTitle .wmhint{font-size:9.5px}
+  #sTitle .btn.big{font-size:20px;padding:4px 14px}
+}

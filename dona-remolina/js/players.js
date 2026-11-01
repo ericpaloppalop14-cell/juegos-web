@@ -1,10 +1,10 @@
 // Las 6 limpiadoras jugables de Mueblópolis. Todo el arte es original y procedural.
 import * as THREE from 'three';
-import { buildChar } from './charpack.js?v=16';
-import { GB, lighten, darken, mix, hiQ } from './geo.js?v=16';
-import { addLids, EXTRA_PLAYERS } from './players2.js?v=16';
-import { EXTRA_PLAYERS3 } from './players3.js?v=16';
-import { PAL, part, makeDona } from './models.js?v=16';
+import { buildChar } from './charpack.js?v=17';
+import { GB, lighten, darken, mix, hiQ } from './geo.js?v=17';
+import { addLids, EXTRA_PLAYERS } from './players2.js?v=17';
+import { EXTRA_PLAYERS3 } from './players3.js?v=17';
+import { PAL, part, makeDona } from './models.js?v=17';
 const PI = Math.PI;
 const INK = 0x2a1840;
 

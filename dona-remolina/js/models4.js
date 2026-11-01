@@ -1,7 +1,7 @@
 // v15: seis ciudades nuevas MUY distintas: Arrecife, Desierto de Caramelo, Polo Iglú, Selva Frutal, Ciudad Lunar, Volcán Chocolatero
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=16';
-import { KINDS, PAL } from './models.js?v=16';
+import { GB, lighten, darken } from './geo.js?v=17';
+import { KINDS, PAL } from './models.js?v=17';
 const PI = Math.PI, pk = (a, v) => a[v % a.length], INK = 0x2a1840;
 const N = (id, n, f, tier, nv, coins, th, pl) => { KINDS[id] = { n, tier, f, nv, coins, th, places: [pl], notint: true }; };
 const CB = (id, n, f, coins, th, pl) => { KINDS[id] = { n, tier: 5, f: () => f(), nv: 1, coins, th, places: [pl], notint: true, cb: true }; };

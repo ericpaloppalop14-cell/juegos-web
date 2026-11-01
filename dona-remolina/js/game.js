@@ -1,25 +1,25 @@
-// Doña Remolina — juego 3D móvil (Three.js). Todo el código y el arte son originales.
+// TORNADO LIMPIEZA — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=16';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=16';
-import './models2.js?v=16';
-import './models3.js?v=16';
-import './models4.js?v=16';
-import { PLACES } from './places.js?v=16';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=16';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=16';
-import { NPC } from './npcs.js?v=16';
-import { makeTitle } from './title.js?v=16';
-import { makeStage } from './stage.js?v=16';
-import { citySVG } from './citymap.js?v=16';
-import { phrase } from './phrases.js?v=16';
-import { makeThumbs } from './thumbs.js?v=16';
-import { GB, setOutlines } from './geo.js?v=16';
-import { loadPacks, initCharEnv } from './charpack.js?v=16';
+import * as AU from './audio.js?v=17';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=17';
+import './models2.js?v=17';
+import './models3.js?v=17';
+import './models4.js?v=17';
+import { PLACES } from './places.js?v=17';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=17';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=17';
+import { NPC } from './npcs.js?v=17';
+import { makeTitle } from './title.js?v=17';
+import { makeStage } from './stage.js?v=17';
+import { citySVG } from './citymap.js?v=17';
+import { phrase } from './phrases.js?v=17';
+import { makeThumbs } from './thumbs.js?v=17';
+import { GB, setOutlines } from './geo.js?v=17';
+import { loadPacks, initCharEnv } from './charpack.js?v=17';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco', 'pinguino', 'cactus', 'rex', 'ninja', 'abeja', 'torero', 'vikingo', 'astro', 'yeti', 'unicornio'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=16';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=16';
+import { Particles, Rings, makeTornado } from './fx.js?v=17';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=17';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -667,7 +667,7 @@ window.addEventListener('resize', () => { chFree = null; });
 let chCorr = { m: 1, dx: 0, dy: 0 }; const CH_YAW = 0.42;
 function titleInsets() {
   const W = window.innerWidth, H = window.innerHeight, q = (s) => document.querySelector(s).getBoundingClientRect(), lg = q('#sTitle .logo'), st = q('#sTitle .statline'), mn = q('#sTitle .menu');
-  if (W > H * 1.1) return { l: 0, r: Math.round(Math.max(0, W - mn.left + 6)), t: 0, b: 0 };
+  if (W > H * 1.1) { const wm = q('#sTitle .wmap'); return { l: 0, r: Math.round(Math.max(0, W - mn.left + 6)), t: 0, b: Math.round(Math.max(0, H - wm.top + 2)) }; }
   return { l: 0, r: 0, t: Math.round(Math.max(lg.bottom, st.bottom) + 2), b: Math.round(Math.max(0, H - mn.top + 2)) };
 }
 function applyChCamera() {
@@ -856,24 +856,25 @@ function refreshTitle() {
 
 // v14: mapa de ciudades: miniaturas ilustradas, camino numerado con flechas, estados (completada / actual / bloqueada) y aviso de cómo se desbloquea
 let mapPage = 0, mapKey = '', mapPLi = -1; const MAP_PER = 6;
-function renderMap() {
-  const N = PLACES.length, pages = Math.ceil(N / MAP_PER);
-  if (mapPLi !== PLi) { mapPLi = PLi; mapPage = Math.floor(PLi / MAP_PER); mapKey = ''; }
+function renderMap() { // v17: tira compacta de ciudades (carrusel horizontal) en la parte baja; deja ver el tornado y el título
+  const N = PLACES.length, pages = Math.ceil(N / MAP_PER), grid = $('wmGrid');
   const done = PLACES.map((q) => !!progOf(q.id).done), cur = PLACES.findIndex((q, i) => i < save.unlocked && !done[i]);
-  const key = [mapPage, PLi, save.unlocked, done.map((d) => +d).join('')].join('|'); if (key === mapKey) return; mapKey = key;
-  const tabs = $('wmTabs'); tabs.style.display = pages > 1 ? 'flex' : 'none';
-  tabs.innerHTML = Array.from({ length: pages }, (_, p) => `<button class="wmtab${p === mapPage ? ' on' : ''}" data-p="${p}">${p * MAP_PER + 1}–${Math.min(N, (p + 1) * MAP_PER)}</button>`).join('<i>›</i>');
+  const key = [PLi, save.unlocked, done.map((d) => +d).join('')].join('|'); if (key === mapKey && grid.firstChild) return;
+  const first = !mapKey || !grid.firstChild, centerNow = mapPLi !== PLi || first; mapKey = key; mapPLi = PLi;
+  const prevL = grid.scrollLeft;
   const tile = (idx) => {
-    if (idx >= N) return '<span class="ct empty"></span>';
     const q = PLACES[idx], lock = idx >= save.unlocked, dn = done[idx], isCur = idx === cur, sel = idx === PLi;
     return `<button class="ct ${lock ? 'lock' : dn ? 'done' : 'open'}${sel ? ' sel' : ''}${isCur ? ' cur' : ''}" data-i="${idx}" style="--c:${q.sky[1]}" aria-label="${q.name}${lock ? ' (bloqueada)' : dn ? ' (completada)' : ''}"><span class="ctimg">${citySVG(q.id)}${lock ? '<span class="ctlock">🔒</span>' : ''}</span><span class="ctn">${idx + 1}</span>${dn ? '<span class="ctok">✔</span>' : ''}${isCur ? '<span class="ctcur">¡Aquí!</span>' : ''}<b class="ctname">${q.name}</b></button>`;
   };
   const arr = (idx) => `<i class="ctarr ${idx + 1 < save.unlocked ? 'on' : 'off'}${idx + 1 === cur ? ' next' : ''}"><svg viewBox="0 0 24 24"><path d="M3 12h13M11 5l8 7l-8 7" /></svg></i>`;
-  const wrap = (idx) => `<i class="ctwrap ${idx + 1 < save.unlocked ? 'on' : 'off'}"><svg viewBox="0 0 300 20" preserveAspectRatio="none"><path d="M262 0v9H38v8" /><path class="hd" d="M31 11l7 8l7-8" /></svg></i>`;
-  const b = mapPage * MAP_PER; let html = '';
-  for (let k = 0; k < MAP_PER; k++) { html += tile(b + k); if (k % 3 < 2) html += (b + k + 1 < N ? arr(b + k) : '<i></i>'); else if (k === 2) html += wrap(b + k); }
-  $('wmGrid').innerHTML = html;
+  let html = ''; for (let i = 0; i < N; i++) html += tile(i) + (i < N - 1 ? arr(i) : '');
+  grid.innerHTML = html; grid.scrollLeft = prevL;
+  const sc = () => { const c = grid.querySelector('.ct[data-i="' + PLi + '"]'); if (!c || !grid.clientWidth) { mapKey = ''; return; } grid.scrollTo({ left: Math.max(0, c.offsetLeft - (grid.clientWidth - c.offsetWidth) / 2), behavior: first ? 'auto' : 'smooth' }); };
+  if (centerNow) sc();
+  mapPage = mapPageAt(); drawTabs(pages);
 }
+function mapPageAt() { const g = $('wmGrid'); let pg = 0; for (let p = 1; p * MAP_PER < PLACES.length; p++) { const c = g.querySelector('.ct[data-i="' + p * MAP_PER + '"]'); if (c && c.offsetLeft <= g.scrollLeft + g.clientWidth * 0.45) pg = p; } return pg; }
+function drawTabs(pages) { const N = PLACES.length, tabs = $('wmTabs'); tabs.style.display = pages > 1 ? 'flex' : 'none'; tabs.innerHTML = Array.from({ length: pages }, (_, p) => `<button class="wmtab${p === mapPage ? ' on' : ''}" data-p="${p}">${p * MAP_PER + 1}–${Math.min(N, (p + 1) * MAP_PER)}</button>`).join('<i>›</i>'); }
 function toMenu() {
   persist(); setChar(save.char); G.mode = 'menu'; $('hud').classList.remove('on'); joyShow(false); joy.on = false; G.intro = 0; G.combo = 0; G.comboT = 0; G.slow = 0; G.total = 0; G.left = 0;
   $('combo').classList.remove('on'); $('alcInd').style.display = 'none'; $('leftInd').style.display = 'none'; $('dBanner').classList.remove('on'); resetDemo(); G.A0 = G.A = 0.81; G.R = G.Rv = 0.9; show('sTitle'); refreshTitle(); AU.setMusicMode('menu');
@@ -1084,7 +1085,8 @@ on('bShPrev', () => shopMove(-1)); on('bShNext', () => shopMove(1));
 // lugares
 const placeMove = (d) => { const i = PLi + d; if (i < 0 || i >= PLACES.length || G.mode === 'travel') return; AU.select(); travelTo(i, false); };
 $('wmGrid').addEventListener('click', (e) => { const t = e.target.closest('.ct[data-i]'); if (t) { const i = +t.dataset.i; if (i !== PLi) placeMove(i - PLi); else AU.click && AU.click(); } });
-$('wmTabs').addEventListener('click', (e) => { const t = e.target.closest('.wmtab'); if (t) { mapPage = +t.dataset.p; mapKey = ''; AU.select && AU.select(); renderMap(); } });
+$('wmTabs').addEventListener('click', (e) => { const t = e.target.closest('.wmtab'); if (t) { const g = $('wmGrid'), c = g.querySelector('.ct[data-i="' + (+t.dataset.p * MAP_PER) + '"]'); AU.select && AU.select(); if (c) g.scrollTo({ left: Math.max(0, c.offsetLeft - 8), behavior: 'smooth' }); mapPage = +t.dataset.p; drawTabs(Math.ceil(PLACES.length / MAP_PER)); } });
+$('wmGrid').addEventListener('scroll', () => { const p = mapPageAt(); if (p !== mapPage) { mapPage = p; drawTabs(Math.ceil(PLACES.length / MAP_PER)); } }, { passive: true });
 on('bPPrev', () => placeMove(-1)); on('bPNext', () => placeMove(1));
 on('bPdGo', (e) => { const n = +e.target.dataset.next; if (n >= 0) travelTo(n, true); else { AU.click(); toMenu(); } });
 on('bPdMenu', () => { AU.click(); toMenu(); }); on('bPdShop', () => openShop('sPlaceDone'));
@@ -1115,9 +1117,10 @@ function frame(now) {
 function advance(sec, bot) { const n = Math.round(sec * 60); const b = G.bot; if (bot !== undefined) G.bot = bot; for (let i = 0; i < n; i++) { botT -= 0; step(1 / 60); } G.bot = b; draw(0.016); }
 window.DR = { stage, charScreenBox, get scenery() { return scenery; }, G, save, PLAYERS, NPC, X, setChar, openChars, renderChars, get ch() { return ch; }, get landmarks() { return landmarks; }, get composer() { return composer; }, set bloomOn(v) { bloomOn = v; }, get bloomOn() { return bloomOn; }, get qLevel() { return qLevel; }, cull, drawMini, charsMove, step, advance, startRound, endRound, buildWorld, swallow, get props() { return props; }, get movers() { return movers; }, get alc() { return alc; }, get sucked() { return sucked; }, get pickups() { return pickups; }, parts, renderer, scene, camera, joy, toMenu, upCost, STATS, upList, UPMAX, PLACES, get PL() { return PL; }, get PLi() { return PLi; }, enterPlace, travelTo, completePlace, showPlaceDone, prog, progOf, persist, doPulse, get UT() { return ut(); }, resetUT() { UT = null; }, refreshTitle, get pixelRatio() { return pixelRatio; }, spawnAlcalde, resetDemo, showResults };
 
+const SWIRL = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="tlg" cx="40%" cy="35%" r="75%"><stop offset="0" stop-color="#ff9ad6"/><stop offset="1" stop-color="#8a3df0"/></radialGradient></defs><circle cx="20" cy="20" r="16" fill="url(#tlg)" stroke="#b3175f" stroke-width="4.5"/><path d="M20 20.5a1.6 1.6 0 0 1 3.2 0a4.4 4.4 0 0 1-8.8 0a7.3 7.3 0 0 1 14.6 0a10.4 10.4 0 0 1-20.8 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>';
 function initLogo() {
-  const L = document.querySelector('#sTitle .logo'); if (!L) return; L.setAttribute('aria-label', 'Doña Remolina'); let n = 0;
-  for (const c of ['l1', 'l2']) { const e = L.querySelector('.' + c), tx = e.textContent; e.setAttribute('aria-hidden', 'true'); e.innerHTML = [...tx].map((ch2) => `<span style="--i:${n++};--r:${n % 2 ? 1 : -1}">${ch2}</span>`).join(''); }
+  const L = document.querySelector('#sTitle .logo'); if (!L) return; L.setAttribute('aria-label', 'TORNADO LIMPIEZA'); let n = 0;
+  for (const c of ['l1', 'l2']) { const e = L.querySelector('.' + c), tx = e.textContent; e.setAttribute('aria-hidden', 'true'); e.innerHTML = [...tx].map((ch2, k) => { const sw = c === 'l1' && k === 1; return `<span class="${sw ? 'lo' : ''}" style="--i:${n++};--r:${n % 2 ? 1 : -1}">${sw ? SWIRL : ch2}</span>`; }).join(''); }
   L.addEventListener('pointerdown', (e) => { e.stopPropagation(); AU.init(); AU.select(); L.classList.remove('squish'); void L.offsetWidth; L.classList.add('squish'); if (title && title.active) title.air(e.clientX, e.clientY); });
 }
 async function boot() {
