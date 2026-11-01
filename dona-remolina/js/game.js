@@ -1,27 +1,27 @@
 // TORNADO LIMPIEZA — juego 3D móvil (Three.js). Todo el código y el arte son originales.
 import * as THREE from 'three';
-import * as AU from './audio.js?v=18';
-import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=18';
-import './models2.js?v=18';
-import './models3.js?v=18';
-import './models4.js?v=18';
-import './models5.js?v=18';
-import { makeWool } from './wool.js?v=18';
-import { PLACES } from './places.js?v=18';
-import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=18';
-import { PLAYERS, PLAYER_BY_ID } from './players.js?v=18';
-import { NPC } from './npcs.js?v=18';
-import { makeTitle } from './title.js?v=18';
-import { makeStage } from './stage.js?v=18';
-import { citySVG } from './citymap.js?v=18';
-import { phrase } from './phrases.js?v=18';
-import { makeThumbs } from './thumbs.js?v=18';
-import { GB, setOutlines } from './geo.js?v=18';
-import { loadPacks, initCharEnv } from './charpack.js?v=18';
+import * as AU from './audio.js?v=19';
+import { KINDS, getGeo, propMaterial, makeAlcalde, part, PAL, setPlaceTint, clearGeoCache } from './models.js?v=19';
+import './models2.js?v=19';
+import './models3.js?v=19';
+import './models4.js?v=19';
+import './models5.js?v=19';
+import { makeWool } from './wool.js?v=19';
+import { PLACES } from './places.js?v=19';
+import { STATS, CHAR_UPS, UPMAX, upCost, upList, statTotals, pulsePeriod, pulseRadius } from './upgrades.js?v=19';
+import { PLAYERS, PLAYER_BY_ID } from './players.js?v=19';
+import { NPC } from './npcs.js?v=19';
+import { makeTitle } from './title.js?v=19';
+import { makeStage } from './stage.js?v=19';
+import { citySVG } from './citymap.js?v=19';
+import { phrase } from './phrases.js?v=19';
+import { makeThumbs } from './thumbs.js?v=19';
+import { GB, setOutlines } from './geo.js?v=19';
+import { loadPacks, initCharEnv } from './charpack.js?v=19';
 // los personajes esculpidos se descargan antes de arrancar (12 paquetes .bin pequeños, en paralelo)
 { const lf = document.getElementById('lbarFill'), lt = document.getElementById('loadTxt'); if (lt) lt.textContent = 'Esculpiendo a las limpiadoras…'; await loadPacks(['dona', 'gato', 'fregona', 'bruja', 'robo', 'calcetin', 'pulpo', 'jamon', 'croqueta', 'genio', 'fantasma', 'disco', 'pinguino', 'cactus', 'rex', 'ninja', 'abeja', 'torero', 'vikingo', 'astro', 'yeti', 'unicornio'], './', 13, (p) => { if (lf) lf.style.width = (p * 30) + '%'; }); }
-import { Particles, Rings, makeTornado } from './fx.js?v=18';
-import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=18';
+import { Particles, Rings, makeTornado } from './fx.js?v=19';
+import { buildScenery, disposeScenery, setDistrictStyle, generate, HALF, SPAWN, mulberry, skyTex, DISTRICTS, districtAt } from './world.js?v=19';
 import { EffectComposer } from '../lib/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/addons/postprocessing/UnrealBloomPass.js';
@@ -62,6 +62,8 @@ if (!(save.place >= 0 && save.place < PLACES.length)) save.place = 0;
 if ((save.unlocked | 0) === 12 && save.pl && save.pl.volcan && save.pl.volcan.done) save.unlocked = 13; // v18: quien ya limpió la 12 abre la 13
 save.unlocked = Math.max(1, Math.min(PLACES.length, save.unlocked | 0));
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
+// v19: modo de pruebas (?pruebas=1 o #pruebas): abre las 13 ciudades y los 22 personajes y da monedas de sobra; queda guardado
+try { if (/[?&]pruebas(=1|=true|&|$)/i.test(location.search) || /pruebas/i.test(location.hash)) { save.pruebas = 1; save.unlocked = PLACES.length; for (const c of PLAYERS) save.owned[c.id] = true; save.coins = Math.max(save.coins | 0, 1000000); save.tut = true; persist(); } } catch (e) {}
 let PLi = save.place, PL = PLACES[PLi];
 const progOf = (id) => save.pl[id] || (save.pl[id] = { rm: [], rn: [], done: false, att: 0, tot: 0 });
 const prog = () => progOf(PL.id);

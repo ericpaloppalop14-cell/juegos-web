@@ -1,7 +1,7 @@
 // v18: jerséis puestos en capas sobre el personaje (Villa Jersey). Máx. 5 capas visibles + 1 "núcleo" donde se fusionan las viejas.
 import * as THREE from 'three';
-import { GB, addOutline } from './geo.js?v=18';
-import { JERSEY_COLORS } from './models5.js?v=18';
+import { GB, addOutline } from './geo.js?v=19';
+import { JERSEY_COLORS } from './models5.js?v=19';
 
 const MAXV = 5;
 let knitTex = null, geo = null; const mats = new Map();

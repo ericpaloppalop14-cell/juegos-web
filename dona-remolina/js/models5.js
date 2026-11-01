@@ -1,7 +1,7 @@
 // v18: VILLA JERSEY (jersey): jerséis de lana de todos los tamaños con ochos de punto, ovillos, agujas locas
 import * as THREE from 'three';
-import { GB, lighten, darken } from './geo.js?v=18';
-import { KINDS } from './models.js?v=18';
+import { GB, lighten, darken } from './geo.js?v=19';
+import { KINDS } from './models.js?v=19';
 const PI = Math.PI, pk = (a, v) => a[v % a.length], INK = 0x2a1840;
 const N = (id, n, f, tier, nv, coins, th, pl, extra) => { KINDS[id] = { n, tier, f, nv, coins, th, places: [pl], notint: true, ...(extra || {}) }; };
 const CB = (id, n, f, coins, th, pl) => { KINDS[id] = { n, tier: 5, f: () => f(), nv: 1, coins, th, places: [pl], notint: true, cb: true }; };
