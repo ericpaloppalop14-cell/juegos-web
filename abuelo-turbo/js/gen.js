@@ -1,8 +1,8 @@
 /* Generador de patrones justos: siempre hay camino libre */
-import { clamp, rand, randi, pick } from './util.js?v=4';
-import { lowForDistrict, highForDistrict, bigForDistrict, carForDistrict } from './props.js?v=4';
-import { distIdxAt } from './world.js?v=4';
-import { S, upValue } from './store.js?v=4';
+import { clamp, rand, randi, pick } from './util.js?v=5';
+import { lowForDistrict, highForDistrict, bigForDistrict, carForDistrict } from './props.js?v=5';
+import { distIdxAt } from './world.js?v=5';
+import { S, upValue } from './store.js?v=5';
 
 export const LW = 2.4;
 const LANES = [-1, 0, 1];

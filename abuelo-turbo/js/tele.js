@@ -1,5 +1,5 @@
 /* Telegrafía de obstáculos: flechas en el suelo + icono flotante (verde = SALTA, naranja = AGÁCHATE) */
-import { THREE, bendMat } from './util.js?v=4';
+import { THREE, bendMat } from './util.js?v=5';
 
 const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 function chevrons(up, col1, col2) {
@@ -34,7 +34,7 @@ function init() {
   const mk = m => { const mm = bendMat(new THREE.MeshBasicMaterial({ map: m, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false })); return mm; };
   const mi = t => bendMat(new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }));
   G = {
-    dg: new THREE.PlaneGeometry(2.0, 5.2), ig: new THREE.PlaneGeometry(1.15, 1.15),
+    dg: new THREE.PlaneGeometry(2.2, 6.2), ig: new THREE.PlaneGeometry(1.5, 1.5),
     dm: { jump: mk(T.jump), slide: mk(T.slide) },
     im: { jump: mi(badge(true, '#7bea34', '#2fae1f')), slide: mi(badge(false, '#ffb02a', '#ff6a1a')) },
   };

@@ -1,8 +1,8 @@
-import { Game } from './game.js?v=4';
-import A from './audio.js?v=4';
-import * as ST from './store.js?v=4';
-import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=4';
-import { THREE, clamp, pick } from './util.js?v=4';
+import { Game } from './game.js?v=5';
+import A from './audio.js?v=5';
+import * as ST from './store.js?v=5';
+import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=5';
+import { THREE, clamp, pick } from './util.js?v=5';
 
 const { S } = ST; const $ = id => document.getElementById(id);
 const fmt = n => Math.floor(n).toLocaleString('es-ES');

@@ -1,4 +1,4 @@
-import { THREE, BEND, softTexture, rand, clamp } from './util.js?v=4';
+import { THREE, BEND, softTexture, rand, clamp } from './util.js?v=5';
 
 const VS = `uniform float uBend; uniform float uBendX; uniform float uScale; attribute float size; attribute vec4 aCol; varying vec4 vC;
 void main(){ vC=aCol; vec4 mv=modelViewMatrix*vec4(position,1.); mv.y-=uBend*mv.z*mv.z; mv.x+=uBendX*mv.z*mv.z; gl_Position=projectionMatrix*mv; gl_PointSize=size*uScale/max(0.3,-mv.z); }`;
@@ -72,6 +72,8 @@ export class FX {
   burst(x, y, z, n, cols, speed = 6, life = 0.7, size = 0.28, grav = 12) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, b = Math.random() * 3.14 - 1.57, s = speed * (0.4 + Math.random() * 0.8); const c = C(cols[i % cols.length]); this.dots.emit(x, y, z, Math.cos(a) * Math.cos(b) * s, Math.sin(b) * s + 2, Math.sin(a) * Math.cos(b) * s, life * (0.6 + Math.random() * 0.6), size, size * 0.3, c, [c[0], c[1], c[2], 0], grav, 0.5); } }
   dust(x, y, z, n = 1, col = 0xd8d0c0, vz = 3) { const c0 = C(col, 0.55), c1 = C(col, 0); for (let i = 0; i < n; i++) this.nrm.emit(x + rand(-0.3, 0.3), y + 0.1, z + rand(-0.2, 0.4), rand(-0.8, 0.8), rand(0.3, 1.2), vz + rand(0, 2), rand(0.35, 0.6), 0.25, 0.9, c0, c1, -0.5, 1.5); }
   flame(x, y, z, vz, big = 1) { const c0 = C(0xffc040, 0.9), c1 = C(0xff3a10, 0); this.add.emit(x + rand(-0.05, 0.05), y + rand(-0.05, 0.05), z, rand(-0.4, 0.4), rand(-0.3, 0.3), vz + rand(2, 6), rand(0.18, 0.35) * big, 0.38 * big, 0.08, c0, c1, 0, 2); }
+  spark(x, y, z, vz) { const c0 = C(0xffd070, 1), c1 = C(0xff4a10, 0); this.dots.emit(x + rand(-0.06, 0.06), y + rand(-0.06, 0.06), z, rand(-1.6, 1.6), rand(-0.4, 2.2), vz + rand(0, 6), rand(0.25, 0.6), 0.11, 0.03, c0, c1, 5, 0.6); }
+  core(x, y, z, vz) { const c0 = C(0xfffff0, 0.95), c1 = C(0xffd070, 0); this.add.emit(x, y, z, rand(-0.1, 0.1), rand(-0.1, 0.1), vz + rand(0, 2), rand(0.1, 0.18), 0.3, 0.12, c0, c1, 0, 2); }
   smoke(x, y, z, vz) { const c0 = C(0xcfcfd8, 0.4), c1 = C(0x9a9aa4, 0); this.nrm.emit(x, y, z, rand(-0.5, 0.5), rand(0.2, 1), vz + rand(2, 5), rand(0.5, 0.9), 0.3, 1.4, c0, c1, -0.4, 1); }
   confetti(x, y, z, n = 30) { const cols = [0xff4f8a, 0xffd23c, 0x4fe8ff, 0x7bff4f, 0xffffff, 0xb78cff]; for (let i = 0; i < n; i++) { const c = C(cols[i % 6]); this.dots.emit(x + rand(-2, 2), y + rand(0, 2), z + rand(-3, 1), rand(-3, 3), rand(3, 8), rand(-3, 2), rand(0.9, 1.6), 0.18, 0.12, c, [c[0], c[1], c[2], 0.0], 9, 0.8); } }
   stars(x, y, z, n = 14) { for (let i = 0; i < n; i++) { const a = i / n * 6.283; this.add.emit(x, y, z, Math.cos(a) * 5, rand(2, 6), Math.sin(a) * 5, 0.8, 0.5, 0.1, C(0xffe36a), C(0xff8a1a, 0), 8, 0.5); } }

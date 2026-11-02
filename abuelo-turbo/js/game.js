@@ -1,13 +1,13 @@
-import { TELE } from './tele.js?v=4';
-import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=4';
-import { World, distIdxAt } from './world.js?v=4';
-import { FX } from './fx.js?v=4';
-import { M, getRig, applySkin, poseRig } from './rig.js?v=4';
-import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=4';
-import A from './audio.js?v=4';
-import * as ST from './store.js?v=4';
-import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=4';
-import { initGen, genAhead, LW } from './gen.js?v=4';
+import { TELE } from './tele.js?v=5';
+import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=5';
+import { World, distIdxAt } from './world.js?v=5';
+import { FX } from './fx.js?v=5';
+import { M, getRig, applySkin, poseRig } from './rig.js?v=5';
+import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=5';
+import A from './audio.js?v=5';
+import * as ST from './store.js?v=5';
+import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=5';
+import { initGen, genAhead, LW } from './gen.js?v=5';
 
 const { S } = ST;
 const SOLID = new Set(['car', 'taxi', 'van', 'bus', 'truck', 'container', 'carroza', 'limo']);
@@ -97,6 +97,7 @@ export class Game {
     const e = m; e.cls = cls; e.x = lane * LW; e.z = -d; e.lane = lane; e.vx = 0; e.walk = 0; e.dead = false; e.ph = Math.random() * 6; e.side = opt.side || 1; e.dy = opt.dy || 0;
     if (cls === 'cross') { e.x = e.side * 6.3; e.tx = lane * LW; e.waiting = true; }
     if (cls === 'bird') { e.base = 0.95 + e.dy; }
+    if (e.outl) { const di = distIdxAt(d), night = di >= 4; e.outl.material.color.setHex(night ? (cls === 'low' || cls === 'high' ? (di === 5 ? 0xfff03c : 0xffffff) : (di === 5 ? 0x6af4ff : 0xffe0a0)) : (cls === 'low' || cls === 'high' ? 0x1a1030 : 0x141a3c)); }
     TELE.attach(e);     e.obj.position.set(e.x, cls === 'bird' ? e.base : 0, e.z); e.obj.rotation.set(0, cls === 'cross' ? -e.side * 1.4 : 0, 0); this.obs.push(e); return e;
   }
   addCoin(x, y, d, gold) { this.coins.push({ x, y, z: -d, gold: Math.random() < gold, mag: false, ph: Math.random() * 6 }); }
@@ -384,7 +385,7 @@ export class Game {
     if (p.invul > 0 && !(p.shieldT > 0) && p.invul < 3.3 && this.state === 'play') { /* blink handled */ }
     // particles
     const nz = p.z + 1.5, fy = p.y + 0.66, big = p.turboT > 0 ? 1.7 : 1;
-    for (const sx of [-0.34, 0.34]) { this.fx.flame(p.x + sx, fy, nz, -this.speed * 0.72, big); if (p.turboT > 0 || Math.random() < 0.3) this.fx.flame(p.x + sx, fy, nz + 0.4, -this.speed * 0.65, big); }
+    for (const sx of [-0.34, 0.34]) { this.fx.flame(p.x + sx, fy, nz, -this.speed * 0.72, big); if (p.turboT > 0 || Math.random() < 0.3) this.fx.flame(p.x + sx, fy, nz + 0.4, -this.speed * 0.65, big); this.fx.core(p.x + sx, fy, nz - 0.05, -this.speed * 0.7); if (Math.random() < dt * 55) this.fx.spark(p.x + sx, fy, nz + 0.2, -this.speed * 0.7); if (Math.random() < dt * 9) this.fx.smoke(p.x + sx, fy + 0.05, nz + 0.8, -this.speed * 0.5); }
     if (!p.air && this.speed > 8 && Math.random() < dt * 22) this.fx.dust(p.x + (Math.random() < 0.5 ? -0.6 : 0.6), 0, p.z + 0.2, 1, 0xd8d0c0, -this.speed * 0.6);
     if (p.turboT > 0 && Math.random() < dt * 40) this.fx.smoke(p.x, fy, nz + 1, -this.speed * 0.55);
     if (p.shieldT > 0) { R.shield.visible = true; R.shield.position.y = 0.95; }
@@ -416,7 +417,7 @@ export class Game {
     const ps = this.ps; ps.speed = this.state === 'over' ? 0 : 0; ps.idle = true; ps.roll = 0; ps.yaw = 0; ps.air = false; ps.slide = false; ps.turbo = false; ps.crash = false; ps.scream = false; ps.shieldWarn = false; ps.cheer = false; ps.wheelie = 0; ps.hideFlag = this.camMode === 'taller';
     if (this.state === 'over') { R.root.position.set(0, 0, zo); R.root.rotation.set(0, 0, 0); R.tilt.rotation.set(0, 0, 0); R.root.visible = true; p.x = 0; p.z = zo; p.zPrev = zo; }
     R.root.rotation.y = damp(R.root.rotation.y, this.camMode === 'taller' ? 0 : 0, 6, dt); poseRig(R, ps, dt, this.time);
-    if (Math.random() < dt * 14) this.fx.flame(0.34, 0.66, 1.5 + zo, 3, 0.7), this.fx.flame(-0.34, 0.66, 1.5 + zo, 3, 0.7);
+    if (Math.random() < dt * 14) this.fx.flame(0.34, 0.66, 1.5 + zo, 3, 0.7), this.fx.flame(-0.34, 0.66, 1.5 + zo, 3, 0.7), this.fx.spark(0.34, 0.66, 1.6 + zo, 3), this.fx.spark(-0.34, 0.66, 1.6 + zo, 3);
     this.setVOff(({ taller: 0.34, abuelos: 0.25, over: 0.27 }[this.camMode] || 0) * (this.aspect > 1 ? 0.4 : 1), dt);
     this.camBlend = 0; const c = this.camera; c.position.set(mc.x, mc.y, mc.z + zo); c.lookAt(ml.x, ml.y, ml.z + zo);
     if (Math.abs(c.fov - this.baseFov) > 0.05) { c.fov = this.baseFov; c.updateProjectionMatrix(); } this.fovCur = this.baseFov; this.cx = null; this.cy = null; this.cz = null;

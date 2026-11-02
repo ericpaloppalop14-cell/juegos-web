@@ -1,15 +1,16 @@
-import { THREE, GB, rng, TAU, clamp } from './util.js?v=4';
-import { DIST } from './data.js?v=4';
-import { signUV } from './tex.js?v=4';
+import { THREE, GB, rng, TAU, clamp } from './util.js?v=5';
+import { DIST } from './data.js?v=5';
+import { signUV } from './tex.js?v=5';
 
 export const TL = 30; // tile length
+const LITE = typeof location !== 'undefined' && (/[?&]q=baja/.test(location.search) || (!/[?&]q=(alta|media)/.test(location.search) && typeof navigator !== 'undefined' && (navigator.hardwareConcurrency || 8) <= 4)); // móviles modestos: menos detalle de escenario
 const PAL = {
   barrio: [0xf6dcae, 0xeebb8c, 0xf4cbb4, 0xdde8c4, 0xcfe0f2, 0xf5e9d2, 0xeaab96, 0xfff0c8],
   mercado: [0xf7c98a, 0xf0a77a, 0xf9dd9a, 0xe9a0a0, 0xa8d8c0, 0xf3b46c, 0xffd6a8],
   playa: [0xffffff, 0xfdf3e0, 0xe6f4ff, 0xfff0f4, 0xf5ffe8, 0xe8f0ff],
   poligono: [0xc9ccd2, 0xe0b878, 0xa9b4c0, 0xd8d0c4, 0xb8c4b0, 0xdadada],
   fiestas: [0xf8f0e0, 0xf4e4c8, 0xfae8d8, 0xe8dcc0, 0xf2ead8],
-  noche: [0x3a3470, 0x2a2c5a, 0x4a2c6a, 0x23365e, 0x38285a, 0x2c2250],
+  noche: [0x5a52a8, 0x4a4c8a, 0x6a4c8a, 0x43569e, 0x58487f, 0x4c4270],
 };
 const SIGN_FOR = { barrio: [0, 1, 2, 3, 4, 5], mercado: [1, 5, 9, 3, 2], playa: [8, 9, 5, 14], poligono: [12, 7, 3], fiestas: [10, 5, 1, 0, 9], noche: [6, 7, 11, 13, 14, 0] };
 const rp = (R, a) => a[Math.floor(R() * a.length)];
@@ -25,23 +26,47 @@ const SOLID = [0.9, 0.05]; // inside white cell (cell 15 at bottom-right in canv
 
 function lamp(P, G, x, z, s, col = 0xfff2c0, night = false, h = 5.4) {
   P.cy(0.06, 0.09, h, 7, x, h / 2, z, 0x3a3f4a); P.cy(0.15, 0.18, 0.35, 7, x, 0.18, z, 0x2e323c); P.rb(1.0, 0.07, 0.07, 0.03, x - s * 0.5, h, z, 0x3a3f4a); P.rb(0.4, 0.14, 0.26, 0.05, x - s * 1.0, h + 0.02, z, 0x2e323c);
-  G.sp(0.17, x - s * 1.0, h - 0.1, z, col, { uv: SOLID, seg: 8 });
+  P.cy(0.12, 0.2, 0.18, 7, x, 0.5, z, 0x2e323c); P.cy(0.11, 0.11, 0.05, 7, x, 1.2, z, 0x4a4f5c); P.cy(0.095, 0.095, 0.05, 7, x, h - 0.6, z, 0x4a4f5c); // ornamentos del fuste
+  P.cone(0.22, 0.18, 7, x - s * 1.0, h + 0.2, z, 0x2e323c); P.bx(0.04, 0.34, 0.04, x - s * 0.55, h - 0.18, z, 0x3a3f4a, { rz: s * 0.5 }); // sombrerete + tornapunta
+    G.sp(0.17, x - s * 1.0, h - 0.1, z, col, { uv: SOLID, seg: 8 });
   if (night) G.halo(x - s * 1.0, h - 0.1, z, col, 3.2);
 }
 function tree(P, R, x, z, kind = 'round') {
-  const g1 = rp(R, [0x4aa84a, 0x5cba4e, 0x3f9a50, 0x6cc058]);
-  P.cy(0.16, 0.22, 2.3, 7, x, 1.15, z, 0x7a5232);
+  const g1 = rp(R, [0x4aa84a, 0x5cba4e, 0x3f9a50, 0x6cc058]), g2 = shd(g1, 0.82), g3 = shd(g1, 1.15);
+  P.cy(0.5, 0.55, 0.08, 10, x, 0.14, z, 0x4a4f5a); P.cy(0.42, 0.42, 0.04, 10, x, 0.17, z, 0x2a2d34); for (let k = 0; k < 6; k++) P.bx(0.05, 0.02, 0.4, x + Math.cos(k) * 0.18, 0.2, z + Math.sin(k) * 0.18, 0x15171c, { ry: -k }); // alcorque con rejilla
   if (kind === 'palm') {
     P.cy(0.14, 0.2, 5.2, 7, x, 2.6, z, 0x9a7048, { rz: 0.1 });
-    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU; P.rb(0.35, 0.05, 2.2, 0.02, x + 0.4 + Math.cos(a) * 1.0, 5.4 - 0.2, z + Math.sin(a) * 1.0, 0x3fae4a, { ry: -a + Math.PI / 2, rx: 0.5 }); }
-    P.sp(0.16, x + 0.5, 5.2, z, 0x6a4a2a); P.sp(0.16, x + 0.35, 5.15, z + 0.2, 0x6a4a2a);
+    for (let k = 0; k < 4; k++) P.cy(0.205, 0.215, 0.07, 7, x + k * 0.03 + 0.04, 1.0 + k * 1.2, z, 0x7a5a38); // anillos del tronco
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; P.rb(0.4, 0.05, 2.4, 0.02, x + 0.4 + Math.cos(a) * 1.0, 5.4 - 0.2, z + Math.sin(a) * 1.0, i % 2 ? 0x3fae4a : 0x2f9a40, { ry: -a + Math.PI / 2, rx: 0.5 }); P.rb(0.3, 0.04, 1.4, 0.02, x + 0.4 + Math.cos(a + 0.35) * 1.9, 5.0, z + Math.sin(a + 0.35) * 1.9, 0x3fae4a, { ry: -a - 0.35 + Math.PI / 2, rx: 1.0 }); }
+    for (let k = 0; k < 4; k++) P.sp(0.17, x + 0.5 + Math.cos(k * 1.6) * 0.2, 5.1 - (k % 2) * 0.1, z + Math.sin(k * 1.6) * 0.2, 0x6a4a2a);
+  } else if (kind === 'poplar') {
+    P.cy(0.14, 0.2, 2.6, 7, x, 1.3, z, 0x6a4a2e); for (let k = 0; k < 5; k++) P.sp(0.9 - k * 0.1, x + Math.sin(k * 2.3) * 0.2, 2.6 + k * 1.3, z + Math.cos(k * 1.7) * 0.2, k % 2 ? g2 : g1, { seg: 8, sy: 1.5 });
   } else {
-    P.sp(1.4, x, 3.6, z, g1, { seg: 9, sy: 0.9 }); P.sp(1.0, x + 0.7, 4.3, z + 0.5, g1, { seg: 8 }); P.sp(1.0, x - 0.6, 4.4, z - 0.5, 0x58b84e, { seg: 8 });
+    P.cy(0.16, 0.22, 2.3, 7, x, 1.15, z, 0x7a5232); P.cy(0.08, 0.1, 1.5, 6, x + 0.35, 2.6, z, 0x7a5232, { rz: -0.7 }); P.cy(0.07, 0.09, 1.3, 6, x - 0.3, 2.7, z + 0.1, 0x7a5232, { rz: 0.7 }); // tronco con ramas
+        P.sp(1.4, x, 3.6, z, g1, { seg: 9, sy: 0.9 }); P.sp(1.0, x + 0.7, 4.3, z + 0.5, g1, { seg: 8 }); P.sp(1.0, x - 0.6, 4.4, z - 0.5, g3, { seg: 8 });
+    P.sp(0.8, x + 0.9, 3.2, z - 0.6, g2, { seg: 6 }); P.sp(0.8, x - 1.0, 3.4, z + 0.5, g2, { seg: 6 }); P.sp(0.7, x, 4.9, z + 0.1, g3, { seg: 6 });
+    for (let k = 0; k < 3; k++) P.bx(0.14, 0.14, 0.14, x + rr(R, -1.4, 1.4), 3.2 + R() * 1.8, z + rr(R, -1.2, 1.2), rp(R, [0xffd0e0, 0xffffff, 0xffe070, 0xff8aa0])); // flores / frutos
   }
 }
-function bench(P, x, z, s) { P.rb(0.5, 0.08, 1.7, 0.03, x, 0.5, z, 0x9a6a3a); P.rb(0.08, 0.5, 1.7, 0.03, x + s * 0.24, 0.8, z, 0x9a6a3a); P.bx(0.08, 0.45, 0.08, x, 0.25, z - 0.7, 0x333840); P.bx(0.08, 0.45, 0.08, x, 0.25, z + 0.7, 0x333840); }
-function bin(P, x, z, col = 0x2f9a58) { P.cy(0.3, 0.26, 0.85, 8, x, 0.5, z, col); P.cy(0.32, 0.32, 0.08, 8, x, 0.95, z, 0x2a2e36); }
-function hydrant(P, x, z) { P.cy(0.12, 0.14, 0.6, 7, x, 0.45, z, 0xe03a2a); P.sp(0.13, x, 0.78, z, 0xe03a2a); P.cy(0.05, 0.05, 0.4, 5, x, 0.5, z, 0xe03a2a, { rz: Math.PI / 2 }); }
+function bush(P, R, x, z, w = 1.6) { const g = rp(R, [0x3f9a50, 0x4aa84a, 0x5cba4e]); for (let k = 0; k < 4; k++) P.sp(0.5 + R() * 0.15, x, 0.45 + (k % 2) * 0.1, z - w / 2 + k * w / 3, k % 2 ? shd(g, 0.85) : g, { seg: 6, sy: 0.8 }); P.rb(0.8, 0.18, w + 0.3, 0.05, x, 0.09, z, 0x8a8f98); }
+function signpost(P, x, z, col = 0xd8322a) { P.cy(0.03, 0.03, 2.4, 5, x, 1.2, z, 0x6a707c); P.cy(0.3, 0.3, 0.04, 14, x, 2.3, z, col, { rx: Math.PI / 2 }); P.cy(0.22, 0.22, 0.05, 14, x, 2.3, z, 0xffffff, { rx: Math.PI / 2 }); P.bx(0.25, 0.07, 0.06, x, 2.3, z, col); P.rb(0.4, 0.2, 0.04, 0.02, x, 1.85, z, 0x2a6ad0); }
+function bikeRack(P, x, z) { for (let k = 0; k < 3; k++) P.tor(0.28, 0.022, x, 0.3, z - 0.7 + k * 0.7, 0x8a909c, { ry: Math.PI / 2, seg: 6 }); P.bx(0.05, 0.05, 2.0, x, 0.04, z, 0x5a606c); }
+function kiosk(P, x, z, s, col) { P.rb(1.1, 2.3, 1.6, 0.08, x, 1.15, z, col); P.rb(1.4, 0.14, 1.9, 0.05, x, 2.35, z, shd(col, 0.7)); P.rb(0.06, 1.0, 1.2, 0.02, x - s * 0.55, 1.45, z, 0x9bc6ee); P.rb(0.5, 0.06, 1.3, 0.02, x - s * 0.8, 1.0, z, 0xe8e2d4); for (let k = 0; k < 5; k++) P.rb(0.05, 0.22, 0.2, 0.01, x - s * 0.62, 1.6 + (k % 2) * 0.3, z - 0.5 + k * 0.25, [0xff4f6a, 0xffd23c, 0x4fa8ff, 0x7bd84f, 0xffffff][k]); }
+function terraza(P, R, x, z, s, col) {
+  P.cy(0.03, 0.03, 2.4, 5, x, 1.2, z, 0xdfe3ea); P.cone(1.5, 0.55, 8, x, 2.5, z, col); for (let k = 0; k < 8; k++) P.rb(0.4, 0.03, 0.04, 0.01, x + Math.cos(k * 0.785) * 0.8, 2.3, z + Math.sin(k * 0.785) * 0.8, 0xffffff, { ry: -k * 0.785 });
+  P.cy(0.5, 0.5, 0.05, 12, x, 0.75, z, 0xf2ead8); P.cy(0.04, 0.04, 0.7, 5, x, 0.38, z, 0x4a4f5a); P.cy(0.2, 0.2, 0.03, 8, x, 0.8, z, 0xb85a3a);
+  for (const a of [0.6, 2.7, 4.3]) { P.cy(0.2, 0.2, 0.05, 8, x + Math.cos(a) * 0.85, 0.46, z + Math.sin(a) * 0.85, 0x2a2d34); P.rb(0.05, 0.4, 0.3, 0.02, x + Math.cos(a) * 1.0, 0.7, z + Math.sin(a) * 1.0, 0x2a2d34, { ry: -a }); for (const t of [0.15, -0.15]) P.cy(0.015, 0.015, 0.45, 4, x + Math.cos(a) * 0.85 + Math.sin(a) * t, 0.22, z + Math.sin(a) * 0.85 - Math.cos(a) * t, 0x2a2d34); }
+}
+function bench(P, x, z, s) {
+  for (let k = 0; k < 4; k++) P.rb(0.14, 0.05, 1.7, 0.02, x - s * (0.0 + k * 0.1) + s * 0.1, 0.5, z, 0x9a6a3a); // listones del asiento
+  for (let k = 0; k < 3; k++) P.rb(0.05, 0.12, 1.7, 0.02, x + s * 0.3, 0.72 + k * 0.15, z, 0xa87644, { rz: s * 0.1 });
+  for (const dz of [-0.78, 0.78]) { P.bx(0.06, 0.5, 0.06, x, 0.25, z + dz, 0x333840); P.bx(0.06, 0.8, 0.06, x + s * 0.3, 0.55, z + dz, 0x333840, { rz: s * 0.1 }); P.rb(0.4, 0.05, 0.07, 0.02, x, 0.62, z + dz * 1.04, 0x333840); P.sp(0.03, x, 0.5, z + dz, 0xcfd4dc, { seg: 4 }); }
+}
+function bin(P, x, z, col = 0x2f9a58) {
+  P.cy(0.3, 0.26, 0.85, 8, x, 0.5, z, col); P.cy(0.32, 0.32, 0.08, 8, x, 0.95, z, 0x2a2e36); P.cy(0.31, 0.31, 0.03, 8, x, 0.3, z, shd(col, 0.7)); P.sp(0.09, x, 1.03, z, 0x2a2e36, { seg: 6 }); P.rb(0.3, 0.18, 0.04, 0.02, x, 0.6, z - 0.28, 0xffffff); P.rb(0.18, 0.1, 0.03, 0.01, x, 0.6, z - 0.3, shd(col, 0.7));
+  for (let k = 0; k < 5; k++) P.bx(0.02, 0.5, 0.02, x + Math.cos(k * 1.26) * 0.27, 0.5, z + Math.sin(k * 1.26) * 0.27, shd(col, 0.78));
+}
+function hydrant(P, x, z) { P.cy(0.12, 0.14, 0.6, 7, x, 0.45, z, 0xe03a2a); P.sp(0.13, x, 0.78, z, 0xe03a2a); P.cy(0.05, 0.05, 0.4, 5, x, 0.5, z, 0xe03a2a, { rz: Math.PI / 2 }); P.cy(0.17, 0.17, 0.05, 8, x, 0.17, z, 0x8a2a1a); P.cy(0.15, 0.15, 0.04, 8, x, 0.68, z, 0xb02a1a); P.sp(0.045, x + 0.2, 0.5, z, 0xcfd4dc, { seg: 5 }); P.sp(0.045, x - 0.2, 0.5, z, 0xcfd4dc, { seg: 5 }); P.sp(0.05, x, 0.92, z, 0xcfd4dc, { seg: 5 }); }
 function awning(P, R, x0, s, z, w, y, col, deep = 1.5) {
   const n = Math.max(2, Math.round(w / 1.0)), sw = w / n;
   for (let i = 0; i < n; i++) P.rb(deep, 0.09, sw - 0.02, 0.03, s * (x0 - deep / 2), y, z - w / 2 + sw * (i + 0.5), i % 2 ? 0xffffff : col, { rz: s * 0.22 });
@@ -62,12 +87,50 @@ function clutter(P, R, s, d, kind) {
   if (kind !== 'poligono' && R() < 0.35) { const bz = rr(R, -9, 9), bx = s * 7.4; for (const k of [-0.35, 0.35]) { P.tor(0.26, 0.025, bx, 0.3, bz + k, 0x2a2d34, { ry: Math.PI / 2, seg: 10 }); } P.bx(0.04, 0.04, 0.9, bx, 0.5, bz, 0x2a6ad0, { rz: 0 }); P.bx(0.04, 0.4, 0.04, bx, 0.6, bz + 0.1, 0x2a6ad0); P.rb(0.12, 0.04, 0.3, 0.01, bx, 0.78, bz - 0.4, 0x151515); } // bici
   if ((kind === 'barrio' || kind === 'mercado' || kind === 'fiestas') && R() < 0.4) { const bz = rr(R, -9, 9), bx = s * 7.0; P.cy(0.5, 0.5, 0.05, 10, bx, 0.78, bz, 0xffffff); P.cy(0.04, 0.04, 0.6, 5, bx, 0.5, bz, 0x555a64); for (const a of [0.5, 2.6, 4.6]) P.rb(0.3, 0.05, 0.3, 0.02, bx + Math.cos(a) * 0.75, 0.5, bz + Math.sin(a) * 0.75, shd(rp(R, [0xd83a3a, 0x2a7ad8, 0xf0a020]), 1)); } // mesa y sillas
   if (R() < 0.3) { const bz = rr(R, -10, 10); P.rb(0.45, 0.85, 0.4, 0.1, s * 5.2, 0.62, bz, 0xe8c21a); P.rb(0.5, 0.12, 0.45, 0.05, s * 5.2, 1.08, bz, 0xd8a81a); } // buzón
+  const dz1 = rr(R, -11, 11);
+  if (kind !== 'noche' && R() < 0.4) signpost(P, s * 5.0, dz1, rp(R, [0xd8322a, 0x2a6ad0, 0xe8b020]));
+  if (R() < 0.25) bikeRack(P, s * 7.4, rr(R, -8, 8));
+  if ((kind === 'barrio' || kind === 'mercado') && R() < 0.22) kiosk(P, s * 7.7, rr(R, -8, 8), s, rp(R, [0x2fa05a, 0xd83a3a, 0x2a7ad8, 0xf0a020]));
+  if ((kind === 'barrio' || kind === 'playa' || kind === 'fiestas') && R() < 0.3) terraza(P, R, s * 7.2, rr(R, -10, 10), s, rp(R, [0xd83a3a, 0x2a7ad8, 0xf0a020, 0x2fa05a]));
+  if (kind !== 'noche' && kind !== 'poligono' && R() < 0.4) bush(P, R, s * 8.3, rr(R, -10, 10), 2.4);
+  if (kind === 'noche') { const nz = rr(R, -10, 10), nc = rp(R, [0xff4fd8, 0x4ff4ff, 0xffe23c]); P.rb(0.5, 0.5, 0.5, 0.06, s * 5.3, 0.3, nz, 0x2a2e48); P.bx(0.08, 1.0, 0.08, s * 5.3, 0.9, nz, 0x6a70a0); P.rb(0.06, 0.5, 0.5, 0.02, s * 5.3, 1.6, nz, nc); }
+}
+function skyline(P, R, s, d) { // bloques lejanos tras la primera fila (capa de fondo en la bruma)
+  const fc = new THREE.Color(d.fog);
+  for (let k = 0; k < 3; k++) { const h = rr(R, 16, 40), w = rr(R, 8, 13), dp = rr(R, 8, 12), z = -10 + k * 10 + rr(R, -2, 2), c = new THREE.Color(rp(R, [0xc8bcb0, 0xb0b8c4, 0xd0c4b0, 0xb8c0b0])).lerp(fc, 0.5).getHex(), x = s * rr(R, 27, 46);
+    P.bx(dp, h, w, x, h / 2, z, c); P.bx(dp + 0.3, 0.5, w + 0.3, x, h + 0.25, z, shd(c, 0.85)); for (let f = 4; f < h; f += 3.4) P.bx(dp + 0.05, 0.9, w * 0.85, x - s * 0.02, f, z, shd(c, 0.78)); }
 }
 function sidewalk(P, d, s, R, kind) {
+  if (R && !LITE && kind !== 'noche' && kind !== 'playa') skyline(P, R, s, d);
   if (R) clutter(P, R, s, d, kind);
   P.bx(3.5, 0.2, TL, s * 6.25, 0.1, 0, d.walk); P.bx(0.3, 0.25, TL, s * 4.65, 0.125, 0, new THREE.Color(d.walk).multiplyScalar(1.15).getHex());
   for (let z = -15; z < 15; z += 3) P.bx(3.5, 0.215, 0.05, s * 6.25, 0.1, z, new THREE.Color(d.walk).multiplyScalar(0.85).getHex());
   P.bx(70, 0.1, TL, s * (8 + 35), 0.05, 0, d.ground);
+}
+
+/* detalles v5 por edificio: azotea (depósito, antenas, chimeneas, placas solares), bajantes, farolas de pared, cartel de farmacia, contadores, cables */
+function extras(F, P, G, R, s, x0, depth, h, w, cz, col, kind) {
+  const nz = kind === 'noche', dk = shd(col, 0.7), top = h + 0.1;
+  const xr = s * (x0 + depth * 0.45), xf = s * (x0 + 1.4);
+  if (LITE) { P.bx(0.3, 0.8, w, s * (x0 - 0.02), top + 0.4, cz, shd(col, nz ? 0.8 : 0.9)); return; }
+  P.bx(0.3, 0.8, w, s * (x0 - 0.02), top + 0.4, cz, shd(col, nz ? 0.8 : 0.9)); P.bx(0.4, 0.1, w + 0.1, s * (x0 - 0.05), top + 0.85, cz, shd(col, nz ? 1.0 : 1.08)); // antepecho y remate
+  if (R() < 0.55) { const tz = cz + rr(R, -w * 0.3, w * 0.3); // depósito de agua
+    P.cy(0.9, 0.9, 1.5, 10, xr, top + 2.2, tz, nz ? 0x3a3a5a : 0x9a6a46); P.cone(1.0, 0.6, 10, xr, top + 3.25, tz, nz ? 0x2a2a46 : 0x6a4a30); for (const [a, b] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) P.bx(0.08, 1.5, 0.08, xr + a, top + 0.75, tz + b, 0x4a4f5a); P.cy(0.93, 0.93, 0.07, 10, xr, top + 1.9, tz, 0x4a4f5a); P.cy(0.93, 0.93, 0.07, 10, xr, top + 2.6, tz, 0x4a4f5a); }
+  if (R() < 0.6) { const az = cz + rr(R, -w * 0.35, w * 0.35), ax = s * (x0 + depth * 0.2); // antena de TV con travesaños
+    P.cy(0.03, 0.03, 3.6, 5, ax, top + 2.0, az, 0x8a909c); for (let k = 0; k < 4; k++) P.bx(0.03, 0.03, 1.2 - k * 0.2, ax, top + 1.6 + k * 0.55, az, 0x8a909c); P.bx(0.03, 0.03, 0.6, ax + s * 0.02, top + 3.7, az, 0x8a909c, { ry: 0.5 }); P.bx(0.03, 0.9, 0.03, ax, top + 1.9, az + 0.5, 0x8a909c); P.bx(0.03, 0.9, 0.03, ax, top + 1.9, az - 0.5, 0x8a909c); }
+  if (R() < 0.35) { const dz = cz + rr(R, -w * 0.3, w * 0.3); P.cy(0.5, 0.2, 0.2, 10, s * (x0 + 1.0), top + 1.0, dz, 0xe8e8ee, { rz: s * 0.9 }); P.cy(0.05, 0.05, 0.5, 5, s * (x0 + 1.2), top + 0.8, dz, 0x6a707c); } // parabólica
+  if (R() < 0.4) { const kz = cz + rr(R, -w * 0.3, w * 0.3); P.bx(0.9, 1.8, 0.9, s * (x0 + depth * 0.7), top + 0.9, kz, shd(col, 0.82)); P.bx(1.0, 0.15, 1.0, s * (x0 + depth * 0.7), top + 1.85, kz, 0x4a4f5a); P.bx(0.3, 0.5, 0.3, s * (x0 + depth * 0.7), top + 2.15, kz, 0xa8a8b0); } // chimenea / hueco de ventilación
+  if (kind === 'barrio' || kind === 'playa' || nz) { const sz = cz + rr(R, -w * 0.2, w * 0.2); for (let k = 0; k < 3; k++) P.bx(0.08, 1.2, 1.4, s * (x0 + 1.6 + k * 1.1), top + 0.5 + k * 0.1, sz, 0x2a4a8a, { rz: s * 0.6 }), P.bx(0.05, 0.1, 1.4, s * (x0 + 1.6 + k * 1.1), top + 0.05, sz, 0x9aa4b4); } // placas solares
+  if (!nz) {
+    P.cy(0.08, 0.08, h, 6, s * (x0 - 0.18), h / 2, cz + w / 2 - 0.1, 0x9aa0aa); for (let k = 1; k < h / 3.4; k++) P.bx(0.2, 0.06, 0.2, s * (x0 - 0.18), k * 3.4, cz + w / 2 - 0.1, 0x6a707c); // bajante con abrazaderas
+    if (R() < 0.7) { const lz = cz - w / 2 + 1.2; P.bx(0.3, 0.07, 0.07, s * (x0 - 0.2), 3.3, lz, 0x3a3f4a); G.sp(0.1, s * (x0 - 0.38), 3.2, lz, 0xfff0c0, { uv: SOLID, seg: 6 }); } // farol de pared
+    if (R() < 0.3) { const fz = cz + rr(R, -w * 0.3, w * 0.3); P.bx(0.12, 0.9, 0.3, s * (x0 - 0.35), 4.8, fz, 0x2fa05a); P.bx(0.12, 0.3, 0.9, s * (x0 - 0.35), 4.8, fz, 0x2fa05a); P.bx(0.3, 0.1, 0.1, s * (x0 - 0.15), 5.3, fz, 0x4a4f5a); G.bx(0.05, 0.84, 0.05, s * (x0 - 0.45), 4.8, fz, 0xbfffcf, { uv: SOLID }); } // cruz de farmacia
+    if (R() < 0.35) { const mz = cz + rr(R, -w * 0.4, w * 0.4); P.rb(0.12, 0.6, 0.45, 0.02, s * (x0 - 0.1), 1.6, mz, 0x8a8f98); P.bx(0.14, 0.04, 0.45, s * (x0 - 0.1), 1.9, mz, 0x4a4f5a); for (let k = 0; k < 3; k++) P.sp(0.05, s * (x0 - 0.18), 1.5 + k * 0.12, mz, 0xffe070, { seg: 4 }); } // cuadro de contadores
+    P.bx(0.03, 0.03, w, s * (x0 - 0.3), 3.8, cz, 0x1a1c20); P.bx(0.03, 0.03, w, s * (x0 - 0.3), 3.65, cz, 0x1a1c20); // cables de la luz
+  }
+  if (nz && R() < 0.5) { const bz = cz + rr(R, -w * 0.2, w * 0.2); P.bx(0.3, 3.4, 5.2, s * (x0 + 0.8), top + 3.2, bz, 0x1a1830); P.bx(0.25, 3.0, 4.8, s * (x0 + 0.62), top + 3.2, bz, 0x2a2850); G.bx(0.1, 2.6, 4.4, s * (x0 + 0.5), top + 3.2, bz, rp(R, [0xff4fd8, 0x4ff4ff, 0xffe23c]), { uv: SOLID }); P.cy(0.06, 0.06, 2.0, 5, s * (x0 + 0.8), top + 1.0, bz - 2.0, 0x2a2850); P.cy(0.06, 0.06, 2.0, 5, s * (x0 + 0.8), top + 1.0, bz + 2.0, 0x2a2850); } // valla publicitaria luminosa
+  if (nz && R() < 0.6) { P.cy(0.05, 0.05, 6, 5, s * (x0 + depth * 0.5), top + 3, cz + w * 0.3, 0x8a8fb0); G.sp(0.16, s * (x0 + depth * 0.5), top + 6.1, cz + w * 0.3, 0xff3a3a, { uv: SOLID, seg: 5 }); for (let k = 0; k < 3; k++) P.bx(0.04, 0.04, 0.8 - k * 0.2, s * (x0 + depth * 0.5), top + 2 + k * 1.2, cz + w * 0.3, 0x8a8fb0); }
+  if (kind === 'poligono') { for (let k = 0; k < 3; k++) { P.cy(0.25, 0.25, 0.9, 8, s * (x0 + 3 + k * 1.2), top + 0.8, cz + (k - 1) * 1.8, 0xb8bcc4); P.cone(0.35, 0.2, 8, s * (x0 + 3 + k * 1.2), top + 1.35, cz + (k - 1) * 1.8, 0x8a8f98); } P.bx(2.5, 0.5, 0.5, s * (x0 + 5), top + 0.4, cz, 0x9aa0aa); for (let k = 0; k < 4; k++) P.bx(0.05, 0.6, 0.05, s * (x0 + 0.4), 0.5, cz - w / 2 + 1 + k * (w - 2) / 3, 0xe8c21a); }
 }
 
 /* ---------- generic building row ---------- */
@@ -90,6 +153,7 @@ function buildings(F, P, G, R, d, s, kind, o) {
       }
     }
     o.deco && o.deco({ F, P, G, R, s, x0, depth, h, w, cz, col, kind });
+    extras(F, P, G, R, s, x0, depth, h, w, cz, col, kind);
     z += w;
   }
 }

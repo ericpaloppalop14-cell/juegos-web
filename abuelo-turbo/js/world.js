@@ -1,8 +1,8 @@
-import { THREE, GB, BEND, bendMat, clamp, lerp, smooth, softTexture, rng } from './util.js?v=4';
-import { DIST, DIST_LEN } from './data.js?v=4';
-import { facadeTex, roadTex, signAtlas, skyTex, bannerTex } from './tex.js?v=4';
-import { buildTile, TL } from './scenery.js?v=4';
-import { M } from './rig.js?v=4';
+import { THREE, GB, BEND, bendMat, clamp, lerp, smooth, softTexture, rng } from './util.js?v=5';
+import { DIST, DIST_LEN } from './data.js?v=5';
+import { facadeTex, roadTex, signAtlas, skyTex, bannerTex } from './tex.js?v=5';
+import { buildTile, TL } from './scenery.js?v=5';
+import { M, GLOW } from './rig.js?v=5';
 
 export const NV = 4; // tile variants per side
 export const distIdxAt = d => d < 0 ? 0 : Math.floor(d / DIST_LEN) % DIST.length;
@@ -27,7 +27,13 @@ export class World {
     const emi = [0, 0, 0, 0.35, 0.55, 1.25];
     for (let i = 0; i < DIST.length; i++) {
       const d = DIST[i], ft = facadeTex(d.id), rt = roadTex(d.id);
-      this.facadeMat.push(bendMat(new THREE.MeshStandardMaterial({ map: ft.map, emissiveMap: ft.em, emissive: 0xffffff, emissiveIntensity: emi[i], vertexColors: true, roughness: 0.85, metalness: 0.0 })));
+      const fm = bendMat(new THREE.MeshStandardMaterial({ map: ft.map, emissiveMap: ft.em, emissive: 0xffffff, emissiveIntensity: emi[i], vertexColors: true, roughness: 0.85, metalness: 0.0 }));
+      { const base = fm.onBeforeCompile; /* oclusión ambiental falsa: la base de los edificios más oscura, la parte alta más luminosa */
+        fm.onBeforeCompile = sh => { base(sh);
+          sh.vertexShader = 'varying float vH;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vH = position.y;');
+          sh.fragmentShader = 'varying float vH;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n diffuseColor.rgb *= mix(0.62, 1.0, smoothstep(0.0, 7.0, vH)) * mix(1.0, 1.08, smoothstep(12.0, 34.0, vH));'); };
+        fm.customProgramCacheKey = () => 'facAO'; }
+      this.facadeMat.push(fm);
       const rm = new THREE.MeshStandardMaterial({ map: rt.map, roughness: d.id === 'noche' ? 0.4 : 0.92, metalness: d.id === 'noche' ? 0.15 : 0 });
       if (d.id === 'noche') { rm.emissiveMap = rt.em; rm.emissive = new THREE.Color(0xffffff); rm.emissiveIntensity = 1.4; }
       rt.map.anisotropy = 8; this.roadMat.push(bendMat(rm));
@@ -108,6 +114,7 @@ export class World {
     this.sky.position.set(camPos.x, camPos.y + 6, camPos.z);
     this.haloMat.uniforms.uScale.value = viewH / (2 * Math.tan(fov * Math.PI / 360));
     this.haloMat.uniforms.uInt.value = lerp(DIST[di0].id === 'noche' || DIST[di0].id === 'fiestas' ? 1 : 0.25, DIST[di1].id === 'noche' || DIST[di1].id === 'fiestas' ? 1 : 0.25, k);
+    { const gl = [0.1, 0.1, 0.08, 0.12, 0.3, 0.75]; GLOW.value = lerp(gl[di0], gl[di1], k); }
     BEND.uBendX.value = Math.sin(dist * 0.0013) * 0.00045;
     this.curDist = di0; this.k = k; this.nextDist = di1;
   }

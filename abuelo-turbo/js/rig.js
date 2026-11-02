@@ -1,5 +1,5 @@
-import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo, addOutline } from './util.js?v=4';
-import { CHARS, SKINS } from './data.js?v=4';
+import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo, addOutline } from './util.js?v=5';
+import { CHARS, SKINS } from './data.js?v=5';
 
 export const M = {
   v: bendMat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.05 })),
@@ -9,9 +9,28 @@ export const M = {
   flameI: new THREE.MeshBasicMaterial({ color: 0xfff1b0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
   rv: bendMat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.05 })),
   rs: bendMat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.25, metalness: 0.55 })),
+  ob: null,
   unlit: bendMat(new THREE.MeshBasicMaterial({ vertexColors: true })),
 };
 bendMat(M.flameO); bendMat(M.flameI);
+/* luz de contorno suave en el abuelo y su silla (separa la figura del fondo) */
+for (const k of ['rv', 'rs']) { const m = M[k], base = m.onBeforeCompile;
+  m.onBeforeCompile = sh => { base(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+ float rimR = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0);
+ totalEmissiveRadiance += vec3(1.0, 0.92, 0.8) * rimR * 0.16 + diffuseColor.rgb * 0.05;`); };
+  m.customProgramCacheKey = () => 'rim1' + k; }
+/* material de obstáculos: igual que M.v pero con un brillo propio (uGlow) y luz de borde, para que se vean aunque el barrio sea oscuro (Neones) */
+export const GLOW = { value: 0.12 };
+M.ob = (() => {
+  const m = bendMat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.05 })); const base = m.onBeforeCompile;
+  m.onBeforeCompile = sh => {
+    base(sh); sh.uniforms.uGlow = GLOW; sh.fragmentShader = 'uniform float uGlow;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+ float rimF = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.0);
+ totalEmissiveRadiance += diffuseColor.rgb * uGlow * (0.55 + 0.9 * rimF);`);
+  };
+  m.customProgramCacheKey = () => 'ob1';
+  return m;
+})();
 
 const mk = (g, m, cast = true) => { const me = new THREE.Mesh(g.build ? g.build() : g, m); me.castShadow = cast; return me; };
 const flameGeo = (() => { const g = new THREE.ConeGeometry(1, 1, 10, 1, true); g.translate(0, 0.5, 0); g.rotateX(Math.PI / 2); return g; })();
@@ -19,6 +38,9 @@ const flameGeo = (() => { const g = new THREE.ConeGeometry(1, 1, 10, 1, true); g
 function wheelGeo(R, tire, rim, spokes = 6, cleats = false) {
   const b = new GB();
   b.tor(R, R * 0.2, 0, 0, 0, tire, { ry: Math.PI / 2, seg: 16 });
+  b.tor(R * 0.9, R * 0.028, 0.045, 0, 0, 0xb9bfca, { ry: Math.PI / 2, seg: 18 }); // aro de empuje
+  for (let i = 0; i < 14; i++) { const a = i / 14 * TAU; b.bx(0.1, R * 0.1, R * 0.07, 0, Math.cos(a) * R * 1.19, Math.sin(a) * R * 1.19, 0x14161a, { rx: a }); } // taco del neumático
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; b.sp(R * 0.045, 0.07, Math.cos(a) * R * 0.3, Math.sin(a) * R * 0.3, 0xe8ecf2, { seg: 5 }); } // tornillos del buje
   b.cy(R * 0.85, R * 0.85, 0.03, 16, 0, 0, 0, rim, { rz: Math.PI / 2 });
   b.cy(R * 0.2, R * 0.2, 0.12, 8, 0, 0, 0, 0xcfcfcf, { rz: Math.PI / 2 });
   for (let i = 0; i < spokes; i++) { const a = i / spokes * Math.PI; b.bx(0.025, R * 1.65, 0.03, 0, 0, 0, 0x888e98, { rx: a }); }
@@ -141,6 +163,7 @@ let _star; function starGeo() {
 const rigCache = new Map();
 export function getRig(charId) { if (!rigCache.has(charId)) rigCache.set(charId, buildRig(charId)); return rigCache.get(charId); }
 
+const shd2 = (c, k) => new THREE.Color(c).multiplyScalar(k).getHex();
 export function buildRig(id) {
   const c = CHARS.find(x => x.id === id);
   const root = new THREE.Group(); const tilt = new THREE.Group(); root.add(tilt);
@@ -165,6 +188,24 @@ export function buildRig(id) {
     A.cy(0.14 + big2, 0.14 + big2, 0.72, 12, x, 0.66, 0.92, 0xe9edf5, { rx: Math.PI / 2 }); A.cy(0.145 + big2, 0.145 + big2, 0.1, 12, x, 0.66, 0.78, 0xd9322a, { rx: Math.PI / 2 }); A.cy(0.145 + big2, 0.145 + big2, 0.1, 12, x, 0.66, 1.0, 0xd9322a, { rx: Math.PI / 2 });
     A.sp(0.14 + big2, x, 0.66, 0.57, 0xe9edf5, {}); A.cy(0.19 + big2, 0.12, 0.22, 12, x, 0.66, 1.34, 0x30343c, { rx: Math.PI / 2 });
   }
+  /* v5: detalles de la silla cohete */
+  for (const s of [-1, 1]) {
+    const x = s * 0.34;
+    A.rb(0.15, 0.07, 0.5, 0.03, s * 0.5, 0.95, 0.12, 0x2a2d35); A.rb(0.1, 0.03, 0.4, 0.015, s * 0.5, 0.985, 0.12, 0x4a4f5c); // reposabrazos acolchado
+    A.cy(0.2 + (id === 'rayo' ? 0.1 : 0), 0.2 + (id === 'rayo' ? 0.1 : 0), 0.05, 14, x, 0.66, 1.2, 0x8a8f9a, { rx: Math.PI / 2 }); // anillo de la tobera
+    A.cy(0.12, 0.12, 0.03, 12, x, 0.66, 1.47, 0x0d0d10, { rx: Math.PI / 2 }); A.cy(0.16, 0.14, 0.02, 12, x, 0.66, 1.45, 0x6a6f7a, { rx: Math.PI / 2 }); // interior de la tobera
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; A.sp(0.017, x + Math.cos(a) * 0.15, 0.66 + Math.sin(a) * 0.15, 0.78, 0x9aa0aa, { seg: 4 }); A.sp(0.017, x + Math.cos(a) * 0.15, 0.66 + Math.sin(a) * 0.15, 1.0, 0x9aa0aa, { seg: 4 }); } // remaches
+    for (let i = 0; i < 4; i++) A.bx(0.12, 0.012, 0.035, x, 0.81 + (i % 2) * 0.002, 0.87 + i * 0.08, 0x4a4f5a); // rejilla de ventilación
+    A.rb(0.07, 0.07, 0.07, 0.02, x, 0.43, 1.25, 0xd9322a); A.sp(0.02, x, 0.43, 1.29, 0xff8a6a, { seg: 5 }); // piloto trasero
+    A.bx(0.18, 0.025, 0.02, x, 0.66, 0.66, 0xffe23c, { rz: 0 }); // franja de aviso
+    A.cy(0.025, 0.025, 0.16, 6, s * 0.4, 1.34, 0.64, 0x1a1a1e); A.sp(0.04, s * 0.4, 1.44, 0.64, 0x2a2d35, { seg: 6 }); // puño del manillar
+  }
+  A.rb(0.46, 0.16, 0.34, 0.04, 0, 0.42, 0.34, 0x2a2d35); A.bx(0.4, 0.03, 0.02, 0, 0.42, 0.18, 0xffd23c); A.bx(0.2, 0.025, 0.02, 0, 0.5, 0.18, 0x7bff4f); // batería bajo el asiento
+  for (const [x2, y2] of [[-0.3, 1.3], [0.3, 1.3], [-0.3, 0.72], [0.3, 0.72]]) A.sp(0.022, x2, y2, 0.465, 0x9aa0aa, { seg: 5 }); // remaches del respaldo
+  for (let i = -1; i <= 1; i += 2) A.bx(0.012, 0.6, 0.012, i * 0.13, 1.0, 0.425, 0x20232a, { rx: 0.12 }); // costuras del respaldo
+  A.bx(0.7, 0.012, 0.012, 0, 0.7, 0.4, 0x4a4f5c); A.cy(0.07, 0.07, 0.04, 10, 0, 0.3, -0.94, 0xfff6c0, { rx: Math.PI / 2 }); A.cy(0.09, 0.09, 0.02, 10, 0, 0.3, -0.92, 0x6a6f7a, { rx: Math.PI / 2 }); // faro delantero
+  for (let i = 0; i < 6; i++) { A.bx(0.5, 0.012, 0.03, 0, 0.588, -0.18 + i * 0.1, 0x20232a); } // costuras del cojín
+  A.cy(0.012, 0.012, 0.5, 4, 0.34, 1.65, 0.7, 0x888e98); A.sp(0.03, 0.34, 1.9, 0.7, 0xff4a4a, { seg: 5 }); // antena trasera
   chairExtras(id, F, A, { c });
   const frame = mk(F, frameMat); tilt.add(frame);
   const acc = mk(A, M.rs); tilt.add(acc);
@@ -197,6 +238,11 @@ export function buildRig(id) {
   if (id === 'ole') { T.rb(0.7, 0.6, 0.5, 0.2, 0, 0.33, 0.01, 0xc0201c); for (let i = 0; i < 5; i++) { T.bx(0.5, 0.025, 0.02, 0, 0.12 + i * 0.1, -0.255, 0xe9b923); } for (const s of [-1, 1]) T.sp(0.07, s * 0.36, 0.6, 0, 0xe9b923); T.bx(0.08, 0.5, 0.03, 0, 0.35, -0.255, 0xe9b923); }
   if (id === 'disco') { T.rb(0.7, 0.7, 0.5, 0.2, 0, 0.36, 0.01, 0xffd23c); T.add(starGeo(), 0xff4fd8, { x: 0, y: 0.34, z: -0.26, s: 0.17 }); for (const s of [-1, 1]) T.sp(0.1, s * 0.4, 0.62, 0, 0xff4fd8); }
   if (id === 'super') { T.rb(0.7, 0.72, 0.5, 0.2, 0, 0.36, 0.01, 0x2a50c8); T.rb(0.3, 0.22, 0.04, 0.03, 0, 0.4, -0.27, 0xffc928); T.bx(0.03, 0.14, 0.03, 0, 0.4, -0.3, 0xe42d2d); T.bx(0.12, 0.03, 0.03, 0, 0.45, -0.3, 0xe42d2d); T.rb(0.72, 0.07, 0.5, 0.03, 0, 0.15, 0.01, 0xffc928); }
+  { const sh = new THREE.Color(c.shirt), dkS = sh.clone().multiplyScalar(0.7).getHex(), ltS = sh.clone().multiplyScalar(1.2).getHex();
+    for (const s of [-1, 1]) { T.rb(0.15, 0.1, 0.04, 0.02, s * 0.1, 0.69, -0.2, ltS, { rz: -s * 0.55 }); T.rb(0.15, 0.14, 0.035, 0.02, s * 0.2, 0.17, -0.265, dkS); T.bx(0.15, 0.015, 0.04, s * 0.2, 0.235, -0.268, dkS); T.bx(0.012, 0.6, 0.03, s * 0.33, 0.3, -0.12, dkS); }
+    T.bx(0.015, 0.12, 0.02, -0.2, 0.26, -0.28, 0xd8c040); T.sp(0.012, -0.2, 0.33, -0.28, 0xff4a4a, { seg: 4 }); // bolígrafo en el bolsillo
+    T.tor(0.06, 0.006, 0.1, 0.34, -0.27, 0xe0c060, { seg: 10 }); T.bx(0.12, 0.006, 0.006, 0.05, 0.4, -0.27, 0xe0c060, { rz: 0.4 }); // cadena del reloj
+    if (!['paco', 'pirata', 'ole', 'super', 'disco', 'cosmica', 'rockero', 'rayo'].includes(id)) for (let i = 0; i < 4; i++) T.sp(0.03, 0, 0.1 + i * 0.14, -0.275, 0xe9dcc0, { seg: 6 }); }
   T.tor(0.15, 0.058, 0, 0.71, -0.04, id === 'cosmica' ? 0xcfcfd8 : (id === 'rockero' ? 0x2a2a30 : c.shirt), { rx: Math.PI / 2, seg: 14 }); // cuello de camisa tapando la unión
   const torso = mk(T, M.rv); body.add(torso);
   // cape
@@ -217,7 +263,9 @@ export function buildRig(id) {
     const AG = new GB(); AG.sp(0.125, 0, 0.0, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt)); AG.cap(0.1, 0.22, 0, -0.2, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt));
     const um = mk(AG, M.rv); up.add(um);
     const fo = new THREE.Group(); fo.position.set(0, -0.4, 0); up.add(fo);
-    const FG = new GB(); FG.cap(0.085, 0.2, 0, -0.17, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt)); FG.sp(0.095, 0, -0.34, 0, id === 'cosmica' ? 0xe6e6f2 : c.skin);
+    const FG = new GB(); FG.cap(0.085, 0.2, 0, -0.17, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt)); const hc2 = id === 'cosmica' ? 0xe6e6f2 : c.skin; FG.sp(0.095, 0, -0.34, 0, hc2); FG.tor(0.088, 0.026, 0, -0.25, 0, id === 'cosmica' ? 0xcfcfd8 : 0xf2efe6, { rx: Math.PI / 2, seg: 10 }); // puño de la manga
+    for (let k = 0; k < 4; k++) FG.cap(0.021, 0.07, (k - 1.5) * 0.04, -0.42, -0.04, hc2, { rx: 0.5 }); FG.cap(0.024, 0.06, s * 0.09, -0.36, -0.03, hc2, { rz: s * 0.9, rx: 0.4 }); // dedos y pulgar
+    for (let k = 0; k < 4; k++) FG.sp(0.012, (k - 1.5) * 0.04, -0.46, -0.075, 0xf0cfc0, { seg: 4 }); // uñas
     if (id === 'pirata' && s > 0) FG.cone(0.04, 0.2, 6, 0, -0.45, 0, 0xcfd6e6, { rx: Math.PI });
     fo.add(mk(FG, M.rv)); R.arms.push({ up, fo, s });
   }
@@ -226,6 +274,10 @@ export function buildRig(id) {
   for (const s of [-1, 1]) {
     L.rb(0.22, 0.22, 0.58, 0.09, s * 0.17, 0.76, -0.12, c.pants); L.rb(0.2, 0.55, 0.2, 0.09, s * 0.17, 0.5, -0.56, c.pants, { rx: 0.18 }); L.rb(0.22, 0.12, 0.34, 0.05, s * 0.17, 0.27, -0.78, c.shoe);
     if (id === 'cosmica' || id === 'disco') L.rb(0.23, 0.04, 0.35, 0.02, s * 0.17, 0.22, -0.78, 0xffffff);
+    L.rb(0.24, 0.045, 0.37, 0.02, s * 0.17, 0.215, -0.785, 0x25262c); L.sp(0.05, s * 0.17, 0.3, -0.93, c.shoe, { sz: 1.1, sy: 0.7 }); // suela y puntera
+    for (let k = 0; k < 3; k++) L.bx(0.13, 0.012, 0.014, s * 0.17, 0.34, -0.7 - k * 0.07, 0xf2f2f2); // cordones
+    L.sp(0.1, s * 0.17, 0.55, -0.4, shd2(c.pants, 0.85), { sy: 0.8, sz: 0.7 }); L.bx(0.2, 0.012, 0.016, s * 0.17, 0.62, -0.5, shd2(c.pants, 0.7), { rx: 0.2 }); L.bx(0.2, 0.012, 0.016, s * 0.17, 0.5, -0.52, shd2(c.pants, 0.7), { rx: 0.2 }); // rodilla y arrugas del pantalón
+    L.rb(0.21, 0.05, 0.21, 0.02, s * 0.17, 0.34, -0.68, shd2(c.pants, 0.75), { rx: 0.18 }); // bajo del pantalón
   }
   const blk = id === 'super' ? 0xffc928 : c.blanket;
   L.rb(0.64, 0.17, 0.64, 0.08, 0, 0.83, -0.16, blk); const dk = new THREE.Color(blk).multiplyScalar(0.55).getHex();
@@ -237,11 +289,28 @@ export function buildRig(id) {
   const H = new GB();
   H.sp(0.31, 0, 0.3, 0, c.skin, { sy: 1.04, seg: 14 }); for (const s of [-1, 1]) { H.sp(0.07, s * 0.3, 0.28, 0.02, c.skin); H.sp(0.05, s * 0.32, 0.28, 0.02, 0xe39b86); }
   H.sp(0.075, 0, 0.24, -0.3, 0xe39b86, { sy: 1.1, sz: 1.1 }); for (const s of [-1, 1]) H.sp(0.06, s * 0.19, 0.18, -0.24, 0xf08a8a, { sz: 0.5, s: 1 });
-  for (const s of [-1, 1]) H.cap(0.028, 0.1, s * 0.12, 0.46, -0.25, id === 'rockero' || id === 'ole' ? 0x333333 : 0xf2f2f2, { rz: Math.PI / 2 - s * 0.18 });
+  { const sk = new THREE.Color(c.skin), dk = sk.clone().multiplyScalar(0.8).getHex(), dk2 = sk.clone().multiplyScalar(0.9).getHex(), hc = (id === 'rockero' || id === 'pirata' || id === 'ole') ? 0x3a3a40 : 0xf2f2f2;
+    for (let i = 0; i < 3; i++) H.bx(0.2 - Math.abs(i - 1) * 0.04, 0.011, 0.02, 0, 0.52 + i * 0.03, -0.215 + i * 0.045, dk, { rx: -0.35 + i * 0.1 }); // arrugas de la frente
+    for (const s of [-1, 1]) {
+      H.sp(0.065, s * 0.1, 0.445, -0.285, hc, { sx: 1.5, sy: 0.55, sz: 0.7, rz: s * 0.12 }); H.sp(0.055, s * 0.19, 0.425, -0.27, hc, { sx: 1.4, sy: 0.55, sz: 0.7, rz: s * 0.45 }); // cejas pobladas
+      H.sp(0.045, s * 0.12, 0.275, -0.265, dk2, { sy: 0.38, sz: 0.5 }); // bolsas bajo los ojos
+      for (let k = 0; k < 3; k++) H.bx(0.07, 0.01, 0.012, s * 0.265, 0.36 - k * 0.028, -0.17, dk, { rz: s * (0.35 - k * 0.3) }); // patas de gallo
+      H.bx(0.012, 0.11, 0.014, s * 0.105, 0.17, -0.29, dk, { rz: s * 0.28 }); // surco nasolabial
+      H.sp(0.03, s * 0.035, 0.205, -0.35, 0x8a4a3a, { sz: 0.4 }); // fosas nasales
+      H.tor(0.05, 0.011, s * 0.3, 0.28, 0.03, 0xd08a78, { ry: Math.PI / 2, seg: 8 }); H.sp(0.03, s * 0.3, 0.2, 0.03, 0xe39b86, { sy: 1.3 }); // oreja: pliegue y lóbulo
+      H.sp(0.05, s * 0.29, 0.43, 0.0, hc, { sy: 1.2 }); H.sp(0.035, s * 0.31, 0.37, 0.0, hc, { sy: 1.3 }); // mechones sobre las orejas
+      H.cap(0.01, 0.12, s * 0.33, 0.3, 0.05, hc, { rz: s * 0.4 });
+    }
+    H.sp(0.085, 0, 0.3, -0.31, sk.clone().multiplyScalar(1.03).getHex(), { sy: 1.5, sz: 0.6 }); // puente de la nariz
+    H.sp(0.055, 0, 0.1, -0.2, dk2, { sy: 0.5 }); H.bx(0.04, 0.012, 0.012, 0, 0.065, -0.29, dk, { }); // barbilla con hoyuelo
+    for (let k = 0; k < 3; k++) H.cap(0.008, 0.1, (k - 1) * 0.07, 0.64, -0.02, hc, { rz: (k - 1) * 0.5 }); // pelos sueltos
+    if (['ole', 'disco', 'super'].includes(id)) { H.cap(0.05, 0.2, 0, 0.15, -0.31, 0xf2f2f2, { rz: Math.PI / 2 }); H.sp(0.05, -0.12, 0.13, -0.31, 0xf2f2f2); H.sp(0.05, 0.12, 0.13, -0.31, 0xf2f2f2); }
+    if (id === 'ole') { for (const s of [-1, 1]) H.tor(0.075, 0.012, s * 0.12, 0.35, -0.3, 0x2a2a30, { seg: 12 }); H.bx(0.07, 0.012, 0.012, 0, 0.36, -0.3, 0x2a2a30); }
+  }
   // headParts positions are relative to head centre y=0.3 -> offset via nested group
   const HP = new GB(); headParts(id, HP, c);
   const faceG = new GB(); // eyes (separate for blink)
-  for (const s of [-1, 1]) { faceG.sp(0.068, s * 0.12, 0.35, -0.26, 0xffffff); faceG.sp(0.04, s * 0.12, 0.35, -0.315, 0x15151a); faceG.sp(0.012, s * 0.108, 0.36, -0.348, 0xffffff); }
+  for (const s of [-1, 1]) { faceG.sp(0.068, s * 0.12, 0.35, -0.26, 0xffffff); faceG.sp(0.052, s * 0.12, 0.35, -0.305, 0x5a86b8, { sz: 0.5 }); faceG.sp(0.04, s * 0.12, 0.35, -0.315, 0x15151a); faceG.bx(0.1, 0.012, 0.02, s * 0.12, 0.405, -0.27, 0x3a2a24, { rz: s * 0.1 }); faceG.sp(0.012, s * 0.108, 0.36, -0.348, 0xffffff); }
   const grin = new GB(); grin.rb(0.2, 0.09, 0.06, 0.035, 0, 0.12, -0.285, 0x4a1a1a); grin.rb(0.17, 0.045, 0.05, 0.02, 0, 0.14, -0.3, 0xffffff); for (let i = -1; i <= 1; i++) grin.bx(0.008, 0.04, 0.01, i * 0.04, 0.14, -0.33, 0xbcb5aa);
   const scream = new GB(); scream.sp(0.075, 0, 0.1, -0.29, 0x3a0f10, { sz: 0.5, sy: 1.1 }); scream.sp(0.04, 0, 0.07, -0.31, 0xff7a8a, { sz: 0.4 });
   head.add(mk(H, M.rv)); R.hair = mk(HP, M.rv); R.hair.position.y = 0.3; HP.mk === 'helmet'; head.add(R.hair);
