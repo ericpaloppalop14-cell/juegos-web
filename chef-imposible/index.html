@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ff5a4d">
+<title>El Chef Imposible</title>
+<meta name="description" content="Fiesta de cocina loca: los ingredientes huyen, tú los cazas y los echas a la olla antes de que se queme.">
+<meta property="og:title" content="El Chef Imposible"><meta property="og:description" content="¡Que no se queme la olla! Cocina loca para 1-4 jugadores.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="bPause" class="iconbtn hide" aria-label="Pausa">❚❚</button>
+
+<div id="sTitle" class="screen">
+  <div class="top"><div class="pill"><i class="ic coin"></i><b id="tCoins">0</b></div><button id="bSnd" class="iconbtn" aria-label="Sonido">🔊</button></div>
+  <div class="logo"><div class="l1">EL CHEF</div><div class="l2">IMPOSIBLE</div><p>¡Que no se queme la olla!</p></div>
+  <div class="bottom">
+    <button id="bPlay" class="big">¡A COCINAR!</button>
+    <button id="bChefs" class="mid">👨‍🍳 Cocineros</button>
+    <small id="tHint">1-4 jugadores · ¡Atrapa, lanza y no te quemes!</small>
+  </div>
+</div>
+
+<div id="sLevels" class="screen hide">
+  <div class="top"><button class="iconbtn back" data-go="title">←</button><h2>Elige cocina</h2><div class="pill"><i class="ic coin"></i><b class="coinN">0</b></div></div>
+  <div id="lvGrid" class="grid"></div>
+</div>
+
+<div id="sLobby" class="screen hide">
+  <div class="top"><button class="iconbtn back" data-go="levels">←</button><h2 id="lbTitle">Cocineros</h2><div class="pill"><i class="ic coin"></i><b class="coinN">0</b></div></div>
+  <p class="sub" id="lbDesc"></p>
+  <div id="slots"></div>
+  <div class="bottom"><button id="bStart" class="big">¡A LA OLLA!</button><small id="lbHint"></small></div>
+</div>
+
+<div id="sChefs" class="screen hide">
+  <div class="top"><button class="iconbtn back" data-go="title">←</button><h2>Cocineros</h2><div class="pill"><i class="ic coin"></i><b class="coinN">0</b></div></div>
+  <div id="chGrid" class="grid"></div>
+</div>
+
+<div id="sResult" class="screen modal hide">
+  <div class="card">
+    <h1 id="rTitle"></h1>
+    <div id="rStars"></div>
+    <p id="rSub"></p>
+    <div id="rRank"></div>
+    <div class="coinsLine"><i class="ic coin"></i> +<b id="rCoins">0</b> monedas</div>
+    <div id="rUnlock"></div>
+    <div class="btns"><button id="rNext" class="mid good">Siguiente cocina ▶</button><button id="rAgain" class="mid">↻ Repetir</button><button id="rMenu" class="mid dark">Menú</button></div>
+  </div>
+</div>
+
+<div id="sPause" class="screen modal hide">
+  <div class="card"><h1>Pausa</h1>
+    <div class="btns"><button id="pResume" class="mid good">▶ Seguir cocinando</button><button id="pAgain" class="mid">↻ Reiniciar</button><button id="pSnd" class="mid">🔊 Sonido</button><button id="pMenu" class="mid dark">Salir al menú</button></div>
+  </div>
+</div>
+<div id="toast" class="hide"></div>
+<script src="data.js?v=1"></script>
+<script src="art.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
