@@ -1,8 +1,8 @@
-import { Game } from './game.js?v=2';
-import A from './audio.js?v=2';
-import * as ST from './store.js?v=2';
-import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=2';
-import { THREE, clamp, pick } from './util.js?v=2';
+import { Game } from './game.js?v=3';
+import A from './audio.js?v=3';
+import * as ST from './store.js?v=3';
+import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=3';
+import { THREE, clamp, pick } from './util.js?v=3';
 
 const { S } = ST; const $ = id => document.getElementById(id);
 const fmt = n => Math.floor(n).toLocaleString('es-ES');
@@ -188,9 +188,10 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && g.s
 /* bubble follow */
 const _v = new THREE.Vector3();
 function follow() {
-  requestAnimationFrame(follow); const b = $('bubble'); if (!b.classList.contains('on')) return; const head = g.rig && g.rig.head; if (!head) return;
-  head.getWorldPosition(_v); _v.y += 1.2; _v.project(g.camera); const x = (_v.x * 0.5 + 0.5) * innerWidth, y = (-_v.y * 0.5 + 0.5) * innerHeight;
-  const w = b.offsetWidth / 2 + 8; b.style.left = clamp(x, w, innerWidth - w) + 'px'; b.style.top = clamp(y, 90, innerHeight) + 'px';
+  requestAnimationFrame(follow); const b = $('bubble'); if (!b.classList.contains('on')) return; const rt = g.rig && g.rig.root; if (!rt) return;
+  /* el bocadillo va DEBAJO del abuelo (bajo las ruedas y las llamas), nunca tapando la carretera de delante */
+  rt.getWorldPosition(_v); _v.z += 2.4; _v.y = 0; _v.project(g.camera); const x = (_v.x * 0.5 + 0.5) * innerWidth, y = (-_v.y * 0.5 + 0.5) * innerHeight;
+  const w = b.offsetWidth / 2 + 8, h = b.offsetHeight + 6; b.style.left = clamp(x, w, innerWidth - w) + 'px'; b.style.top = clamp(y + 6, 120, innerHeight - h - 40) + 'px';
 }
 /* menu quips */
 setInterval(() => { if (g.state === 'menu' && !panelOpen && S.set.sfx) g.say(pick(g.char.lines), 2.6); }, 9000);

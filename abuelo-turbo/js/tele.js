@@ -1,5 +1,5 @@
 /* Telegrafía de obstáculos: flechas en el suelo + icono flotante (verde = SALTA, naranja = AGÁCHATE) */
-import { THREE, bendMat } from './util.js?v=2';
+import { THREE, bendMat } from './util.js?v=3';
 
 const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 function chevrons(up, col1, col2) {

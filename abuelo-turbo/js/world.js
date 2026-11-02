@@ -1,8 +1,8 @@
-import { THREE, GB, BEND, bendMat, clamp, lerp, smooth, softTexture, rng } from './util.js?v=2';
-import { DIST, DIST_LEN } from './data.js?v=2';
-import { facadeTex, roadTex, signAtlas, skyTex, bannerTex } from './tex.js?v=2';
-import { buildTile, TL } from './scenery.js?v=2';
-import { M } from './rig.js?v=2';
+import { THREE, GB, BEND, bendMat, clamp, lerp, smooth, softTexture, rng } from './util.js?v=3';
+import { DIST, DIST_LEN } from './data.js?v=3';
+import { facadeTex, roadTex, signAtlas, skyTex, bannerTex } from './tex.js?v=3';
+import { buildTile, TL } from './scenery.js?v=3';
+import { M } from './rig.js?v=3';
 
 export const NV = 4; // tile variants per side
 export const distIdxAt = d => d < 0 ? 0 : Math.floor(d / DIST_LEN) % DIST.length;

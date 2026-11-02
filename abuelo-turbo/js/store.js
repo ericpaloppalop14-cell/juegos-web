@@ -1,5 +1,5 @@
-import { CHARS, SKINS, UPGR } from './data.js?v=2';
-import { rng } from './util.js?v=2';
+import { CHARS, SKINS, UPGR } from './data.js?v=3';
+import { rng } from './util.js?v=3';
 
 const PRUEBAS = /[?&]pruebas=1/.test(location.search);
 const KEY = PRUEBAS ? 'abuelo-turbo-pruebas-v1' : 'abuelo-turbo-v1';

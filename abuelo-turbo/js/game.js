@@ -1,13 +1,13 @@
-import { TELE } from './tele.js?v=2';
-import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=2';
-import { World, distIdxAt } from './world.js?v=2';
-import { FX } from './fx.js?v=2';
-import { M, getRig, applySkin, poseRig } from './rig.js?v=2';
-import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=2';
-import A from './audio.js?v=2';
-import * as ST from './store.js?v=2';
-import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=2';
-import { initGen, genAhead, LW } from './gen.js?v=2';
+import { TELE } from './tele.js?v=3';
+import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=3';
+import { World, distIdxAt } from './world.js?v=3';
+import { FX } from './fx.js?v=3';
+import { M, getRig, applySkin, poseRig } from './rig.js?v=3';
+import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=3';
+import A from './audio.js?v=3';
+import * as ST from './store.js?v=3';
+import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=3';
+import { initGen, genAhead, LW } from './gen.js?v=3';
 
 const { S } = ST;
 const SOLID = new Set(['car', 'taxi', 'van', 'bus', 'truck', 'container', 'carroza', 'limo']);
@@ -36,6 +36,9 @@ export class Game {
     this.rigRoot = new THREE.Group(); this.scene.add(this.rigRoot);
     this.setChar(S.char, S.skin);
     this.applyQuality(S.set.q);
+    canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); this.ctxLost = true; });
+    canvas.addEventListener('webglcontextrestored', () => { this.ctxLost = false; this.resize(); });
+    this.prewarm();
     window.addEventListener('resize', () => this.resize()); this.resize();
     this.resetWorld(); this.state = 'menu';
     this.last = performance.now(); this.loop = this.loop.bind(this); requestAnimationFrame(this.loop);
@@ -156,7 +159,7 @@ export class Game {
     for (const k of ['shieldT', 'turboT', 'magT', 'caneT', 'cafeT']) if (p[k] > 0) { p[k] -= dt; if (p[k] <= 0) { p[k] = 0; this.onPillEnd(k); } }
     p.invul = Math.max(0, p.invul - dt); p.stumbleT = Math.max(0, p.stumbleT - dt); p.coyote = Math.max(0, p.coyote - dt); p.laneT += dt;
     // speed
-    const base = 15 + Math.min(20, this.dist * 0.0042); const tur = p.turboT > 0 ? 1.4 : 1;
+    /* velocidad progresiva y suave con la distancia: 14 → ~37 m/s */ const base = 14 + 23 * (1 - Math.exp(-this.dist / 1700)); const tur = p.turboT > 0 ? 1.4 : 1;
     let tgt = base * tur; if (this.startGrace > 0 || this.runT < 1.2) tgt = Math.min(tgt, 8 + this.runT * 8); if (this.tut >= 0) tgt = Math.min(tgt, 14);
     if (p.stumbleT > 0.9) tgt *= 0.85;
     this.speed = damp(this.speed, tgt, p.turboT > 0 ? 2.5 : 1.8, dt);
@@ -409,7 +412,18 @@ export class Game {
   pushHud() {
     const p = this.p; this.cb.hud && this.cb.hud({ score: Math.floor(this.score), coins: Math.floor(this.coinsRun), dist: Math.floor(this.dist), mult: ST.S.mult * (p.cafeT > 0 ? 2 : 1), tur: p.turboT > 0 ? p.turboT / p.turboMax : 0, mag: p.magT > 0 ? p.magT / p.magMax : 0, shd: p.shieldT > 0 ? p.shieldT / p.shieldMax : 0, can: p.caneT > 0 ? p.caneT / p.caneMax : 0, caf: p.cafeT > 0 ? p.cafeT / p.cafeMax : 0, tut: this.tut, di: distIdxAt(this.dist), kmh: Math.round(this.speed * 3.6) });
   }
-  render() { this.r.render(this.scene, this.camera); }
+  render() {
+    try { this.r.render(this.scene, this.camera); this.renderErr = 0; }
+    catch (e) { this.renderErr = (this.renderErr || 0) + 1; if (this.renderErr < 4) console.error('render error', e); }
+  }
+  /* compila de antemano los materiales de TODOS los barrios (así el cambio a Neones no se atasca ni falla al estrenar shaders) */
+  prewarm() {
+    try {
+      const w = this.world, mats = [...w.roadMat, ...w.facadeMat, w.glowMat], tmp = [];
+      for (const m of mats) { const me = new THREE.Mesh(new THREE.PlaneGeometry(0.01, 0.01), m); me.frustumCulled = false; this.scene.add(me); tmp.push(me); }
+      this.r.compile(this.scene, this.camera); tmp.forEach(me => { this.scene.remove(me); me.geometry.dispose(); });
+    } catch (e) { console.warn('prewarm', e); }
+  }
   /* headless helper for tests: advance simulation without drawing */
   stepSim(dt) { if (this.state === 'play' || this.state === 'crash') this.sim(dt * this.ts); }
 }

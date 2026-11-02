@@ -1,6 +1,6 @@
-import { THREE, GB, bendMat, TAU, rboxGeo, addOutline } from './util.js?v=2';
-import { M } from './rig.js?v=2';
-import { PILLS } from './data.js?v=2';
+import { THREE, GB, bendMat, TAU, rboxGeo, addOutline } from './util.js?v=3';
+import { M } from './rig.js?v=3';
+import { PILLS } from './data.js?v=3';
 
 const CAR_COL = [0xe8453c, 0x3b7de0, 0xf0c030, 0x3cbf72, 0xf4f4f6, 0x8a5ad8, 0xff8a30, 0x2fb8c8, 0xc9ccd4];
 const GLASS = 0x2a3a58, TIRE = 0x1c1d22;

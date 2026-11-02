@@ -1,5 +1,5 @@
-import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo, addOutline } from './util.js?v=2';
-import { CHARS, SKINS } from './data.js?v=2';
+import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo, addOutline } from './util.js?v=3';
+import { CHARS, SKINS } from './data.js?v=3';
 
 export const M = {
   v: bendMat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.05 })),
@@ -184,8 +184,11 @@ export function buildRig(id) {
   /* rider */
   const body = new THREE.Group(); body.position.set(0, 0.66, 0.15); tilt.add(body); R.body = body;
   const T = new GB();
-  T.rb(0.66, 0.72, 0.48, 0.2, 0, 0.36, 0, c.shirt);
-  T.sp(0.3, 0, 0.18, -0.12, c.shirt, { sx: 1.12, sy: 0.95 });
+  const OUT = { paco: c.vest, rayo: c.vest, rockero: 0x1c1c20, pirata: 0x1f1f2e, cosmica: 0xf4f4f8, ole: 0xc0201c, disco: 0xffd23c, super: 0x2a50c8 }[id] || c.shirt;
+  T.rb(0.66, 0.72, 0.48, 0.22, 0, 0.36, 0, c.shirt);
+  T.sp(0.3, 0, 0.26, -0.03, OUT, { sx: 1.1, sy: 0.9, sz: 0.88 }); // barriguita redondeada
+  T.sp(0.3, 0, 0.6, -0.01, OUT, { sx: 1.13, sy: 0.5, sz: 0.82 }); // hombros caídos hacia el cuello
+  T.cy(0.1, 0.115, 0.34, 12, 0, 0.74, -0.04, c.skin); // cuello
   if (id === 'paco') { T.rb(0.68, 0.5, 0.5, 0.18, 0, 0.3, 0.01, c.vest); for (let i = 0; i < 3; i++) T.sp(0.03, 0, 0.12 + i * 0.14, -0.27, 0xe9dcc0); T.rb(0.1, 0.3, 0.04, 0.02, 0, 0.62, -0.24, 0xe9dcc0, {}); }
   if (id === 'rayo') { T.rb(0.68, 0.5, 0.5, 0.18, 0, 0.28, 0.01, c.vest); T.bx(0.05, 0.3, 0.03, 0.05, 0.4, -0.26, 0xff4fa0, { rz: 0.5 }); }
   if (id === 'rockero') { T.rb(0.7, 0.7, 0.5, 0.2, 0, 0.36, 0.01, 0x1c1c20); T.bx(0.06, 0.6, 0.03, 0, 0.35, -0.26, 0x777777); for (const s of [-1, 1]) { T.sp(0.045, s * 0.3, 0.64, -0.2, 0xcfcfcf); T.sp(0.045, s * 0.3, 0.52, -0.22, 0xcfcfcf); } T.rb(0.22, 0.04, 0.04, 0.01, 0, 0.42, -0.27, 0xd02a2a); }
@@ -194,6 +197,7 @@ export function buildRig(id) {
   if (id === 'ole') { T.rb(0.7, 0.6, 0.5, 0.2, 0, 0.33, 0.01, 0xc0201c); for (let i = 0; i < 5; i++) { T.bx(0.5, 0.025, 0.02, 0, 0.12 + i * 0.1, -0.255, 0xe9b923); } for (const s of [-1, 1]) T.sp(0.07, s * 0.36, 0.6, 0, 0xe9b923); T.bx(0.08, 0.5, 0.03, 0, 0.35, -0.255, 0xe9b923); }
   if (id === 'disco') { T.rb(0.7, 0.7, 0.5, 0.2, 0, 0.36, 0.01, 0xffd23c); T.add(starGeo(), 0xff4fd8, { x: 0, y: 0.34, z: -0.26, s: 0.17 }); for (const s of [-1, 1]) T.sp(0.1, s * 0.4, 0.62, 0, 0xff4fd8); }
   if (id === 'super') { T.rb(0.7, 0.72, 0.5, 0.2, 0, 0.36, 0.01, 0x2a50c8); T.rb(0.3, 0.22, 0.04, 0.03, 0, 0.4, -0.27, 0xffc928); T.bx(0.03, 0.14, 0.03, 0, 0.4, -0.3, 0xe42d2d); T.bx(0.12, 0.03, 0.03, 0, 0.45, -0.3, 0xe42d2d); T.rb(0.72, 0.07, 0.5, 0.03, 0, 0.15, 0.01, 0xffc928); }
+  T.tor(0.15, 0.058, 0, 0.71, -0.04, id === 'cosmica' ? 0xcfcfd8 : (id === 'rockero' ? 0x2a2a30 : c.shirt), { rx: Math.PI / 2, seg: 14 }); // cuello de camisa tapando la unión
   const torso = mk(T, M.rv); body.add(torso);
   // cape
   if (id === 'ole' || id === 'super' || id === 'rayo') {
@@ -210,7 +214,7 @@ export function buildRig(id) {
   R.arms = [];
   for (const s of [-1, 1]) {
     const up = new THREE.Group(); up.position.set(s * 0.37, 0.64, 0); body.add(up);
-    const AG = new GB(); AG.cap(0.1, 0.22, 0, -0.2, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt));
+    const AG = new GB(); AG.sp(0.125, 0, 0.0, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt)); AG.cap(0.1, 0.22, 0, -0.2, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt));
     const um = mk(AG, M.rv); up.add(um);
     const fo = new THREE.Group(); fo.position.set(0, -0.4, 0); up.add(fo);
     const FG = new GB(); FG.cap(0.085, 0.2, 0, -0.17, 0, id === 'rockero' ? 0x1c1c20 : (id === 'cosmica' ? 0xf4f4f8 : c.shirt)); FG.sp(0.095, 0, -0.34, 0, id === 'cosmica' ? 0xe6e6f2 : c.skin);
@@ -229,7 +233,7 @@ export function buildRig(id) {
   L.rb(0.64, 0.4, 0.15, 0.06, 0, 0.7, -0.5, blk, { rx: -0.35 });
   tilt.add(mk(L, M.rv));
   /* head */
-  const head = new THREE.Group(); head.position.set(0, 0.95, -0.04); body.add(head); R.head = head;
+  const head = new THREE.Group(); head.position.set(0, 0.86, -0.04); body.add(head); R.head = head;
   const H = new GB();
   H.sp(0.31, 0, 0.3, 0, c.skin, { sy: 1.04, seg: 14 }); for (const s of [-1, 1]) { H.sp(0.07, s * 0.3, 0.28, 0.02, c.skin); H.sp(0.05, s * 0.32, 0.28, 0.02, 0xe39b86); }
   H.sp(0.075, 0, 0.24, -0.3, 0xe39b86, { sy: 1.1, sz: 1.1 }); for (const s of [-1, 1]) H.sp(0.06, s * 0.19, 0.18, -0.24, 0xf08a8a, { sz: 0.5, s: 1 });

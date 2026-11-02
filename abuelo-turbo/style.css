@@ -145,9 +145,8 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit;padding:0}
 #pop{position:absolute;left:0;right:0;top:36%;text-align:center;pointer-events:none}
 #pop i{position:absolute;left:0;right:0;font-style:normal;font-size:34px;font-weight:700;text-shadow:0 4px 0 rgba(0,0,0,.45);-webkit-text-stroke:2px rgba(0,0,0,.35);paint-order:stroke fill;animation:floatUp 1.3s ease-out forwards}
 @keyframes floatUp{0%{transform:translateY(20px) scale(.6);opacity:0}15%{transform:translateY(0) scale(1.15);opacity:1}100%{transform:translateY(-70px) scale(1);opacity:0}}
-#bubble{position:absolute;left:0;top:0;transform:translate(-50%,-100%) scale(.6);opacity:0;background:#fff;color:#1a2a6a;border:3px solid #1a2a6a;border-radius:20px;padding:6px 14px 8px;font-weight:600;font-size:clamp(15px,4.3vw,20px);line-height:1.1;max-width:min(76vw,300px);text-align:center;box-shadow:0 5px 0 rgba(0,0,0,.25);transition:opacity .18s,transform .18s cubic-bezier(.2,1.6,.4,1);pointer-events:none;will-change:transform,left,top}
-#bubble::after{content:'';position:absolute;left:50%;bottom:-13px;width:18px;height:18px;background:#fff;border-right:3px solid #1a2a6a;border-bottom:3px solid #1a2a6a;transform:translateX(-50%) rotate(45deg) skew(8deg,8deg);border-bottom-right-radius:5px}
-#bubble.on{opacity:1;transform:translate(-50%,-100%) scale(1)}
+#bubble{position:absolute;left:0;top:0;transform:translate(-50%,0) scale(.85);opacity:0;background:rgba(60,60,60,.55);color:#fff;border:0;border-radius:14px;padding:5px 12px 6px;font-weight:600;font-size:clamp(13px,3.7vw,17px);line-height:1.15;max-width:min(70vw,280px);text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.45);box-shadow:none;transition:opacity .22s,transform .22s ease-out;pointer-events:none;will-change:transform,left,top;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+#bubble.on{opacity:1;transform:translate(-50%,0) scale(1)}
 #hint{position:absolute;left:0;right:0;bottom:4%;pointer-events:none;display:none;justify-content:center;gap:10px;padding:0 10px}
 #hint.on{display:flex}
 .hi{background:rgba(10,26,80,.55);border:2px solid rgba(255,255,255,.85);border-radius:14px;padding:5px 6px;text-align:center;font-size:12px;font-weight:600;line-height:1.1;width:30%;max-width:130px;animation:pulse 1.2s infinite}
