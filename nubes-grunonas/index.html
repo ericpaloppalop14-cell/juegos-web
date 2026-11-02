@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#7ec8ff">
+<title>Terminal de Nubes Gruñonas</title>
+<meta name="description" content="Manda nubes gruñonas al andén, sube a los pasajeros de su color y no dejes que se llene la estación. Un puzle justo, sin tiempo y con 65 niveles.">
+<meta property="og:title" content="Terminal de Nubes Gruñonas"><meta property="og:description" content="Puzle de nubes gruñonas: 65 niveles siempre resolubles, sin cronómetro.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+
+  <div id="hud" class="hide">
+    <div id="topbar">
+      <button class="ibtn" id="bPause" aria-label="Pausa"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 5h4v14H6zM14 5h4v14h-4z" fill="#3a3560"/></svg></button>
+      <div id="lvlBox"><b id="hLvl">Nivel 1</b><span id="hSub">Andén 1</span></div>
+      <div class="pill" id="hCoinPill"><i class="coinic"></i><b id="hCoins">0</b></div>
+    </div>
+    <div id="bubble"><canvas class="portrait" id="pTrueno"></canvas><div id="bText"></div></div>
+    <div id="boosters">
+      <button class="bst" id="bUndo"><svg viewBox="0 0 24 24"><path d="M9 7H15a5 5 0 0 1 0 10H8" fill="none" stroke="#3a3560" stroke-width="2.6" stroke-linecap="round"/><path d="M12 3L7 7l5 4z" fill="#3a3560"/></svg><span>Deshacer</span><em id="nUndo">0</em></button>
+      <button class="bst" id="bSlot"><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="10" rx="3" fill="none" stroke="#3a3560" stroke-width="2.4"/><path d="M12 2v6M9 5h6" stroke="#3a3560" stroke-width="2.6" stroke-linecap="round"/></svg><span>Hueco extra</span><em id="nSlot">0</em></button>
+      <button class="bst" id="bShuf"><svg viewBox="0 0 24 24"><path d="M3 7h4c6 0 6 10 12 10h2M3 17h4c2.5 0 4-2 5-4M14 9c1.2-1.2 2.6-2 5-2h2" fill="none" stroke="#3a3560" stroke-width="2.4" stroke-linecap="round"/><path d="M20 4l3 3-3 3zM20 14l3 3-3 3z" fill="#3a3560"/></svg><span>Barajar cola</span><em id="nShuf">0</em></button>
+    </div>
+  </div>
+
+  <div id="menu" class="screen hide">
+    <div id="logo"><small>La</small><b>Terminal de</b><b class="big">Nubes Gruñonas</b></div>
+    <canvas id="menuCast"></canvas>
+    <div id="menuBtns">
+      <button id="mGift" class="gift hide">Premio diario de la Señora Arcoíris</button>
+      <button class="btn green big" id="mPlay">Jugar<small id="mPlayLvl">Nivel 1</small></button>
+      <div class="row">
+        <button class="btn blue" id="mLevels">Niveles</button>
+        <button class="btn pink" id="mShop">Tienda</button>
+      </div>
+      <div class="row small">
+        <button class="btn ghost" id="mCast">Personajes</button>
+        <button class="btn ghost" id="mSet">Ajustes</button>
+      </div>
+    </div>
+    <div id="menuCoins" class="pill"><i class="coinic"></i><b id="mCoins">0</b></div>
+  </div>
+
+  <div id="levels" class="screen hide">
+    <div class="sheetHead"><button class="ibtn" id="lBack" aria-label="Volver"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="#3a3560" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2>Elige tu nivel</h2><div class="pill"><i class="coinic"></i><b id="lCoins">0</b></div></div>
+    <div id="lvlList"></div>
+  </div>
+
+  <div id="modal" class="hide"></div>
+  <div id="toast"></div>
+  <div id="flash"></div>
+</div>
+<script src="core.js?v=1"></script>
+<script src="levels.js?v=1"></script>
+<script src="art.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
