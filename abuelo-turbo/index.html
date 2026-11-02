@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a9df4">
+<title>ABUELO TURBO</title>
+<meta name="description" content="Abuelo Turbo: corre en tu silla de ruedas cohete por la ciudad, esquiva coches y palomas, recoge dentaduras y mejora el motor.">
+<meta property="og:title" content="ABUELO TURBO"><meta property="og:description" content="El abuelo más rápido de la ciudad. ¡Corre, salta y recoge dentaduras!">
+<link rel="icon" href="icon.svg"><link rel="manifest" href="manifest.json">
+<link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=1">
+<script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+  <div id="vig"></div><div id="flash"></div><div id="sweep"></div>
+
+  <!-- CARGA -->
+  <div id="loading" class="screen show">
+    <div class="logo big"><span class="l1">ABUELO</span><span class="l2">TURBO</span></div>
+    <div class="lbar"><i id="lbarFill"></i></div><p id="ltxt">Calentando el motor…</p>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="screen">
+    <div id="hTop">
+      <button id="bPause" class="round sm" aria-label="Pausa"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4.5" height="14" rx="1.5"/><rect x="13.5" y="5" width="4.5" height="14" rx="1.5"/></svg></button>
+      <div id="hScoreBox"><b id="hScore">0</b><span id="hMult">x1</span><small id="hDist">0 m</small></div>
+      <div class="pill" id="hCoinPill"><i class="ic-den"></i><b id="hCoins">0</b></div>
+    </div>
+    <div id="chips"></div>
+    <div id="district"><b id="dName"></b><span id="dSub"></span></div>
+    <div id="pop"></div>
+    <div id="bubble"><span id="bubbleTxt"></span></div>
+    <div id="hint"><div class="hi" id="hiL"><i>⟷</i><span>Desliza ← →<br>para cambiar de carril</span></div><div class="hi" id="hiJ"><i>⤒</i><span>Desliza ↑<br>para saltar</span></div><div class="hi" id="hiS"><i>⤓</i><span>Desliza ↓<br>para reclinarte</span></div></div>
+    <div id="kmh"></div>
+  </div>
+
+  <!-- MENU -->
+  <div id="menu" class="screen">
+    <div id="mTop">
+      <div class="pill big" id="mCoinPill"><i class="ic-den"></i><b id="mCoins">0</b></div>
+      <div id="mMult" class="chipx" title="Multiplicador de puntos"><small>MULT.</small><b id="mMultV">x1</b></div>
+      <button id="bSet" class="round sm" aria-label="Ajustes"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.2 5.3-.1-.8 1.9-1.5-1.9-3.3-2.3.9a7 7 0 0 0-1.4-.8l-.4-2.4h-3.8l-.4 2.4c-.5.2-1 .5-1.4.8l-2.3-.9L3.9 11.5l1.9 1.5a7 7 0 0 0 0 1.6l-1.9 1.5 1.9 3.3 2.3-.9c.4.3.9.6 1.4.8l.4 2.4h3.8l.4-2.4c.5-.2 1-.5 1.4-.8l2.3.9 1.9-3.3-1.9-1.5c.1-.3.1-.5.1-.8Z" transform="translate(0 -1.2) scale(.97) translate(.35 .4)"/></svg></button>
+    </div>
+    <div class="logo"><span class="l1">ABUELO</span><span class="l2">TURBO</span></div>
+    <div id="mBottom">
+      <div id="mBest"><span>RÉCORD</span><b id="mBestV">0</b></div>
+      <button id="bPlay" class="btn play">¡A CORRER!</button>
+      <div id="mTiles">
+        <button class="tile" id="bTaller"><i class="ti ti-taller"></i><span>Taller</span></button>
+        <button class="tile" id="bAbu"><i class="ti ti-abu"></i><span>Abuelos</span></button>
+        <button class="tile" id="bMis"><i class="ti ti-mis"></i><span>Misiones</span><em id="misBadge"></em></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TALLER -->
+  <div id="pTaller" class="screen panel">
+    <div class="phead"><button class="round sm back" data-back><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2>TALLER</h2><div class="pill"><i class="ic-den"></i><b class="coinsV">0</b></div></div>
+    <p class="psub">Mejora el motor y los extras de tu silla cohete.</p>
+    <div id="upList"></div>
+  </div>
+
+  <!-- ABUELOS -->
+  <div id="pAbu" class="screen panel low">
+    <div class="phead"><button class="round sm back" data-back><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2>ABUELOS</h2><div class="pill"><i class="ic-den"></i><b class="coinsV">0</b></div></div>
+    <div id="abuInfo">
+      <button class="round arrow" id="aPrev"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div id="abuName"><h3 id="aName"></h3><small id="aSub"></small></div>
+      <button class="round arrow" id="aNext"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div id="abuAb"><b id="aAb"></b><span id="aAbD"></span></div>
+    <button id="aBtn" class="btn green"></button>
+    <div id="skinHead">SILLA</div>
+    <div id="skinRow"></div>
+    <div id="aDots"></div>
+  </div>
+
+  <!-- MISIONES -->
+  <div id="pMis" class="screen panel">
+    <div class="phead"><button class="round sm back" data-back><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2>MISIONES</h2><div class="pill"><i class="ic-den"></i><b class="coinsV">0</b></div></div>
+    <p class="psub">Misiones de hoy. Completa las tres y sube tu multiplicador.</p>
+    <div id="misList"></div>
+    <div id="misMult"><span>Multiplicador actual</span><b id="misMultV">x1</b><small>Máximo x15 · se sube completando las 3 misiones del día</small></div>
+    <div id="misStats"></div>
+  </div>
+
+  <!-- AJUSTES -->
+  <div id="pSet" class="screen panel">
+    <div class="phead"><button class="round sm back" data-back><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h2>AJUSTES</h2><span></span></div>
+    <div class="setrow"><span>Música</span><button class="tog" id="tMus"></button></div>
+    <div class="setrow"><span>Efectos y voz</span><button class="tog" id="tSfx"></button></div>
+    <div class="setrow"><span>Gráficos</span><div class="seg" id="sQ"><button data-q="auto">Auto</button><button data-q="alta">Alta</button><button data-q="media">Media</button><button data-q="baja">Baja</button></div></div>
+    <div class="setrow"><span>Borrar progreso</span><button class="btn small red" id="bReset">Borrar</button></div>
+    <p class="fine">Controles: desliza en la pantalla (← → ↑ ↓) o usa las flechas / WASD. Espacio = saltar. P = pausa.<br>Tu progreso se guarda en este navegador.</p>
+  </div>
+
+  <!-- PAUSA -->
+  <div id="pPause" class="screen modal">
+    <div class="card"><h2>PAUSA</h2><button class="btn green" id="bResume">SEGUIR</button><button class="btn blue" id="bRestart">REINICIAR</button><button class="btn red" id="bQuit">SALIR AL MENÚ</button></div>
+  </div>
+
+  <!-- CONTINUAR -->
+  <div id="pCont" class="screen modal">
+    <div class="card"><h2>¡AY, MI CADERA!</h2><p>¿Seguimos? Tu abuelo aún tiene cuerda.</p>
+      <div id="contRing"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="bg"/><circle cx="50" cy="50" r="44" class="fg" id="contFg"/></svg><b id="contNum">6</b></div>
+      <button class="btn green" id="bContinue"><span>CONTINUAR</span><em><i class="ic-den"></i><b id="contCost">100</b></em></button>
+      <button class="btn ghost" id="bSkip">No, gracias</button>
+    </div>
+  </div>
+
+  <!-- RESUMEN -->
+  <div id="pOver" class="screen modal">
+    <div class="card big"><h2 id="oTitle">¡FIN DE LA CARRERA!</h2><div id="oRecord">¡NUEVO RÉCORD!</div>
+      <div id="oScore"><small>PUNTOS</small><b id="oScoreV">0</b></div>
+      <div id="oStats"><div><small>METROS</small><b id="oDist">0</b></div><div><small>DENTADURAS</small><b id="oCoins"><i class="ic-den"></i><span>0</span></b></div><div><small>RÉCORD</small><b id="oBest">0</b></div></div>
+      <div id="oMis"></div>
+      <button class="btn play" id="bAgain">OTRA VEZ</button><button class="btn blue" id="bMenu">MENÚ</button>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <div id="nogl" class="screen"><div class="card"><h2>Uy…</h2><p>Tu navegador no puede mostrar gráficos 3D (WebGL). Prueba con Chrome, Safari o Firefox actualizados.</p></div></div>
+</div>
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>

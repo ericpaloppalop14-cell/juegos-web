@@ -1,0 +1,86 @@
+/* Datos del juego: personajes, mejoras, distritos, skins, frases */
+export const CHARS = [
+  { id: 'paco', name: 'Abuelo Paco', sub: 'El auténtico Abuelo Turbo', price: 0, ab: 'Empujón de salida', abd: 'Arrancas cada partida con 3 segundos de turbo.',
+    skin: 0xf2b79a, shirt: 0xe9dcc0, vest: 0x2f6fb0, pants: 0x46505e, blanket: 0xb83232, shoe: 0x6b4a2f, hair: 0xf2f2f2, chair: 0x2f7be0, voice: 1.0,
+    lines: ['¡Esto en mis tiempos era a pie!', '¡Agárrate, Paco, que arrancamos!', '¡Mi cadera ni se entera!', '¡Dónde están mis gafas! Ah, en la cara.', '¡A cuarenta por hora, qué locura!', '¡Ni el autobús me alcanza!', '¡Esto es mejor que el Imserso!'] },
+  { id: 'rayo', name: 'Abuela Rayo', sub: 'Más rápida que su sombra', price: 1500, ab: 'Rayo manchego', abd: 'Cambias de carril al instante y atraes dentaduras cercanas.',
+    skin: 0xf6c1a3, shirt: 0xff69b4, vest: 0xffd23c, pants: 0xffd23c, blanket: 0x7b5cff, shoe: 0xffffff, hair: 0xd9c8ff, chair: 0xff4fa0, voice: 1.45,
+    lines: ['¡Zasca, rayo, centella!', '¡Yo soy más rápida que el WhatsApp!', '¡Ni las gafas me frenan!', '¡Cuidado, que llevo prisa!', '¡Que viene la Rayo!', '¡Esto mueve más que el bingo!'] },
+  { id: 'rockero', name: 'Yayo Rockero', sub: 'Heavy metal y caldito', price: 3000, ab: 'Guitarrazo', abd: 'Cuando la faja se rompe, un guitarrazo revienta todo lo cercano.',
+    skin: 0xe3a98a, shirt: 0x151515, vest: 0x1d1d1d, pants: 0x232323, blanket: 0x3a3a3a, shoe: 0x111111, hair: 0xb0b0b8, chair: 0x2a2a30, voice: 0.72,
+    lines: ['¡Rock and roll, chaval!', '¡Esto suena a Los Pekenikes con esteroides!', '¡Más fuerte, que no oigo!', '¡Guitarrazo en do mayor!', '¡Yo toqué con los Beatles... en el bar!', '¡Que se enteren en el asilo!'] },
+  { id: 'pirata', name: 'Abuelo Pirata', sub: 'Terror de la piscina municipal', price: 5000, ab: 'Botín del abuelo', abd: 'Cada dentadura vale un 25% más y salen más dentaduras de oro.',
+    skin: 0xd99a76, shirt: 0xb02a2a, vest: 0x1f1f2e, pants: 0x35405a, blanket: 0x6a4a2a, shoe: 0x222222, hair: 0x9b9b9b, chair: 0x8a5a2b, voice: 0.8,
+    lines: ['¡Arrr, mis dentaduras!', '¡Por las barbas del pulpo!', '¡Tierra a la vista... y un bar!', '¡Al abordaje de ese autobús!', '¡Loro, tú vigila los coches!', '¡Yo-jo-jo y una botella de anís!'] },
+  { id: 'cosmica', name: 'Yaya Cósmica', sub: 'Viene de la Luna (de Valencia)', price: 8000, ab: 'Gravedad lunar', abd: 'Tus saltos son un 40% más altos y duran más.',
+    skin: 0xf2c7a5, shirt: 0xf4f4f8, vest: 0xe6e6f2, pants: 0xe6e6f2, blanket: 0x4aa8ff, shoe: 0xffd23c, hair: 0xf0f0f0, chair: 0xe8eef6, voice: 1.2,
+    lines: ['¡Houston, tenemos abuela!', '¡Un pequeño paso para una yaya!', '¡Aquí arriba se ve genial!', '¡Gravedad, esa señora tan pesada!', '¡Ni en la Luna había tanto tráfico!', '¡Despegando, mis niños!'] },
+  { id: 'ole', name: 'Don Olé', sub: 'Torero jubilado con mucho arte', price: 12000, ab: 'Pases de capote', abd: 'Las pastillas aparecen el doble de veces.',
+    skin: 0xe0a07c, shirt: 0xc0201c, vest: 0xe9b923, pants: 0x1a1a1a, blanket: 0xc0201c, shoe: 0x111111, hair: 0x2b2b2b, chair: 0xc0201c, voice: 0.9,
+    lines: ['¡Olé, olé y olé mis mocasines!', '¡Toro, toro, ven aquí!', '¡Esto es arte, señores!', '¡Vamos, que me aplauden!', '¡Hasta los coches me esquivan!', '¡Más gracia que el Paquirri!'] },
+  { id: 'disco', name: 'Abuela Disco', sub: 'La reina de la pista y del bingo', price: 16000, ab: 'Pista de baile', abd: 'Las pastillas duran un 40% más.',
+    skin: 0xc98b6a, shirt: 0xffd23c, vest: 0xff4fd8, pants: 0xffd23c, blanket: 0x6a3cff, shoe: 0xff4fd8, hair: 0xb78cff, chair: 0x8f4bff, voice: 1.3,
+    lines: ['¡Que no pare la música!', '¡Cariño, estoy on fire!', '¡Saturday night, a las seis de la tarde!', '¡Mirad cómo brillo!', '¡Pista libre, que paso!', '¡Esto es mejor que el Zumba!'] },
+  { id: 'super', name: 'Superabuelo', sub: 'Capa, corona y mala cadera', price: 25000, ab: 'Segundo aliento', abd: 'Si te estrellas, vuelves a la carrera gratis, una vez por partida.',
+    skin: 0xf0b698, shirt: 0x2a50c8, vest: 0xe42d2d, pants: 0x2a50c8, blanket: 0xffc928, shoe: 0xe42d2d, hair: 0xffffff, chair: 0xffc928, voice: 0.85,
+    lines: ['¡Soy el rey del barrio!', '¡Arrodillaos ante mi silla!', '¡Con gran poder, gran lumbago!', '¡Es un pájaro, es un avión... es mi suegro!', '¡Yo no me jubilo jamás!', '¡Superabuelo al rescate!'] },
+];
+export const SKINS = [
+  { id: 'def', name: 'De serie', price: 0, color: null },
+  { id: 'fuego', name: 'Fuego', price: 600, color: 0xff6a1a, emi: 0x8a2200 },
+  { id: 'hielo', name: 'Hielo', price: 800, color: 0x7fe4ff, emi: 0x0a4a66 },
+  { id: 'chicle', name: 'Chicle', price: 1000, color: 0xff8fd1, emi: 0x55103a },
+  { id: 'lima', name: 'Lima limón', price: 1200, color: 0xa8ee2a, emi: 0x2a4400 },
+  { id: 'negro', name: 'Carbono', price: 2500, color: 0x151518, emi: 0x330000, metal: 0.8 },
+  { id: 'oro', name: 'Oro puro', price: 4000, color: 0xffcc2a, emi: 0x4a3200, metal: 0.9 },
+  { id: 'arcoiris', name: 'Arcoíris', price: 6000, color: 0xffffff, rainbow: true },
+];
+export const UPGR = [
+  { id: 'turbo', name: 'Motor cohete', d: 'El turbo dura más tiempo.', base: 5, per: 1.0, unit: 's', costs: [300, 700, 1500, 3000, 6000], icon: 'turbo' },
+  { id: 'iman', name: 'Imán de nevera', d: 'El imán atrae dentaduras durante más tiempo.', base: 8, per: 1.6, unit: 's', costs: [250, 600, 1300, 2600, 5200], icon: 'iman' },
+  { id: 'faja', name: 'Faja reforzada', d: 'La faja ortopédica aguanta más tiempo puesta.', base: 10, per: 2.4, unit: 's', costs: [300, 700, 1500, 3000, 6000], icon: 'faja' },
+  { id: 'baston', name: 'Bastón telescópico', d: 'El superbastón dura más saltos y más tiempo.', base: 8, per: 1.4, unit: 's', costs: [300, 700, 1500, 3000, 6000], icon: 'baston' },
+  { id: 'cafe', name: 'Cafelito doble', d: 'El cafelito duplica tus dentaduras y puntos más tiempo.', base: 10, per: 2.0, unit: 's', costs: [350, 800, 1600, 3200, 6400], icon: 'cafe' },
+  { id: 'oro', name: 'Dentadura de oro', d: 'Más dentaduras de oro por el camino.', base: 6, per: 2, unit: '%', costs: [400, 900, 1800, 3600, 7200], icon: 'oro' },
+];
+export const PILLS = {
+  turbo: { name: 'Turbo cohete', col: 0xff3b30, col2: 0xffd23c, hud: '#ff5a3c' },
+  iman: { name: 'Imán', col: 0x2f7bff, col2: 0xff3b30, hud: '#3b8cff' },
+  faja: { name: 'Faja ortopédica', col: 0x28c76f, col2: 0xe9fff2, hud: '#2fd37a' },
+  baston: { name: 'Superbastón', col: 0xb86a2a, col2: 0xffe0a8, hud: '#d9893a' },
+  cafe: { name: 'Cafelito x2', col: 0x6b3b1f, col2: 0xfff1d6, hud: '#c58a52' },
+};
+/* distritos: colores de cielo / niebla / luces */
+export const DIST = [
+  { id: 'barrio', name: 'El Barrio', sub: 'Calles de toda la vida', fog: 0xcfe8ff, near: 40, far: 170, sky: ['#3b8fe8', '#8cc8ff', '#d6ecff', '#cfe8ff'], hemi: [0xbfe0ff, 0xe8d9b8, 1.05], sun: [0xfff2d8, 2.2], ground: 0x8fae6a, road: 0x4b4e57, walk: 0xc9bfae, light: [-0.55, 1, 0.45] },
+  { id: 'mercado', name: 'El Mercado', sub: 'Frutas, gritos y descuentos', fog: 0xffe2b8, near: 38, far: 160, sky: ['#ff9d5c', '#ffc78a', '#ffe6bf', '#ffe2b8'], hemi: [0xffe9c8, 0xd7a87a, 1.0], sun: [0xffe0b0, 2.3], ground: 0xc9a46a, road: 0x6a5a4c, walk: 0xd8b98c, light: [0.5, 1, 0.5] },
+  { id: 'playa', name: 'Paseo Marítimo', sub: 'Sol, sombrillas y mojitos', fog: 0xcdf2ff, near: 45, far: 190, sky: ['#18a0f0', '#6cd0ff', '#c4f1ff', '#cdf2ff'], hemi: [0xcdf2ff, 0xf3e0b0, 1.1], sun: [0xfff6dc, 2.5], ground: 0xf0dca0, road: 0x5a5f6a, walk: 0xf4e6c8, light: [-0.4, 1, 0.55] },
+  { id: 'poligono', name: 'El Polígono', sub: 'Naves, camiones y humo', fog: 0xd8c8c0, near: 35, far: 150, sky: ['#7d8aa0', '#b9b2b6', '#e0cdc2', '#d8c8c0'], hemi: [0xd8dcec, 0x8a8070, 0.95], sun: [0xffe8cc, 1.9], ground: 0x77746c, road: 0x3e4046, walk: 0x9a9a98, light: [0.6, 1, 0.4] },
+  { id: 'fiestas', name: 'Fiestas del Pueblo', sub: 'Verbena y fuegos artificiales', fog: 0x4a2f6e, near: 30, far: 150, sky: ['#150d3a', '#5a2f8a', '#d9588a', '#4a2f6e'], hemi: [0x9a7ad0, 0x5a3a4a, 0.9], sun: [0xffb08a, 1.5], ground: 0x4d5a3a, road: 0x4a4350, walk: 0xb8a58c, light: [-0.6, 0.8, 0.5] },
+  { id: 'noche', name: 'Noche de Neones', sub: 'La ciudad que nunca duerme la siesta', fog: 0x120a30, near: 28, far: 150, sky: ['#05031a', '#1a0b46', '#4a1a7a', '#120a30'], hemi: [0x7a60e0, 0x20104a, 0.85], sun: [0x9a8cff, 1.4], ground: 0x14102a, road: 0x1a1830, walk: 0x3a3358, light: [0.5, 1, 0.4] },
+];
+export const DIST_LEN = 450;
+export const BANNER_LINES = ['', '', '', '', '', ''];
+export const SHOUTS = {
+  start: ['¡A toda máquina!', '¡Arranca, cohete!', '¡Allá voy, mundo!', '¡Que nadie me adelante!'],
+  coin: ['¡Mis dentaduras!', '¡Cómo brillan!', '¡Ñam, dentadura!', '¡Este sí que es un buen sueldo!'],
+  gold: ['¡Dentadura de oro!', '¡Esa vale una paga!', '¡Premio gordo!'],
+  jump: ['¡Hop!', '¡Arriba!', '¡Aúpa!'],
+  slide: ['¡Me tumbo!', '¡Cuidado con la espalda!'],
+  hit: ['¡Ay, mi cadera!', '¡Mi lumbago!', '¡Cuidado, majete!', '¡Mi pobre rodilla!'],
+  stumble: ['¡Uy, casi!', '¡Perdón, perdón!', '¡Oiga, que voy yo!'],
+  turbo: ['¡¡TURBOOO!!', '¡Cohete activado!', '¡Esto va como un tiro!'],
+  iman: ['¡Ven aquí, bonita!', '¡Imán de nevera, a tope!'],
+  faja: ['¡Faja puesta! Ya no me duele nada.', '¡Blindado como un señor!'],
+  fajaBreak: ['¡La faja ha dicho basta!', '¡Pum! Faja a la basura.'],
+  baston: ['¡Bastón con muelles!', '¡Boing, boing!'],
+  cafe: ['¡Cafelito! Ahora sí que despierto.', '¡Doble ración!'],
+  flip: ['¡Pirueta de abuelo!', '¡Menudo salto mortal!', '¡Esto no lo hace ni mi nieto!'],
+  record: ['¡Récord! ¡Que se entere el bar!', '¡Nuevo récord, mis niños!'],
+  barrio: ['¡Mi barrio, mi vida!', '¡Hola, vecina!'],
+  mercado: ['¡Qué buen género!', '¡Dos kilos de fresas, que paso!'],
+  playa: ['¡Playa! ¡Que me pongo el bañador!', '¡Cuidado con las sombrillas!'],
+  poligono: ['¡Aquí hay mucho camión!', '¡Esto huele a gasoil!'],
+  fiestas: ['¡Verbena! ¡Bailo luego!', '¡Fuegos artificiales!'],
+  noche: ['¡Qué luces, parece Las Vegas!', '¡Neones, mis ojos!'],
+};
