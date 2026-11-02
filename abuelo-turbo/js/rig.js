@@ -1,5 +1,5 @@
-import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo } from './util.js?v=1';
-import { CHARS, SKINS } from './data.js?v=1';
+import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo, addOutline } from './util.js?v=2';
+import { CHARS, SKINS } from './data.js?v=2';
 
 export const M = {
   v: bendMat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.05 })),
@@ -244,9 +244,22 @@ export function buildRig(id) {
   // HP positions were authored relative to head centre; shift by -0.3 not needed because we offset the mesh +0.3
   R.eyes = mk(faceG, M.rv, false); head.add(R.eyes); R.eyes.position.y = 0; R.grin = mk(grin, M.rv, false); head.add(R.grin); R.scream = mk(scream, M.rv, false); R.scream.visible = false; head.add(R.scream);
   if (id === 'cosmica') { const hm = new THREE.Mesh(new THREE.SphereGeometry(0.46, 18, 12), M.glass); hm.position.set(0, 0.3, 0); head.add(hm); R.helmet = hm; const ring = new GB(); ring.tor(0.4, 0.05, 0, 0, 0, 0xd9d9e6, { rx: Math.PI / 2, seg: 16 }); const rm = mk(ring, M.rv); rm.position.y = -0.02; head.add(rm); }
+  /* cartel TURBO en el respaldo + banderín: se lee desde atrás */
+  { const cvs = document.createElement('canvas'); cvs.width = 256; cvs.height = 200; const x = cvs.getContext('2d');
+    x.fillStyle = '#1a2a6a'; x.beginPath(); x.roundRect(6, 6, 244, 188, 34); x.fill(); x.lineWidth = 10; x.strokeStyle = '#ffe45a'; x.stroke();
+    x.fillStyle = '#ffe45a'; x.font = '700 78px Fredoka, Trebuchet MS, sans-serif'; x.textAlign = 'center'; x.fillText('TURBO', 128, 98);
+    x.fillStyle = '#ff8a1a'; x.beginPath(); x.moveTo(140, 112); x.lineTo(92, 112); x.lineTo(118, 138); x.lineTo(70, 176); x.lineTo(168, 130); x.lineTo(142, 130); x.closePath(); x.fill(); x.lineWidth = 5; x.strokeStyle = '#fff'; x.stroke();
+    const tex = new THREE.CanvasTexture(cvs); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const dm = bendMat(new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })); const dec = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.48), dm); dec.position.set(0, 1.0, 0.555 + 0.04); dec.rotation.x = 0.12; tilt.add(dec);
+    const pole = new GB(); pole.cy(0.018, 0.018, 1.9, 6, 0, 0.95, 0, 0xcfd4dc); pole.sp(0.045, 0, 1.92, 0, 0xffd23c, { seg: 6 });
+    const pm = mk(pole, M.rs); const fg = new THREE.Group(); fg.position.set(-0.46, 1.3, 0.74); fg.add(pm); tilt.add(fg);
+    const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute([0, 1.88, 0, 0, 1.5, 0, -0.55, 1.69, 0.04], 3)); tg.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
+    const pen = new THREE.Mesh(tg, bendMat(new THREE.MeshStandardMaterial({ color: c.vest === 0x1d1d1d ? 0xff4f4f : c.vest, roughness: 0.5, emissive: 0x331100, side: THREE.DoubleSide }))); pen.castShadow = false;
+    const pg = new THREE.Group(); pg.add(pen); fg.add(pg); R.flag = pg; }
   /* shield bubble + ring (used by game) */
   R.shield = new THREE.Mesh(new THREE.SphereGeometry(1.35, 20, 14), new THREE.MeshBasicMaterial({ color: 0x4dff9a, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); R.shield.position.set(0, 0.95, 0.1); R.shield.visible = false; tilt.add(R.shield); bendMat(R.shield.material);
   R.belt = null;
+  { const ms = []; root.traverse(o => { if (o.isMesh && o !== R.shield && o.material && !o.material.transparent && o.material.type !== 'MeshBasicMaterial') ms.push(o); }); ms.forEach(m => addOutline(m, 0.026)); }
   root.traverse(o => { if (o.isMesh && o !== R.shield) { o.frustumCulled = false; } });
   applySkin(R, 'def');
   return R;
@@ -283,6 +296,7 @@ export function poseRig(R, s, dt, time) {
   R.body.position.y = damp(R.body.position.y, s.slide ? 0.52 : 0.66, 16, dt);
   R.body.position.z = damp(R.body.position.z, s.slide ? 0.32 : 0.15, 16, dt);
   R.head.rotation.x = damp(R.head.rotation.x, s.slide ? -1.1 : (air ? -0.15 : 0) + Math.sin(t * 2.2) * (s.idle ? 0.04 : 0.01), 14, dt);
+  R.head.rotation.y = damp(R.head.rotation.y, s.glance ? 2.8 : 0, 8, dt); if (R.flag) R.flag.rotation.y = Math.sin(t * 9) * 0.28 + Math.sin(t * 5.3) * 0.12;
   R.head.rotation.z = damp(R.head.rotation.z, -(s.roll || 0) * 0.6 + (s.idle ? Math.sin(t * 1.3) * 0.05 : 0), 10, dt);
   R.head.rotation.y = damp(R.head.rotation.y, s.idle ? Math.sin(t * 0.8) * 0.3 : 0, 6, dt);
   // arms

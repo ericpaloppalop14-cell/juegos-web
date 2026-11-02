@@ -1,8 +1,8 @@
-import { Game } from './game.js?v=1';
-import A from './audio.js?v=1';
-import * as ST from './store.js?v=1';
-import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=1';
-import { THREE, clamp, pick } from './util.js?v=1';
+import { Game } from './game.js?v=2';
+import A from './audio.js?v=2';
+import * as ST from './store.js?v=2';
+import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=2';
+import { THREE, clamp, pick } from './util.js?v=2';
 
 const { S } = ST; const $ = id => document.getElementById(id);
 const fmt = n => Math.floor(n).toLocaleString('es-ES');
@@ -85,6 +85,7 @@ function renderMis() {
 }
 /* ---------- ajustes ---------- */
 function renderSet() {
+  padOn();
   $('tMus').classList.toggle('on', S.set.music); $('tSfx').classList.toggle('on', S.set.sfx);
   document.querySelectorAll('#sQ button').forEach(b => b.classList.toggle('on', b.dataset.q === S.set.q));
 }
@@ -118,7 +119,7 @@ function chipSet(type, v) { if (v > 0) { const c = chip(type); c.bar.style.width
 let lastScore = -1;
 g.cb.hud = h => {
   $('hScore').textContent = fmt(h.score); $('hCoins').textContent = fmt(h.coins); $('hMult').textContent = 'x' + h.mult; $('hDist').textContent = fmt(h.dist) + ' m'; $('kmh').textContent = h.kmh + ' km/h';
-  chipSet('turbo', h.tur); chipSet('iman', h.mag); chipSet('faja', h.shd); chipSet('baston', h.can); chipSet('cafe', h.caf); $('vig').classList.toggle('on', h.tur > 0);
+  $('bTutSkip').style.display = h.tut >= 0 ? 'block' : 'none'; chipSet('turbo', h.tur); chipSet('iman', h.mag); chipSet('faja', h.shd); chipSet('baston', h.can); chipSet('cafe', h.caf); $('vig').classList.toggle('on', h.tur > 0);
 };
 let bubbleTimer = null, lastSay = 0;
 g.cb.say = (text, dur, voice) => {
@@ -130,9 +131,17 @@ g.cb.district = (d, first) => { const el = $('district'); $('dName').textContent
 g.cb.pop = (t, col) => { const i = document.createElement('i'); i.textContent = t; i.style.color = col || '#fff'; $('pop').appendChild(i); setTimeout(() => i.remove(), 1400); };
 g.cb.pill = type => { g.cb.pop(PILLS[type].name.toUpperCase(), PILLS[type].hud); };
 g.cb.flash = (col, a) => { const f = $('flash'); f.style.transition = 'none'; f.style.background = col; f.style.opacity = a; requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = 'opacity .5s'; f.style.opacity = 0; })); };
-let hintTimer = null;
-g.cb.hint = on => { $('hint').classList.toggle('on', on); ['hiL', 'hiJ', 'hiS'].forEach(i => $(i).classList.remove('ok')); clearTimeout(hintTimer); if (on) hintTimer = setTimeout(() => $('hint').classList.remove('on'), 16000); };
-const _hd = g.hintDone.bind(g); g.hintDone = k => { _hd(k); const m = { lane: 'hiL', jump: 'hiJ', slide: 'hiS' }[k]; if (m) $(m).classList.add('ok'); };
+const TUTS = [
+  { c: 'tl', t: '¡Esquiva el coche!', d: 'Desliza ← o → para cambiar de carril' },
+  { c: 'tj', t: '¡Salta la valla!', d: 'Desliza ↑ (o pulsa ▲ / Espacio) para saltar' },
+  { c: 'ts', t: '¡Agáchate bajo el tendedero!', d: 'Desliza ↓ para agacharte' },
+];
+let tutShown = -9;
+g.cb.tut = step => {
+  const el = $('tut'); if (step < 0) { el.classList.remove('on'); tutShown = -9; return; } if (step === tutShown) return; tutShown = step; const T = TUTS[step]; if (!T) return;
+  $('tTitle').textContent = T.t; $('tSub').textContent = T.d; const st = el.querySelector('.tstage'); st.className = 'tstage ' + T.c; [...$('tDots').children].forEach((d, i) => d.className = i < step ? 'on' : i === step ? 'cur' : ''); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); A.click();
+};
+$('bTutSkip').onclick = () => { g.skipTut(); A.click(); };
 g.cb.over = run => {
   setTimeout(() => {
     if (g.state !== 'over') return;
@@ -143,10 +152,29 @@ g.cb.over = run => {
 };
 g.cb.state = s => { if (s === 'menu') { $('vig').classList.remove('on'); } if (s === 'play') { /* nothing */ } };
 /* ---------- input ---------- */
-const app = $('app'); let sx = 0, sy = 0, tracking = false;
-app.addEventListener('pointerdown', e => { A.resume(); if (e.target.closest('button,.card,.panel')) return; sx = e.clientX; sy = e.clientY; tracking = true; });
-app.addEventListener('pointermove', e => { if (!tracking || g.state !== 'play') return; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) > 24) { if (Math.abs(dx) > Math.abs(dy)) g.action(dx > 0 ? 'right' : 'left'); else g.action(dy > 0 ? 'slide' : 'jump'); sx = e.clientX; sy = e.clientY; } });
-const up = () => { tracking = false; }; app.addEventListener('pointerup', up); app.addEventListener('pointercancel', up);
+const app = $('app'); let ptr = null;
+app.addEventListener('pointerdown', e => {
+  A.resume(); if (e.target.closest('button,.card,.panel')) return; if (g.state !== 'play') return; e.preventDefault();
+  ptr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, sx: e.clientX, sy: e.clientY, t0: performance.now(), n: 0 };
+  try { app.setPointerCapture(e.pointerId); } catch (_) { }
+}, { passive: false });
+app.addEventListener('pointermove', e => {
+  if (!ptr || e.pointerId !== ptr.id || g.state !== 'play') return;
+  const W = Math.min(innerWidth, 500), th = Math.max(26, W * 0.07), vth = Math.max(32, W * 0.075);
+  const dx = e.clientX - ptr.sx, dy = e.clientY - ptr.sy, ax = Math.abs(dx), ay = Math.abs(dy), mul = ptr.n ? 2.1 : 1;
+  const quick = ptr.n > 0 || performance.now() - ptr.t0 < 420;
+  if (ay > vth * mul && ax < ay * 0.7 && quick) { g.action(dy < 0 ? 'jump' : 'slide'); ptr.n++; ptr.sx = e.clientX; ptr.sy = e.clientY; if (navigator.vibrate) try { navigator.vibrate(6); } catch (_) { } return; }
+  if (ax > th * mul && ax > ay * 0.6) { g.action(dx < 0 ? 'left' : 'right'); ptr.n++; ptr.sx = e.clientX; ptr.sy = e.clientY; }
+});
+const up = e => { if (ptr && (!e || e.pointerId === ptr.id)) ptr = null; }; app.addEventListener('pointerup', up); app.addEventListener('pointercancel', up);
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false }); document.addEventListener('contextmenu', e => e.preventDefault());
+/* botones en pantalla (opcional) */
+const padOn = () => { $('pad').classList.toggle('on', !!S.set.btns); $('tPad') && $('tPad').classList.toggle('on', !!S.set.btns); $('bPadTog').textContent = 'BOTONES EN PANTALLA: ' + (S.set.btns ? 'SÍ' : 'NO'); };
+const padBind = (id, a) => $(id).addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); A.resume(); g.action(a); });
+padBind('pL', 'left'); padBind('pR', 'right'); padBind('pJ', 'jump'); padBind('pS', 'slide');
+$('tPad').onclick = () => { S.set.btns = !S.set.btns; ST.save(); padOn(); A.click(); };
+$('bPadTog').onclick = () => { S.set.btns = !S.set.btns; ST.save(); padOn(); A.click(); };
+$('bTutAgain').onclick = () => { S.seen.tuto = false; ST.save(); A.click(); toast('El tutorial saldrá en tu próxima carrera'); };
 window.addEventListener('keydown', e => {
   if (e.repeat) return; A.resume(); const k = e.key;
   if (k === 'ArrowLeft' || k === 'a' || k === 'A') g.action('left'); else if (k === 'ArrowRight' || k === 'd' || k === 'D') g.action('right');
@@ -161,14 +189,14 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && g.s
 const _v = new THREE.Vector3();
 function follow() {
   requestAnimationFrame(follow); const b = $('bubble'); if (!b.classList.contains('on')) return; const head = g.rig && g.rig.head; if (!head) return;
-  head.getWorldPosition(_v); _v.y += 0.85; _v.project(g.camera); const x = (_v.x * 0.5 + 0.5) * innerWidth, y = (-_v.y * 0.5 + 0.5) * innerHeight;
+  head.getWorldPosition(_v); _v.y += 1.2; _v.project(g.camera); const x = (_v.x * 0.5 + 0.5) * innerWidth, y = (-_v.y * 0.5 + 0.5) * innerHeight;
   const w = b.offsetWidth / 2 + 8; b.style.left = clamp(x, w, innerWidth - w) + 'px'; b.style.top = clamp(y, 90, innerHeight) + 'px';
 }
 /* menu quips */
 setInterval(() => { if (g.state === 'menu' && !panelOpen && S.set.sfx) g.say(pick(g.char.lines), 2.6); }, 9000);
 /* ---------- boot ---------- */
 (async function boot() {
-  ST.load(); A.musicOn = S.set.music; A.sfxOn = S.set.sfx;
+  ST.load(); if (q.get('tuto') === '0') S.seen.tuto = true; if (q.get('tuto') === '1') g.forceTut = true; A.musicOn = S.set.music; A.sfxOn = S.set.sfx;
   const bar = $('lbarFill'), txt = $('ltxt'); const msgs = ['Calentando el motor…', 'Inflando los neumáticos…', 'Buscando la dentadura…', 'Afinando la bocina…', 'Tomando la pastilla…'];
   try {
     await new Promise(r => setTimeout(r, 30));
@@ -176,7 +204,7 @@ setInterval(() => { if (g.state === 'menu' && !panelOpen && S.set.sfx) g.say(pic
   } catch (e) { console.error(e); $('loading').classList.remove('show'); $('nogl').classList.add('show'); return; }
   bar.style.width = '100%'; await new Promise(r => setTimeout(r, 250));
   if (!S.set.music) A.musicOn = false;
-  show('menu'); $('loading').classList.remove('show'); refreshMenu(); follow(); window.__ready = true;
+  padOn(); show('menu'); $('loading').classList.remove('show'); refreshMenu(); follow(); window.__ready = true;
   const first = () => { A.resume(); if (A.ok) { A.setMusic(S.set.music); A.setSfx(S.set.sfx); if (g.state === 'menu') A.musicStart(0, true); } window.removeEventListener('pointerdown', first); window.removeEventListener('keydown', first); };
   window.addEventListener('pointerdown', first); window.addEventListener('keydown', first);
   if (q.get('auto') === '1') { A.resume(); startRun(); }

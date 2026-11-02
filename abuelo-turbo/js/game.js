@@ -1,17 +1,18 @@
-import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=1';
-import { World, distIdxAt } from './world.js?v=1';
-import { FX } from './fx.js?v=1';
-import { M, getRig, applySkin, poseRig } from './rig.js?v=1';
-import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=1';
-import A from './audio.js?v=1';
-import * as ST from './store.js?v=1';
-import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=1';
-import { initGen, genAhead, LW } from './gen.js?v=1';
+import { TELE } from './tele.js?v=2';
+import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=2';
+import { World, distIdxAt } from './world.js?v=2';
+import { FX } from './fx.js?v=2';
+import { M, getRig, applySkin, poseRig } from './rig.js?v=2';
+import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=2';
+import A from './audio.js?v=2';
+import * as ST from './store.js?v=2';
+import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=2';
+import { initGen, genAhead, LW } from './gen.js?v=2';
 
 const { S } = ST;
 const SOLID = new Set(['car', 'taxi', 'van', 'bus', 'truck', 'container', 'carroza', 'limo']);
 const HIGH = new Set(['tendedero', 'toldo', 'sombrilla', 'viga', 'pancarta', 'neon']);
-const GRAV = 30;
+const GRAV = 30, RS = 1.16;
 const PH = 1.5, PH_SLIDE = 0.75;
 
 export class Game {
@@ -53,7 +54,7 @@ export class Game {
   setChar(id, skin, locked = false) {
     this.char = CHARS.find(c => c.id === id) || CHARS[0];
     if (this.rig) this.rigRoot.remove(this.rig.root);
-    this.rig = getRig(this.char.id); applySkin(this.rig, skin || 'def'); this.rigRoot.add(this.rig.root); this.setLocked(locked);
+    this.rig = getRig(this.char.id); this.rig.root.scale.setScalar(RS); applySkin(this.rig, skin || 'def'); this.rigRoot.add(this.rig.root); this.setLocked(locked);
   }
   setLocked(l) { const k = l ? 0.42 : 1; M.rv.color.setScalar(k); M.rs.color.setScalar(k); if (this.rig) { this.rig.frameMat.color.multiplyScalar(1); this.rig.locked = l; if (l) { this.rig.frameMat.color.multiplyScalar(0.3); } else applySkin(this.rig, this.rig.skinId); } }
   previewSkin(skin) { if (this.rig) applySkin(this.rig, skin); }
@@ -61,9 +62,9 @@ export class Game {
   resetWorld() {
     for (const o of this.obs) this.release(o); this.obs.length = 0; this.coins.length = 0; for (const p of this.pills) this.scene.remove(p.obj); this.pills.length = 0;
     for (const d of this.debris) this.scene.remove(d.obj); this.debris.length = 0; this.fx.clear();
-    const p = this.p; Object.assign(p, { x: 0, y: 0, vy: 0, z: 0, zPrev: 0, lane: 0, lastLane: 0, tl: 0, slideT: 0, air: false, onRamp: false, shieldT: 0, turboT: 0, magT: 0, caneT: 0, cafeT: 0, invul: 0, stumbleT: 0, flip: 0, flipping: false, crashed: false, fall: false, coyote: 0, laneT: 99 });
+    const p = this.p; Object.assign(p, { x: 0, y: 0, vy: 0, z: 0, zPrev: 0, lane: 0, lastLane: 0, vx: 0, wob: 0, wobV: 0, tl: 0, slideT: 0, air: false, onRamp: false, shieldT: 0, turboT: 0, magT: 0, caneT: 0, cafeT: 0, invul: 0, stumbleT: 0, flip: 0, flipping: false, crashed: false, fall: false, coyote: 0, laneT: 99 });
     this.dist = 0; this.speed = 0; this.score = 0; this.coinsRun = 0; this.banked = 0; this.streak = 0; this.streakT = 0; this.cnt = { jump: 0, slide: 0, pills: 0, flip: 0, turbo: 0, shield: 0, coins: 0 }; this.continues = 0; this.usedFree = false; this.maxDi = 0; this.lastDi = 0;
-    initGen(this); this.rig.root.position.set(0, 0, 0); this.rig.root.rotation.set(0, 0, 0); this.rig.tilt.rotation.set(0, 0, 0); this.rig.root.visible = true; this.rig.root.scale.setScalar(1);
+    initGen(this); this.rig.root.position.set(0, 0, 0); this.rig.root.rotation.set(0, 0, 0); this.rig.tilt.rotation.set(0, 0, 0); this.rig.root.visible = true; this.rig.root.scale.setScalar(RS);
     this.timeScale(1);
   }
   timeScale(v) { this.ts = v; }
@@ -71,9 +72,10 @@ export class Game {
     A.resume(); this.resetWorld(); this.mode = 'play'; this.state = 'play'; this.runT = 0; this.speed = 8; this.startGrace = 1.0;
     this.rig.shield.visible = false; this.camMode = 'run'; this.camBlend = 0;
     A.engineStart(); A.musicStart(0, false); A.sfx = null; A.whoosh(); this.hintT = 0;
-    if (this.char.id === 'paco') { this.startPill('turbo', 3, true); }
+    
     this.say(pick(this.char.lines.slice(0, 2)), 2.2); this.fx.lineSeed(0, 0);
-    if (!S.seen.tuto) { this.cb.hint && this.cb.hint(true); }
+    if (this.char.id === 'paco' && S.seen.tuto && !this.forceTut) this.startPill('turbo', 3, true);
+    this.tut = (!S.seen.tuto || this.forceTut) ? 0 : -1; this.tutO = null; this.tutAct = false; this.tutCd = 0; this.tutOk = 0; this.tsT = 1; this.cb.tut && this.cb.tut(-1);
     ST.mission('runs', 1); this.runStart = performance.now();
     this.cb.state && this.cb.state('play');
   }
@@ -92,7 +94,7 @@ export class Game {
     const e = m; e.cls = cls; e.x = lane * LW; e.z = -d; e.lane = lane; e.vx = 0; e.walk = 0; e.dead = false; e.ph = Math.random() * 6; e.side = opt.side || 1; e.dy = opt.dy || 0;
     if (cls === 'cross') { e.x = e.side * 6.3; e.tx = lane * LW; e.waiting = true; }
     if (cls === 'bird') { e.base = 0.95 + e.dy; }
-    e.obj.position.set(e.x, cls === 'bird' ? e.base : 0, e.z); e.obj.rotation.set(0, cls === 'cross' ? -e.side * 1.4 : 0, 0); this.obs.push(e); return e;
+    TELE.attach(e);     e.obj.position.set(e.x, cls === 'bird' ? e.base : 0, e.z); e.obj.rotation.set(0, cls === 'cross' ? -e.side * 1.4 : 0, 0); this.obs.push(e); return e;
   }
   addCoin(x, y, d, gold) { this.coins.push({ x, y, z: -d, gold: Math.random() < gold, mag: false, ph: Math.random() * 6 }); }
   pillGeom(type) { return this.pillGeo[type] || (this.pillGeo[type] = (() => { const g = pillMesh(type); const h = new THREE.BufferGeometry(); h.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3)); const c = new THREE.Color(PILLS[type].col); h.setAttribute('color', new THREE.Float32BufferAttribute([c.r, c.g, c.b], 3)); h.setAttribute('size', new THREE.Float32BufferAttribute([3.4], 1)); return { g, h }; })()); }
@@ -103,13 +105,13 @@ export class Game {
   /* ---------- input ---------- */
   action(a) {
     if (this.state !== 'play') return; const p = this.p; if (p.crashed) return;
-    if (a === 'left' || a === 'right') { const d = a === 'left' ? -1 : 1; const nl = clamp(p.lane + d, -1, 1); if (nl !== p.lane) { p.lastLane = p.lane; p.lane = nl; p.laneT = 0; A.lane(d); this.fx.dust(p.x, 0, p.z + 0.4, 3); } else { this.fx.camShake(0.05); this.bump = d; } this.cb.hint && S.seen.tuto === false && this.hintDone('lane'); }
-    else if (a === 'jump') { if (p.y <= this.groundAt(p.x, p.z) + 0.12 || p.coyote > 0) { this.jump(); } else this.queue.push({ a: 'jump', t: 0.14 }); this.hintDone('jump'); }
+    if (a === 'left' || a === 'right') { const d = a === 'left' ? -1 : 1; const nl = clamp(p.lane + d, -1, 1); if (nl !== p.lane) { p.lastLane = p.lane; p.lane = nl; p.laneT = 0; p.wobV -= 1.6; A.lane(d); this.fx.dust(p.x, 0, p.z + 0.4, 3); } else { this.fx.camShake(0.05); this.bump = d; } this.cb.hint && S.seen.tuto === false && this.hintDone('lane'); }
+    else if (a === 'jump') { if (p.y <= this.groundAt(p.x, p.z) + 0.12 || p.coyote > 0) { this.jump(); } else this.queue.push({ a: 'jump', t: 0.22 }); this.hintDone('jump'); }
     else if (a === 'slide') { if (p.air) { p.vy = -26; p.slideT = 0.6; } else { p.slideT = 0.7; p.slideStart = true; A.slide(); this.cnt.slide++; this.fx.dust(p.x, 0, p.z, 6, 0xd8d0c0, 5); } this.hintDone('slide'); }
   }
-  hintDone(k) { if (!this._hint) this._hint = {}; this._hint[k] = 1; if (this._hint.lane && this._hint.jump && this._hint.slide && !S.seen.tuto) { S.seen.tuto = true; ST.save(); this.cb.hint && this.cb.hint(false); } }
+  hintDone(k) { }
   jump() {
-    const p = this.p; let v = 10.2; if (this.char.id === 'cosmica') v *= 1.2; if (p.caneT > 0) v = 15.8; p.vy = v; p.air = true; p.slideT = 0; p.coyote = 0; this.cnt.jump++; A.jump(); if (p.caneT > 0) A.cane(); this.fx.dust(p.x, 0, p.z, 4);
+    const p = this.p; let v = 10.2; if (this.char.id === 'cosmica') v *= 1.2; if (p.caneT > 0) v = 15.8; p.vy = v; p.air = true; p.slideT = 0; p.coyote = 0; p.wobV -= 7; this.cnt.jump++; A.jump(); if (p.caneT > 0) A.cane(); this.fx.dust(p.x, 0, p.z, 4);
     if (Math.random() < 0.18) this.say(pick(SHOUTS.jump), 1.0);
   }
   /* ---------- helpers ---------- */
@@ -137,27 +139,31 @@ export class Game {
   }
   frame(dt) {
     this.last_dt = dt;
-    if (this.state === 'play' || this.state === 'crash') this.update(dt * this.ts);
-    else if (this.state === 'paused') { /* freeze */ }
+    if (this.state === 'play' || this.state === 'crash') {
+      if (this.state === 'play') { const tt = this.tsT == null ? 1 : this.tsT; this.ts = damp(this.ts, tt, tt < this.ts ? 16 : 6, dt); if (Math.abs(this.ts - tt) < 0.01) this.ts = tt; }
+      this.sim(dt * this.ts);
+    } else if (this.state === 'paused') { /* freeze */ }
     else this.updateMenu(dt);
     this.fx.update(this.state === 'paused' ? 0 : dt, this.h, this.camera.fov);
   }
   /* ---------- simulation ---------- */
-  update(dt) {
+  sim(sdt) { const n = Math.max(1, Math.ceil(sdt * 120 - 1e-6)), h = sdt / n; for (let i = 0; i < n; i++) { this.update(h, i === n - 1, sdt); if (this.state !== 'play' && this.state !== 'crash') break; } }
+  update(dt, last = true, fdt = dt) {
     const p = this.p, rig = this.rig; this.time += dt;
-    if (this.state === 'crash') return this.updateCrash(dt);
+    if (this.state === 'crash') return this.updateCrash(dt, last, fdt);
     this.runT += dt; this.startGrace = Math.max(0, this.startGrace - dt);
     // timers
     for (const k of ['shieldT', 'turboT', 'magT', 'caneT', 'cafeT']) if (p[k] > 0) { p[k] -= dt; if (p[k] <= 0) { p[k] = 0; this.onPillEnd(k); } }
     p.invul = Math.max(0, p.invul - dt); p.stumbleT = Math.max(0, p.stumbleT - dt); p.coyote = Math.max(0, p.coyote - dt); p.laneT += dt;
     // speed
     const base = 15 + Math.min(20, this.dist * 0.0042); const tur = p.turboT > 0 ? 1.4 : 1;
-    let tgt = base * tur; if (this.startGrace > 0 || this.runT < 1.2) tgt = Math.min(tgt, 8 + this.runT * 8);
+    let tgt = base * tur; if (this.startGrace > 0 || this.runT < 1.2) tgt = Math.min(tgt, 8 + this.runT * 8); if (this.tut >= 0) tgt = Math.min(tgt, 14);
     if (p.stumbleT > 0.9) tgt *= 0.85;
     this.speed = damp(this.speed, tgt, p.turboT > 0 ? 2.5 : 1.8, dt);
     p.zPrev = p.z; const dz = this.speed * dt; p.z -= dz; this.dist += dz;
     // lateral
-    const tx = p.lane * LW; const lk = this.char.id === 'rayo' ? 34 : 21; p.vxl = (tx - p.x); p.x = damp(p.x, tx, lk, dt); if (Math.abs(tx - p.x) < 0.01) p.x = tx;
+    const tx = p.lane * LW; const lk = this.char.id === 'rayo' ? 520 : 250, lc = 2 * Math.sqrt(lk) * 0.96; p.vxl = (tx - p.x); p.vx += ((tx - p.x) * lk - p.vx * lc) * dt; p.x += p.vx * dt; if (Math.abs(tx - p.x) < 0.004 && Math.abs(p.vx) < 0.05) { p.x = tx; p.vx = 0; }
+    p.wobV += (-p.wob * 300 - p.wobV * 10) * dt; p.wob += p.wobV * dt; p.wob = clamp(p.wob, -0.9, 0.9);
     // buffered jump
     for (let i = this.queue.length - 1; i >= 0; i--) { const q = this.queue[i]; q.t -= dt; if (q.t <= 0) this.queue.splice(i, 1); else if (q.a === 'jump' && !p.air) { this.jump(); this.queue.splice(i, 1); } }
     // vertical
@@ -165,11 +171,11 @@ export class Game {
     if (p.turboT > 0) { const ty = 4.3 + Math.sin(this.time * 3) * 0.2; p.y = damp(p.y, ty, 4, dt); p.vy = 0; p.air = true; p.onRamp = false; }
     else {
       if (p.onRamp && g < p.y - 0.08 && p.vy <= 0.01) { p.vy = 12.8 + Math.min(4, (this.speed - 15) * 0.12); p.air = true; p.flipping = true; p.flip = 0; p.onRamp = false; A.boing(); this.fx.camShake(0.15); }
-      if (p.y > g + 0.001 || p.vy > 0) { p.vy -= GRAV * dt; p.y += p.vy * dt; p.air = true; }
+      if (p.y > g + 0.001 || p.vy > 0) { p.vy -= GRAV * (Math.abs(p.vy) < 3 ? 0.8 : 1) * dt; p.y += p.vy * dt; p.air = true; }
       if (p.y <= g && p.vy <= 0) { // landing / on ground
         const wasAir = p.air && p.vy < -2; const hv = -p.vy; p.y = g; p.vy = 0; p.air = false; p.onRamp = g > 0.05; p.coyote = 0.05;
         if (wasAir) {
-          A.land(clamp(hv / 14, 0.3, 1)); this.fx.dust(p.x, 0, p.z, 6); this.fx.camShake(Math.min(0.2, hv * 0.012));
+          A.land(clamp(hv / 14, 0.3, 1)); p.wobV += clamp(hv * 0.7, 2, 10); this.fx.dust(p.x, 0, p.z, 6); this.fx.camShake(Math.min(0.2, hv * 0.012));
           if (p.flipping) { this.cnt.flip++; this.score += 600 * ST.S.mult; A.flip(); this.say(pick(SHOUTS.flip), 1.8); this.fx.confetti(p.x, 1, p.z, 36); this.coinsRun += 15; this.cb.pop && this.cb.pop('¡PIRUETA! +15', '#ffd23c'); p.flipping = false; }
           if (p.caneT > 0 && p.slideT <= 0) { p.vy = 15.8; p.air = true; A.boing(); this.fx.burst(p.x, 0.2, p.z, 10, [0xffe0a8, 0xffffff], 4, 0.4, 0.2, 4); }
         }
@@ -179,7 +185,7 @@ export class Game {
     if (p.flipping) { p.flip = Math.min(1, p.flip + dt / 0.85); }
     if (p.slideT > 0 && !p.air) { p.slideT -= dt; } else if (p.air && p.slideT > 0) { p.slideT -= dt * 0.5; }
     // content
-    genAhead(this, this.dist);
+    if (this.tut >= 0) this.updateTut(dt); else genAhead(this, this.dist);
     this.updateObstacles(dt);
     if (!p.crashed) { this.collide(dt); this.pickups(dt); }
     this.updatePills(dt); this.updateCoins(dt);
@@ -191,14 +197,48 @@ export class Game {
     this.streakT -= dt; if (this.streakT <= 0) this.streak = 0;
     // audio
     if (this.dist < 99999) { A.engineSet(this.speed, p.turboT > 0, 1); A.intensity = p.turboT > 0 ? 1 : 0.2; }
-    this.updateRig(dt); this.updateCam(dt, false);
-    this.hudT -= dt; if (this.hudT <= 0) { this.hudT = 0.08; this.pushHud(); }
-    this.world.update(this.dist, p.z, this.camera.position, dt, this.h, this.camera.fov, this.time);
+    if (!last) return;
+    TELE.tick(this.time);
+    this.updateRig(fdt); this.updateCam(fdt, false);
+    this.hudT -= fdt; if (this.hudT <= 0) { this.hudT = 0.08; this.pushHud(); }
+    this.world.update(this.dist, p.z, this.camera.position, fdt, this.h, this.camera.fov, this.time);
     // fireworks in Fiestas
-    if (di === 4 && Math.random() < dt * 0.9) this.fireworkShow();
-    if (di === 4 && Math.random() < dt * 0.5) this.fx.confetti(p.x + rand(-4, 4), 5, p.z - rand(8, 25), 8);
-    this.fx.updateLines(p.x, p.z, this.speed, (this.speed - 14) / 24 + (p.turboT > 0 ? 0.7 : 0), dt);
+    if (di === 4 && Math.random() < fdt * 0.9) this.fireworkShow();
+    if (di === 4 && Math.random() < fdt * 0.5) this.fx.confetti(p.x + rand(-4, 4), 5, p.z - rand(8, 25), 8);
+    this.fx.updateLines(p.x, p.z, this.speed, (this.speed - 14) / 24 + (p.turboT > 0 ? 0.7 : 0), fdt);
   }
+  /* ---------- tutorial interactivo (primera partida) ---------- */
+  updateTut(dt) {
+    const p = this.p, T = this.tut;
+    if (!this.tutO) {
+      this.tutCd -= dt; if (this.tutCd > 0 || this.runT < 1.4) return;
+      const d = this.dist + 52, kind = T === 0 ? 'car' : T === 1 ? 'valla' : 'tendedero'; this.tutAct = false;
+      if (T === 0) { const L = p.lane; this.tutO = [this.addObs(pick(['car', 'taxi']), L, d)]; const side = L === 1 ? -1 : 1; for (let i = 0; i < 7; i++) this.addCoin((L + side) * LW, 0.9, d - 8 + i * 2.2, 0); }
+      else if (T === 1) { this.tutO = [-1, 0, 1].map(l => this.addObs('valla', l, d)); for (let l = -1; l <= 1; l++) for (let i = 0; i < 7; i++) { const t = (i + 0.5) / 7; this.addCoin(l * LW, 0.9 + Math.sin(t * Math.PI) * 1.5, d - 5 + i * 1.0, 0); } }
+      else { this.tutO = [-1, 0, 1].map(l => this.addObs('tendedero', l, d)); for (let l = -1; l <= 1; l++) for (let i = 0; i < 7; i++) this.addCoin(l * LW, 0.55, d - 5 + i * 1.0, 0); }
+      this.tutO.forEach(o => { o.tut = true; }); return;
+    }
+    const o = this.tutO[0], d = p.z - (o.z + o.len / 2);
+    if (!this.tutAct) {
+      const lim = T === 0 ? 26 : T === 1 ? 8 : 9.5;
+      if (d < 34 && d > 0) this.cb.tut && this.cb.tut(T);
+      if (d < lim && d > 0) this.tsT = 0.3;
+      const did = T === 0 ? p.lane !== o.lane : T === 1 ? p.y > 0.35 : p.slideT > 0.05;
+      if (did && d < lim) { this.tutAct = true; this.tsT = 1; this.cb.tut && this.cb.tut(-1); }
+    }
+    if (d <= 0.4) {
+      let ok;
+      if (T === 0) ok = Math.abs(p.x - o.x) > o.hw + 0.05; else if (T === 1) ok = p.y > o.y1 - 0.45; else ok = p.slideT > 0 && p.y < 0.5;
+      this.tsT = 1; this.cb.tut && this.cb.tut(-1); this.tutAct = true;
+      if (ok) { this.tutOk++; this.cb.pop && this.cb.pop(pick(['¡MUY BIEN!', '¡ASÍ SE HACE!', '¡PERFECTO!']), '#7dff4a'); A.mission(); this.fx.confetti(p.x, 1.5, p.z - 2, 24); this.say(pick(['¡Eso es, Paco!', '¡Qué agilidad!', '¡Ni a los veinte!']), 1.4); this.tut++; this.tutCd = 0.5; this.tutO = null; if (this.tut > 2) this.endTut(true); }
+      else { this.tutO.forEach(q => this.smash(q)); this.cb.pop && this.cb.pop('¡CASI! OTRA VEZ', '#ffb02a'); this.tutCd = 0.9; this.tutO = null; }
+    }
+  }
+  endTut(done) {
+    this.tut = -1; this.tutO = null; this.tsT = 1; S.seen.tuto = true; ST.save(); this.gd = Math.max(this.gd, this.dist + 70); this.cb.tut && this.cb.tut(-1);
+    if (done) { this.cb.pop && this.cb.pop('¡YA SABES CORRER!', '#ffd23c'); this.say('¡Ahora sí! ¡A toda mecha!', 2); A.fanfare(); this.fx.confetti(this.p.x, 3, this.p.z - 5, 40); }
+  }
+  skipTut() { if (this.tut < 0) return; if (this.tutO) this.tutO.forEach(q => this.smash(q)); this.endTut(false); }
   onDistrict(di) {
     const first = this.dist < 1; this.cb.district && this.cb.district(DIST[di], first); if (first) return;
     A.district(); const names = { 0: 'barrio', 1: 'mercado', 2: 'playa', 3: 'poligono', 4: 'fiestas', 5: 'noche' }; setTimeout(() => this.say(pick(SHOUTS[names[di]]), 2.4), 600);
@@ -211,7 +251,7 @@ export class Game {
     for (let i = this.obs.length - 1; i >= 0; i--) {
       const o = this.obs[i]; const ahead = p.z - o.z;
       if (ahead < -22 || o.dead) { if (o.dead && o.dieT > 0) { o.dieT -= dt; o.obj.position.x += o.dvx * dt; o.obj.position.y += o.dvy * dt; o.dvy -= 22 * dt; o.obj.rotation.x += o.drx * dt; o.obj.rotation.z += o.drz * dt; o.obj.position.z -= this.speed * 0.2 * dt; if (o.dieT > 0) continue; } this.release(o); this.obs.splice(i, 1); continue; }
-      if (ahead > 190) { o.obj.visible = false; continue; } o.obj.visible = true;
+      if (ahead > 190) { o.obj.visible = false; continue; } o.obj.visible = true; if (o.tele) TELE.update(o, ahead, this.time);
       if (o.cls === 'cross') {
         if (o.waiting && ahead < 52) { o.waiting = false; const tArr = Math.max(0.5, ahead / Math.max(this.speed, 12)); o.vx = clamp((o.tx - o.x) / tArr, -5, 5); }
         if (!o.waiting) { o.x += o.vx * dt; o.walk += dt; } o.obj.position.x = o.x; o.obj.position.y = Math.abs(Math.sin(o.ph + this.time * 9)) * (o.waiting ? 0.0 : 0.08); o.obj.rotation.z = Math.sin(this.time * 9 + o.ph) * (o.waiting ? 0.02 : 0.07); o.obj.rotation.y = o.waiting ? -o.side * 1.4 : (o.vx > 0 ? 1.4 : -1.4) * 1.0;
@@ -223,13 +263,13 @@ export class Game {
     }
   }
   collide(dt) {
-    const p = this.p; if (p.invul > 0 || p.turboT > 0 || this.startGrace > 0.5) return;
-    const ph = p.slideT > 0 ? PH_SLIDE : PH; const px0 = p.x - 0.42, px1 = p.x + 0.42;
+    const p = this.p; if (this.tut >= 0) return; if (p.invul > 0 || p.turboT > 0 || this.startGrace > 0.5) return;
+    const ph = p.slideT > 0 ? PH_SLIDE : PH; const px0 = p.x - 0.34, px1 = p.x + 0.34;
     for (const o of this.obs) {
       if (o.dead || o.cls === 'ramp') continue; const dzz = Math.abs(p.z - o.z); if (dzz > o.len / 2 + 2.2) continue;
-      const ox = o.x; if (px1 < ox - o.hw + 0.12 || px0 > ox + o.hw - 0.12) continue;
-      if (dzz > o.len / 2 + 0.5) continue;
-      if (p.y >= o.y1 - 0.08 || p.y + ph <= o.y0 + 0.08) continue;
+      const ox = o.x; if (px1 < ox - o.hw + 0.22 || px0 > ox + o.hw - 0.22) continue;
+      if (dzz > o.len / 2 + 0.3) continue;
+      if (p.y >= o.y1 - 0.26 || p.y + ph <= o.y0 + 0.24) continue;
       const depth = (o.z + o.len / 2) - (p.z - 0.7); const lanechg = p.laneT < 0.32 && Math.abs(p.x - p.lane * LW) > 0.08;
       if (p.caneT > 0 && p.y > 1.0 && o.cls !== 'high') continue;
       if (p.shieldT > 0) { this.breakShield(o); return; }
@@ -252,17 +292,17 @@ export class Game {
     A.crash(); A.engineStop(); A.honk(); this.fx.camShake(1.0); this.fx.stars(p.x, 1.2, p.z, 20); this.fx.burst(p.x, 1, p.z, 24, [0xffffff, 0xffd23c, 0xff5a1a, 0xe8453c], 8, 0.8, 0.3, 14); this.cb.flash && this.cb.flash('#ff3b30', 0.5);
     this.say(pick(SHOUTS.hit), 1.6); p.fvx = rand(-3, 3); p.fvy = 9; p.fvz = -this.speed * 0.45; this.rig.shield.visible = false;
   }
-  updateCrash(dt) {
+  updateCrash(dt, last = true, fdt = dt) {
     const p = this.p, R = this.rig; this.crashT += dt / Math.max(0.01, this.ts); // real-time-ish
     p.fvy -= 24 * dt; R.root.position.x += p.fvx * dt; R.root.position.y = Math.max(0, R.root.position.y + p.fvy * dt); R.root.position.z += p.fvz * dt; p.fvz *= (1 - 1.2 * dt); R.root.rotation.z += 5 * dt; R.root.rotation.x -= 4 * dt;
     if (R.root.position.y <= 0 && p.fvy < 0) { p.fvy = Math.abs(p.fvy) * 0.35; p.fvx *= 0.7; if (Math.abs(p.fvy) < 1) p.fvy = 0; }
     this.ps.crash = true; this.ps.speed = 0; this.ps.scream = true; poseRig(R, this.ps, dt, this.time); this.speed = damp(this.speed, 0, 3, dt);
-    this.updateCam(dt, true); this.world.update(this.dist, p.z, this.camera.position, dt, this.h, this.camera.fov, this.time); this.fx.updateLines(p.x, p.z, this.speed, 0, dt);
+    if (last) { this.updateCam(fdt, true); this.world.update(this.dist, p.z, this.camera.position, fdt, this.h, this.camera.fov, this.time); this.fx.updateLines(p.x, p.z, this.speed, 0, fdt); }
     this.updateObstacles(dt); this.updateCoins(dt); this.updatePills(dt);
     if (this.crashT > 0.55 && this.ts < 1) this.ts = 0.7; if (this.crashT > 1.5 && this.state === 'crash') this.endRun();
   }
   endRun() {
-    this.state = 'over'; this.ts = 1; A.engineStop(); const run = this.summary(); this.run = run; this.bank();
+    this.state = 'over'; this.ts = 1; this.camMode = 'over'; A.engineStop(); const run = this.summary(); this.run = run; this.bank();
     this.cb.over && this.cb.over(run); A.musicStart(0, true); this.cb.state && this.cb.state('over');
   }
   summary() {
@@ -276,7 +316,7 @@ export class Game {
   canContinue() { return S.coins >= this.continueCost(); }
   doContinue() {
     const cost = this.continueCost(); if (S.coins < cost || this.state !== 'over') return false; S.coins -= cost; this.continues++; ST.save();
-    const p = this.p, R = this.rig; p.crashed = false; p.invul = 3.5; p.y = 0; p.vy = 0; p.slideT = 0; p.air = false; this.ts = 1; R.root.position.set(0, 0, 0); R.root.rotation.set(0, 0, 0); R.root.position.z = 0; p.lane = Math.round(clamp(p.x / LW, -1, 1)); p.x = p.lane * LW; p.laneT = 99;
+    const p = this.p, R = this.rig; p.crashed = false; p.invul = 3.5; p.y = 0; p.vy = 0; p.slideT = 0; p.air = false; this.ts = 1; this.tsT = 1; p.vx = 0; p.wob = 0; p.wobV = 0; R.tilt.scale.set(1, 1, 1); R.root.position.set(0, 0, 0); R.root.rotation.set(0, 0, 0); R.root.position.z = 0; p.lane = Math.round(clamp(p.x / LW, -1, 1)); p.x = p.lane * LW; p.laneT = 99;
     for (const q of this.obs) if (!q.dead && q.cls !== 'ramp' && Math.abs(q.z - p.z) < 45 && q.z < p.z + 6) this.smash(q);
     this.speed = 10; this.startGrace = 0; this.runT = 2; this.state = 'play'; A.engineStart(); A.musicStart(distIdxAt(this.dist), false); this.fx.ring(p.x, 1, p.z, 0xffd23c); this.say('¡Otra vez! ¡Esto no hay quien lo pare!', 2.2); this.cb.state && this.cb.state('play'); this.cb.flash && this.cb.flash('#ffffff', 0.3); return true;
   }
@@ -316,8 +356,11 @@ export class Game {
   /* ---------- rig, camera ---------- */
   updateRig(dt) {
     const p = this.p, R = this.rig, s = this.ps; const rootPos = R.root.position; rootPos.x = p.x; rootPos.y = p.y; rootPos.z = p.z;
-    const dx = p.lane * LW - p.x; s.speed = this.speed; s.roll = clamp(-dx * 0.32, -0.42, 0.42); s.yaw = clamp(-dx * 0.1, -0.25, 0.25); s.air = p.air && p.turboT <= 0; s.vy = p.vy; s.slide = p.slideT > 0 && !p.air; s.turbo = p.turboT > 0; s.crash = false; s.idle = false; s.scream = p.turboT > 0 || (p.air && p.vy > 4 && p.caneT > 0); s.shieldWarn = p.shieldT > 0 && p.shieldT < 2.5; s.cheer = p.flipping;
+    const dx = p.lane * LW - p.x; s.speed = this.speed; s.roll = clamp(-p.vx * 0.075 - dx * 0.12, -0.45, 0.45); s.yaw = clamp(-p.vx * 0.026, -0.28, 0.28);
+    { const w = p.wob; R.tilt.scale.set(1 + w * 0.12, 1 - w * 0.24, 1 + w * 0.12); } s.air = p.air && p.turboT <= 0; s.vy = p.vy; s.slide = p.slideT > 0 && !p.air; s.turbo = p.turboT > 0; s.crash = false; s.idle = false; s.scream = p.turboT > 0 || (p.air && p.vy > 4 && p.caneT > 0); s.shieldWarn = p.shieldT > 0 && p.shieldT < 2.5; s.cheer = p.flipping;
     s.wheelie = this.startGrace > 0 ? 0.12 : 0;
+    this.glT = (this.glT == null ? 2.2 : this.glT) - dt; if (this.glT <= 0) { this.glW = 1.15; this.glT = 3.6 + Math.random() * 3; }
+    this.glW = Math.max(0, (this.glW || 0) - dt); s.glance = this.glW > 0 && !p.crashed && this.tut < 0 ? 1 : 0;
     if (p.flipping) { R.tilt.rotation.x = -p.flip * TAU; } else if (Math.abs(R.tilt.rotation.x) > TAU - 0.5) R.tilt.rotation.x = 0;
     // pose first (it damps tilt); keep flip override after
     const fl = p.flip; poseRig(R, s, dt, this.time); if (p.flipping) { R.tilt.rotation.x = -fl * TAU; }
@@ -334,7 +377,7 @@ export class Game {
   setVOff(t, dt) { this.vOff = damp(this.vOff || 0, t, 5, dt); if (Math.abs(this.vOff) < 0.002 && t === 0) { if (this.vOffOn) { this.camera.clearViewOffset(); this.vOffOn = false; } } else { this.camera.setViewOffset(this.w, this.h, 0, this.vOff * this.h, this.w, this.h); this.vOffOn = true; } }
   updateCam(dt, crash) {
     if (this.vOff) this.setVOff(0, dt);
-    const p = this.p, c = this.camera, s = this.speed; const back = 8.6, hgt = 4.8; const turbo = p.turboT > 0;
+    const p = this.p, c = this.camera, s = this.speed; const back = 7.9, hgt = 5.5; const turbo = p.turboT > 0;
     const tx = p.x * 0.6, ty = hgt + p.y * 0.4 + (turbo ? 0.8 : 0), tz = p.z + back + (turbo ? 1.4 : 0) + clamp(s * 0.03, 0, 1.0);
     this.cx = damp(this.cx != null ? this.cx : tx, tx, 7, dt); this.cy = damp(this.cy != null ? this.cy : ty, ty, 5, dt); this.cz = damp(this.cz != null ? this.cz : tz, tz, 8, dt);
     if (this.camBlend < 1) { this.camBlend = Math.min(1, this.camBlend + dt * 1.2); }
@@ -348,7 +391,7 @@ export class Game {
   /* ---------- menu ---------- */
   updateMenu(dt) {
     this.time += dt; const R = this.rig, p = this.p;
-    const presets = { home: { c: [2.6, 1.9, -4.6], l: [0, 1.15, 0.2] }, taller: { c: [-5.4, 2.0, 6.2], l: [0, 0.9, 0.2] }, abuelos: { c: [1.4, 1.6, -5.3], l: [0, 1.0, 0] }, misiones: { c: [2.6, 1.9, -4.6], l: [0, 1.15, 0.2] } };
+    const presets = { home: { c: [2.6, 1.9, -4.6], l: [0, 1.15, 0.2] }, over: { c: [1.5, 1.5, -5.6], l: [0, 1.0, 0] }, taller: { c: [-5.4, 2.0, 6.2], l: [0, 0.9, 0.2] }, abuelos: { c: [1.4, 1.6, -5.3], l: [0, 1.0, 0] }, misiones: { c: [2.6, 1.9, -4.6], l: [0, 1.15, 0.2] } };
     const pr = presets[this.camMode] || presets.home; const mc = this.menuCam, ml = this.menuLook;
     const orbit = this.camMode === 'abuelos' || this.camMode === 'home' ? Math.sin(this.time * 0.35) * 0.35 : 0;
     const sc = this.aspect > 1 ? 1 + Math.min(0.55, (this.aspect - 1) * 0.7) : 1; const cx = pr.l[0] + (pr.c[0] - pr.l[0]) * sc + orbit, cz = pr.l[2] + (pr.c[2] - pr.l[2]) * sc; mc.x = damp(mc.x, cx, 3.5, dt); mc.y = damp(mc.y, pr.c[1] + (sc - 1) * 0.6, 3.5, dt); mc.z = damp(mc.z, cz, 3.5, dt); ml.x = damp(ml.x, pr.l[0], 3.5, dt); ml.y = damp(ml.y, pr.l[1], 3.5, dt); ml.z = damp(ml.z, pr.l[2], 3.5, dt);
@@ -357,18 +400,18 @@ export class Game {
     if (this.state === 'over') { R.root.position.set(0, 0, 0); R.root.rotation.set(0, 0, 0); R.tilt.rotation.set(0, 0, 0); R.root.visible = true; p.x = 0; p.z = 0; }
     R.root.rotation.y = damp(R.root.rotation.y, this.camMode === 'taller' ? 0 : 0, 6, dt); poseRig(R, ps, dt, this.time);
     if (Math.random() < dt * 14) this.fx.flame(0.34, 0.66, 1.5, 3, 0.7), this.fx.flame(-0.34, 0.66, 1.5, 3, 0.7);
-    this.setVOff(({ taller: 0.34, abuelos: 0.25 }[this.camMode] || 0) * (this.aspect > 1 ? 0.4 : 1), dt);
+    this.setVOff(({ taller: 0.34, abuelos: 0.25, over: 0.27 }[this.camMode] || 0) * (this.aspect > 1 ? 0.4 : 1), dt);
     this.camBlend = 0; const c = this.camera; c.position.set(mc.x, mc.y, mc.z); c.lookAt(ml.x, ml.y, ml.z);
     if (Math.abs(c.fov - this.baseFov) > 0.05) { c.fov = this.baseFov; c.updateProjectionMatrix(); } this.fovCur = this.baseFov; this.cx = null; this.cy = null; this.cz = null;
     this.world.update(this.state === 'over' ? this.dist : 0, p.z, c.position, dt, this.h, c.fov, this.time);
     this.updateCoins(dt); this.fx.updateLines(0, 0, 0, 0, dt);
   }
   pushHud() {
-    const p = this.p; this.cb.hud && this.cb.hud({ score: Math.floor(this.score), coins: Math.floor(this.coinsRun), dist: Math.floor(this.dist), mult: ST.S.mult * (p.cafeT > 0 ? 2 : 1), tur: p.turboT > 0 ? p.turboT / p.turboMax : 0, mag: p.magT > 0 ? p.magT / p.magMax : 0, shd: p.shieldT > 0 ? p.shieldT / p.shieldMax : 0, can: p.caneT > 0 ? p.caneT / p.caneMax : 0, caf: p.cafeT > 0 ? p.cafeT / p.cafeMax : 0, di: distIdxAt(this.dist), kmh: Math.round(this.speed * 3.6) });
+    const p = this.p; this.cb.hud && this.cb.hud({ score: Math.floor(this.score), coins: Math.floor(this.coinsRun), dist: Math.floor(this.dist), mult: ST.S.mult * (p.cafeT > 0 ? 2 : 1), tur: p.turboT > 0 ? p.turboT / p.turboMax : 0, mag: p.magT > 0 ? p.magT / p.magMax : 0, shd: p.shieldT > 0 ? p.shieldT / p.shieldMax : 0, can: p.caneT > 0 ? p.caneT / p.caneMax : 0, caf: p.cafeT > 0 ? p.cafeT / p.cafeMax : 0, tut: this.tut, di: distIdxAt(this.dist), kmh: Math.round(this.speed * 3.6) });
   }
   render() { this.r.render(this.scene, this.camera); }
   /* headless helper for tests: advance simulation without drawing */
-  stepSim(dt) { if (this.state === 'play' || this.state === 'crash') this.update(dt * this.ts); }
+  stepSim(dt) { if (this.state === 'play' || this.state === 'crash') this.sim(dt * this.ts); }
 }
 function smoothK(t) { return t * t * (3 - 2 * t); }
 Game.prototype.menuCam = null;

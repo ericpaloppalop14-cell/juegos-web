@@ -1,6 +1,6 @@
-import { THREE, GB, bendMat, TAU, rboxGeo } from './util.js?v=1';
-import { M } from './rig.js?v=1';
-import { PILLS } from './data.js?v=1';
+import { THREE, GB, bendMat, TAU, rboxGeo, addOutline } from './util.js?v=2';
+import { M } from './rig.js?v=2';
+import { PILLS } from './data.js?v=2';
 
 const CAR_COL = [0xe8453c, 0x3b7de0, 0xf0c030, 0x3cbf72, 0xf4f4f6, 0x8a5ad8, 0xff8a30, 0x2fb8c8, 0xc9ccd4];
 const GLASS = 0x2a3a58, TIRE = 0x1c1d22;
@@ -121,7 +121,7 @@ const cache = new Map();
 export function makeModel(kind, variant = 0) {
   const key = kind + ':' + variant; let t = cache.get(key);
   if (!t) { const r = B[kind](variant); const mt = mesh(r.b.build(), kind === 'neon' || kind === 'neonbaja' ? M.shiny : M.v); mt.castShadow = true; t = { mesh: mt, hw: r.hw, len: r.len, y0: r.y0, y1: r.y1, ramp: !!r.ramp, H: r.H || 0 }; cache.set(key, t); }
-  const g = new THREE.Group(); const m = new THREE.Mesh(t.mesh.geometry, t.mesh.material); m.castShadow = true; m.receiveShadow = false; g.add(m);
+  const g = new THREE.Group(); const m = new THREE.Mesh(t.mesh.geometry, t.mesh.material); m.castShadow = true; m.receiveShadow = false; g.add(m); addOutline(m, kind === 'neon' || kind === 'neonbaja' ? 0.02 : 0.034);
   return { obj: g, hw: t.hw, len: t.len, y0: t.y0, y1: t.y1, ramp: t.ramp, H: t.H, kind };
 }
 
@@ -133,7 +133,7 @@ export function makePigeon() {
     const w = new GB(); w.rb(0.5, 0.04, 0.3, 0.02, 0.25, 0, 0, 0xe4e7ee); _pig = { body: b.build(), wing: w.build() };
   }
   const g = new THREE.Group(); const body = new THREE.Mesh(_pig.body, M.v); g.add(body); body.castShadow = true;
-  const wl = new THREE.Mesh(_pig.wing, M.v), wr = new THREE.Mesh(_pig.wing, M.v); wl.position.set(0.15, 0.08, 0); wr.position.set(-0.15, 0.08, 0); wr.scale.x = -1; g.add(wl, wr); g.scale.setScalar(1.15);
+  const wl = new THREE.Mesh(_pig.wing, M.v), wr = new THREE.Mesh(_pig.wing, M.v); wl.position.set(0.15, 0.08, 0); wr.position.set(-0.15, 0.08, 0); wr.scale.x = -1; g.add(wl, wr); addOutline(body, 0.018); addOutline(wl, 0.014); addOutline(wr, 0.014); g.scale.setScalar(1.15);
   return { obj: g, hw: 0.5, len: 0.7, y0: 0.95, y1: 1.5, kind: 'paloma', wl, wr };
 }
 export function makeGranny() {
@@ -147,7 +147,7 @@ export function makeGranny() {
     b.sp(0.15, 0, 0.95, -0.7, 0x9ad84a, { seg: 6 }); b.sp(0.13, 0.15, 0.95, -0.6, 0xe8426a, { seg: 6 });
     _gran = b.build();
   }
-  const g = new THREE.Group(); const m = new THREE.Mesh(_gran, M.v); m.castShadow = true; g.add(m); g.scale.setScalar(1.05);
+  const g = new THREE.Group(); const m = new THREE.Mesh(_gran, M.v); m.castShadow = true; g.add(m); addOutline(m, 0.025); g.scale.setScalar(1.05);
   return { obj: g, hw: 0.62, len: 1.0, y0: 0, y1: 1.9, kind: 'abuela', body: m };
 }
 

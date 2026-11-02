@@ -1,6 +1,6 @@
-import { THREE, GB, rng, TAU, clamp } from './util.js?v=1';
-import { DIST } from './data.js?v=1';
-import { signUV } from './tex.js?v=1';
+import { THREE, GB, rng, TAU, clamp } from './util.js?v=2';
+import { DIST } from './data.js?v=2';
+import { signUV } from './tex.js?v=2';
 
 export const TL = 30; // tile length
 const PAL = {

@@ -160,3 +160,41 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit;padding:0}
 #nogl{display:none;place-items:center;background:#1a5ad0;z-index:50}#nogl.show{display:grid}
 @media (min-width:900px) and (min-aspect-ratio:1/1){.logo.big{margin-top:12vh}#abuInfo{margin-top:calc(34vh - 20px)}}
 @media (max-height:640px){.btn.play{font-size:30px;padding:10px 14px 13px}.logo .l1{font-size:min(13vw,60px)}.logo .l2{font-size:min(17vw,80px)}#abuInfo{margin-top:30vh}}
+
+/* ===== v2: tutorial interactivo, botones, mejoras visuales ===== */
+#tut{position:absolute;left:0;right:0;bottom:7%;display:none;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+#tut.on{display:flex}
+#tut .tcard{width:min(86vw,360px);background:linear-gradient(rgba(14,30,96,.88),rgba(10,22,74,.9));border:3px solid #fff;border-radius:26px;padding:10px 14px 12px;text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.25),0 14px 30px rgba(0,0,0,.4);animation:tutIn .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes tutIn{from{transform:translateY(30px) scale(.85);opacity:0}}
+#tTitle{display:block;font-size:26px;line-height:1.05;text-shadow:0 3px 0 rgba(0,0,0,.4)}
+#tSub{display:block;font-size:15px;opacity:.9;margin-top:2px}
+#tDots{display:flex;gap:6px;justify-content:center;margin-top:7px}#tDots i{width:34px;height:8px;border-radius:5px;background:rgba(255,255,255,.28)}#tDots i.on{background:linear-gradient(#7dff7a,#27b83a);box-shadow:0 0 8px #5dff6a}#tDots i.cur{background:#ffe45a;animation:pulse .8s infinite}
+.tstage{position:relative;height:96px;margin:0 auto 4px;width:200px;overflow:hidden;border-radius:18px;background:linear-gradient(#2a3d8a,#1a2766);border:2px solid rgba(255,255,255,.4)}
+.tstage .lane{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.28)}.tstage .l1{left:33%}.tstage .l2{left:66%}.tstage .l3{display:none}
+.tarrow{position:absolute;left:50%;top:50%;width:70px;height:70px;margin:-35px 0 0 -35px;background-repeat:no-repeat;background-position:center;background-size:contain;opacity:.95}
+.thand{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-6px 0 0 -14px;filter:drop-shadow(0 4px 3px rgba(0,0,0,.45));transform-origin:30% 20%}
+.tstage.tl .tarrow{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path d='M10 35h50M24 21 10 35l14 14M46 21l14 14-14 14' fill='none' stroke='%23ffe45a' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/></svg>")}
+.tstage.tj .tarrow{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path d='M35 60V12M20 27 35 12l15 15' fill='none' stroke='%237dff3a' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>")}
+.tstage.ts .tarrow{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 70'><path d='M35 10v48M20 43l15 15 15-15' fill='none' stroke='%23ffa21a' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/></svg>")}
+.tstage.tl .thand{animation:swL 1.5s ease-in-out infinite}.tstage.tj .thand{animation:swJ 1.3s ease-in-out infinite}.tstage.ts .thand{animation:swS 1.3s ease-in-out infinite}
+@keyframes swL{0%{transform:translateX(-52px);opacity:0}15%{opacity:1}55%{transform:translateX(34px);opacity:1}75%,100%{transform:translateX(40px);opacity:0}}
+@keyframes swJ{0%{transform:translateY(34px);opacity:0}15%{opacity:1}55%{transform:translateY(-30px);opacity:1}75%,100%{transform:translateY(-36px);opacity:0}}
+@keyframes swS{0%{transform:translateY(-34px);opacity:0}15%{opacity:1}55%{transform:translateY(34px);opacity:1}75%,100%{transform:translateY(40px);opacity:0}}
+#bTutSkip{pointer-events:auto;position:absolute;right:14px;top:calc(max(8px,env(safe-area-inset-top)) + 62px);font-size:14px;opacity:.9;padding:5px 12px;background:rgba(10,24,70,.55);border:2px solid rgba(255,255,255,.6);border-radius:14px;display:none}
+#pad{position:absolute;left:0;right:0;bottom:max(14px,env(safe-area-inset-bottom));display:none;justify-content:space-between;padding:0 14px;pointer-events:none}
+#pad.on{display:flex}
+#pad .pgrp{display:flex;gap:12px;align-items:flex-end}
+#pad button{pointer-events:auto;width:74px;height:74px;border-radius:24px;background:linear-gradient(rgba(94,195,255,.82),rgba(42,125,224,.82));border:3px solid rgba(255,255,255,.9);box-shadow:0 6px 0 rgba(26,74,154,.8),0 10px 16px rgba(0,0,0,.3);display:grid;place-items:center;position:relative;touch-action:none}
+#pad button:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(26,74,154,.8)}
+#pad svg{width:42px;height:42px;fill:none;stroke:#fff;stroke-width:3.6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 0 rgba(0,0,0,.3))}
+#pad button.j{background:linear-gradient(rgba(125,255,58,.85),rgba(40,170,30,.85));box-shadow:0 6px 0 rgba(20,100,20,.8),0 10px 16px rgba(0,0,0,.3);width:88px;height:88px;border-radius:28px}
+#pad button.s{background:linear-gradient(rgba(255,178,40,.88),rgba(240,100,20,.88));box-shadow:0 6px 0 rgba(150,60,0,.8),0 10px 16px rgba(0,0,0,.3);width:88px;height:88px;border-radius:28px}
+#pad button small{position:absolute;bottom:-1px;font-size:10px;font-weight:700;letter-spacing:.04em;text-shadow:0 2px 0 rgba(0,0,0,.4);transform:translateY(100%);color:#fff;white-space:nowrap}
+#pad .pgrp:last-child button{margin-bottom:14px}
+#kmh{bottom:calc(max(10px,env(safe-area-inset-bottom)))}
+.setrow span small{display:block;font-size:12px;font-weight:400;opacity:.8}
+/* v2 game-over bottom sheet: character visible above */
+#pOver{background:linear-gradient(rgba(6,16,56,0) 38%,rgba(6,16,56,.72) 100%);backdrop-filter:none;-webkit-backdrop-filter:none;place-items:end center}
+#pOver .card{width:min(100vw,460px);border-radius:30px 30px 0 0;border-bottom:0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));gap:9px;animation:sheet .45s cubic-bezier(.2,1.1,.3,1);background:linear-gradient(#3a8cf0,#1b45b0)}
+#pOver .card h2{font-size:30px}
+@keyframes sheet{from{transform:translateY(100%)}}

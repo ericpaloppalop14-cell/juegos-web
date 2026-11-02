@@ -124,3 +124,32 @@ export function softTexture(size = 64, stops = [[0, 'rgba(255,255,255,1)'], [0.4
   x.fillStyle = g; x.fillRect(0, 0, size, size); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 export function disposeObj(o) { o.traverse(c => { if (c.geometry) c.geometry.dispose(); }); }
+
+/* ---------- contorno de dibujo animado (casco invertido con normales suavizadas) ---------- */
+const _olGeo = new WeakMap(), _olMat = new Map();
+function smoothGeo(g) {
+  const pa = g.attributes.position, na = g.attributes.normal; const map = new Map(); const n = pa.count;
+  const key = i => Math.round(pa.getX(i) * 500) + ',' + Math.round(pa.getY(i) * 500) + ',' + Math.round(pa.getZ(i) * 500);
+  for (let i = 0; i < n; i++) { const k = key(i); let a = map.get(k); if (!a) { a = [0, 0, 0]; map.set(k, a); } a[0] += na.getX(i); a[1] += na.getY(i); a[2] += na.getZ(i); }
+  const o = new THREE.BufferGeometry(); o.setAttribute('position', pa); const nn = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const a = map.get(key(i)); const l = Math.hypot(a[0], a[1], a[2]) || 1; nn[i * 3] = a[0] / l; nn[i * 3 + 1] = a[1] / l; nn[i * 3 + 2] = a[2] / l; }
+  o.setAttribute('normal', new THREE.BufferAttribute(nn, 3)); if (g.index) o.setIndex(g.index); return o;
+}
+function olMat(w, col) {
+  const k = w + '|' + col; let m = _olMat.get(k); if (m) return m;
+  m = new THREE.MeshBasicMaterial({ color: col, side: THREE.BackSide });
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uBend = BEND.uBend; sh.uniforms.uBendX = BEND.uBendX;
+    sh.vertexShader = 'uniform float uBend;\nuniform float uBendX;\n' + sh.vertexShader
+      .replace('#include <begin_vertex>', `float dd = -(modelViewMatrix * vec4(position, 1.0)).z; vec3 transformed = position + normalize(normal) * ${w.toFixed(4)} * clamp(0.55 + dd * 0.028, 0.6, 2.4);`)
+      .replace('#include <project_vertex>', `#include <project_vertex>
+ mvPosition.y -= uBend * mvPosition.z * mvPosition.z; mvPosition.x += uBendX * mvPosition.z * mvPosition.z;
+ gl_Position = projectionMatrix * mvPosition;`);
+  };
+  _olMat.set(k, m); return m;
+}
+export function addOutline(mesh, w = 0.03, col = 0x141a3c) {
+  if (!mesh.geometry || !mesh.geometry.attributes.normal) return null;
+  let g = _olGeo.get(mesh.geometry); if (!g) { g = smoothGeo(mesh.geometry); _olGeo.set(mesh.geometry, g); }
+  const o = new THREE.Mesh(g, olMat(w, col)); o.castShadow = false; o.receiveShadow = false; o.frustumCulled = false; o.userData.outline = true; o.renderOrder = -1; mesh.add(o); return o;
+}
