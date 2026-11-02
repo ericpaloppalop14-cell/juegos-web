@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#4db8ff">
+<title>Gallinas al Espacio</title>
+<meta name="description" content="Lanza gallinas al espacio con un cohete casero, mejora la nave y descubre planetas de huevos.">
+<meta property="og:title" content="Gallinas al Espacio"><meta property="og:description" content="¡Cocorico! Cohete casero, gallinas locas y planetas de huevos.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preload" href="fredoka.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+
+  <div id="hud" class="hide">
+    <div id="hTop">
+      <div class="pill"><i class="ic coin"></i><b id="hCoins">0</b></div>
+      <div class="pill"><i class="ic egg"></i><b id="hEggs">0</b></div>
+      <div class="pill alt"><b id="hAlt">0 m</b></div>
+    </div>
+    <div id="prog"><span id="pgIcon">🧀</span><div class="bar"><i id="pgBar"></i></div></div>
+    <div id="fuelWrap"><span>🌽</span><div class="bar fuel"><i id="fuelBar"></i></div><div id="shields"></div></div>
+    <div id="combo" class="hide"><b id="comboN">x2</b></div>
+    <div id="banner"></div>
+  </div>
+
+  <div id="launch" class="hide">
+    <div id="gaugeMsg">¡Toca cuando la plumita esté en lo verde!</div>
+    <div id="gauge"><div id="zone"></div><div id="marker"></div></div>
+    <div id="tapHint">TOCA PARA LANZAR</div>
+  </div>
+
+  <div id="menu">
+    <div id="mTop">
+      <div class="pill"><i class="ic coin"></i><b id="mCoins">0</b></div>
+      <div class="pill"><i class="ic egg"></i><b id="mEggs">0</b></div>
+      <button id="bSound" class="iconbtn" aria-label="Sonido">🔊</button>
+    </div>
+    <div id="title"><h1>GALLINAS<br><span>AL ESPACIO</span></h1><p id="subtitle"></p></div>
+    <div id="mBottom">
+      <div id="planetPick">
+        <button id="pPrev" class="arrow" aria-label="Planeta anterior">‹</button>
+        <div id="pCard"><canvas id="pIcon" width="120" height="120"></canvas><div class="pinfo"><b id="pName"></b><small id="pDist"></small><small id="pStat"></small></div></div>
+        <button id="pNext" class="arrow" aria-label="Planeta siguiente">›</button>
+      </div>
+      <button id="bGo" class="big">¡DESPEGAR!</button>
+      <div id="tabs"><button id="bShop" class="tab">🔧 Taller</button><button id="bChick" class="tab">🐔 Gallinas</button></div>
+      <div id="tip"></div>
+    </div>
+  </div>
+
+  <div id="panel" class="hide">
+    <div id="pBox">
+      <div id="pHead"><b id="pTitle">Taller</b><div class="pills"><span class="mini"><i class="ic coin"></i><b id="pCoins">0</b></span><span class="mini"><i class="ic egg"></i><b id="pEggs">0</b></span></div><button id="pClose" class="iconbtn">✕</button></div>
+      <div id="pList"></div>
+    </div>
+  </div>
+
+  <div id="results" class="hide">
+    <div id="rBox">
+      <h2 id="rTitle">¡Aterrizaje!</h2>
+      <p id="rLine"></p>
+      <div id="rPlanet"></div>
+      <div class="rStats">
+        <div><small>Altura máxima</small><b id="rAlt">0 m</b></div>
+        <div><i class="ic coin"></i><b id="rCoins">0</b></div>
+        <div><i class="ic egg"></i><b id="rEggs">0</b></div>
+      </div>
+      <div id="rBonus"></div>
+      <div class="rBtns"><button id="rShop" class="btn">🔧 Taller</button><button id="rAgain" class="btn go">¡Otra vez!</button></div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <div id="rot">Gira el móvil: la gallina prefiere volar en vertical 🐔</div>
+</div>
+<script src="data.js?v=1"></script>
+<script src="art.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
