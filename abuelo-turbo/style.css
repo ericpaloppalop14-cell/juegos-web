@@ -63,7 +63,7 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit;padding:0}
 #misBadge.on{display:grid;animation:pulse 1s infinite}
 /* panels */
 .panel{display:none;background:linear-gradient(rgba(10,26,80,.92),rgba(14,40,110,.94) 60%);padding-top:max(12px,env(safe-area-inset-top))}
-.panel.show{display:block;animation:slideUp .28s ease-out}
+.panel.show{display:block;animation:slideUp .28s ease-out;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .panel.low{background:linear-gradient(transparent 0,transparent 36%,rgba(10,26,80,.92) 52%,rgba(14,40,110,.97));padding-top:max(10px,env(safe-area-inset-top))}
 .panel.show.low{animation:fade .25s}
 @keyframes slideUp{from{transform:translateY(24px);opacity:0}}
@@ -197,3 +197,14 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit;padding:0}
 #pOver .card{width:min(100vw,460px);border-radius:30px 30px 0 0;border-bottom:0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));gap:9px;animation:sheet .45s cubic-bezier(.2,1.1,.3,1);background:linear-gradient(#3a8cf0,#1b45b0)}
 #pOver .card h2{font-size:30px}
 @keyframes sheet{from{transform:translateY(100%)}}
+/* menús: se puede deslizar con el dedo (el * de arriba pone touch-action:none para el juego) */
+.panel,.panel *{touch-action:pan-y}
+#upList,#misList{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+/* v4: retoques de interfaz */
+.up{background:linear-gradient(rgba(255,255,255,.2),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 4px 0 rgba(8,20,70,.45),0 8px 18px rgba(0,0,0,.25)}
+.up .ico{box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),0 3px 0 rgba(0,0,0,.25)}
+#pTaller,#pMis,#pSet{backdrop-filter:blur(1.5px)}
+.panel .psub{text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.tile,.btn{transition:transform .08s ease-out,filter .15s}.tile:active,.btn:active{transform:translateY(3px) scale(.98);filter:brightness(1.08)}
+#bPlay{animation:playPulse 1.6s ease-in-out infinite}
+@keyframes playPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}

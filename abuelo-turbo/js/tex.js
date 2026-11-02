@@ -1,4 +1,4 @@
-import { THREE, rng, TAU } from './util.js?v=3';
+import { THREE, rng, TAU } from './util.js?v=4';
 const mkc = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; };
 const tex = (c, srgb = true) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
 const rr = (x, a, b, w, h, r) => { x.beginPath(); x.roundRect ? x.roundRect(a, b, w, h, r) : x.rect(a, b, w, h); };
@@ -64,6 +64,15 @@ export function roadTex(kind) {
   if (kind === 'noche') { line(-1.2, 5, '#6af4ff', true, true); line(1.2, 5, '#6af4ff', true, true); line(-4.15, 6, '#ff6ad8', false, true); line(4.15, 6, '#ff6ad8', false, true); x.fillStyle = 'rgba(120,100,220,.18)'; for (let i = 0; i < 14; i++) { x.beginPath(); x.ellipse(R() * W, R() * H, 20 + R() * 30, 10 + R() * 25, 0, 0, TAU); x.fill(); } }
   if (kind === 'fiestas') for (let i = 0; i < 260; i++) { x.fillStyle = ['#ff4f8a', '#ffd23c', '#4fe8ff', '#7bff4f', '#ffffff'][i % 5]; x.fillRect(R() * W, R() * H, 4, 3); }
   if (kind === 'poligono') for (let z = 4; z < 30; z += 15) { x.fillStyle = 'rgba(230,194,26,.8)'; for (let k = 0; k < 6; k++) { x.save(); x.translate((-4.15 + 4.5) * mx + 6, z * my + k * 18); x.rotate(0.6); x.fillRect(0, 0, 30, 8); x.restore(); } }
+  /* detalles de asfalto: rodadas, parches, grietas y alcantarillas */
+  if (kind !== 'mercado') {
+    for (const lx of [-2.4, 0, 2.4]) for (const off of [-0.72, 0.72]) { const px = (lx + off + 4.5) * mx; const gr = x.createLinearGradient(px - 9, 0, px + 9, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, kind === 'noche' ? 'rgba(0,0,0,.22)' : 'rgba(0,0,0,.14)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(px - 9, 0, 18, H); }
+    for (let i = 0; i < 3; i++) { const pw = 30 + R() * 50, ph = 40 + R() * 90; x.fillStyle = `rgba(${R() < 0.5 ? '0,0,0' : '255,255,255'},.045)`; x.fillRect(R() * (W - pw), R() * (H - ph), pw, ph); }
+    x.strokeStyle = 'rgba(0,0,0,.28)'; x.lineWidth = 1.2; for (let i = 0; i < 7; i++) { let cx2 = R() * W, cy2 = R() * H; x.beginPath(); x.moveTo(cx2, cy2); for (let k = 0; k < 5; k++) { cx2 += (R() - 0.5) * 30; cy2 += R() * 26; x.lineTo(cx2, cy2); } x.stroke(); }
+    const mh = (px, py) => { x.fillStyle = 'rgba(30,32,38,.9)'; x.beginPath(); x.arc(px, py, 15, 0, TAU); x.fill(); x.strokeStyle = 'rgba(150,155,165,.7)'; x.lineWidth = 2; x.beginPath(); x.arc(px, py, 15, 0, TAU); x.stroke(); x.beginPath(); x.arc(px, py, 9, 0, TAU); x.stroke(); x.beginPath(); x.moveTo(px - 15, py); x.lineTo(px + 15, py); x.moveTo(px, py - 15); x.lineTo(px, py + 15); x.stroke(); };
+    mh((-2.4 + 0.9 + 4.5) * mx, 180 + R() * 200); mh((2.4 - 0.9 + 4.5) * mx, 620 + R() * 260);
+    x.fillStyle = 'rgba(25,26,30,.8)'; for (let k = 0; k < 4; k++) x.fillRect((4.15 + 4.5 - 0.7) * mx, 760 + k * 6, 20, 3); // sumidero junto al bordillo
+  }
   const t = tex(c), te = tex(ce); t.repeat.set(1, 1); return { map: t, em: te };
 }
 
@@ -114,7 +123,12 @@ export function skyTex(kind, d) {
     x.fillStyle = '#fffbe0'; x.beginPath(); x.arc(mx, 50, 20, 0, TAU); x.fill(); x.fillStyle = '#e8e0b8'; x.beginPath(); x.arc(mx - 6, 44, 4, 0, TAU); x.fill(); x.beginPath(); x.arc(mx + 7, 55, 3, 0, TAU); x.fill();
   } else {
     const gm = x.createRadialGradient(sunAt, 62, 0, sunAt, 62, 130); gm.addColorStop(0, 'rgba(255,255,235,1)'); gm.addColorStop(0.12, 'rgba(255,248,200,.9)'); gm.addColorStop(0.4, 'rgba(255,240,190,.25)'); gm.addColorStop(1, 'rgba(255,240,190,0)'); x.fillStyle = gm; x.fillRect(sunAt - 130, 0, 260, hz + 20);
-    wrap(o => { for (let i = 0; i < 16; i++) { const cx = o + R() * W, cy = 20 + R() * 66, k = 0.6 + R() * 0.8; for (let j = 0; j < 5; j++) blob(cx + (j - 2) * 22 * k, cy + (j % 2) * 4, 30 * k, 10 * k, kind === 'poligono' ? '#c9c4c8' : '#ffffff', kind === 'poligono' ? 0.5 : 0.78); } });
+    wrap(o => { const pol = kind === 'poligono'; for (let i = 0; i < 16; i++) { const cx = o + R() * W, cy = 20 + R() * 66, k = 0.6 + R() * 0.8;
+      for (let j = 0; j < 5; j++) blob(cx + (j - 2) * 22 * k, cy + 7 * k + (j % 2) * 4, 30 * k, 9 * k, pol ? '#a9a4a8' : '#cfdcf0', pol ? 0.4 : 0.55);                       // base sombreada
+      for (let j = 0; j < 5; j++) blob(cx + (j - 2) * 22 * k, cy + (j % 2) * 4, 30 * k, 10 * k, pol ? '#c9c4c8' : '#ffffff', pol ? 0.5 : 0.8);
+      for (let j = 0; j < 3; j++) blob(cx + (j - 1) * 24 * k, cy - 8 * k - (j % 2) * 4, 20 * k, 11 * k, pol ? '#d8d4d8' : '#ffffff', pol ? 0.5 : 0.9); } // torreones
+    for (let i = 0; i < 10; i++) { x.strokeStyle = 'rgba(255,255,255,.28)'; x.lineWidth = 2 + R() * 2; const sx = o + R() * W, sy = 8 + R() * 40; x.beginPath(); x.moveTo(sx, sy); x.quadraticCurveTo(sx + 60, sy - 6, sx + 130 + R() * 80, sy + 2); x.stroke(); } // cirros
+    if (!pol) for (let i = 0; i < 6; i++) { const bx = o + R() * W, by = 22 + R() * 40; x.strokeStyle = 'rgba(40,50,70,.55)'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(bx - 6, by - 3); x.quadraticCurveTo(bx - 3, by - 6, bx, by); x.quadraticCurveTo(bx + 3, by - 6, bx + 6, by - 3); x.stroke(); } }); // pajaritos
   }
   // distant silhouettes
   const sil = '#' + new THREE.Color(d.fog).multiplyScalar(kind === 'noche' ? 0.55 : (kind === 'fiestas' ? 0.55 : 0.82)).getHexString();

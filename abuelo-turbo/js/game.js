@@ -1,13 +1,13 @@
-import { TELE } from './tele.js?v=3';
-import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=3';
-import { World, distIdxAt } from './world.js?v=3';
-import { FX } from './fx.js?v=3';
-import { M, getRig, applySkin, poseRig } from './rig.js?v=3';
-import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=3';
-import A from './audio.js?v=3';
-import * as ST from './store.js?v=3';
-import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=3';
-import { initGen, genAhead, LW } from './gen.js?v=3';
+import { TELE } from './tele.js?v=4';
+import { THREE, BEND, bendMat, clamp, lerp, damp, rand, randi, pick, TAU } from './util.js?v=4';
+import { World, distIdxAt } from './world.js?v=4';
+import { FX } from './fx.js?v=4';
+import { M, getRig, applySkin, poseRig } from './rig.js?v=4';
+import { makeModel, makePigeon, makeGranny, dentureGeo, pillMesh, lowForDistrict } from './props.js?v=4';
+import A from './audio.js?v=4';
+import * as ST from './store.js?v=4';
+import { CHARS, SKINS, DIST, DIST_LEN, PILLS, SHOUTS, UPGR } from './data.js?v=4';
+import { initGen, genAhead, LW } from './gen.js?v=4';
 
 const { S } = ST;
 const SOLID = new Set(['car', 'taxi', 'van', 'bus', 'truck', 'container', 'carroza', 'limo']);
@@ -312,16 +312,29 @@ export class Game {
     const score = Math.floor(this.score), dist = Math.floor(this.dist), newBest = score > S.best; const done = [];
     const add = a => a && a.forEach(m => done.push(m));
     add(ST.mission('coins', this.cnt.coins)); add(ST.mission('dist', dist, 'max')); add(ST.mission('score', score, 'max')); add(ST.mission('jump', this.cnt.jump)); add(ST.mission('slide', this.cnt.slide)); add(ST.mission('pills', this.cnt.pills)); add(ST.mission('flip', this.cnt.flip)); add(ST.mission('turbo', this.cnt.turbo)); add(ST.mission('shield', this.cnt.shield)); add(ST.mission('district', Math.min(5, this.maxDi), 'max'));
+    for (const k in this.cnt) this.cnt[k] = 0; /* ya contadas: así seguir tras revivir no las cuenta dos veces */
     return { score, dist, coins: Math.floor(this.coinsRun), newBest, best: Math.max(S.best, score), done, canFree: false, cost: this.continueCost() };
   }
   bank() { const run = this.run; const add = Math.floor(this.coinsRun) - this.banked; this.banked = Math.floor(this.coinsRun); S.coins += add; S.totalCoins += add; if (run.score > S.best) S.best = run.score; if (run.dist > S.bestDist) S.bestDist = run.dist; S.runs++; ST.save(); }
   continueCost() { return Math.min(2000, 100 * Math.pow(2, this.continues)); }
   canContinue() { return S.coins >= this.continueCost(); }
   doContinue() {
-    const cost = this.continueCost(); if (S.coins < cost || this.state !== 'over') return false; S.coins -= cost; this.continues++; ST.save();
-    const p = this.p, R = this.rig; p.crashed = false; p.invul = 3.5; p.y = 0; p.vy = 0; p.slideT = 0; p.air = false; this.ts = 1; this.tsT = 1; p.vx = 0; p.wob = 0; p.wobV = 0; R.tilt.scale.set(1, 1, 1); R.root.position.set(0, 0, 0); R.root.rotation.set(0, 0, 0); R.root.position.z = 0; p.lane = Math.round(clamp(p.x / LW, -1, 1)); p.x = p.lane * LW; p.laneT = 99;
-    for (const q of this.obs) if (!q.dead && q.cls !== 'ramp' && Math.abs(q.z - p.z) < 45 && q.z < p.z + 6) this.smash(q);
-    this.speed = 10; this.startGrace = 0; this.runT = 2; this.state = 'play'; A.engineStart(); A.musicStart(distIdxAt(this.dist), false); this.fx.ring(p.x, 1, p.z, 0xffd23c); this.say('¡Otra vez! ¡Esto no hay quien lo pare!', 2.2); this.cb.state && this.cb.state('play'); this.cb.flash && this.cb.flash('#ffffff', 0.3); return true;
+    const cost = this.continueCost(); if (S.coins < cost || this.state !== 'over' || this.reviving) return false; this.reviving = true; S.coins -= cost; this.continues++; ST.save();
+    const p = this.p, R = this.rig;
+    /* CAUSA del cuelgue: en la pantalla de fin updateMenu() deja p.z = 0 y la cámara en modo 'over' (con desplazamiento de vista); al seguir, el abuelo quedaba en z=0 lejos del mundo (z = -distancia) y la cámara fija en el menú. Restauramos todo. */
+    p.z = -this.dist; p.zPrev = p.z; p.crashed = false; p.fall = false; p.invul = 3.0; p.y = 0; p.vy = 0; p.slideT = 0; p.air = false; p.onRamp = false; p.flipping = false; p.flip = 0; p.stumbleT = 0; p.vx = 0; p.wob = 0; p.wobV = 0; p.fvx = 0; p.fvy = 0; p.fvz = 0;
+    p.shieldT = 0; p.turboT = 0; R.shield.visible = false; this.ts = 1; this.tsT = 1; this.crashT = 0;
+    R.tilt.scale.set(1, 1, 1); R.tilt.rotation.set(0, 0, 0); R.root.rotation.set(0, 0, 0); R.root.visible = true; R.root.scale.setScalar(RS);
+    p.lane = 0; p.x = 0; p.lastLane = 0; p.laneT = 99; R.root.position.set(p.x, 0, p.z);
+    for (const q of this.obs) if (!q.dead && q.cls !== 'ramp' && q.z < p.z + 8 && q.z > p.z - 70) this.smash(q); // despeja el camino (detrás, encima y 70 m por delante)
+    for (const q of this.obs) if (q.cls === 'ramp' && !q.dead && Math.abs(q.z - p.z) < 10) this.smash(q);
+    this.ps.crash = false; this.ps.scream = false; this.ps.idle = false; this.ps.air = false; this.ps.slide = false;
+    /* cámara de carrera de nuevo, sin desplazamiento de menú ni mezcla con la cámara del menú */
+    this.camMode = 'run'; this.camBlend = 1; this.cx = null; this.cy = null; this.cz = null; this.vOff = 0; this.vOffOn = false; try { this.camera.clearViewOffset(); } catch (_) { }
+    this.speed = 10; this.startGrace = 0; this.runT = 2; this.state = 'play'; this.last = performance.now();
+    A.engineStop(); A.engineStart(); A.resume(); A.musicStart(distIdxAt(this.dist), false);
+    this.updateCam(0.016, false); this.fx.ring(p.x, 1, p.z, 0xffd23c); this.say('¡Otra vez! ¡Esto no hay quien lo pare!', 2.2); this.cb.state && this.cb.state('play'); this.cb.flash && this.cb.flash('#ffffff', 0.3);
+    this.reviving = false; return true;
   }
   /* ---------- pickups ---------- */
   pickups(dt) {
@@ -367,7 +380,7 @@ export class Game {
     if (p.flipping) { R.tilt.rotation.x = -p.flip * TAU; } else if (Math.abs(R.tilt.rotation.x) > TAU - 0.5) R.tilt.rotation.x = 0;
     // pose first (it damps tilt); keep flip override after
     const fl = p.flip; poseRig(R, s, dt, this.time); if (p.flipping) { R.tilt.rotation.x = -fl * TAU; }
-    if (p.invul > 0 && p.turboT <= 0 && p.shieldT <= 0) R.root.visible = Math.floor(this.time * 18) % 2 === 0 || p.invul > 3; else R.root.visible = true;
+    if (p.invul > 0 && p.turboT <= 0 && p.shieldT <= 0) R.root.visible = Math.floor(this.time * 18) % 2 === 0; else R.root.visible = true;
     if (p.invul > 0 && !(p.shieldT > 0) && p.invul < 3.3 && this.state === 'play') { /* blink handled */ }
     // particles
     const nz = p.z + 1.5, fy = p.y + 0.66, big = p.turboT > 0 ? 1.7 : 1;
@@ -398,13 +411,14 @@ export class Game {
     const pr = presets[this.camMode] || presets.home; const mc = this.menuCam, ml = this.menuLook;
     const orbit = this.camMode === 'abuelos' || this.camMode === 'home' ? Math.sin(this.time * 0.35) * 0.35 : 0;
     const sc = this.aspect > 1 ? 1 + Math.min(0.55, (this.aspect - 1) * 0.7) : 1; const cx = pr.l[0] + (pr.c[0] - pr.l[0]) * sc + orbit, cz = pr.l[2] + (pr.c[2] - pr.l[2]) * sc; mc.x = damp(mc.x, cx, 3.5, dt); mc.y = damp(mc.y, pr.c[1] + (sc - 1) * 0.6, 3.5, dt); mc.z = damp(mc.z, cz, 3.5, dt); ml.x = damp(ml.x, pr.l[0], 3.5, dt); ml.y = damp(ml.y, pr.l[1], 3.5, dt); ml.z = damp(ml.z, pr.l[2], 3.5, dt);
+    const zo = this.state === 'over' ? -this.dist : 0; /* en la pantalla de fin, abuelo y cámara se quedan donde acabó la carrera, con la calle detrás */
     if (this.state !== 'over') { Object.assign(p, { x: 0, y: 0, z: 0 }); this.speed = 0; }
-    const ps = this.ps; ps.speed = this.state === 'over' ? 0 : 0; ps.idle = true; ps.roll = 0; ps.yaw = 0; ps.air = false; ps.slide = false; ps.turbo = false; ps.crash = false; ps.scream = false; ps.shieldWarn = false; ps.cheer = false; ps.wheelie = 0;
-    if (this.state === 'over') { R.root.position.set(0, 0, 0); R.root.rotation.set(0, 0, 0); R.tilt.rotation.set(0, 0, 0); R.root.visible = true; p.x = 0; p.z = 0; }
+    const ps = this.ps; ps.speed = this.state === 'over' ? 0 : 0; ps.idle = true; ps.roll = 0; ps.yaw = 0; ps.air = false; ps.slide = false; ps.turbo = false; ps.crash = false; ps.scream = false; ps.shieldWarn = false; ps.cheer = false; ps.wheelie = 0; ps.hideFlag = this.camMode === 'taller';
+    if (this.state === 'over') { R.root.position.set(0, 0, zo); R.root.rotation.set(0, 0, 0); R.tilt.rotation.set(0, 0, 0); R.root.visible = true; p.x = 0; p.z = zo; p.zPrev = zo; }
     R.root.rotation.y = damp(R.root.rotation.y, this.camMode === 'taller' ? 0 : 0, 6, dt); poseRig(R, ps, dt, this.time);
-    if (Math.random() < dt * 14) this.fx.flame(0.34, 0.66, 1.5, 3, 0.7), this.fx.flame(-0.34, 0.66, 1.5, 3, 0.7);
+    if (Math.random() < dt * 14) this.fx.flame(0.34, 0.66, 1.5 + zo, 3, 0.7), this.fx.flame(-0.34, 0.66, 1.5 + zo, 3, 0.7);
     this.setVOff(({ taller: 0.34, abuelos: 0.25, over: 0.27 }[this.camMode] || 0) * (this.aspect > 1 ? 0.4 : 1), dt);
-    this.camBlend = 0; const c = this.camera; c.position.set(mc.x, mc.y, mc.z); c.lookAt(ml.x, ml.y, ml.z);
+    this.camBlend = 0; const c = this.camera; c.position.set(mc.x, mc.y, mc.z + zo); c.lookAt(ml.x, ml.y, ml.z + zo);
     if (Math.abs(c.fov - this.baseFov) > 0.05) { c.fov = this.baseFov; c.updateProjectionMatrix(); } this.fovCur = this.baseFov; this.cx = null; this.cy = null; this.cz = null;
     this.world.update(this.state === 'over' ? this.dist : 0, p.z, c.position, dt, this.h, c.fov, this.time);
     this.updateCoins(dt); this.fx.updateLines(0, 0, 0, 0, dt);

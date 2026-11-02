@@ -1,4 +1,4 @@
-import { THREE, BEND, softTexture, rand, clamp } from './util.js?v=3';
+import { THREE, BEND, softTexture, rand, clamp } from './util.js?v=4';
 
 const VS = `uniform float uBend; uniform float uBendX; uniform float uScale; attribute float size; attribute vec4 aCol; varying vec4 vC;
 void main(){ vC=aCol; vec4 mv=modelViewMatrix*vec4(position,1.); mv.y-=uBend*mv.z*mv.z; mv.x+=uBendX*mv.z*mv.z; gl_Position=projectionMatrix*mv; gl_PointSize=size*uScale/max(0.3,-mv.z); }`;

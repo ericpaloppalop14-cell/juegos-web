@@ -1,6 +1,6 @@
-import { THREE, GB, rng, TAU, clamp } from './util.js?v=3';
-import { DIST } from './data.js?v=3';
-import { signUV } from './tex.js?v=3';
+import { THREE, GB, rng, TAU, clamp } from './util.js?v=4';
+import { DIST } from './data.js?v=4';
+import { signUV } from './tex.js?v=4';
 
 export const TL = 30; // tile length
 const PAL = {
@@ -24,7 +24,7 @@ function solidG(G, geoFn) { /* helper: G uses uv fixed to solid white cell */ }
 const SOLID = [0.9, 0.05]; // inside white cell (cell 15 at bottom-right in canvas => v small)
 
 function lamp(P, G, x, z, s, col = 0xfff2c0, night = false, h = 5.4) {
-  P.cy(0.06, 0.09, h, 6, x, h / 2, z, 0x3a3f4a); P.rb(1.0, 0.07, 0.07, 0.03, x - s * 0.5, h, z, 0x3a3f4a);
+  P.cy(0.06, 0.09, h, 7, x, h / 2, z, 0x3a3f4a); P.cy(0.15, 0.18, 0.35, 7, x, 0.18, z, 0x2e323c); P.rb(1.0, 0.07, 0.07, 0.03, x - s * 0.5, h, z, 0x3a3f4a); P.rb(0.4, 0.14, 0.26, 0.05, x - s * 1.0, h + 0.02, z, 0x2e323c);
   G.sp(0.17, x - s * 1.0, h - 0.1, z, col, { uv: SOLID, seg: 8 });
   if (night) G.halo(x - s * 1.0, h - 0.1, z, col, 3.2);
 }
@@ -53,7 +53,18 @@ function balcony(P, G, x0, s, z, y, w = 1.9, plant = true, col = 0x30353d) {
   if (plant) for (let i = 0; i < 3; i++) { P.rb(0.22, 0.17, 0.3, 0.05, s * (x0 - 0.95), y + 0.72, z - w / 3 + i * w / 3, 0xb85a3a); P.sp(0.17, s * (x0 - 0.95), y + 0.9, z - w / 3 + i * w / 3, [0x3fae4a, 0xe8426a, 0xffc83c][i % 3], { seg: 6 }); }
 }
 
-function sidewalk(P, d, s) {
+const shd = (c, k) => new THREE.Color(c).multiplyScalar(k).getHex();
+/* mobiliario urbano: maceteros, bolardos, bicis aparcadas, mesas de terraza, buzones */
+function clutter(P, R, s, d, kind) {
+  const w = d.walk;
+  for (let z = -13; z < 14; z += 6.5) if (R() < 0.55) { const bx = s * 4.95, bz = z + R() * 2; P.cy(0.09, 0.1, 0.75, 7, bx, 0.55, bz, 0x4a4f5a); P.sp(0.1, bx, 0.95, bz, 0xffd23c, { seg: 6 }); } // bolardos
+  if (R() < 0.55) { const bz = rr(R, -10, 10), bx = s * 7.3; P.rb(0.55, 0.45, 0.55, 0.08, bx, 0.42, bz, 0xb06a3a); P.sp(0.36, bx, 0.92, bz, rp(R, [0x3fae4a, 0x5cba4e]), { seg: 7, sy: 0.9 }); for (let k = 0; k < 3; k++) P.sp(0.07, bx + rr(R, -0.2, 0.2), 1.1 + R() * 0.2, bz + rr(R, -0.2, 0.2), rp(R, [0xff5a7a, 0xffd23c, 0xffffff]), { seg: 4 }); } // maceta
+  if (kind !== 'poligono' && R() < 0.35) { const bz = rr(R, -9, 9), bx = s * 7.4; for (const k of [-0.35, 0.35]) { P.tor(0.26, 0.025, bx, 0.3, bz + k, 0x2a2d34, { ry: Math.PI / 2, seg: 10 }); } P.bx(0.04, 0.04, 0.9, bx, 0.5, bz, 0x2a6ad0, { rz: 0 }); P.bx(0.04, 0.4, 0.04, bx, 0.6, bz + 0.1, 0x2a6ad0); P.rb(0.12, 0.04, 0.3, 0.01, bx, 0.78, bz - 0.4, 0x151515); } // bici
+  if ((kind === 'barrio' || kind === 'mercado' || kind === 'fiestas') && R() < 0.4) { const bz = rr(R, -9, 9), bx = s * 7.0; P.cy(0.5, 0.5, 0.05, 10, bx, 0.78, bz, 0xffffff); P.cy(0.04, 0.04, 0.6, 5, bx, 0.5, bz, 0x555a64); for (const a of [0.5, 2.6, 4.6]) P.rb(0.3, 0.05, 0.3, 0.02, bx + Math.cos(a) * 0.75, 0.5, bz + Math.sin(a) * 0.75, shd(rp(R, [0xd83a3a, 0x2a7ad8, 0xf0a020]), 1)); } // mesa y sillas
+  if (R() < 0.3) { const bz = rr(R, -10, 10); P.rb(0.45, 0.85, 0.4, 0.1, s * 5.2, 0.62, bz, 0xe8c21a); P.rb(0.5, 0.12, 0.45, 0.05, s * 5.2, 1.08, bz, 0xd8a81a); } // buzón
+}
+function sidewalk(P, d, s, R, kind) {
+  if (R) clutter(P, R, s, d, kind);
   P.bx(3.5, 0.2, TL, s * 6.25, 0.1, 0, d.walk); P.bx(0.3, 0.25, TL, s * 4.65, 0.125, 0, new THREE.Color(d.walk).multiplyScalar(1.15).getHex());
   for (let z = -15; z < 15; z += 3) P.bx(3.5, 0.215, 0.05, s * 6.25, 0.1, z, new THREE.Color(d.walk).multiplyScalar(0.85).getHex());
   P.bx(70, 0.1, TL, s * (8 + 35), 0.05, 0, d.ground);
@@ -67,6 +78,17 @@ function buildings(F, P, G, R, d, s, kind, o) {
     const x0 = o.x0 + (R() < 0.35 ? rr(R, 0, o.stag) : 0), depth = rr(R, o.dmin, o.dmax), h = rr(R, o.hmin, o.hmax);
     const col = rp(R, pal), cz = z + w / 2, cx = s * (x0 + depth / 2);
     F.facade(depth, h, w, cx, h / 2, cz, col, 12, { uofs: R(), vofs: Math.floor(R() * 3) / 3 });
+    if (kind !== 'noche') {
+      P.bx(0.4, 1.1, w, s * (x0 - 0.15), 0.55, cz, shd(col, 0.68));                                   // zócalo
+      for (const dz of [0.28, w - 0.28]) P.bx(0.5, h, 0.5, s * (x0 - 0.06), h / 2, z + dz, shd(col, 0.92)); // pilastras de esquina
+      for (let fl = 3.4; fl < h - 1; fl += 3.4) P.bx(0.22, 0.14, w, s * (x0 - 0.1), fl, cz, shd(col, 0.86));    // impostas entre plantas
+      if (kind !== 'poligono' && R() < 0.85) { // escaparate con puerta
+        const gw = w * 0.5, gz = cz + rr(R, -w * 0.15, w * 0.15);
+        P.rb(0.12, 2.2, gw, 0.04, s * (x0 - 0.12), 1.5, gz, 0xa6cde6); P.bx(0.16, 0.12, gw + 0.2, s * (x0 - 0.12), 2.65, gz, shd(col, 0.6)); P.bx(0.16, 0.12, gw + 0.2, s * (x0 - 0.12), 0.4, gz, shd(col, 0.6));
+        for (let k = 0; k <= 3; k++) P.bx(0.17, 2.3, 0.07, s * (x0 - 0.12), 1.5, gz - gw / 2 + k * gw / 3, shd(col, 0.55));
+        P.rb(0.14, 2.0, 0.9, 0.03, s * (x0 - 0.13), 1.15, gz + gw / 2 + 0.7, rp(R, [0x7a4a2a, 0x2a4a7a, 0x2a6a4a])); P.sp(0.05, s * (x0 - 0.22), 1.1, gz + gw / 2 + 0.4, 0xffd23c, { seg: 5 });
+      }
+    }
     o.deco && o.deco({ F, P, G, R, s, x0, depth, h, w, cz, col, kind });
     z += w;
   }
@@ -75,7 +97,7 @@ function buildings(F, P, G, R, d, s, kind, o) {
 /* ---------- districts ---------- */
 const GEN = {
   barrio(F, P, G, R, s) {
-    const d = DIST[0]; sidewalk(P, d, s);
+    const d = DIST[0]; sidewalk(P, d, s, R, d.id);
     buildings(F, P, G, R, d, s, 'barrio', { x0: 8.4, stag: 1.2, wmin: 8, wmax: 13, dmin: 9, dmax: 13, hmin: 11, hmax: 21, deco: b => {
       const nf = Math.floor(b.h / 3.4);
       for (let f = 1; f < Math.min(nf, 5); f++) for (let k = 0; k < 2; k++) if (R() < 0.8) balcony(P, G, b.x0, s, b.cz - b.w / 4 + k * b.w / 2, f * 3.4 + 0.5, 1.9, true);
@@ -93,7 +115,7 @@ const GEN = {
     }
   },
   mercado(F, P, G, R, s) {
-    const d = DIST[1]; sidewalk(P, d, s);
+    const d = DIST[1]; sidewalk(P, d, s, R, d.id);
     buildings(F, P, G, R, d, s, 'mercado', { x0: 9.2, stag: 0.8, wmin: 7, wmax: 11, dmin: 8, dmax: 11, hmin: 8, hmax: 14, deco: b => {
       awning(P, R, b.x0, s, b.cz, b.w * 0.8, 3.4, rp(R, [0xd83a3a, 0xf0a020, 0x2fa05a, 0x2a7ad8]), 1.6);
       if (R() < 0.7) signQuad(G, s * (b.x0 - 0.05), 4.3, b.cz, 3.2, 1.6, rp(R, SIGN_FOR.mercado), s, 0xd8d8d8);
@@ -114,7 +136,7 @@ const GEN = {
   },
   playa(F, P, G, R, s) {
     const d = DIST[2];
-    if (s > 0) { sidewalk(P, d, s); buildings(F, P, G, R, d, s, 'playa', { x0: 9.5, stag: 1.5, wmin: 9, wmax: 14, dmin: 10, dmax: 14, hmin: 16, hmax: 32, deco: b => {
+    if (s > 0) { sidewalk(P, d, s, R, d.id); buildings(F, P, G, R, d, s, 'playa', { x0: 9.5, stag: 1.5, wmin: 9, wmax: 14, dmin: 10, dmax: 14, hmin: 16, hmax: 32, deco: b => {
       for (let f = 1; f < Math.min(8, Math.floor(b.h / 3.4)); f++) P.rb(0.9, 0.1, b.w * 0.8, 0.03, s * (b.x0 - 0.45), f * 3.4 + 0.9, b.cz, 0xf0f4f8);
       signQuad(G, s * (b.x0 - 0.05), 3.8, b.cz, 3.6, 1.8, rp(R, SIGN_FOR.playa), s, 0xdcdcdc); P.rb(0.5, 0.3, b.w, 0.08, s * (b.x0 - 0.25), b.h + 0.15, b.cz, 0xdde4ec); } });
       lamp(P, G, s * 7.7, -7.5, s, 0xfff6d0); lamp(P, G, s * 7.7, 7.5, s, 0xfff6d0); tree(P, R, s * 5.6, -4 + R() * 3, 'palm'); tree(P, R, s * 5.6, 8 + R() * 4, 'palm');
@@ -133,7 +155,7 @@ const GEN = {
     }
   },
   poligono(F, P, G, R, s) {
-    const d = DIST[3]; sidewalk(P, d, s);
+    const d = DIST[3]; sidewalk(P, d, s, R, d.id);
     buildings(F, P, G, R, d, s, 'poligono', { x0: 10.5, stag: 3, wmin: 12, wmax: 20, dmin: 14, dmax: 22, hmin: 7, hmax: 12, deco: b => {
       P.bx(b.depth + 0.3, 0.4, b.w + 0.3, s * (b.x0 + b.depth / 2), b.h + 0.2, b.cz, 0x8a8f98);
       if (R() < 0.7) signQuad(G, s * (b.x0 - 0.05), b.h - 1.6, b.cz, 5.0, 2.5, rp(R, SIGN_FOR.poligono), s, 0xcfcfcf);
@@ -148,7 +170,7 @@ const GEN = {
     if (s > 0) P.bx(16.5, 0.45, 0.45, 0, 9.5, -2, 0x9aa0aa); // tubería elevada
   },
   fiestas(F, P, G, R, s) {
-    const d = DIST[4]; sidewalk(P, d, s);
+    const d = DIST[4]; sidewalk(P, d, s, R, d.id);
     buildings(F, P, G, R, d, s, 'fiestas', { x0: 9.4, stag: 1, wmin: 7, wmax: 11, dmin: 8, dmax: 11, hmin: 7, hmax: 11, deco: b => {
       P.cone(Math.max(b.w, b.depth) * 0.78, 3.2, 4, s * (b.x0 + b.depth / 2), b.h + 1.6, b.cz, 0xb8452a, { ry: Math.PI / 4, sx: b.depth / Math.max(b.w, b.depth), sz: b.w / Math.max(b.w, b.depth) });
       if (R() < 0.6) balcony(P, G, b.x0, s, b.cz, 3.8, 2.0, true, 0x4a3320);
@@ -167,7 +189,7 @@ const GEN = {
     if (s > 0) { bunting(P, R, 6.8, [0xff4f8a, 0xffd23c, 0x4fe8ff, 0x7bff4f, 0xffffff], G); lightStrings(G, R); }
   },
   noche(F, P, G, R, s) {
-    const d = DIST[5]; sidewalk(P, d, s);
+    const d = DIST[5]; sidewalk(P, d, s, R, d.id);
     buildings(F, P, G, R, d, s, 'noche', { x0: 9.0, stag: 2, wmin: 8, wmax: 14, dmin: 10, dmax: 14, hmin: 22, hmax: 55, deco: b => {
       const nc = [0xff4fd8, 0x4ff4ff, 0xffe23c, 0x8f6aff][Math.floor(R() * 4)];
       signQuad(G, s * (b.x0 - 0.05), 4.0, b.cz, 4.0, 2.0, rp(R, SIGN_FOR.noche), s, 0xffffff); G.halo(s * (b.x0 - 0.8), 4.0, b.cz, 0xffffff, 6);

@@ -1,8 +1,8 @@
-import { Game } from './game.js?v=3';
-import A from './audio.js?v=3';
-import * as ST from './store.js?v=3';
-import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=3';
-import { THREE, clamp, pick } from './util.js?v=3';
+import { Game } from './game.js?v=4';
+import A from './audio.js?v=4';
+import * as ST from './store.js?v=4';
+import { CHARS, SKINS, UPGR, PILLS, DIST } from './data.js?v=4';
+import { THREE, clamp, pick } from './util.js?v=4';
 
 const { S } = ST; const $ = id => document.getElementById(id);
 const fmt = n => Math.floor(n).toLocaleString('es-ES');
@@ -167,7 +167,7 @@ app.addEventListener('pointermove', e => {
   if (ax > th * mul && ax > ay * 0.6) { g.action(dx < 0 ? 'left' : 'right'); ptr.n++; ptr.sx = e.clientX; ptr.sy = e.clientY; }
 });
 const up = e => { if (ptr && (!e || e.pointerId === ptr.id)) ptr = null; }; app.addEventListener('pointerup', up); app.addEventListener('pointercancel', up);
-document.addEventListener('touchmove', e => e.preventDefault(), { passive: false }); document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('touchmove', e => { if (g.state !== 'play' && e.target.closest && e.target.closest('.panel')) return; e.preventDefault(); }, { passive: false }); document.addEventListener('contextmenu', e => e.preventDefault());
 /* botones en pantalla (opcional) */
 const padOn = () => { $('pad').classList.toggle('on', !!S.set.btns); $('tPad') && $('tPad').classList.toggle('on', !!S.set.btns); $('bPadTog').textContent = 'BOTONES EN PANTALLA: ' + (S.set.btns ? 'SÍ' : 'NO'); };
 const padBind = (id, a) => $(id).addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); A.resume(); g.action(a); });

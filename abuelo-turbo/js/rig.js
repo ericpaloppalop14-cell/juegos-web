@@ -1,5 +1,5 @@
-import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo, addOutline } from './util.js?v=3';
-import { CHARS, SKINS } from './data.js?v=3';
+import { THREE, GB, bendMat, clamp, lerp, damp, TAU, rboxGeo, addOutline } from './util.js?v=4';
+import { CHARS, SKINS } from './data.js?v=4';
 
 export const M = {
   v: bendMat(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.05 })),
@@ -256,7 +256,7 @@ export function buildRig(id) {
     const tex = new THREE.CanvasTexture(cvs); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
     const dm = bendMat(new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })); const dec = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.48), dm); dec.position.set(0, 1.0, 0.555 + 0.04); dec.rotation.x = 0.12; tilt.add(dec);
     const pole = new GB(); pole.cy(0.018, 0.018, 1.9, 6, 0, 0.95, 0, 0xcfd4dc); pole.sp(0.045, 0, 1.92, 0, 0xffd23c, { seg: 6 });
-    const pm = mk(pole, M.rs); const fg = new THREE.Group(); fg.position.set(-0.46, 1.3, 0.74); fg.add(pm); tilt.add(fg);
+    const pm = mk(pole, M.rs); const fg = new THREE.Group(); fg.position.set(-0.46, 1.3, 0.74); R.flagBase = fg; fg.add(pm); tilt.add(fg);
     const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute([0, 1.88, 0, 0, 1.5, 0, -0.55, 1.69, 0.04], 3)); tg.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3));
     const pen = new THREE.Mesh(tg, bendMat(new THREE.MeshStandardMaterial({ color: c.vest === 0x1d1d1d ? 0xff4f4f : c.vest, roughness: 0.5, emissive: 0x331100, side: THREE.DoubleSide }))); pen.castShadow = false;
     const pg = new THREE.Group(); pg.add(pen); fg.add(pg); R.flag = pg; }
@@ -301,6 +301,7 @@ export function poseRig(R, s, dt, time) {
   R.body.position.z = damp(R.body.position.z, s.slide ? 0.32 : 0.15, 16, dt);
   R.head.rotation.x = damp(R.head.rotation.x, s.slide ? -1.1 : (air ? -0.15 : 0) + Math.sin(t * 2.2) * (s.idle ? 0.04 : 0.01), 14, dt);
   R.head.rotation.y = damp(R.head.rotation.y, s.glance ? 2.8 : 0, 8, dt); if (R.flag) R.flag.rotation.y = Math.sin(t * 9) * 0.28 + Math.sin(t * 5.3) * 0.12;
+  if (R.flagBase) { R.flagBase.rotation.z = damp(R.flagBase.rotation.z, s.idle ? 1.05 : 0, 6, dt); R.flagBase.rotation.x = damp(R.flagBase.rotation.x, s.idle ? 0.2 : 0, 6, dt); R.flagBase.visible = !(s.idle && s.hideFlag); } /* en el menú el mástil se inclina hacia fuera para no quedar sobre la cabeza */
   R.head.rotation.z = damp(R.head.rotation.z, -(s.roll || 0) * 0.6 + (s.idle ? Math.sin(t * 1.3) * 0.05 : 0), 10, dt);
   R.head.rotation.y = damp(R.head.rotation.y, s.idle ? Math.sin(t * 0.8) * 0.3 : 0, 6, dt);
   // arms
