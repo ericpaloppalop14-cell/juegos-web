@@ -3559,7 +3559,7 @@ function showList(pl, m) { const max = O.mode === 'pub' ? PUBMAX : 0; let h = pl
   if (O.mode === 'pub' && m && m.eta != null) $('onWait').textContent = m.eta > 0 ? `La carrera empieza en ${Math.ceil(m.eta / 1000)} s…` : '¡Empezamos!'; }
 const tx = (k, fb) => { try { const s = T(k); if (s) return s; } catch (e) {} return fb; };
 const CHAT_R = ['👍', '😂', '🔥', '😮', '🎉'];
-const CHAT_Q = [{ id: 'chQ1', k: 'chQ1', t: '¡Buena carrera!' }, { id: 'chQ2', k: 'chQ2', t: '¡Vamos!' }, { id: 'chQ3', k: 'chQ3', t: '¡Otra!' }, { id: 'chQ4', k: 'chQ4', t: '¡Bien jugado!' }, { id: 'chQ5', k: 'chQ5', t: '¡Qué rápido!' }];
+const CHAT_Q = [{ id: 'chQ1', k: 'chQ1', t: '¡Buena carrera!' }];
 let chatLog = [], seenChat = new Set();
 function resetChat() { chatLog = []; seenChat = new Set(); renderChat(true); }
 function bindChatDom() {
