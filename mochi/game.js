@@ -3494,22 +3494,29 @@ const css = document.createElement('style'); css.textContent = `
 #onHud.on{display:block}#onHud .r{display:flex;gap:5px;align-items:center;margin:2px 0;justify-content:flex-end}#onHud i{width:10px;height:10px;border-radius:50%;display:inline-block}
 #onBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 52px);width:min(60vw,260px);height:10px;border-radius:6px;background:rgba(255,255,255,.45);z-index:30;display:none;overflow:visible}
 #onBar.on{display:block}#onBar u{position:absolute;top:-3px;width:16px;height:16px;border-radius:50%;margin-left:-8px;border:2px solid #fff;box-sizing:border-box}#onBar s{position:absolute;right:-6px;top:-8px;font-size:18px;text-decoration:none}
-#chatBox{text-align:left;margin-top:6px}
-#chatLog{max-height:min(26vh,200px);min-height:72px;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;padding:6px;background:#f8eefc;border-radius:16px}
+#onShare{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;margin:8px 0 6px;border:none;border-radius:999px;padding:12px 16px;font:700 18px inherit;color:#fff;background:linear-gradient(180deg,#3dce9a,#1fb57a);box-shadow:0 4px 0 #149864;cursor:pointer}
+#onWait{font-size:14px;line-height:1.3;color:#7a4fb0;margin:4px 0}
+#onStart{width:100%;border-radius:999px}
+#onFoot{font-size:13px;line-height:1.35;color:#e070a8;font-weight:600;margin:8px 4px 2px}
+#onChat{background:#fdeff8;border-radius:18px;padding:12px 10px 10px;margin-top:8px;text-align:center}
+#onChat .chTitle{font-size:15px;color:#8b5cc2;margin-bottom:4px}
+#chatLog{max-height:min(22vh,160px);min-height:64px;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;padding:4px 2px;background:transparent;text-align:left}
 #chatLog .cm{max-width:92%;align-self:flex-start;background:#fff;border-radius:14px 14px 14px 4px;padding:6px 10px;font-size:14px;font-weight:600;line-height:1.3;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 #chatLog .cm.me{align-self:flex-end;background:#ffe3f0;border-radius:14px 14px 4px 14px}
 #chatLog .cm small{display:block;font-size:11px;color:#c0679a;font-weight:700}
-#chatLog .empty{font-size:13px;color:#c0679a;text-align:center;font-weight:600}
-#chatQs{display:flex;flex-direction:column;gap:6px;margin-top:6px}
-#chatQs button{font-family:inherit;font-weight:700;font-size:15px;color:#8b5cc2;background:#fff;border:2px solid #f3c6e4;border-radius:14px;padding:8px 12px;white-space:normal;overflow:visible;text-overflow:clip;height:auto;line-height:1.25;text-align:center;width:100%;cursor:pointer}
-#chatForm{touch-action:auto;margin-top:6px}
-#chatForm input{user-select:text;-webkit-user-select:text;touch-action:auto;text-align:left}`;
+#chatLog .empty{font-size:14px;color:#c07ab0;text-align:center;font-weight:600;padding:8px 4px}
+#chQ{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-start;overflow:visible;margin-top:8px}
+#chQ button{flex:0 0 auto;width:auto;max-width:100%;height:40px;box-sizing:border-box;border:none;background:#fff;color:#6a4b8a;border-radius:999px;font:700 14px inherit;padding:0 12px;white-space:nowrap;overflow:visible;text-overflow:clip;cursor:pointer;box-shadow:0 2px 0 rgba(200,140,180,.28)}
+#chQ button.emo{width:40px;padding:0;border-radius:50%;font-size:18px}
+#chatForm{display:flex;gap:8px;align-items:center;margin-top:8px;touch-action:auto}
+#chatIn{flex:1;width:auto;margin:0;text-align:left;border-radius:999px;padding:10px 14px;font-size:15px;user-select:text;-webkit-user-select:text;touch-action:auto}
+#chatSend{flex:none;width:46px;height:46px;margin:0;padding:0;border:none;border-radius:50%;background:linear-gradient(180deg,#ff8cc0,#ff5fa2);color:#fff;font-size:20px;box-shadow:0 3px 0 #c43c7d;cursor:pointer}`;
 document.head.appendChild(css);
 const div = document.createElement('div'); div.innerHTML = `
 <div id="onl"><div class="onc"><h2>🌐 Online</h2>
 <div id="on0"><input id="onName" maxlength="12" placeholder="Tu nombre de jugador"><button class="pbtn go big" id="onPub">🌍 Sala pública<small>Sin código · te emparejamos al momento</small></button><button class="pbtn blue big" id="onPriv">🔒 Sala privada<small>Con código para jugar con amigos (desde 2)</small></button><button class="pbtn" id="onRk">🏆 Ranking mundial</button></div>
 <div id="onA" style="display:none"><div style="font-size:15px;margin-bottom:4px">🔒 Sala privada</div><button class="pbtn go" id="onCreate">✨ Crear sala</button><div class="row"><input id="onJoinCode" maxlength="4" placeholder="CÓDIGO" style="text-transform:uppercase"><button class="pbtn" id="onJoin">Unirse</button></div></div>
-<div id="onB" style="display:none"><div id="onCodeL" style="font-size:13px">Código de la sala</div><div id="onCode">----</div><div id="onList"></div><div id="chatBox" style="display:none"><div id="chatLog"></div><div id="chatQs"></div><form id="chatForm" class="row"><input id="chatIn" maxlength="80" placeholder="Mensaje…" autocomplete="off" enterkeyhint="send"><button class="pbtn" id="chatSend" type="submit">Enviar</button></form></div><button class="pbtn go" id="onStart">▶ ¡Empezar carrera!</button><div id="onWait" style="font-size:14px">Esperando a que el anfitrión empiece…</div></div>
+<div id="onB" style="display:none"><div id="onCodeL" style="font-size:13px">Código de la sala</div><div id="onCode">----</div><button id="onShare" type="button">📤 Compartir invitación</button><div id="onWait">👋 Esperando a tus amigos… (con 2 ya podéis empezar)</div><div id="onList"></div><button class="pbtn go" id="onStart" type="button">▶ ¡Empezar carrera!</button><div id="onChat"><div class="chTitle">💬 Chat de la sala</div><div id="chatLog"></div><div id="chQ"></div><form id="chatForm"><input id="chatIn" maxlength="80" placeholder="Escribe un mensaje..." autocomplete="off" enterkeyhint="send"><button id="chatSend" type="submit" aria-label="Enviar">➤</button></form></div><div id="onFoot">Comparte el código o el enlace. Con 2 jugadores ya podéis empezar.</div></div>
 <div id="onMsg"></div><button class="pbtn" id="onBack">← Volver</button></div></div>
 <div id="onres"><div class="onc"><h2 id="onResT">Clasificación</h2><div id="onResL"></div><div id="onResP" style="font-size:15px;color:#ff6fae"></div><div id="onResW" style="font-size:14px"></div><button class="pbtn go" id="onAgain" style="display:none">↻ Otra carrera</button><button class="pbtn" id="rmBack" style="display:none">↩ Volver a la sala</button><button class="pbtn" id="onRk2">🏆 Ranking mundial</button><button class="pbtn" id="onMenu">Menú</button></div></div>
 <div id="onrk"><div class="onc"><h2>🏆 Ranking mundial</h2><div class="rktabs"><button id="rkW" class="sel">🥇 Victorias</button><button id="rkP">⭐ Puntos</button></div><div id="rkSrc"></div><div id="rkList"></div><div id="rkMe" style="font-size:14px;margin-top:6px"></div><button class="pbtn" id="rkClose">← Volver</button></div></div>
@@ -3529,7 +3536,10 @@ const myId = () => net ? net.myId : 'h';
 const uid = (() => { let u = store.get('mochi_uid', ''); if (!u) { u = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); store.set('mochi_uid', u); } return u; })();
 function msg(t) { $('onMsg').textContent = t || ''; }
 function show(s) { step = s; $('on0').style.display = s === 0 ? '' : 'none'; $('onA').style.display = s === 1 ? '' : 'none'; $('onB').style.display = s === 2 ? '' : 'none';
-  const cb = $('chatBox'); if (!cb) return; const on = s === 2 && O.mode === 'priv'; cb.style.display = on ? '' : 'none'; if (on) { bindChatDom(); renderChat(true); } }
+  const priv = s === 2 && O.mode === 'priv';
+  ['onShare', 'onChat', 'onFoot'].forEach(id => { const n = $(id); if (n) n.style.display = priv ? '' : 'none'; });
+  const h = document.querySelector('#onl h2'); if (h) h.textContent = priv ? '🌐 Modo online' : '🌐 Online';
+  if (priv) { bindChatDom(); renderChat(true); if ($('onFoot')) $('onFoot').textContent = tx('chFoot', 'Comparte el código o el enlace. Con 2 jugadores ya podéis empezar.'); } }
 function openLobby() { state = 'onlobby'; setScreen(null); $('onl').classList.add('on'); show(0); msg(''); $('onName').value = store.get('mochi_onname', '') || ''; }
 function closeAll() { $('onl').classList.remove('on'); $('onres').classList.remove('on'); $('onHud').classList.remove('on'); $('onBar').classList.remove('on'); }
 function clearTimers() { clearInterval(pubTimer); pubTimer = null; clearInterval(botTimer); botTimer = null; botQueue.forEach(clearTimeout); botQueue = []; }
@@ -3539,12 +3549,17 @@ function info() { myName = ($('onName').value || '').trim().slice(0, 12) || ('Mo
 function showList(pl, m) { const max = O.mode === 'pub' ? PUBMAX : 0; let h = pl.map((p, i) => `<div class="onp${p.id === myId() ? ' me' : ''}"><i style="background:${GCOL[i % 6]}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.id === 'h' && O.mode !== 'pub' ? '👑' : ''}</b></div>`).join('');
   for (let i = pl.length; i < max; i++) h += `<div class="onp slot"><i style="background:#ddd"></i>Buscando jugador…</div>`; $('onList').innerHTML = h;
   if (O.mode === 'pub' && m && m.eta != null) $('onWait').textContent = m.eta > 0 ? `La carrera empieza en ${Math.ceil(m.eta / 1000)} s…` : '¡Empezamos!'; }
-const CHAT_Q = [{ id: 'chQ1', t: '¡Buena carrera!' }, { id: 'chQ2', t: '¡Vamos!' }, { id: 'chQ3', t: '¡Otra!' }, { id: 'chQ4', t: '¡Bien jugado!' }, { id: 'chQ5', t: 'Espera un momento' }, { id: 'chQ6', t: '😂' }];
+const tx = (k, fb) => { try { const s = T(k); if (s) return s; } catch (e) {} return fb; };
+const CHAT_R = ['👍', '😂', '🔥', '😮', '🎉'];
+const CHAT_Q = [{ id: 'chQ1', k: 'chQ1', t: '¡Buena carrera!' }, { id: 'chQ2', k: 'chQ2', t: '¡Vamos!' }, { id: 'chQ3', k: 'chQ3', t: '¡Otra!' }, { id: 'chQ4', k: 'chQ4', t: '¡Bien jugado!' }, { id: 'chQ5', k: 'chQ5', t: '¡Qué rápido!' }];
 let chatLog = [], seenChat = new Set();
 function resetChat() { chatLog = []; seenChat = new Set(); renderChat(true); }
 function bindChatDom() {
-  const qs = $('chatQs'), form = $('chatForm'); if (!qs || !form || qs.dataset.on) return; qs.dataset.on = '1';
-  for (const q of CHAT_Q) { const b = document.createElement('button'); b.type = 'button'; b.id = q.id; b.textContent = q.t; b.addEventListener('click', stop(() => sendChat(q.t, q.id))); qs.appendChild(b); }
+  const qs = $('chQ'), form = $('chatForm'); if (!qs || !form || qs.dataset.on) return; qs.dataset.on = '1';
+  CHAT_R.forEach((emo, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'emo'; b.id = 'chR' + (i + 1); b.textContent = emo; b.addEventListener('click', stop(() => sendChat(emo, b.id))); qs.appendChild(b); });
+  for (const q of CHAT_Q) { const label = tx(q.k, q.t); const b = document.createElement('button'); b.type = 'button'; b.id = q.id; b.textContent = label; b.addEventListener('click', stop(() => sendChat(label, q.id))); qs.appendChild(b); }
+  if ($('chatIn')) $('chatIn').placeholder = tx('chPh', 'Escribe un mensaje...');
+  const sh = $('onShare'); if (sh) sh.textContent = '📤 ' + tx('chShare', 'Compartir invitación');
   form.addEventListener('submit', stop(() => { sendChat($('chatIn').value, ''); $('chatIn').value = ''; }));
 }
 function renderChat(force) {
@@ -3552,7 +3567,7 @@ function renderChat(force) {
   const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
   const near = !!force || gap < 48 || el.scrollHeight <= el.clientHeight + 2;
   const prev = el.scrollTop;
-  el.innerHTML = chatLog.length ? chatLog.map(m => `<div class="cm${m.mine ? ' me' : ''}"><small>${esc(m.name)}${m.mine ? ' · tú' : ''}</small>${esc(m.text)}</div>`).join('') : '<div class="empty">Aún no hay mensajes. ¡Saluda!</div>';
+  el.innerHTML = chatLog.length ? chatLog.map(m => `<div class="cm${m.mine ? ' me' : ''}"><small>${esc(m.name)}${m.mine ? ' · tú' : ''}</small>${esc(m.text)}</div>`).join('') : '<div class="empty">' + esc(tx('chEmpty', 'Di hola a tus amigos 👋')) + '</div>';
   el.scrollTop = near ? el.scrollHeight : prev;
 }
 function ingestChat(m) {
@@ -3572,7 +3587,7 @@ function onChatNet(d) {
   if (net && net.isHost && d.from && d.from !== net.myId) { for (const [id, c] of net.conns) if (id !== d.from && c.open) { try { c.send(d); } catch (e) {} } }
 }
 function wire() {
-  net.on('lobby', (pl, m) => { showList(pl, m); const pub = O.mode === 'pub'; $('onStart').style.display = net.isHost && !pub ? '' : 'none'; $('onWait').style.display = net.isHost && !pub ? 'none' : ''; if (!pub) $('onWait').textContent = 'Esperando a que el anfitrión empiece…'; });
+  net.on('lobby', (pl, m) => { showList(pl, m); const pub = O.mode === 'pub'; $('onStart').style.display = net.isHost && !pub ? '' : 'none'; $('onWait').style.display = ''; if (!pub) $('onWait').textContent = net.isHost ? tx('chWait', '👋 Esperando a tus amigos… (con 2 ya podéis empezar)') : 'Esperando a que el anfitrión empiece…'; });
   net.on('msg', d => onMsg(d)); net.on('left', id => { if (O.peers[id]) { O.peers[id].dead = 1; O.peers[id].gone = 1; checkEnd(); } });
   bindChatDom();
   net.on('hostgone', () => { toastLocal('El anfitrión se ha ido'); if (!O.active) { if (O.mode === 'pub' && step === 2) { msg('La sala se ha cerrado, buscando otra…'); disconnect(); setTimeout(publicMatch, 400); } else leave(); } else { O.hostGone = 1; for (const k in O.peers) if (k !== myId()) O.peers[k].dead = 1; if (O.done) showRes(); } });
@@ -3581,7 +3596,9 @@ function toastLocal(t) { try { showHint(t, 2); } catch (e) { } }
 tap('onPub', () => publicMatch());
 tap('onPriv', () => { info(); O.mode = 'priv'; show(1); msg(''); });
 tap('onRk', () => openRank()); tap('onRk2', () => openRank()); tap('rkClose', () => $('onrk').classList.remove('on'));
-tap('onCreate', async () => { msg('Creando sala…'); try { O.mode = 'priv'; resetChat(); net = new Net(); wire(); const code = await net.create(info()); $('onCode').textContent = code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg('Comparte el código. Con 2 jugadores ya podéis empezar.'); net.lobby(); } catch (e) { msg('No se pudo crear la sala. Revisa tu conexión.'); net = null; } });
+function inviteLink() { const u = new URL(location.href); u.searchParams.set('sala', net && net.code || ''); return u.toString(); }
+tap('onShare', async () => { if (!net || !net.code) return; const url = inviteLink(), text = '¡Corre conmigo en Mochi! Código ' + net.code; if (navigator.share) { try { await navigator.share({ title: 'Mochi', text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } } try { await navigator.clipboard.writeText(text + ' ' + url); msg('Enlace copiado'); } catch (e2) { msg(url); } });
+tap('onCreate', async () => { msg('Creando sala…'); try { O.mode = 'priv'; resetChat(); net = new Net(); wire(); const code = await net.create(info()); $('onCode').textContent = code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg(''); net.lobby(); } catch (e) { msg('No se pudo crear la sala. Revisa tu conexión.'); net = null; } });
 tap('onJoin', async () => { msg('Conectando…'); try { O.mode = 'priv'; resetChat(); net = new Net(); wire(); await net.join($('onJoinCode').value, info()); $('onCode').textContent = net.code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg(''); } catch (e) { msg(e.message === 'llena' ? 'La sala está llena o ya ha empezado.' : e.message === 'codigo' ? 'Escribe un código de 4 letras.' : 'No se encontró esa sala.'); disconnect(); } });
 tap('onStart', () => { if (!net || !net.isHost) return; if (net.players.length < 2) { msg('Necesitas al menos 2 jugadores.'); return; } startRace(); });
 tap('onBack', () => { if (step === 0) leave(); else { disconnect(); O.mode = ''; show(0); msg(''); } });
@@ -3763,6 +3780,7 @@ function drawFinish(g, z) { const RH = LH + 0.55, n = 10, z2 = z + 0.8;
   g.beginPath(); g.moveTo(l.x, l.y); g.lineTo(l.x, l.y - h); g.moveTo(r.x, r.y); g.lineTo(r.x, r.y - h); g.stroke();
   g.fillStyle = '#ff6fae'; g.fillRect(l.x, l.y - h, r.x - l.x, h * 0.22); g.fillStyle = '#fff'; g.font = `700 ${Math.max(10, Math.round(h * 0.17))}px ${I18N.FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('META', (l.x + r.x) / 2, l.y - h * 0.89);
 }
+try { const sala = new URLSearchParams(location.search).get('sala'); if (sala) setTimeout(() => { openLobby(); const c = $('onJoinCode'); if (c) c.value = String(sala).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); const b = $('onJoin'); if (b) b.click(); }, 400); } catch (e) {}
 window.__onl = { O, Rank, uid, get net() { return net; }, get state() { return state; }, get LH() { return LH; }, get freezeT() { return freezeT; }, setGod(v) { godMode = v; }, setDist(v) { dist = v; }, getDist() { return dist; }, kill() { godMode = false; invulnT = 0; die('block'); }, rowsSig() { return rows.slice().sort((a, b) => a.z - b.z).slice(0, 4).map(r => r.cells.map(c => c.t + (c.c ?? '')).join('') + '@' + Math.round(r.z + dist)).join(' '); },
   chat: { presets: CHAT_Q, openPriv() { O.mode = 'priv'; myName = myName || 'Yo'; if (!net) net = new Net(); net.myId = net.myId || 'h'; net.isHost = true; net.code = net.code || 'TEST'; wire(); state = 'onlobby'; $('onl').classList.add('on'); show(2); }, ingest(m) { ingestChat(m); }, deliver(d) { if (net && net.h.msg) net.h.msg(d); }, breakHandler() { if (net) net.on('msg', () => { window.__chatDropped = (window.__chatDropped || 0) + 1; }); }, back() { backToRoom(); }, count() { return chatLog.length; }, last() { const m = chatLog[chatLog.length - 1]; return m ? m.text : ''; } } };
 })();

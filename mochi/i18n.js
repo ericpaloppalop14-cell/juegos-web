@@ -5,6 +5,8 @@
     premHint: '👑 ¡Descubre los personajes premium en «Personajes»!',
     newChar: '¡Nuevo personaje!', pickIn: 'Elígelo en «Personajes»',
     sub: '¡Corre, cambia de color y atraviesa!', chars: 'Personajes', tapPlay: 'Toca para jugar', points: 'Puntos', record: 'Récord',
+    onRoomTitle: '🌐 Modo online', chCode: 'Código de la sala', chShare: 'Compartir invitación', chWait: '👋 Esperando a tus amigos… (con 2 ya podéis empezar)', chStart: '▶ ¡Empezar carrera!', chTitle: '💬 Chat de la sala', chEmpty: 'Di hola a tus amigos 👋', chPh: 'Escribe un mensaje...', chFoot: 'Comparte el código o el enlace. Con 2 jugadores ya podéis empezar.', chBack: '← Volver',
+    chQ1: '¡Buena carrera!', chQ2: '¡Vamos!', chQ3: '¡Otra!', chQ4: '¡Bien jugado!', chQ5: '¡Qué rápido!',
     newRecord: '¡Nuevo récord!', tapRetry: 'Toca para repetir', back: '‹ Volver', prev: 'Anterior', next: 'Siguiente', noAds: 'Sin anuncios',
     restore: 'Restaurar compras', privacy: 'Privacidad', play: '¡Jugar!', contTitle: '¿Seguir donde<br>te quedaste?', soFar: 'Llevas',
     contAd: '▶ Ver anuncio y seguir', contFree: '▶ Seguir gratis', noThanks: 'No, gracias', pause: 'Pausa', tapResume: 'Toca para seguir', sound: 'Sonido',
