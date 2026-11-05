@@ -3477,7 +3477,7 @@ function botPlan(b) { // decide si termina y, si no, dónde falla (los fallos se
   b.tl = 0; b.nextMove = rnd(0.4, 1.6); b.react = rnd(0.25, 0.9) * (1.3 - b.skill); b.cT = rnd(0.8, 2.5); }
 // ---------- UI ----------
 const css = document.createElement('style'); css.textContent = `
-#onlineBtn{color:#fff;background:linear-gradient(180deg,#7fd0ff,#5b8cff);box-shadow:0 6px 0 #3b62c8}
+#playOnline{color:#fff;background:linear-gradient(180deg,#7fd0ff,#5b8cff);box-shadow:0 6px 0 #3b62c8}
 #onl,#onres,#onrk{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(80,40,110,.35);font-family:inherit}
 #onrk{z-index:61}#onl.on,#onres.on,#onrk.on{display:flex}
 .onc{pointer-events:auto;width:min(92vw,380px);max-height:92vh;overflow:auto;background:rgba(255,255,255,.95);border-radius:26px;padding:18px 18px 16px;color:#8b5cc2;text-align:center;box-shadow:0 8px 0 rgba(180,120,200,.45);font-weight:700;box-sizing:border-box}
@@ -3523,7 +3523,7 @@ const div = document.createElement('div'); div.innerHTML = `
 <div id="onHud"></div><div id="onBar"><s>🏁</s></div>`;
 document.body.appendChild(div);
 const $ = id => document.getElementById(id);
-let mb = $('onlineBtn'); if (!mb) { mb = document.createElement('button'); mb.className = 'pbtn'; mb.id = 'onlineBtn'; mb.type = 'button'; $('modeRow').after(mb); } mb.textContent = '🌐 Modo online';
+let mb = $('playOnline'); if (!mb) { mb = document.createElement('button'); mb.id = 'playOnline'; mb.type = 'button'; $('modeRow').after(mb); } if (!mb.querySelector('br')) mb.innerHTML = '🌐 Modo<br>online';
 const stop = f => e => { e.preventDefault(); e.stopPropagation(); try { Snd.init(); Snd.ui(); } catch (x) { } f(e); };
 ['onl', 'onres', 'onrk'].forEach(id => ['pointerdown', 'touchstart', 'keydown'].forEach(ev => $(id).addEventListener(ev, e => e.stopPropagation())));
 const tap = (id, f) => $(id).addEventListener('click', stop(f));
