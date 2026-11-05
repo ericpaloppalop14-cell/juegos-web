@@ -49,8 +49,10 @@
   var dlg = el('<div id="pxDlg" role="dialog"><div class="pxCard"><div class="pxBlob"><i></i><i></i><s></s><s></s></div><h3>' + T.q + '</h3><div class="pxRow"><button class="pxY" id="pxYes">' + T.yes + '</button><button class="pxN" id="pxNo">' + T.no + '</button></div></div></div>');
   var toast = el('<div id="pxToast"></div>');
   [dlg, toast].forEach(function (n) { document.body.appendChild(n); });
+  if (!document.getElementById('menuRate')) {
   var mt = C.mountAfter && document.getElementById(C.mountAfter);
   if (mt) { bar.style.cssText = 'position:relative;left:auto;top:auto;right:auto;bottom:auto;justify-content:center;margin:12px auto 4px;z-index:2'; mt.insertAdjacentElement('afterend', bar); } else document.body.appendChild(bar);
+  }
   ['pointerdown', 'touchstart', 'mousedown'].forEach(function (e) { dlg.addEventListener(e, function (ev) { ev.stopPropagation(); }, { passive: true }); });
   function say(t) { toast.textContent = t; toast.style.display = 'block'; clearTimeout(say.t); say.t = setTimeout(function () { toast.style.display = 'none'; }, 1800); }
   function rateManual() { nat('openStore', { id: PKG }).catch(function () { window.open(URL_, '_blank'); }); }
@@ -61,7 +63,7 @@
       else if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { say(T.copied); });
     });
   }
-  tap(bar.querySelector('#pxRate'), rateManual); tap(bar.querySelector('#pxShare'), share);
+  if (!document.getElementById('menuRate')) { tap(bar.querySelector('#pxRate'), rateManual); tap(bar.querySelector('#pxShare'), share); }
   function openExit() { dlg.classList.add('on'); }
   function closeExit() { dlg.classList.remove('on'); }
   tap(dlg.querySelector('#pxNo'), closeExit);

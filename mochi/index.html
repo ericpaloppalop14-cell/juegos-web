@@ -59,8 +59,16 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .sub{margin-top:10px;font-size:19px;font-weight:600;color:#a374c4;background:rgba(255,255,255,.6);padding:4px 14px;border-radius:16px}
 .tap{position:absolute;bottom:calc(9vh + env(safe-area-inset-bottom));font-size:26px;font-weight:700;color:#fff;background:linear-gradient(180deg,#ffa9cf,#f37fb4);padding:14px 34px;border-radius:40px;box-shadow:0 6px 0 #d0609a,0 12px 22px rgba(200,90,150,.35);animation:pulse 1.2s ease-in-out infinite}
+#topBar{position:absolute;z-index:6;top:calc(10px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));display:flex;gap:8px}
+#topBar .pbtn{font-size:15px;padding:8px 12px;background:#fff;color:#7a4fb0;border-radius:22px}
+#rankBtn{margin-top:12px;font-size:17px;padding:8px 18px;color:#fff;background:linear-gradient(180deg,#ffd56a,#ff9a2e);box-shadow:0 4px 0 #e07a20;border-radius:18px}
+#howBtn .qmark{width:22px;height:22px;border-radius:50%;background:#ff4d6a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;flex:none}
+#playRow{position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;gap:10px;justify-content:center;align-items:stretch;flex-wrap:nowrap;padding:0 14px;z-index:2}
+#playNow,#playOnline{flex:1 1 0;width:0;min-width:0;margin:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;line-height:1.05;font-family:inherit;font-size:22px;font-weight:700;min-height:88px;padding:14px 10px;border-radius:28px;border:none;cursor:pointer;pointer-events:auto}
+#playNow{color:#fff;background:linear-gradient(180deg,#ffa9cf,#f37fb4);box-shadow:0 6px 0 #d0609a,0 12px 22px rgba(200,90,150,.35)}
+#playOnline{color:#fff;background:linear-gradient(180deg,#7fd0ff,#5b8cff);box-shadow:0 6px 0 #3b62c8}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
-.bestline{position:absolute;bottom:calc(9vh + 92px + env(safe-area-inset-bottom));font-size:18px;font-weight:600;color:#fff;background:rgba(160,110,200,.4);padding:4px 14px;border-radius:16px}
+.bestline{position:absolute;bottom:calc(104px + env(safe-area-inset-bottom));font-size:16px;font-weight:700;color:#8b5cc2;background:rgba(255,255,255,.78);padding:4px 14px;border-radius:16px}
 #over{justify-content:center;background:rgba(255,230,240,.25)}
 .card{background:rgba(255,255,255,.92);border-radius:30px;padding:22px 30px 26px;min-width:250px;text-align:center;box-shadow:0 8px 0 rgba(200,140,210,.45),0 20px 40px rgba(150,80,150,.25);transform:scale(.8);transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
 #over.on .card{transform:scale(1)}
@@ -75,7 +83,8 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 #pause .card h2{color:#a374c4}
 .pbtn{pointer-events:auto;font-family:inherit;font-weight:700;border:none;cursor:pointer;color:#8b5cc2;background:rgba(255,255,255,.88);border-radius:30px;box-shadow:0 4px 0 rgba(180,120,200,.45);display:inline-flex;align-items:center;gap:8px}
 .pbtn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(180,120,200,.45)}
-#charBtn{position:absolute;bottom:calc(9vh + 140px + env(safe-area-inset-bottom));font-size:19px;padding:9px 20px}
+#charBtn{position:absolute;bottom:calc(108px + env(safe-area-inset-bottom));font-size:19px;padding:9px 20px}
+#title.has-rec #charBtn{bottom:calc(150px + env(safe-area-inset-bottom))}
 #charBtn .dot{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 18%,#ffb3d6 30%,#c9a8ff 100%)}
 #selTrial{background:#ffd76a;color:#7a4a00;margin-top:6px}#selTrialLeft{font-size:12px;margin-top:2px}#overTrial #trialBuy{background:#ffd76a;color:#7a4a00;margin-top:6px}#trialKeep{font-size:13px;margin-top:4px}
 .unl{margin-top:10px;font-size:16px;font-weight:600;color:#a88bc4}
@@ -110,7 +119,7 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 #selShop{position:absolute;bottom:calc(76px + env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 #selShop .pbtn{font-size:12px;padding:6px 10px}
 @media (max-height:760px){#selDesc{font-size:13px;line-height:1.2}#selName{margin-bottom:0}#selShop{gap:5px}#selShop .pbtn{font-size:11.5px;padding:5px 8px}}
-@media (orientation:landscape) and (max-height:520px){#title .logo{margin-top:3vh;font-size:min(24vh,110px)}#title .sub{font-size:15px;margin-top:4px;padding:3px 12px}#charBtn{position:static;margin-top:8px;font-size:16px;padding:6px 16px}#modeRow{margin-top:8px}#title .tap{bottom:calc(3vh + env(safe-area-inset-bottom));font-size:20px;padding:9px 26px}}
+@media (orientation:landscape) and (max-height:520px){#title .logo{margin-top:3vh;font-size:min(24vh,110px)}#title .sub{font-size:15px;margin-top:4px;padding:3px 12px}#charBtn,#title.has-rec #charBtn{position:static;margin-top:8px;font-size:16px;padding:6px 16px}#modeRow,#rankBtn{margin-top:8px}#playRow{bottom:calc(8px + env(safe-area-inset-bottom))}#playNow,#playOnline{font-size:16px;min-height:58px;padding:8px 6px}.bestline{bottom:calc(68px + env(safe-area-inset-bottom));font-size:13px}}
 #selName.prem{background:linear-gradient(90deg,#c98a1e,#f2c14e,#a8741a,#f2c14e,#c98a1e);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:holo 3s linear infinite}
 #selInner.prem{background:linear-gradient(90deg,#f2c14e,#fff0b8,#f2c14e,#fff0b8,#f2c14e);background-size:200% 100%;animation:holo 3s linear infinite;color:#5a3a10;box-shadow:0 2px 0 rgba(200,140,40,.5)}
 @keyframes holo{to{background-position:200% 0}}
@@ -140,14 +149,16 @@ canvas{position:absolute;inset:0;display:block;touch-action:none}
 <div class="ui">
   <div id="hud" style="opacity:0"><div id="score">0</div><div id="combo">Combo x2</div></div>
   <div id="hint"><span id="hintText"></span></div>
-  <div id="tapStart"><div class="ts-blob"><i></i><i></i></div><div class="ts-txt" data-i18n="tapStart">🎵 Toca para empezar</div></div>
+  <div id="tapStart"><div class="ts-blob"><i></i><i></i></div><div class="ts-txt">🎵 Toca para empezar</div></div>
   <div id="title" class="screen on">
+    <div id="topBar"><button class="pbtn" id="menuRate" type="button">⭐ Valorar</button><button class="pbtn" id="menuShare" type="button">💌 Compartir</button></div>
     <div class="logo"><span class="l">M</span><span class="l">o</span><span class="l">c</span><span class="l">h</span><span class="l">i</span></div>
-    <div class="sub" data-i18n="sub">¡Corre, cambia de color y atraviesa!</div>
+    <div class="sub">¡Corre, cambia de color y atraviesa!</div>
+    <div id="modeRow"><button class="pbtn" id="turboBtn"><span>⚡ Modo Turbo</span><small id="turboSmall">Siempre a tope · puntos ×1,5</small></button><button class="pbtn" id="howBtn"><i class="qmark">?</i><span>¿Cómo jugar?</span></button></div>
+    <button class="pbtn" id="rankBtn" type="button">🏆 Ranking mundial</button>
+    <button class="pbtn" id="charBtn"><span class="dot"></span><span>Personajes</span></button>
     <div class="bestline" id="bestTitle" style="display:none"></div>
-    <button class="pbtn" id="charBtn"><span class="dot"></span><span data-i18n="chars">Personajes</span></button>
-    <div id="modeRow"><button class="pbtn" id="turboBtn"><span data-i18n="turbo">⚡ Modo Turbo</span><small id="turboSmall" data-i18n="turboSub"></small></button><button class="pbtn" id="howBtn" data-i18n="howTo">❓ Cómo jugar</button></div>
-    <div class="tap" data-i18n="tapPlay">Toca para jugar</div>
+    <div id="playRow"><button type="button" id="playNow">▶ Jugar<br>ahora</button><button type="button" id="playOnline">🌐 Modo<br>online</button></div>
   </div>
   <div id="over" class="screen">
     <div class="card">
@@ -209,7 +220,7 @@ I18N.apply();document.documentElement.style.setProperty('--mf',I18N.FONT);
 <script src="monet.js"></script>
 <script src="peerjs.min.js"></script><script src="online-config.js?v=1"></script><script src="online-cf.js?v=1" data-peer-game="mochi"></script>
 <script>window.FX_NOCHE={z:2,n:18,vig:.14,rays:false}</script><script src="fx-noche.js?v=2"></script>
-<script src="game.js?v=27"></script>
+<script src="game.js?v=32"></script>
 <script>
 if('serviceWorker' in navigator && location.protocol==='https:' && !(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 </script>
