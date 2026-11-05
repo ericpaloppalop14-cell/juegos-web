@@ -2587,6 +2587,8 @@ function btn(id, fn) { const b = document.getElementById(id); b.addEventListener
 btn('charBtn', () => { if (state === 'menu') { Snd.tick(); openSelect('menu'); } });
 btn('turboBtn', () => { if (state === 'menu') startGame('turbo'); });
 btn('howBtn', () => { if (state === 'menu') howTo(); });
+btn('menuRate', () => { const url = 'https://play.google.com/store/apps/details?id=com.ericsoul.mochi'; const cap = window.Capacitor; if (cap && cap.isNativePlatform && cap.isNativePlatform()) cap.nativePromise('MochiExtras', 'openStore', { id: 'com.ericsoul.mochi' }).catch(() => window.open(url, '_blank')); else window.open(url, '_blank'); });
+btn('menuShare', () => { const url = 'https://play.google.com/store/apps/details?id=com.ericsoul.mochi'; const text = '¡Juega conmigo a Mochi! 🍡✨ ' + url; const cap = window.Capacitor; const web = () => { if (navigator.share) navigator.share({ title: 'Mochi', text }).catch(() => {}); else if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); }; if (cap && cap.isNativePlatform && cap.isNativePlatform()) cap.nativePromise('MochiExtras', 'share', { text, title: 'Mochi' }).catch(web); else web(); });
 btn('pauseBtn', () => { if (state === 'play') { Snd.tick(); pause(); } });
 btn('skipBtn', () => { if (state === 'play' && tutStep >= 0) { Snd.tick(); skipTutorial(); } });
 btn('pResume', () => resume());
@@ -2744,8 +2746,8 @@ function gameOver() { if (!(window.ONL && ONL.active) && tutStep < 0) AdPace.run
 }
 function updateTitleBest() {
   const el = document.getElementById('bestTitle');
-  if (best > 0) { el.style.display = ''; el.textContent = T('recordLine', { n: fmtN(best) }); } else el.style.display = 'none';
-  document.getElementById('turboSmall').textContent = bestTurbo > 0 ? T('turboRec', { n: fmtN(bestTurbo) }) : T('turboSub');
+  if (best > 0) { el.style.display = ''; el.textContent = 'Récord: ' + fmtN(best); } else el.style.display = 'none';
+  document.getElementById('turboSmall').textContent = bestTurbo > 0 ? 'Récord Turbo: ' + fmtN(bestTurbo) : 'Siempre a tope · puntos ×1,5';
 }
 
 // ================= Update =================
@@ -3473,7 +3475,7 @@ function botPlan(b) { // decide si termina y, si no, dónde falla (los fallos se
   b.tl = 0; b.nextMove = rnd(0.4, 1.6); b.react = rnd(0.25, 0.9) * (1.3 - b.skill); b.cT = rnd(0.8, 2.5); }
 // ---------- UI ----------
 const css = document.createElement('style'); css.textContent = `
-#onlineBtn{font-size:17px;padding:9px 20px;color:#fff;background:linear-gradient(180deg,#7fd0ff,#5b8cff);box-shadow:0 4px 0 #3b62c8;margin-top:8px}
+#onlineBtn{color:#fff;background:linear-gradient(180deg,#7fd0ff,#5b8cff);box-shadow:0 6px 0 #3b62c8}
 #onl,#onres,#onrk{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(80,40,110,.35);font-family:inherit}
 #onrk{z-index:61}#onl.on,#onres.on,#onrk.on{display:flex}
 .onc{pointer-events:auto;width:min(92vw,380px);max-height:92vh;overflow:auto;background:rgba(255,255,255,.95);border-radius:26px;padding:18px 18px 16px;color:#8b5cc2;text-align:center;box-shadow:0 8px 0 rgba(180,120,200,.45);font-weight:700;box-sizing:border-box}
@@ -3512,11 +3514,12 @@ const div = document.createElement('div'); div.innerHTML = `
 <div id="onHud"></div><div id="onBar"><s>🏁</s></div>`;
 document.body.appendChild(div);
 const $ = id => document.getElementById(id);
-const mb = document.createElement('button'); mb.className = 'pbtn'; mb.id = 'onlineBtn'; mb.textContent = '🌐 Online'; $('modeRow').after(mb);
+let mb = $('onlineBtn'); if (!mb) { mb = document.createElement('button'); mb.className = 'pbtn'; mb.id = 'onlineBtn'; mb.type = 'button'; $('modeRow').after(mb); } mb.textContent = 'Modo online';
 const stop = f => e => { e.preventDefault(); e.stopPropagation(); try { Snd.init(); Snd.ui(); } catch (x) { } f(e); };
 ['onl', 'onres', 'onrk'].forEach(id => ['pointerdown', 'touchstart', 'keydown'].forEach(ev => $(id).addEventListener(ev, e => e.stopPropagation())));
 const tap = (id, f) => $(id).addEventListener('click', stop(f));
 mb.addEventListener('pointerdown', stop(() => { if (state === 'menu') openLobby(); }));
+const rankB = $('rankBtn'); if (rankB) rankB.addEventListener('pointerdown', stop(() => { if (state === 'menu') openRank(); }));
 
 const O = window.ONL = { active: false, goal: GOAL, seed: 1, peers: {}, done: false, res: null, mode: '' };
 let net = null, myName = '', sendT = 0, startAt = 0, finT = 0, pubTimer = null, botTimer = null, botQueue = [], step = 0;
