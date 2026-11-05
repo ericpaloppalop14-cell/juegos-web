@@ -3002,10 +3002,15 @@ function drawBlock(g, lane, z, cell) {
 const BANDS = { A: { x: 2.05, step: 2.9 }, B: { x: 2.95, step: 4.2 }, C: { x: 3.95, step: 7 } };
 const town = { next: null, treeK: [0, 2], houseK: [0, 1] };
 let cheerT = 0;
+// La x del decorado está medida para la pista de 3 carriles (offline). En online la pista
+// pasa a 5 carriles (LH = 2) y el bordillo se ensancha un carril: sin este empuje, casas,
+// árboles y gominolas quedan debajo de la calzada y el lateral parece vacío. Con LH = 1
+// el desplazamiento es 0, así que las carreras normales no cambian.
+function scX(x) { return (x || 0) + (Math.sign(x) || 1) * (LH - 1); }
 function cheerTown() {
   cheerT = 1.8;
   for (const s of scenery) if (s.type === 'inh' && s.z > 1 && s.z < 14 && Math.random() < 0.6) {
-    const p = proj(s.x + Math.sign(s.x) * (LH - 1), s.z), w = laneW * p.s;
+    const p = proj(scX(s.x), s.z), w = laneW * p.s;
     if (p.x > 0 && p.x < W) burst(p.x, p.y - w * 0.9, [255, 226, 122], 3, { min: 30, max: 90, g: -20, type: 'star', life: 0.9, rmin: 1.5, rmax: 3 });
   }
 }
@@ -3040,7 +3045,7 @@ function groundShadow(g, x, z, wUnits) {
   g.globalAlpha = 1;
 }
 function drawInhabitant(g, s) {
-  const p = proj(s.x + Math.sign(s.x) * (LH - 1), s.z), units = 1.0 * s.sc, w = units * laneW * p.s;
+  const p = proj(scX(s.x), s.z), units = 1.0 * s.sc, w = units * laneW * p.s;
   if (w < 3 || p.y > H + 10 || p.x < -w || p.x > W + w || s.z > 33) return;
   const a = clamp((33 - s.z) / 7, 0, 1) * (s.z < 0 ? clamp(1 + s.z / 1.5, 0, 1) : 1); if (a <= 0.02) return;
   const near = s.z > -0.5 && s.z < 7, cheer = cheerT > 0 && s.z < 30;
@@ -3069,18 +3074,19 @@ function drawInhabitant(g, s) {
 function drawScenery(g, s) {
   if (window.__SK && window.__SK[s.type]) return;
   if (s.type === 'inh') { drawInhabitant(g, s); return; }
+  const x = scX(s.x);
   if (s.type === 'house') {
-    groundShadow(g, s.x, s.z, 1.5);
-    drawSprite(g, spr.house[s.hv], s.x, s.z, 1.5, s.flip);
-    if (TP.stars > 0.05) { const a = TP.stars; const p = proj(s.x + Math.sign(s.x) * (LH - 1), s.z); const w = 1.5 * laneW * p.s, img = spr.houseLit[s.hv], h = w * img.height / img.width; g.globalAlpha = fadeFar(s.z) * a; g.save(); g.translate(p.x, p.y); g.rotate(Math.sin(t * 1.6 + s.x * 3 + s.z * 0.15) * 0.045); if (s.flip) g.scale(-1, 1); g.drawImage(img, -w / 2, -h, w, h); g.restore(); g.globalAlpha = 1; }
+    groundShadow(g, x, s.z, 1.5);
+    drawSprite(g, spr.house[s.hv], x, s.z, 1.5, s.flip);
+    if (TP.stars > 0.05) { const a = TP.stars; const p = proj(x, s.z); const w = 1.5 * laneW * p.s, img = spr.houseLit[s.hv], h = w * img.height / img.width; g.globalAlpha = fadeFar(s.z) * a; g.save(); g.translate(p.x, p.y); g.rotate(Math.sin(t * 1.6 + x * 3 + s.z * 0.15) * 0.045); if (s.flip) g.scale(-1, 1); g.drawImage(img, -w / 2, -h, w, h); g.restore(); g.globalAlpha = 1; }
     return;
   }
-  groundShadow(g, s.x, s.z, s.type === 'gum' ? 0.9 : s.type === 'cupcake' ? 1.0 : 1.0);
+  groundShadow(g, x, s.z, s.type === 'gum' ? 0.9 : s.type === 'cupcake' ? 1.0 : 1.0);
   const ty = s.type;
-  if (ty === 'eyetree') { const closed = (t * 0.55 + s.ph) % 3.2 < 0.16; drawSprite(g, closed ? spr.eyetreeC : spr.eyetree, s.x, s.z, 1.3, s.flip); return; }
+  if (ty === 'eyetree') { const closed = (t * 0.55 + s.ph) % 3.2 < 0.16; drawSprite(g, closed ? spr.eyetreeC : spr.eyetree, x, s.z, 1.3, s.flip); return; }
   if (ty.startsWith('gummy')) {
     const pc = PAL[+ty[5]], ph = s.ph;
-    drawSprite(g, spr[ty], s.x, s.z, 0.62, s.flip, 0, (g2, w, h) => { // waving right arm
+    drawSprite(g, spr[ty], x, s.z, 0.62, s.flip, 0, (g2, w, h) => { // waving right arm
       const a = -1.9 + Math.sin(t * 7 + ph) * 0.55;
       g2.save(); g2.translate(w * 0.24, -h * 0.4); g2.rotate(a);
       g2.fillStyle = rgbs(pc.lrgb, 0.95); g2.strokeStyle = rgbs(pc.drgb, 0.7); g2.lineWidth = Math.max(1, w * 0.02);
@@ -3088,7 +3094,7 @@ function drawScenery(g, s) {
     });
     return;
   }
-  drawSprite(g, spr[ty], s.x, s.z, ty === 'gum' ? 1.0 : ty === 'cupcake' ? 0.9 : 1.25, s.flip);
+  drawSprite(g, spr[ty], x, s.z, ty === 'gum' ? 1.0 : ty === 'cupcake' ? 0.9 : 1.25, s.flip);
 }
 function drawStar(g, s) {
   const lift = laneW * 0.45;
@@ -3387,7 +3393,7 @@ window.__mochi = { get selChar() { return selChar; }, get trialIdx() { return tr
   get color() { return mochi.color; }, get lane() { return mochi.lane; }, get tutStep() { return tutStep; }, tutGoDash() { rows = rows.filter(r => r.tut == null); tutStep = TUT.findIndex(s => s.need === 'dash'); spawnTutorial(); showHint(TUT[tutStep].hint, 99); },
   rows: () => rows.map(r => ({ z: r.z, pat: r.pat, cells: r.cells.map(c => c.t + (c.c != null ? (c.show != null ? c.show : c.c) : '')), done: r.done, tut: r.tut })),
   skipTutorial() { tutDone = true; store.set('mochi_tut', '1'); },
-  get diff() { return dCur; }, get contUsed() { return contUsed; }, get freezeT() { return freezeT; }, get invulnT() { return invulnT; }, ownedChar: i => ownedChar(i), get cheer() { return cheerT; }, cheerNow() { cheerTown(); }, sceneryCount: () => scenery.length, get speed() { return speed; }, get selChar() { return selChar; }, get unlockPts() { return unlockPts; }, get best() { return best; },
+  get diff() { return dCur; }, get contUsed() { return contUsed; }, get freezeT() { return freezeT; }, get invulnT() { return invulnT; }, ownedChar: i => ownedChar(i), get cheer() { return cheerT; }, cheerNow() { cheerTown(); }, sceneryCount: () => scenery.length, scX, setLH(v) { LH = v; }, get speed() { return speed; }, get selChar() { return selChar; }, get unlockPts() { return unlockPts; }, get best() { return best; },
   get banners() { return banners.length; }, get selIdx() { return selIdx; }, unlocked: () => CH.map((c, i) => isUnlocked(i)), chars: () => CH.map(c => ({ name: c.name, unlock: c.unlock, interior: c.interior })),
   openSelect() { openSelect('menu'); }, closeSelect, selGo, selPick: selPickCur, selPlay, selectChar(i) { if (isUnlocked(i)) { selChar = i; store.set('mochi_char', String(i)); } },
   banner(i) { banners.push({ ch: i, t: 0 }); }, setDiff(v) { dCur = v; }, debug: DEBUG,
@@ -3483,15 +3489,25 @@ const css = document.createElement('style'); css.textContent = `
 #onHud{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 60px);z-index:30;pointer-events:none;font-weight:700;font-size:13px;color:#fff;text-shadow:0 1px 3px rgba(120,50,130,.9);display:none;min-width:120px}
 #onHud.on{display:block}#onHud .r{display:flex;gap:5px;align-items:center;margin:2px 0;justify-content:flex-end}#onHud i{width:10px;height:10px;border-radius:50%;display:inline-block}
 #onBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 52px);width:min(60vw,260px);height:10px;border-radius:6px;background:rgba(255,255,255,.45);z-index:30;display:none;overflow:visible}
-#onBar.on{display:block}#onBar u{position:absolute;top:-3px;width:16px;height:16px;border-radius:50%;margin-left:-8px;border:2px solid #fff;box-sizing:border-box}#onBar s{position:absolute;right:-6px;top:-8px;font-size:18px;text-decoration:none}`;
+#onBar.on{display:block}#onBar u{position:absolute;top:-3px;width:16px;height:16px;border-radius:50%;margin-left:-8px;border:2px solid #fff;box-sizing:border-box}#onBar s{position:absolute;right:-6px;top:-8px;font-size:18px;text-decoration:none}
+#chatBox{text-align:left;margin-top:6px}
+#chatLog{max-height:min(26vh,200px);min-height:72px;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px;padding:6px;background:#f8eefc;border-radius:16px}
+#chatLog .cm{max-width:92%;align-self:flex-start;background:#fff;border-radius:14px 14px 14px 4px;padding:6px 10px;font-size:14px;font-weight:600;line-height:1.3;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+#chatLog .cm.me{align-self:flex-end;background:#ffe3f0;border-radius:14px 14px 4px 14px}
+#chatLog .cm small{display:block;font-size:11px;color:#c0679a;font-weight:700}
+#chatLog .empty{font-size:13px;color:#c0679a;text-align:center;font-weight:600}
+#chatQs{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+#chatQs button{font-family:inherit;font-weight:700;font-size:15px;color:#8b5cc2;background:#fff;border:2px solid #f3c6e4;border-radius:14px;padding:8px 12px;white-space:normal;overflow:visible;text-overflow:clip;height:auto;line-height:1.25;text-align:center;width:100%;cursor:pointer}
+#chatForm{touch-action:auto;margin-top:6px}
+#chatForm input{user-select:text;-webkit-user-select:text;touch-action:auto;text-align:left}`;
 document.head.appendChild(css);
 const div = document.createElement('div'); div.innerHTML = `
 <div id="onl"><div class="onc"><h2>🌐 Online</h2>
 <div id="on0"><input id="onName" maxlength="12" placeholder="Tu nombre de jugador"><button class="pbtn go big" id="onPub">🌍 Sala pública<small>Sin código · te emparejamos al momento</small></button><button class="pbtn blue big" id="onPriv">🔒 Sala privada<small>Con código para jugar con amigos (desde 2)</small></button><button class="pbtn" id="onRk">🏆 Ranking mundial</button></div>
 <div id="onA" style="display:none"><div style="font-size:15px;margin-bottom:4px">🔒 Sala privada</div><button class="pbtn go" id="onCreate">✨ Crear sala</button><div class="row"><input id="onJoinCode" maxlength="4" placeholder="CÓDIGO" style="text-transform:uppercase"><button class="pbtn" id="onJoin">Unirse</button></div></div>
-<div id="onB" style="display:none"><div id="onCodeL" style="font-size:13px">Código de la sala</div><div id="onCode">----</div><div id="onList"></div><button class="pbtn go" id="onStart">▶ ¡Empezar carrera!</button><div id="onWait" style="font-size:14px">Esperando a que el anfitrión empiece…</div></div>
+<div id="onB" style="display:none"><div id="onCodeL" style="font-size:13px">Código de la sala</div><div id="onCode">----</div><div id="onList"></div><div id="chatBox" style="display:none"><div id="chatLog"></div><div id="chatQs"></div><form id="chatForm" class="row"><input id="chatIn" maxlength="80" placeholder="Mensaje…" autocomplete="off" enterkeyhint="send"><button class="pbtn" id="chatSend" type="submit">Enviar</button></form></div><button class="pbtn go" id="onStart">▶ ¡Empezar carrera!</button><div id="onWait" style="font-size:14px">Esperando a que el anfitrión empiece…</div></div>
 <div id="onMsg"></div><button class="pbtn" id="onBack">← Volver</button></div></div>
-<div id="onres"><div class="onc"><h2 id="onResT">Clasificación</h2><div id="onResL"></div><div id="onResP" style="font-size:15px;color:#ff6fae"></div><div id="onResW" style="font-size:14px"></div><button class="pbtn go" id="onAgain" style="display:none">↻ Otra carrera</button><button class="pbtn" id="onRk2">🏆 Ranking mundial</button><button class="pbtn" id="onMenu">Menú</button></div></div>
+<div id="onres"><div class="onc"><h2 id="onResT">Clasificación</h2><div id="onResL"></div><div id="onResP" style="font-size:15px;color:#ff6fae"></div><div id="onResW" style="font-size:14px"></div><button class="pbtn go" id="onAgain" style="display:none">↻ Otra carrera</button><button class="pbtn" id="rmBack" style="display:none">↩ Volver a la sala</button><button class="pbtn" id="onRk2">🏆 Ranking mundial</button><button class="pbtn" id="onMenu">Menú</button></div></div>
 <div id="onrk"><div class="onc"><h2>🏆 Ranking mundial</h2><div class="rktabs"><button id="rkW" class="sel">🥇 Victorias</button><button id="rkP">⭐ Puntos</button></div><div id="rkSrc"></div><div id="rkList"></div><div id="rkMe" style="font-size:14px;margin-top:6px"></div><button class="pbtn" id="rkClose">← Volver</button></div></div>
 <div id="onHud"></div><div id="onBar"><s>🏁</s></div>`;
 document.body.appendChild(div);
@@ -3507,32 +3523,75 @@ let net = null, myName = '', sendT = 0, startAt = 0, finT = 0, pubTimer = null, 
 const myId = () => net ? net.myId : 'h';
 const uid = (() => { let u = store.get('mochi_uid', ''); if (!u) { u = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); store.set('mochi_uid', u); } return u; })();
 function msg(t) { $('onMsg').textContent = t || ''; }
-function show(s) { step = s; $('on0').style.display = s === 0 ? '' : 'none'; $('onA').style.display = s === 1 ? '' : 'none'; $('onB').style.display = s === 2 ? '' : 'none'; }
+function show(s) { step = s; $('on0').style.display = s === 0 ? '' : 'none'; $('onA').style.display = s === 1 ? '' : 'none'; $('onB').style.display = s === 2 ? '' : 'none';
+  const cb = $('chatBox'); if (!cb) return; const on = s === 2 && O.mode === 'priv'; cb.style.display = on ? '' : 'none'; if (on) { bindChatDom(); renderChat(true); } }
 function openLobby() { state = 'onlobby'; setScreen(null); $('onl').classList.add('on'); show(0); msg(''); $('onName').value = store.get('mochi_onname', '') || ''; }
 function closeAll() { $('onl').classList.remove('on'); $('onres').classList.remove('on'); $('onHud').classList.remove('on'); $('onBar').classList.remove('on'); }
 function clearTimers() { clearInterval(pubTimer); pubTimer = null; clearInterval(botTimer); botTimer = null; botQueue.forEach(clearTimeout); botQueue = []; }
 function disconnect() { clearTimers(); if (net) net.close(); net = null; }
-function leave() { disconnect(); O.active = false; closeAll(); LH = 1; resize(); goMenu(); }
+function leave() { resetChat(); disconnect(); O.active = false; closeAll(); LH = 1; resize(); goMenu(); }
 function info() { myName = ($('onName').value || '').trim().slice(0, 12) || ('Mochi' + ((Math.random() * 900 + 100) | 0)); $('onName').value = myName; store.set('mochi_onname', myName); return { name: myName, ch: selChar, uid }; }
 function showList(pl, m) { const max = O.mode === 'pub' ? PUBMAX : 0; let h = pl.map((p, i) => `<div class="onp${p.id === myId() ? ' me' : ''}"><i style="background:${GCOL[i % 6]}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.id === 'h' && O.mode !== 'pub' ? '👑' : ''}</b></div>`).join('');
   for (let i = pl.length; i < max; i++) h += `<div class="onp slot"><i style="background:#ddd"></i>Buscando jugador…</div>`; $('onList').innerHTML = h;
   if (O.mode === 'pub' && m && m.eta != null) $('onWait').textContent = m.eta > 0 ? `La carrera empieza en ${Math.ceil(m.eta / 1000)} s…` : '¡Empezamos!'; }
+const CHAT_Q = [{ id: 'chQ1', t: '¡Buena carrera!' }, { id: 'chQ2', t: '¡Vamos!' }, { id: 'chQ3', t: '¡Otra!' }, { id: 'chQ4', t: '¡Bien jugado!' }, { id: 'chQ5', t: 'Espera un momento' }, { id: 'chQ6', t: '😂' }];
+let chatLog = [], seenChat = new Set();
+function resetChat() { chatLog = []; seenChat = new Set(); renderChat(true); }
+function bindChatDom() {
+  const qs = $('chatQs'), form = $('chatForm'); if (!qs || !form || qs.dataset.on) return; qs.dataset.on = '1';
+  for (const q of CHAT_Q) { const b = document.createElement('button'); b.type = 'button'; b.id = q.id; b.textContent = q.t; b.addEventListener('click', stop(() => sendChat(q.t, q.id))); qs.appendChild(b); }
+  form.addEventListener('submit', stop(() => { sendChat($('chatIn').value, ''); $('chatIn').value = ''; }));
+}
+function renderChat(force) {
+  const el = $('chatLog'); if (!el) return;
+  const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+  const near = !!force || gap < 48 || el.scrollHeight <= el.clientHeight + 2;
+  const prev = el.scrollTop;
+  el.innerHTML = chatLog.length ? chatLog.map(m => `<div class="cm${m.mine ? ' me' : ''}"><small>${esc(m.name)}${m.mine ? ' · tú' : ''}</small>${esc(m.text)}</div>`).join('') : '<div class="empty">Aún no hay mensajes. ¡Saluda!</div>';
+  el.scrollTop = near ? el.scrollHeight : prev;
+}
+function ingestChat(m) {
+  if (!m || m.t !== 'chat' || !m.id || seenChat.has(m.id)) return;
+  const text = String(m.text || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!text) return;
+  seenChat.add(m.id); chatLog.push({ id: m.id, name: String(m.name || 'Jugador').slice(0, 12), text, mine: m.from === myId() });
+  if (chatLog.length > 80) chatLog.shift(); renderChat(false);
+}
+function sendChat(text, qid) {
+  if (!net || O.mode !== 'priv') return;
+  const body = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!body) return;
+  const m = { t: 'chat', id: (net.myId || 'x') + '-' + Date.now().toString(36) + '-' + ((Math.random() * 1e6) | 0), from: net.myId, name: myName || 'Mochi', text: body, q: qid || '' };
+  ingestChat(m); net.send(m);
+}
+function onChatNet(d) {
+  ingestChat(d);
+  if (net && net.isHost && d.from && d.from !== net.myId) { for (const [id, c] of net.conns) if (id !== d.from && c.open) { try { c.send(d); } catch (e) {} } }
+}
 function wire() {
   net.on('lobby', (pl, m) => { showList(pl, m); const pub = O.mode === 'pub'; $('onStart').style.display = net.isHost && !pub ? '' : 'none'; $('onWait').style.display = net.isHost && !pub ? 'none' : ''; if (!pub) $('onWait').textContent = 'Esperando a que el anfitrión empiece…'; });
   net.on('msg', d => onMsg(d)); net.on('left', id => { if (O.peers[id]) { O.peers[id].dead = 1; O.peers[id].gone = 1; checkEnd(); } });
+  bindChatDom();
   net.on('hostgone', () => { toastLocal('El anfitrión se ha ido'); if (!O.active) { if (O.mode === 'pub' && step === 2) { msg('La sala se ha cerrado, buscando otra…'); disconnect(); setTimeout(publicMatch, 400); } else leave(); } else { O.hostGone = 1; for (const k in O.peers) if (k !== myId()) O.peers[k].dead = 1; if (O.done) showRes(); } });
 }
 function toastLocal(t) { try { showHint(t, 2); } catch (e) { } }
 tap('onPub', () => publicMatch());
 tap('onPriv', () => { info(); O.mode = 'priv'; show(1); msg(''); });
 tap('onRk', () => openRank()); tap('onRk2', () => openRank()); tap('rkClose', () => $('onrk').classList.remove('on'));
-tap('onCreate', async () => { msg('Creando sala…'); try { O.mode = 'priv'; net = new Net(); wire(); const code = await net.create(info()); $('onCode').textContent = code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg('Comparte el código. Con 2 jugadores ya podéis empezar.'); net.lobby(); } catch (e) { msg('No se pudo crear la sala. Revisa tu conexión.'); net = null; } });
-tap('onJoin', async () => { msg('Conectando…'); try { O.mode = 'priv'; net = new Net(); wire(); await net.join($('onJoinCode').value, info()); $('onCode').textContent = net.code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg(''); } catch (e) { msg(e.message === 'llena' ? 'La sala está llena o ya ha empezado.' : e.message === 'codigo' ? 'Escribe un código de 4 letras.' : 'No se encontró esa sala.'); disconnect(); } });
+tap('onCreate', async () => { msg('Creando sala…'); try { O.mode = 'priv'; resetChat(); net = new Net(); wire(); const code = await net.create(info()); $('onCode').textContent = code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg('Comparte el código. Con 2 jugadores ya podéis empezar.'); net.lobby(); } catch (e) { msg('No se pudo crear la sala. Revisa tu conexión.'); net = null; } });
+tap('onJoin', async () => { msg('Conectando…'); try { O.mode = 'priv'; resetChat(); net = new Net(); wire(); await net.join($('onJoinCode').value, info()); $('onCode').textContent = net.code; $('onCode').style.display = ''; $('onCodeL').style.display = ''; show(2); msg(''); } catch (e) { msg(e.message === 'llena' ? 'La sala está llena o ya ha empezado.' : e.message === 'codigo' ? 'Escribe un código de 4 letras.' : 'No se encontró esa sala.'); disconnect(); } });
 tap('onStart', () => { if (!net || !net.isHost) return; if (net.players.length < 2) { msg('Necesitas al menos 2 jugadores.'); return; } startRace(); });
 tap('onBack', () => { if (step === 0) leave(); else { disconnect(); O.mode = ''; show(0); msg(''); } });
 tap('onMenu', () => leave());
 tap('onAgain', () => { if (O.mode === 'pub') { disconnect(); O.active = false; closeAll(); LH = 1; resize(); state = 'onlobby'; $('onl').classList.add('on'); publicMatch(); return; }
   if (!net || !net.isHost) return; net.players = net.players.filter(p => p.id === 'h' || net.conns.has(p.id)); if (net.players.length < 2) { $('onResW').textContent = 'No quedan rivales conectados.'; return; } startRace(); });
+function backToRoom() {
+  if (!net || O.mode !== 'priv') return;
+  clearInterval(botTimer); botTimer = null; O.active = false; O.done = false; O.final = 0; net.started = false;
+  if (net.isHost) net.players = net.players.filter(p => !p.bot && (p.id === 'h' || net.conns.has(p.id)));
+  state = 'onlobby'; closeAll(); $('onl').classList.add('on');
+  $('onCode').textContent = net.code || ''; $('onCode').style.display = ''; $('onCodeL').style.display = '';
+  wire(); show(2); if (net.isHost) { try { net.lobby(); } catch (e) {} }
+}
+tap('rmBack', () => backToRoom());
 // ---------- sala pública: matchmaking automático por huecos fijos ----------
 async function publicMatch() {
   O.mode = 'pub'; const me = info(), t0 = performance.now(); show(2); $('onCode').style.display = 'none'; $('onCodeL').style.display = 'none'; $('onStart').style.display = 'none'; $('onWait').style.display = ''; $('onWait').textContent = '';
@@ -3615,6 +3674,7 @@ function feed(src, ts, q) { const p = O.peers[q.id]; if (!p) return; const now =
   p.buf.push({ t: lt, d: q.d, x: q.x, v: q.v || 0 }); if (p.buf.length > 30) p.buf.shift();
   p.d = q.d; p.x = q.x; p.c = q.c; p.v = q.v || 0; p.dead = q.dead; p.fin = q.fin; p.ft = q.ft; }
 function onMsg(d) {
+  if (d && d.t === 'chat') { onChatNet(d); return; }
   if (d.t === 'start') { begin(d); return; }
   if (d.t === 'st' && net.isHost) { if (O.peers[d.from]) { d.id = d.from; feed(d.from, d.ts, d); } checkEnd(); return; }
   if (d.t === 'all') { for (const q of d.ps) if (q.id !== myId()) feed('h', d.ts, q); if (O.done) showRes(); return; }
@@ -3648,7 +3708,8 @@ function showRes() { if (!O.done) return; const r = ranking(), meI = r.findIndex
   $('onResL').innerHTML = r.map((p, i) => `<div class="onp${p.id === myId() ? ' me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + 'º'}</span><i style="background:${p.col}"></i>${esc(p.name)}${p.id === myId() ? ' (tú)' : ''}<b>${p.fin ? '🏁 ' + p.ft.toFixed(1) + ' s' : Math.round(p.d) + ' m' + (p.dead ? '' : ' …')}</b></div>`).join('');
   $('onResW').textContent = fin ? '' : 'Esperando a que terminen los demás…';
   if (fin && !O.sent && meI >= 0) { O.sent = 1; const pts = racePoints(meI, r[meI]); $('onResP').textContent = `+${pts} puntos${meI === 0 ? ' · +1 victoria' : ''} para el ranking mundial`; Rank.add(meI === 0 ? 1 : 0, pts); } else if (!fin) $('onResP').textContent = '';
-  $('onAgain').style.display = fin && (O.mode === 'pub' || (net && net.isHost)) ? '' : 'none'; $('onAgain').textContent = O.mode === 'pub' ? '🔎 Buscar otra carrera' : '↻ Otra carrera'; }
+  $('onAgain').style.display = fin && (O.mode === 'pub' || (net && net.isHost)) ? '' : 'none'; $('onAgain').textContent = O.mode === 'pub' ? '🔎 Buscar otra carrera' : '↻ Otra carrera';
+  $('rmBack').style.display = fin && O.mode === 'priv' ? '' : 'none'; }
 function hud() { if ((O._h = (O._h || 0) + 1) % 6) return; const r = ranking();
   $('onHud').innerHTML = r.map((p, i) => `<div class="r">${i + 1}. ${esc(p.name)}${p.id === myId() ? ' ★' : ''} ${p.fin ? '🏁' : p.dead ? '💥' : Math.round(p.d) + 'm'} <i style="background:${p.col}"></i></div>`).join('');
   for (const p of r) { const u = $('ob_' + p.id); if (u) u.style.left = Math.min(100, p.d / GOAL * 100) + '%'; } }
@@ -3697,6 +3758,7 @@ function drawFinish(g, z) { const RH = LH + 0.55, n = 10, z2 = z + 0.8;
   g.beginPath(); g.moveTo(l.x, l.y); g.lineTo(l.x, l.y - h); g.moveTo(r.x, r.y); g.lineTo(r.x, r.y - h); g.stroke();
   g.fillStyle = '#ff6fae'; g.fillRect(l.x, l.y - h, r.x - l.x, h * 0.22); g.fillStyle = '#fff'; g.font = `700 ${Math.max(10, Math.round(h * 0.17))}px ${I18N.FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('META', (l.x + r.x) / 2, l.y - h * 0.89);
 }
-window.__onl = { O, Rank, uid, get net() { return net; }, get state() { return state; }, get LH() { return LH; }, get freezeT() { return freezeT; }, setGod(v) { godMode = v; }, setDist(v) { dist = v; }, getDist() { return dist; }, kill() { godMode = false; invulnT = 0; die('block'); }, rowsSig() { return rows.slice().sort((a, b) => a.z - b.z).slice(0, 4).map(r => r.cells.map(c => c.t + (c.c ?? '')).join('') + '@' + Math.round(r.z + dist)).join(' '); } };
+window.__onl = { O, Rank, uid, get net() { return net; }, get state() { return state; }, get LH() { return LH; }, get freezeT() { return freezeT; }, setGod(v) { godMode = v; }, setDist(v) { dist = v; }, getDist() { return dist; }, kill() { godMode = false; invulnT = 0; die('block'); }, rowsSig() { return rows.slice().sort((a, b) => a.z - b.z).slice(0, 4).map(r => r.cells.map(c => c.t + (c.c ?? '')).join('') + '@' + Math.round(r.z + dist)).join(' '); },
+  chat: { presets: CHAT_Q, openPriv() { O.mode = 'priv'; myName = myName || 'Yo'; if (!net) net = new Net(); net.myId = net.myId || 'h'; net.isHost = true; net.code = net.code || 'TEST'; wire(); state = 'onlobby'; $('onl').classList.add('on'); show(2); }, ingest(m) { ingestChat(m); }, deliver(d) { if (net && net.h.msg) net.h.msg(d); }, breakHandler() { if (net) net.on('msg', () => { window.__chatDropped = (window.__chatDropped || 0) + 1; }); }, back() { backToRoom(); }, count() { return chatLog.length; }, last() { const m = chatLog[chatLog.length - 1]; return m ? m.text : ''; } } };
 })();
 })();
