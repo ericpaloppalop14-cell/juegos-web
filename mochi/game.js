@@ -2746,8 +2746,10 @@ function gameOver() { if (!(window.ONL && ONL.active) && tutStep < 0) AdPace.run
 }
 function updateTitleBest() {
   const el = document.getElementById('bestTitle');
-  if (best > 0) { el.style.display = ''; el.textContent = 'Récord: ' + fmtN(best); } else el.style.display = 'none';
-  document.getElementById('turboSmall').textContent = bestTurbo > 0 ? 'Récord Turbo: ' + fmtN(bestTurbo) : 'Siempre a tope · puntos ×1,5';
+  const esN = n => Math.round(n).toLocaleString('es-ES');
+  document.getElementById('title').classList.toggle('has-rec', best > 0);
+  if (best > 0) { el.style.display = ''; el.textContent = 'Récord: ' + esN(best); } else el.style.display = 'none';
+  document.getElementById('turboSmall').textContent = bestTurbo > 0 ? 'Récord Turbo: ' + esN(bestTurbo) : 'Siempre a tope · puntos ×1,5';
 }
 
 // ================= Update =================
@@ -3514,7 +3516,7 @@ const div = document.createElement('div'); div.innerHTML = `
 <div id="onHud"></div><div id="onBar"><s>🏁</s></div>`;
 document.body.appendChild(div);
 const $ = id => document.getElementById(id);
-let mb = $('onlineBtn'); if (!mb) { mb = document.createElement('button'); mb.className = 'pbtn'; mb.id = 'onlineBtn'; mb.type = 'button'; $('modeRow').after(mb); } mb.textContent = 'Modo online';
+let mb = $('onlineBtn'); if (!mb) { mb = document.createElement('button'); mb.className = 'pbtn'; mb.id = 'onlineBtn'; mb.type = 'button'; $('modeRow').after(mb); } mb.textContent = '🌐 Modo online';
 const stop = f => e => { e.preventDefault(); e.stopPropagation(); try { Snd.init(); Snd.ui(); } catch (x) { } f(e); };
 ['onl', 'onres', 'onrk'].forEach(id => ['pointerdown', 'touchstart', 'keydown'].forEach(ev => $(id).addEventListener(ev, e => e.stopPropagation())));
 const tap = (id, f) => $(id).addEventListener('click', stop(f));
